@@ -78,8 +78,13 @@ import { AddProjectPanel } from '../components/AddProjectPanel';
 import { ProjectOverviewPanel } from '../components/ProjectOverviewPanel';
 import { ArchivePanel } from '../components/ArchivePanel';
 import { SettingsPanel } from '../components/SettingsPanel';
+import { UsagePanel } from '../components/UsagePanel';
 import { SnoozePanel } from '../components/SnoozePanel';
 import { ThreadRenamePanel } from '../components/ThreadRenamePanel';
+import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
+import { IconButton } from '../components/ui/IconButton';
+import { AppButton } from '../components/ui/AppButton';
+import { HomeBottomBar, HomeTab } from '../components/ui/HomeBottomBar';
 
 interface PreviewViewportPayload { _tag: string; width: number; height: number; }
 interface DeviceActionPayload { hostId: string; deviceId: string; type: string; value: string; }
@@ -114,7 +119,7 @@ function primaryButton() {
 struct Index {
   private keyboard: KeyboardCommands = new KeyboardCommands();
   private composerFocused: boolean = false;
-  private searchFocused: boolean = false;
+  @State searchFocused: boolean = false;
   private composingText: boolean = false;
 
   @StorageLink('t3ShortcutGeneration') @Watch('openShortcut') shortcutGeneration: number = 0;
@@ -218,6 +223,8 @@ struct Index {
   @State restoringEnvironments: boolean = false;
   @State settingsSection: string = '';
   @State page: string = 'sessions';
+  @State searchOpen: boolean = false;
+  @State homeTabDetailOpen: boolean = false;
   @State showTools: boolean = false;
   @State panelOpen: boolean = false;
   @State panel: string = 'server';
@@ -671,6 +678,7 @@ struct Index {
     else if (action === 'back') this.onBackPress();
     else if (action === 'search') {
       this.page = 'sessions';
+      this.searchOpen = true;
       setTimeout(() => { if (this.alive && this.page === 'sessions') this.getUIContext().getFocusController().requestFocus('thread-search'); }, 0);
     }
     return true;
@@ -2073,6 +2081,17 @@ struct Index {
       }
       return true;
     }
+    if (this.page === 'sessions' && this.searchOpen) {
+      this.searchOpen = false;
+      this.searchFocused = false;
+      if (this.threadQuery) this.setThreadQuery('');
+      return true;
+    }
+    if (this.page === 'home-pulls' || this.page === 'usage') {
+      this.homeTabDetailOpen = false;
+      this.page = 'sessions';
+      return true;
+    }
     if (this.page === 'chat') { this.page = 'sessions'; return true; }
     if (this.page === 'settings' || this.page === 'choose-project') { this.page = 'sessions'; return true; }
     if (this.page === 'add-project') { this.page = this.addProjectReturn; return true; }
@@ -2216,10 +2235,12 @@ struct Index {
 
   @Builder
   emptyState(title: string, detail: string) {
-    Column({ space: 8 }) {
-      Text(title).fontSize(22).fontWeight(FontWeight.Medium).lineHeight('30fp').textAlign(TextAlign.Center)
-      Text(detail).fontSize(15).lineHeight('21fp').fontColor($r('app.color.muted')).textAlign(TextAlign.Center)
-    }.width('100%').padding(28)
+    Column({ space: Space.xs }) {
+      Text(title).fontSize(FontSize.title).fontWeight(Weight.bold).lineHeight(LineHeight.title)
+        .fontColor($r('app.color.ink')).textAlign(TextAlign.Center)
+      Text(detail).fontSize(FontSize.body).lineHeight(LineHeight.body)
+        .fontColor($r('app.color.muted')).textAlign(TextAlign.Center)
+    }.width('100%').padding(Space.lg)
   }
 
   @Builder
@@ -2555,17 +2576,17 @@ struct Index {
           this.emptyState(this.restoringEnvironments ? '正在读取工作环境' : '未能恢复工作环境',
             this.restoringEnvironments ? '正在安全读取已保存的连接。' : this.status)
           if (this.restoringEnvironments) { LoadingProgress().width(28).height(28) }
-          else { Button('重试恢复').primaryButton().onClick(() => { void this.restoreAddress(); }) }
+          else { AppButton({ label: '重试恢复', kind: 'primary', onTap: () => { void this.restoreAddress(); } }) }
         } else if (this.environmentEntries.length > 0) {
           this.emptyState(this.restoringEnvironments ? '正在连接工作环境' : '工作环境尚未连接',
             '已保留你的环境和会话，连接恢复后继续工作。')
-          Button('管理连接').quietButton().onClick(() => this.openPanel('server'))
+          AppButton({ label: '管理连接', kind: 'secondary', onTap: () => this.openPanel('server') })
         } else {
           this.emptyState('添加你的工作环境', '连接 T3 Code，在手机上继续工作。')
-          Button('＋ 添加环境').primaryButton().onClick(() => this.openPanel('server'))
+          AppButton({ label: '＋ 添加环境', kind: 'primary', onTap: () => this.openPanel('server') })
         }
         Blank()
-      }.layoutWeight(1).width('100%')
+      }.layoutWeight(1).width('100%').padding({ bottom: 88 })
     } else {
       ThreadList({
         shelves: this.shelves, query: this.threadQuery, searchHits: this.threadSearchHits,
@@ -2576,6 +2597,8 @@ struct Index {
         loading: !this.loaded, workingShelfExpanded: this.workingExpanded,
         snoozedShelfExpanded: this.snoozedExpanded, settledShelfExpanded: this.settledExpanded,
         settledLimit: this.settledLimit,
+        searchOpen: this.searchOpen,
+        bottomInset: 88,
         onSelect: (thread: ScopedThread) => { void this.openScopedThread(thread); },
         onAction: (thread: ScopedThread, action: string) => { void this.threadAction(thread, action); },
         onSnooze: (thread: ScopedThread) => { this.snoozeThread = thread; this.openPanel('snooze'); },
@@ -2591,6 +2614,7 @@ struct Index {
         onClearFilters: () => { void this.filterEnvironment(0); },
         onSearch: (value: string) => this.setThreadQuery(value),
         onSearchFocus: (focused: boolean) => { this.searchFocused = focused; this.keyboard.reset(); },
+        onCloseSearch: () => { this.searchOpen = false; this.searchFocused = false; if (this.threadQuery) this.setThreadQuery(''); },
         onNewTask: () => { void this.startNewTask(); },
         onSettings: () => this.openSettings(),
         onAddProject: () => this.openAddProject('choose-project'),
@@ -2920,42 +2944,97 @@ struct Index {
       .border({ width: 0.5, color: $r('app.color.border') }).margin({ bottom: 8 })
   }
 
-  build() {
-    Column() {
-      if (this.shareId && this.page !== 'share' && !this.choosingShare) {
-        Button('收到分享 · 审阅并保存草稿').quietButton().width('100%')
-          .enabled(!this.busy && !this.unknown).onClick(() => { this.panelOpen = false; this.page = 'share'; })
+  private isRootTab(): boolean {
+    return this.page === 'sessions' || this.page === 'home-pulls' || this.page === 'usage' || this.page === 'settings';
+  }
+
+  private showHomeBottomBar(): boolean {
+    return (this.page === 'sessions' && !this.searchFocused) ||
+      (this.page === 'home-pulls' && !this.homeTabDetailOpen) ||
+      (this.page === 'usage' && !this.homeTabDetailOpen) ||
+      (this.page === 'settings' && !this.settingsSection);
+  }
+
+  private activeHomeTab(): HomeTab {
+    if (this.page === 'home-pulls') return 'home-pulls';
+    if (this.page === 'usage') return 'usage';
+    if (this.page === 'settings') return 'settings';
+    return 'sessions';
+  }
+
+  private selectHomeTab(tab: HomeTab): void {
+    this.homeTabDetailOpen = false;
+    if (tab === 'settings') {
+      this.settingsSection = '';
+      void this.refreshSessions();
+    }
+    this.page = tab;
+  }
+
+  private toggleHomeSearch(): void {
+    if (this.searchOpen && !this.threadQuery) {
+      this.searchOpen = false;
+      this.searchFocused = false;
+      return;
+    }
+    this.searchOpen = true;
+    setTimeout(() => {
+      if (this.alive && this.page === 'sessions' && this.searchOpen) {
+        try { this.getUIContext().getFocusController().requestFocus('thread-search'); } catch (_) {}
       }
-      if (this.page === 'voice') {
-        VoiceInputPanel({ onBack: () => this.page = 'chat', onInsert: (value: string) => this.insertVoice(value) })
-      } else if (this.page === 'share') {
-        ShareImportPanel({ shareId: this.shareId, parts: this.shareParts, destination: this.shareDestination, busy: this.savingShare,
-          attachments: this.shareAttachments, uploading: this.uploadingShare, uploadedCount: this.shareUploadedCount,
-          error: this.shareError, onEdit: (id: number, value: string) => this.editSharePart(id, value),
-          onRemove: (id: number) => this.removeSharePart(id),
-          onRemoveAttachment: (id: string) => this.removeShareAttachment(id), onCancelUpload: () => this.cancelShareUpload(),
-          loadThumbnail: (shareId: number, attachmentId: string, stillSelected: () => boolean): Promise<image.PixelMap> =>
-            this.previewShareAttachment(shareId, attachmentId, stillSelected),
-          onConfirm: () => { void this.confirmShare(); },
-          onChooseDestination: () => {
-            this.shareError = ''; this.openProjectPicker(true);
-          }, onCancel: () => { removeIncomingShare(this.shareId); this.page = 'sessions'; } })
-      } else if (this.page === 'settings') {
-        SettingsPanel({ environments: this.environmentEntries, projects: this.scopedProjects, connection: client, connectionReady: this.ready,
-          activeLocalId: this.selectedLocalId,
-          scheduledConnectionKey: this.scheduledConnectionKey,
-          settingsWriteAllowed: this.settingsWriteAllowed,
-          connectionFor: (localId: string): T3Client | undefined => this.registry().clients.get(localId), section: $settingsSection, groupingMode: workspacePrefs.projectGroupingMode, projectCount: this.projectGroups.length,
-          archivedCount: this.archivedThreadCount(), environmentCount: this.environmentEntries.filter((entry: EnvironmentEntry) => !entry.deleting).length,
-          onBack: () => this.page = 'sessions', onEnvironments: () => this.openPanel('server'),
-          onProjects: () => this.openProjectOverview(), onArchive: () => this.openArchive(),
-          onGrouping: (mode: string) => this.chooseGrouping(mode),
-          workingShelfEnabled: this.shelves.workingShelfEnabled,
-          onWorkingShelf: async (enabled: boolean): Promise<void> => {
-            await setWorkingShelfEnabled(enabled);
-            this.rebuildWorkspace();
-          } })
-      } else if (this.page === 'choose-project') {
+    }, 50);
+  }
+
+  build() {
+    Stack({ alignContent: Alignment.Bottom }) {
+      Column() {
+        if (this.shareId && this.page !== 'share' && !this.choosingShare) {
+          Button('收到分享 · 审阅并保存草稿').quietButton().width('100%')
+            .margin({ left: this.isRootTab() ? Space.md : 0, right: this.isRootTab() ? Space.md : 0 })
+            .enabled(!this.busy && !this.unknown).onClick(() => { this.panelOpen = false; this.page = 'share'; })
+        }
+        if (this.page === 'voice') {
+          VoiceInputPanel({ onBack: () => this.page = 'chat', onInsert: (value: string) => this.insertVoice(value) })
+        } else if (this.page === 'share') {
+          ShareImportPanel({ shareId: this.shareId, parts: this.shareParts, destination: this.shareDestination, busy: this.savingShare,
+            attachments: this.shareAttachments, uploading: this.uploadingShare, uploadedCount: this.shareUploadedCount,
+            error: this.shareError, onEdit: (id: number, value: string) => this.editSharePart(id, value),
+            onRemove: (id: number) => this.removeSharePart(id),
+            onRemoveAttachment: (id: string) => this.removeShareAttachment(id), onCancelUpload: () => this.cancelShareUpload(),
+            loadThumbnail: (shareId: number, attachmentId: string, stillSelected: () => boolean): Promise<image.PixelMap> =>
+              this.previewShareAttachment(shareId, attachmentId, stillSelected),
+            onConfirm: () => { void this.confirmShare(); },
+            onChooseDestination: () => {
+              this.shareError = ''; this.openProjectPicker(true);
+            }, onCancel: () => { removeIncomingShare(this.shareId); this.page = 'sessions'; } })
+        } else if (this.page === 'settings') {
+          SettingsPanel({ environments: this.environmentEntries, projects: this.scopedProjects, connection: client, connectionReady: this.ready,
+            activeLocalId: this.selectedLocalId,
+            scheduledConnectionKey: this.scheduledConnectionKey,
+            settingsWriteAllowed: this.settingsWriteAllowed,
+            embedded: true, bottomInset: 88,
+            connectionFor: (localId: string): T3Client | undefined => this.registry().clients.get(localId), section: $settingsSection, groupingMode: workspacePrefs.projectGroupingMode, projectCount: this.projectGroups.length,
+            archivedCount: this.archivedThreadCount(), environmentCount: this.environmentEntries.filter((entry: EnvironmentEntry) => !entry.deleting).length,
+            onBack: () => this.page = 'sessions', onEnvironments: () => this.openPanel('server'),
+            onProjects: () => this.openProjectOverview(), onArchive: () => this.openArchive(),
+            onGrouping: (mode: string) => this.chooseGrouping(mode),
+            workingShelfEnabled: this.shelves.workingShelfEnabled,
+            onWorkingShelf: async (enabled: boolean): Promise<void> => {
+              await setWorkingShelfEnabled(enabled);
+              this.rebuildWorkspace();
+            } })
+        } else if (this.page === 'home-pulls') {
+          PullRequestsPanel({ connection: client, projectId: '', projectLabel: '',
+            embedded: true, bottomInset: 88,
+            onDetailChange: (open: boolean) => { this.homeTabDetailOpen = open; },
+            onBack: () => { this.homeTabDetailOpen = false; this.page = 'sessions'; },
+            onStatus: (value: string) => this.status = value,
+            onCopy: (value: string) => { void this.copy(value); } })
+        } else if (this.page === 'usage') {
+          UsagePanel({ connection: client, embedded: true, bottomInset: 88,
+            onDetailChange: (open: boolean) => { this.homeTabDetailOpen = open; },
+            onBack: () => { this.homeTabDetailOpen = false; this.page = 'sessions'; } })
+        } else if (this.page === 'choose-project') {
         ProjectPicker({ groups: this.pickerGroups(), environments: this.pickerEnvironments(), shareTarget: this.choosingShare,
           drafts: this.choosingShare ? [] : this.draftRecords.filter((draft: ComposerDraft) => !draft.localId || this.environmentEntries.some((entry: EnvironmentEntry) => entry.localId === draft.localId)),
           environmentId: this.pickerEnvironmentId, query: this.pickerQuery,
@@ -3150,9 +3229,8 @@ struct Index {
           projectLabel: this.projects.find((project: ProjectView) => project.id === this.projectId)?.label || '',
           onBack: () => this.page = 'chat', onStatus: (value: string) => this.status = value,
           onCopy: (value: string) => { void this.copy(value); } })
-      } else {
-        Row({ space: 4 }) {
-          if (this.page === 'chat') {
+        } else if (this.page === 'chat') {
+          Row({ space: 4 }) {
             this.iconButton($r('app.media.ui_back'), '返回会话列表', () => this.page = 'sessions')
             Column({ space: 2 }) {
               Text(this.draftMode ? '新任务' : this.threads.find((t: ThreadView) => t.id === this.threadId)?.label || '会话').fontSize(16).fontWeight(FontWeight.Medium)
@@ -3164,40 +3242,73 @@ struct Index {
             }.layoutWeight(1).alignItems(HorizontalAlign.Start)
             if (!this.draftMode) { Button('状态').quietButton().fontSize(12).onClick(() => this.openThreadExtras()) }
             this.iconButton($r('app.media.ui_more'), '会话操作', () => this.openPanel('thread'))
-          } else {
-            Button({ type: ButtonType.Normal }) {
-              Row({ space: 8 }) {
-                Text('T3 Code').fontSize(20).fontWeight(FontWeight.Medium)
-                Text('⌄').fontSize(16).fontColor($r('app.color.muted'))
-              }.width('100%')
-            }.layoutWeight(1).constraintSize({ minHeight: 48 }).padding({ left: 8, right: 8 })
-              .backgroundColor(Color.Transparent).fontColor($r('app.color.ink')).accessibilityText('T3 Code，管理环境')
-              .onClick(() => this.openPanel('server'))
-            Button('新任务').constraintSize({ minWidth: 44, minHeight: 44 }).fontSize(14).fontWeight(FontWeight.Medium)
-              .backgroundColor($r('app.color.primary')).fontColor($r('app.color.on_primary'))
-              .accessibilityText('新建任务').onClick(() => { void this.startNewTask(); })
+          }.width('100%').constraintSize({ minHeight: 56 }).padding({ left: 12, right: 12 })
+          if (this.status !== '会话已同步' && this.status !== '已连接' && this.status !== '未连接') {
+            Text(this.status).fontSize(12).fontColor($r('app.color.muted')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
+              .width('100%').padding({ left: 20, right: 20, bottom: 6 }).accessibilityText('状态：' + this.status)
+              .onClick(() => this.openPanel('thread'))
           }
-        }.width('100%').constraintSize({ minHeight: 56 }).padding({ left: 12, right: 12 })
-        if (this.status !== '会话已同步' && this.status !== '已连接' && this.status !== '未连接') {
-          Text(this.status).fontSize(12).fontColor($r('app.color.muted')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
-            .width('100%').padding({ left: 20, right: 20, bottom: 6 }).accessibilityText('状态：' + this.status)
-            .onClick(() => this.openPanel(this.page === 'chat' ? 'thread' : 'server'))
+          this.chatPage()
+        } else {
+          Row({ space: 4 }) {
+            Button({ type: ButtonType.Normal }) {
+              Row({ space: 5 }) {
+                Text('T3').fontSize(FontSize.title).fontWeight(Weight.bold).fontColor($r('app.color.ink'))
+                Text('Code').fontSize(FontSize.title).fontWeight(Weight.regular).fontColor($r('app.color.muted'))
+              }.alignItems(VerticalAlign.Center)
+            }.constraintSize({ minHeight: Sizes.iconHit }).padding({ left: Space.xxs, right: Space.xs })
+              .backgroundColor(Color.Transparent).accessibilityText('T3 Code，管理环境')
+              .onClick(() => this.openPanel('server'))
+            Blank()
+            IconButton({ icon: $r('app.media.ui_search'), label: '搜索会话', onTap: () => this.toggleHomeSearch() })
+            Stack({ alignContent: Alignment.TopEnd }) {
+              IconButton({ icon: $r('app.media.ui_filter'),
+                label: (this.environmentFilter || this.projectFilterKey) ? '筛选环境与项目，已启用' : '筛选环境与项目',
+                onTap: () => this.openPanel('filter') })
+              if (this.environmentFilter || this.projectFilterKey) {
+                Circle().width(6).height(6).fill($r('app.color.primary')).margin({ top: 7, right: 7 })
+                  .hitTestBehavior(HitTestMode.None)
+              }
+            }
+          }.width('100%').constraintSize({ minHeight: Sizes.topBar }).padding({ left: Space.md, right: Space.sm })
+          Column() {
+            if (this.status && this.status !== '会话已同步' && this.status !== '已连接' && this.status !== '未连接') {
+              Text(this.status).fontSize(FontSize.caption).lineHeight(LineHeight.caption)
+                .fontColor($r('app.color.muted')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
+                .width('100%').padding({ left: Space.md, right: Space.md, top: Space.sm, bottom: Space.xxs })
+                .accessibilityText('状态：' + this.status).onClick(() => this.openPanel('server'))
+            }
+            this.sessionsPage()
+          }.width('100%').layoutWeight(1).backgroundColor($r('app.color.screen'))
+            .borderRadius({ topLeft: 26, topRight: 26 }).clip(true)
         }
-        if (this.page === 'chat') { this.chatPage() } else { this.sessionsPage() }
+      }.width('100%').height('100%')
+      if (this.undoNotice || this.showHomeBottomBar()) {
+        Column({ space: Space.xs }) {
+          if (this.undoNotice) {
+            Row({ space: 10 }) {
+              Text(this.undoNotice.label).fontSize(FontSize.callout).fontColor($r('app.color.ink')).layoutWeight(1)
+              Button('撤销').height(34).backgroundColor(Color.Transparent).fontColor($r('app.color.primary_text'))
+                .onClick(() => { void this.executeUndo(); })
+              Button('×').height(34).width(34).backgroundColor(Color.Transparent).fontColor($r('app.color.muted'))
+                .onClick(() => { this.undoNotice = undefined; })
+            }.width('100%').padding({ left: Space.md, right: Space.sm, top: Space.xs, bottom: Space.xs })
+              .margin({ left: this.isRootTab() ? Space.md : 0, right: this.isRootTab() ? Space.md : 0, bottom: this.showHomeBottomBar() ? 0 : Space.sm })
+              .backgroundColor($r('app.color.card')).borderRadius(Radius.card)
+              .border({ width: 0.5, color: $r('app.color.border') })
+              .shadow({ radius: 12, color: '#1a000000', offsetX: 0, offsetY: 2 })
+          }
+          if (this.showHomeBottomBar()) {
+            HomeBottomBar({ activeTab: this.activeHomeTab(),
+              onSelectTab: (tab: HomeTab) => this.selectHomeTab(tab),
+              onNewTask: () => { void this.startNewTask(); } })
+          }
+        }.width('100%').hitTestBehavior(HitTestMode.Transparent)
       }
-      if (this.undoNotice) {
-        Row({ space: 10 }) {
-          Text(this.undoNotice.label).fontSize(13).fontColor($r('app.color.ink')).layoutWeight(1)
-          Button('撤销').height(34).backgroundColor(Color.Transparent).fontColor($r('app.color.primary'))
-            .onClick(() => { void this.executeUndo(); })
-          Button('×').height(34).width(34).backgroundColor(Color.Transparent).fontColor($r('app.color.muted'))
-            .onClick(() => { this.undoNotice = undefined; })
-        }.width('100%').padding({ left: 18, right: 12, top: 8, bottom: 8 })
-          .backgroundColor($r('app.color.surface'))
-      }
-    }.width('100%').height('100%').padding({ left: 8, right: 8 })
+    }.width('100%').height('100%').padding({ left: this.isRootTab() ? 0 : 8, right: this.isRootTab() ? 0 : 8 })
       .focusable(true).onKeyEvent((event: KeyEvent) => { this.keyboardEvent(event, false); })
-      .backgroundColor($r('app.color.canvas')).foregroundColor($r('app.color.ink'))
+      .backgroundColor(this.page === 'sessions' ? $r('app.color.group') : $r('app.color.canvas'))
+      .foregroundColor($r('app.color.ink'))
       .bindSheet($$this.panelOpen, this.panelContent(), { height: this.panel === 'thread' ? '66%' :
         this.panel === 'attachment' ? '80%' :
         this.panel === 'extras' ? '62%' : this.panel === 'composer-command' ? '78%' :

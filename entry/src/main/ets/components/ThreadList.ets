@@ -1,8 +1,13 @@
 import { EnvironmentEntry } from '../protocol/Environment';
 import {
-  ScopedThread, ThreadCapabilities, ThreadShelfState, relativeTime, snoozeWakeLabel,
+  ScopedThread, ThreadCapabilities, ThreadShelfState, snoozeWakeLabel,
   canMoveBeforeActiveNeighbor, effectiveSnoozed, threadCanArchive, threadCanSnooze, threadStatus
 } from '../protocol/Projects';
+import { compactTime, providerGlyph, threadSubline, threadTone } from '../protocol/ThreadRow';
+import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
+import { ProjectMonogram } from './ui/ProjectMonogram';
+import { SectionHeader } from './ui/SectionHeader';
+import { AppButton } from './ui/AppButton';
 
 @Component
 export struct ThreadList {
@@ -25,6 +30,10 @@ export struct ThreadList {
   @Prop snoozedShelfExpanded: boolean = false;
   @Prop settledShelfExpanded: boolean = true;
   @Prop settledLimit: number = 10;
+  /** 搜索框是否展开（由首页标题栏的搜索按钮控制）。有搜索词时总是展开。 */
+  @Prop searchOpen: boolean = false;
+  /** 列表底部留给悬浮底栏的空间。 */
+  @Prop bottomInset: number = 0;
   onSelect: (thread: ScopedThread) => void = () => {};
   onAction: (thread: ScopedThread, action: string) => void = () => {};
   onSnooze: (thread: ScopedThread) => void = () => {};
@@ -41,6 +50,7 @@ export struct ThreadList {
   onToggleSnoozed: () => void = () => {};
   onToggleSettled: () => void = () => {};
   onShowMoreSettled: () => void = () => {};
+  onCloseSearch: () => void = () => {};
 
   private isSelected(thread: ScopedThread): boolean {
     return this.selectedKey === thread.localId + ':' + thread.id;
@@ -64,107 +74,153 @@ export struct ThreadList {
     return !!thread.pinnedAt || canMoveBeforeActiveNeighbor(ordered, up ? index - 1 : index + 2);
   }
   private rowTime(thread: ScopedThread): string {
-    if (thread.settledOverride === 'settled') return relativeTime(thread.settledAt || thread.updatedAt, this.nowMs);
+    if (thread.settledOverride === 'settled') return compactTime(thread.settledAt || thread.updatedAt, this.nowMs);
     if (thread.snoozedUntil) return snoozeWakeLabel(thread, this.nowMs);
-    return relativeTime(thread.latestUserMessageAt || thread.updatedAt || thread.createdAt, this.nowMs);
+    return compactTime(thread.latestUserMessageAt || thread.updatedAt || thread.createdAt, this.nowMs);
   }
   private searchSnippet(thread: ScopedThread): string {
     return this.searchHits[thread.localId + ':' + thread.id] || '';
   }
 
+  private filterLabel(): string {
+    const parts: string[] = [];
+    if (this.environmentFilter) {
+      parts.push(this.environmentEntries.find((entry: EnvironmentEntry) => entry.localId === this.environmentFilter)?.label || '环境');
+    }
+    if (this.projectFiltered) parts.push(this.projectFilterLabel || '项目');
+    return parts.join(' · ');
+  }
+
+  private statusIcon(status: string): Resource {
+    const tone = threadTone(status);
+    if (tone === 'run') return $r('app.media.status_run');
+    if (tone === 'wait') return $r('app.media.status_wait');
+    if (tone === 'danger') return $r('app.media.status_danger');
+    return $r('app.media.status_neutral');
+  }
+
+  private statusColor(status: string): ResourceColor {
+    const tone = threadTone(status);
+    if (tone === 'run') return $r('app.color.primary');
+    if (tone === 'wait') return $r('app.color.warning');
+    if (tone === 'danger') return $r('app.color.danger');
+    return $r('app.color.muted');
+  }
+
   @Builder
   header() {
-    Column({ space: 8 }) {
-      Row({ space: 8 }) {
+    Column({ space: Space.xs }) {
+      if (this.searchOpen || this.query) {
         Row() {
-          Image($r('app.media.ui_search')).width(18).height(18).margin({ left: 12 }).accessibilityLevel('no')
+          Image($r('app.media.ui_search')).width(18).height(18).margin({ left: Space.sm }).accessibilityLevel('no')
           TextInput({ placeholder: '搜索会话、项目或消息', text: this.query })
-            .constraintSize({ minHeight: 44 }).layoutWeight(1).fontSize(14).backgroundColor(Color.Transparent)
-            .fontColor($r('app.color.ink')).padding({ left: 6, right: 8 })
+            .constraintSize({ minHeight: 40 }).layoutWeight(1).fontSize(FontSize.body).backgroundColor(Color.Transparent)
+            .fontColor($r('app.color.ink')).placeholderColor($r('app.color.placeholder')).padding({ left: 6, right: Space.xs })
             .onChange((value: string) => this.onSearch(value)).accessibilityText('搜索会话').id('thread-search')
             .onFocus(() => this.onSearchFocus(true)).onBlur(() => this.onSearchFocus(false))
-          if (this.query) {
-            Button('×', { type: ButtonType.Normal }).width(44).constraintSize({ minHeight: 44 })
-              .backgroundColor(Color.Transparent).fontColor($r('app.color.muted')).padding(0)
-              .accessibilityText('清除搜索').onClick(() => this.onSearch(''))
-          }
-        }.layoutWeight(1).backgroundColor($r('app.color.surface')).borderRadius(12)
-        Button({ type: ButtonType.Circle }) {
-          Image($r('app.media.ui_settings')).width(20).height(20)
-        }.width(44).height(44).backgroundColor($r('app.color.surface'))
-          .accessibilityText('设置与项目').onClick(this.onSettings)
-      }.width('100%')
-      Row({ space: 8 }) {
-        Button({ type: ButtonType.Normal }) {
-          Text(this.environmentFilter
-            ? (this.environmentEntries.find((entry: EnvironmentEntry) => entry.localId === this.environmentFilter)?.label || '环境')
-            : '所有环境')
-            .fontSize(13).fontColor($r('app.color.ink')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
-        }.layoutWeight(1).constraintSize({ minWidth: 44, minHeight: 44 }).padding({ left: 8, right: 8, top: 6, bottom: 6 })
-          .backgroundColor(this.environmentFilter ? $r('app.color.selected') : $r('app.color.surface')).borderRadius(12).onClick(this.onFilterEnvironment)
-          .accessibilityDescription('筛选环境')
-        Button({ type: ButtonType.Normal }) {
-          Text(this.projectFilterLabel || '所有项目')
-            .fontSize(13).fontColor($r('app.color.ink')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
-        }.layoutWeight(1).constraintSize({ minWidth: 44, minHeight: 44 }).padding({ left: 8, right: 8, top: 6, bottom: 6 })
-          .backgroundColor(this.projectFiltered ? $r('app.color.selected') : $r('app.color.surface')).borderRadius(12).onClick(this.onFilterProject)
-          .accessibilityDescription('筛选项目')
-      }.width('100%')
-    }.width('100%').padding({ left: 16, right: 16, top: 2, bottom: 10 })
+          Button({ type: ButtonType.Normal }) {
+            Text(this.query ? '清除' : '取消').fontSize(FontSize.callout).fontColor($r('app.color.primary_text'))
+          }.constraintSize({ minHeight: 40 }).padding({ left: Space.sm, right: Space.sm }).backgroundColor(Color.Transparent)
+            .accessibilityText(this.query ? '清除搜索' : '关闭搜索')
+            .onClick(() => { if (this.query) this.onSearch(''); else this.onCloseSearch(); })
+        }.width('100%').backgroundColor($r('app.color.group')).borderRadius(Radius.button)
+      }
+      if (this.environmentFilter || this.projectFiltered) {
+        Row({ space: Space.xs }) {
+          Image($r('app.media.ui_filter')).width(14).height(14).opacity(0.7).accessibilityLevel('no')
+          Text(this.filterLabel()).fontSize(FontSize.callout).fontColor($r('app.color.ink')).layoutWeight(1)
+            .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+          Button({ type: ButtonType.Normal }) {
+            Text('清除').fontSize(FontSize.callout).fontColor($r('app.color.primary_text'))
+          }.constraintSize({ minHeight: 32 }).padding({ left: Space.xs, right: Space.xs }).backgroundColor(Color.Transparent)
+            .accessibilityText('清除筛选').onClick(this.onClearFilters)
+        }.width('100%').padding({ left: Space.sm, right: Space.xxs }).constraintSize({ minHeight: 40 })
+          .backgroundColor($r('app.color.group')).borderRadius(Radius.button)
+          .accessibilityText('筛选：' + this.filterLabel()).onClick(this.onFilterEnvironment)
+      }
+    }.width('100%').padding({ left: Space.md, right: Space.md, top: (this.searchOpen || this.query || this.environmentFilter || this.projectFiltered) ? Space.xs : 0 })
   }
 
   @Builder
   sectionHeader(title: string, count: number, expanded: boolean, kind: string) {
-    Row({ space: 8 }) {
-      Text(title).fontSize(14).fontWeight(FontWeight.Medium).fontColor($r('app.color.ink'))
-      Text(String(count)).fontSize(12).fontColor($r('app.color.muted'))
-      Blank()
-      if (kind !== 'pinned') {
-        Image(expanded ? $r('app.media.ui_up') : $r('app.media.ui_down')).width(16).height(16)
-      }
-    }.width('100%').padding({ left: 20, right: 20, top: 12, bottom: 10 }).constraintSize({ minHeight: 44 })
-      .accessibilityText(title + '，' + count + ' 个会话' + (kind === 'pinned' ? '' : expanded ? '，已展开' : '，已折叠'))
-      .onClick(() => {
-        if (kind === 'pinned') return;
-        if (kind === 'working') this.onToggleWorking();
-        else if (kind === 'snoozed') this.onToggleSnoozed();
-        else this.onToggleSettled();
-      })
+    Column() {
+      SectionHeader({ title: kind === 'pinned' || expanded ? title : title + ' (' + count + ')',
+        collapsible: kind !== 'pinned', collapsed: !expanded,
+        onToggle: () => {
+          if (kind === 'working') this.onToggleWorking();
+          else if (kind === 'snoozed') this.onToggleSnoozed();
+          else this.onToggleSettled();
+        } })
+    }.padding({ left: Space.sm, right: Space.sm, top: Space.xxs })
+  }
+
+  @Builder
+  providerIcon(providerInstanceId: string) {
+    if (providerGlyph(providerInstanceId) === 'claude') {
+      Image($r('app.media.provider_claude')).width(15).height(15).accessibilityLevel('no')
+    } else if (providerGlyph(providerInstanceId) === 'openai') {
+      Image($r('app.media.provider_openai')).width(15).height(15).accessibilityLevel('no')
+    } else if (providerGlyph(providerInstanceId) === 'gemini') {
+      Image($r('app.media.provider_gemini')).width(15).height(15).accessibilityLevel('no')
+    } else if (providerGlyph(providerInstanceId) === 'cursor') {
+      Image($r('app.media.provider_cursor')).width(15).height(15).accessibilityLevel('no')
+    } else if (providerGlyph(providerInstanceId) === 'generic') {
+      Image($r('app.media.provider_generic')).width(15).height(15).accessibilityLevel('no')
+    }
+  }
+
+  private rowA11y(thread: ScopedThread): string {
+    const status = threadStatus(thread, this.nowMs);
+    const sub = threadSubline(status, thread.lastError, thread.environmentLabel);
+    return [thread.label, thread.projectLabel, status || this.rowTime(thread), sub.text, thread.pinnedAt ? '已固定' : '']
+      .filter((part: string) => !!part).join('，') + '。长按查看操作';
   }
 
   @Builder
   threadRow(thread: ScopedThread) {
-    Row({ space: 10 }) {
-      Column({ space: 3 }) {
-        Row({ space: 6 }) {
-          Text(thread.label).fontSize(16).fontColor($r('app.color.ink')).fontWeight(FontWeight.Medium).maxLines(2)
-            .textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
-          if (thread.pinnedAt) { Text('固定').fontSize(10).fontColor($r('app.color.primary')) }
-          if (thread.settledOverride === 'settled') { Text('已完成').fontSize(10).fontColor($r('app.color.muted')) }
-        }.width('100%')
-        Text(thread.projectLabel + (this.environmentEntries.length > 1 ? ' · ' + thread.environmentLabel : ''))
-          .fontSize(13).fontColor($r('app.color.muted')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%')
-        if (this.searchSnippet(thread)) {
-          Text(this.searchSnippet(thread)).fontSize(12).fontColor($r('app.color.ink')).maxLines(2)
-            .textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%')
-        }
-        Row({ space: 8 }) {
-          Text(threadStatus(thread, this.nowMs) || this.rowTime(thread)).fontSize(11)
-            .fontColor(threadStatus(thread, this.nowMs) ? $r('app.color.primary') : $r('app.color.muted'))
-          if (thread.branch) {
-            Text(thread.branch).fontSize(11).fontColor($r('app.color.muted')).maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
+    Column({ space: 3 }) {
+      Row({ space: Space.xs }) {
+        Column() {
+          ProjectMonogram({ projectId: thread.projectId, name: thread.projectLabel })
+        }.constraintSize({ minHeight: LineHeight.body }).justifyContent(FlexAlign.Center)
+        Text(thread.label).fontSize(FontSize.body).lineHeight(LineHeight.body)
+          .fontWeight(thread.settledOverride === 'settled' ? Weight.regular : Weight.medium)
+          .fontColor($r('app.color.ink')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
+        Row({ space: 4 }) {
+          if (thread.pinnedAt) {
+            Image($r('app.media.ui_pin')).width(12).height(12).accessibilityLevel('no')
           }
-        }.width('100%')
-      }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-        .onClick(() => this.onSelect(thread))
-        .bindContextMenu(this.rowMenu(thread), ResponseType.LongPress)
-      Button({ type: ButtonType.Circle }) {
-        Image($r('app.media.ui_more')).width(18).height(18)
-      }.width(44).height(44).backgroundColor(Color.Transparent)
-        .accessibilityText(thread.label + '，会话操作').bindMenu(this.rowMenu(thread))
-    }.width('100%').padding({ left: 20, right: 12, top: 10, bottom: 10 }).borderRadius(12)
+          if (threadStatus(thread, this.nowMs)) {
+            Image(this.statusIcon(threadStatus(thread, this.nowMs))).width(13).height(13).accessibilityLevel('no')
+            Text(threadStatus(thread, this.nowMs)).fontSize(FontSize.caption).fontWeight(Weight.bold)
+              .fontColor(this.statusColor(threadStatus(thread, this.nowMs))).maxLines(1)
+          } else {
+            Text(this.rowTime(thread)).fontSize(FontSize.caption).fontColor($r('app.color.muted')).maxLines(1)
+          }
+        }.constraintSize({ minHeight: LineHeight.body }).alignItems(VerticalAlign.Center)
+      }.width('100%').alignItems(VerticalAlign.Top)
+      Row({ space: 4 }) {
+        if (threadSubline(threadStatus(thread, this.nowMs), thread.lastError, thread.environmentLabel).error) {
+          Text(threadSubline(threadStatus(thread, this.nowMs), thread.lastError, thread.environmentLabel).text)
+            .fontSize(FontSize.caption).fontColor($r('app.color.danger')).maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
+        } else {
+          Image($r('app.media.ui_env_desktop')).width(12).height(12).accessibilityLevel('no')
+          Text(thread.environmentLabel).fontSize(FontSize.caption).fontColor($r('app.color.muted')).maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
+        }
+        this.providerIcon(thread.providerInstanceId)
+      }.width('100%').padding({ left: Sizes.monogram + Space.xs }).alignItems(VerticalAlign.Center)
+      if (this.searchSnippet(thread)) {
+        Text(this.searchSnippet(thread)).fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.ink'))
+          .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%')
+          .padding({ left: Sizes.monogram + Space.xs })
+      }
+    }.width('100%').padding({ left: Space.sm, right: Space.sm, top: 10, bottom: 10 }).borderRadius(20)
       .backgroundColor(this.isSelected(thread) ? $r('app.color.selected') : Color.Transparent)
+      .accessibilityGroup(true).accessibilityText(this.rowA11y(thread))
+      .onClick(() => this.onSelect(thread))
+      .bindContextMenu(this.rowMenu(thread), ResponseType.LongPress)
   }
 
   @Builder
@@ -211,35 +267,30 @@ export struct ThreadList {
   swipeEnd(thread: ScopedThread) {
     Row() {
       if (effectiveSnoozed(thread, this.nowMs)) {
-        Column({ space: 2 }) {
-          Text('◷').fontSize(18).fontColor($r('app.color.ink'))
-          Text('唤醒').fontSize(10).fontColor($r('app.color.ink'))
+        Column() {
+          Text('唤醒').fontSize(FontSize.callout).fontWeight(Weight.medium).fontColor($r('app.color.ink'))
         }.width(64).height('100%').justifyContent(FlexAlign.Center)
-          .backgroundColor($r('app.color.surface'))
+          .backgroundColor($r('app.color.group'))
           .onClick(() => this.onAction(thread, 'unsnooze'))
       } else if (this.caps(thread).settlement) {
-        Column({ space: 2 }) {
-          Text(thread.settledOverride === 'settled' ? '↶' : '✓').fontSize(18)
-            .fontColor(thread.settledOverride === 'settled' ? $r('app.color.ink') : $r('app.color.on_primary'))
-          Text(thread.settledOverride === 'settled' ? '取消' : 'Settle').fontSize(10)
-            .fontColor(thread.settledOverride === 'settled' ? $r('app.color.ink') : $r('app.color.on_primary'))
+        Column() {
+          Text(thread.settledOverride === 'settled' ? '取消完成' : '完成').fontSize(FontSize.callout).fontWeight(Weight.medium)
+            .fontColor(thread.settledOverride === 'settled' ? $r('app.color.ink') : $r('app.color.on_prominent'))
         }.width(64).height('100%').justifyContent(FlexAlign.Center)
-          .backgroundColor(thread.settledOverride === 'settled' ? $r('app.color.surface') : $r('app.color.primary'))
+          .backgroundColor(thread.settledOverride === 'settled' ? $r('app.color.group') : $r('app.color.prominent'))
           .onClick(() => this.onAction(thread, thread.settledOverride === 'settled' ? 'unsettle' : 'settle'))
       } else {
-        Column({ space: 2 }) {
-          Text('▣').fontSize(18).fontColor($r('app.color.ink'))
-          Text('归档').fontSize(10).fontColor($r('app.color.ink'))
+        Column() {
+          Text('归档').fontSize(FontSize.callout).fontWeight(Weight.medium).fontColor($r('app.color.ink'))
         }.width(64).height('100%').justifyContent(FlexAlign.Center)
-          .backgroundColor($r('app.color.surface'))
+          .backgroundColor($r('app.color.group'))
           .onClick(() => this.onAction(thread, 'archive'))
       }
       if (this.caps(thread).snooze && threadCanSnooze(thread, this.nowMs)) {
-        Column({ space: 2 }) {
-          Text('◷').fontSize(18).fontColor($r('app.color.ink'))
-          Text('暂缓').fontSize(10).fontColor($r('app.color.ink'))
+        Column() {
+          Text('暂缓').fontSize(FontSize.callout).fontWeight(Weight.medium).fontColor($r('app.color.ink'))
         }.width(64).height('100%').justifyContent(FlexAlign.Center)
-          .backgroundColor($r('app.color.surface'))
+          .backgroundColor($r('app.color.warning_bg'))
           .onClick(() => this.onSnooze(thread))
       }
     }.height('100%')
@@ -249,26 +300,28 @@ export struct ThreadList {
   rowItem(thread: ScopedThread) {
     ListItem() {
       this.threadRow(thread)
-    }.swipeAction({ end: this.swipeEnd(thread), edgeEffect: SwipeEdgeEffect.Spring })
+    }.padding({ left: Space.xs, right: Space.xs }).swipeAction({ end: this.swipeEnd(thread), edgeEffect: SwipeEdgeEffect.Spring })
   }
 
   build() {
     List({ space: 0 }) {
-      ListItem() { this.header() }
+      if (this.searchOpen || this.query || this.environmentFilter || this.projectFiltered) {
+        ListItem() { this.header() }
+      }
       if (this.loading) {
         ListItem() {
           Row({ space: 8 }) {
             LoadingProgress().width(18).height(18).color($r('app.color.muted'))
-            Text('正在同步环境列表').fontSize(13).fontColor($r('app.color.muted'))
-          }.padding(20)
+            Text('正在同步环境列表').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+          }.padding(Space.lg)
         }
       } else if (this.query.trim()) {
         if (this.shelves.matches.length === 0) {
           ListItem() {
             Column({ space: 8 }) {
-              Text('没有匹配的会话').fontSize(18).fontWeight(FontWeight.Medium)
-              Text('换一个关键词，或清除搜索。').fontSize(13).fontColor($r('app.color.muted'))
-            }.padding({ left: 20, right: 20, top: 24, bottom: 24 }).width('100%')
+              Text('没有匹配的会话').fontSize(FontSize.headline).fontWeight(Weight.semibold)
+              Text('换一个关键词，或清除搜索。').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+            }.padding({ left: Space.lg, right: Space.lg, top: Space.xl, bottom: Space.xl }).width('100%')
           }
         }
         ForEach(this.shelves.matches, (thread: ScopedThread) => {
@@ -277,17 +330,15 @@ export struct ThreadList {
       } else if (this.shelves.pinned.length + this.shelves.active.length + this.shelves.workingCount +
         this.shelves.snoozedCount + this.shelves.settledCount === 0) {
         ListItem() {
-          Column({ space: 10 }) {
+          Column({ space: Space.sm }) {
             if (this.environmentFilter || this.projectFiltered) {
-              Text('当前筛选没有会话').fontSize(18).fontWeight(FontWeight.Medium)
-              Button('清除筛选').backgroundColor($r('app.color.surface')).fontColor($r('app.color.primary'))
-                .constraintSize({ minHeight: 44 }).onClick(this.onClearFilters)
+              Text('当前筛选没有会话').fontSize(FontSize.headline).fontWeight(Weight.semibold)
+              AppButton({ label: '清除筛选', kind: 'secondary', onTap: () => this.onClearFilters() })
             } else {
-              Text('还没有会话').fontSize(18).fontWeight(FontWeight.Medium)
-              Button('＋ 新建任务').backgroundColor($r('app.color.primary')).fontColor($r('app.color.on_primary'))
-                .constraintSize({ minHeight: 44 }).onClick(this.onNewTask).accessibilityText('新建任务')
+              Text('还没有会话').fontSize(FontSize.headline).fontWeight(Weight.semibold)
+              Text('点右下角按钮，开始第一个任务。').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
             }
-          }.width('100%').padding({ left: 20, right: 20, top: 24, bottom: 24 })
+          }.width('100%').padding({ left: Space.lg, right: Space.lg, top: 64, bottom: Space.xl })
         }
       } else {
         if (this.shelves.pinned.length) {
@@ -326,13 +377,14 @@ export struct ThreadList {
               (thread: ScopedThread) => thread.localId + ':' + thread.id)
             if (this.shelves.settled.length > this.settledLimit) {
               ListItem() {
-                Button('显示更多已完成会话').width('100%').constraintSize({ minHeight: 44 }).backgroundColor(Color.Transparent)
-                  .fontColor($r('app.color.primary')).onClick(this.onShowMoreSettled)
+                AppButton({ label: '显示更多已完成会话', kind: 'text', fill: true, onTap: () => this.onShowMoreSettled() })
               }
             }
           }
         }
       }
     }.width('100%').layoutWeight(1).cachedCount(6).foregroundColor($r('app.color.ink'))
+      .contentStartOffset(Space.xs).contentEndOffset(this.bottomInset)
+      .scrollBar(BarState.Off)
   }
 }

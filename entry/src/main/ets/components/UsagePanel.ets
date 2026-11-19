@@ -6,10 +6,13 @@ import { UsageDayView, UsageAccount, UsageWindow, UsageBucketView, UsageSummaryV
 @Component
 export struct UsagePanel {
   connection: T3Client | undefined = undefined;
+  @Prop embedded: boolean = false;
+  @Prop bottomInset: number = 0;
+  onDetailChange: (open: boolean) => void = () => {};
   onBack: () => void = () => {};
   @State summary: UsageSummaryView | undefined = undefined;
   @State accounts: UsageAccount[] = [];
-  @State selectedAccount: string = '';
+  @State @Watch('selectedAccountChanged') selectedAccount: string = '';
   @State days: number = 7;
   @State provider: string = '';
   @State model: string = '';
@@ -39,6 +42,7 @@ export struct UsagePanel {
     }, 3000);
   }
   aboutToDisappear(): void { this.alive = false; clearInterval(this.timer); }
+  private selectedAccountChanged(): void { this.onDetailChange(this.selectedAccount.length > 0); }
   private async refresh(): Promise<void> {
     const connection = this.connection;
     if (!connection || this.busy) return;
@@ -124,13 +128,16 @@ export struct UsagePanel {
   build() {
     Column() {
       Row({ space: 8 }) {
-        Button({ type: ButtonType.Normal }) { Image($r('app.media.ui_back')).width(22).height(22) }
-          .width(44).height(44).backgroundColor(Color.Transparent).accessibilityText('返回')
-          .onClick(() => { if (this.selectedAccount) this.selectedAccount = ''; else this.onBack(); })
-        Text(this.selectedAccount ? '账号用量限额' : '用量').fontSize(20).layoutWeight(1)
+        if (!this.embedded || this.selectedAccount.length > 0) {
+          Button({ type: ButtonType.Normal }) { Image($r('app.media.ui_back')).width(22).height(22) }
+            .width(44).height(44).backgroundColor(Color.Transparent).accessibilityText('返回')
+            .onClick(() => { if (this.selectedAccount) this.selectedAccount = ''; else this.onBack(); })
+        }
+        Text(this.selectedAccount ? '账号用量限额' : '用量').fontSize(20).fontWeight(FontWeight.Medium).layoutWeight(1)
         Button('刷新').fontSize(14).backgroundColor(Color.Transparent).fontColor($r('app.color.primary'))
           .enabled(!this.busy && !!this.connection?.ready).onClick(() => { void this.refresh(); })
-      }.padding(8).width('100%')
+      }.padding({ left: !this.embedded || this.selectedAccount.length > 0 ? 8 : 16, right: 8, top: 4, bottom: 4 })
+        .constraintSize({ minHeight: 52 }).width('100%')
       Scroll() {
         Column({ space: 12 }) {
           if (!this.connection?.ready) { Text('请先连接一个环境').fontSize(15) }
@@ -184,7 +191,7 @@ export struct UsagePanel {
                 .accessibilityText(account.label + '，查看限额详情').onClick(() => { this.selectedAccount = account.id; })
             })
           }
-        }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: 16, right: 16, bottom: 28 })
+        }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: 16, right: 16, bottom: 28 + (this.embedded && !this.selectedAccount ? this.bottomInset : 0) })
       }.layoutWeight(1).width('100%').align(Alignment.TopStart)
     }.width('100%').height('100%').backgroundColor($r('app.color.canvas')).foregroundColor($r('app.color.ink'))
   }

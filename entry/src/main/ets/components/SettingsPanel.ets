@@ -57,6 +57,8 @@ export struct SettingsPanel {
   @State useLastProject: boolean = workspacePrefs.useLastProjectForNewThreads;
   @State savingLastProject: boolean = false;
   @Prop workingShelfEnabled: boolean = true;
+  @Prop embedded: boolean = false;
+  @Prop bottomInset: number = 0;
   onWorkingShelf: (enabled: boolean) => Promise<void> = async () => {};
 
   aboutToAppear(): void {
@@ -244,12 +246,14 @@ export struct SettingsPanel {
     } else {
     Column({ space: 0 }) {
       Row({ space: 6 }) {
-        Button({ type: ButtonType.Normal }) {
-          Image($r('app.media.ui_back')).width(22).height(22)
-        }.width(44).height(44).backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
-          .accessibilityText(this.section ? '返回设置' : '返回会话').onClick(() => { if (this.section) { this.section = ''; this.notice = ''; } else this.onBack(); })
+        if (!this.embedded || this.section.length > 0) {
+          Button({ type: ButtonType.Normal }) {
+            Image($r('app.media.ui_back')).width(22).height(22)
+          }.width(44).height(44).backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
+            .accessibilityText(this.section ? '返回设置' : '返回会话').onClick(() => { if (this.section) { this.section = ''; this.notice = ''; } else this.onBack(); })
+        }
         Text(this.section === 'diagnostics' ? '诊断' : this.section === 'about' ? '关于' : this.section === 'license' ? '开源许可' : '设置').fontSize(20).fontWeight(FontWeight.Medium).layoutWeight(1)
-      }.width('100%').padding({ left: 8, right: 12, top: 8, bottom: 6 })
+      }.width('100%').constraintSize({ minHeight: 52 }).padding({ left: !this.embedded || this.section.length > 0 ? 8 : 16, right: 12, top: 4, bottom: 4 })
       Scroll() {
         Column({ space: 14 }) {
           if (this.notice) {
@@ -458,7 +462,7 @@ export struct SettingsPanel {
           }
           }
 
-        }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: 16, right: 16, bottom: 20 })
+        }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: 16, right: 16, bottom: 20 + (this.embedded && !this.section ? this.bottomInset : 0) })
       }.width('100%').layoutWeight(1).align(Alignment.TopStart)
     }.width('100%').height('100%').foregroundColor($r('app.color.ink')).backgroundColor($r('app.color.canvas'))
     }

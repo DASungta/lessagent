@@ -243,6 +243,14 @@
     {
       "name": "monogram_8_bg",
       "value": "#ffe4e6"
+    },
+    {
+      "name": "tab_bar_bg",
+      "value": "#f4f4f5"
+    },
+    {
+      "name": "tab_bar_active",
+      "value": "#e0e0e5"
     }
   ]
 }

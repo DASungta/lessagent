@@ -15,6 +15,9 @@ export struct PullRequestsPanel {
   connection: T3Client | undefined = undefined;
   @Prop projectId: string = '';
   @Prop projectLabel: string = '';
+  @Prop embedded: boolean = false;
+  @Prop bottomInset: number = 0;
+  onDetailChange: (open: boolean) => void = () => {};
   onBack: () => void = () => {};
   onStatus: (value: string) => void = () => {};
   onCopy: (value: string) => void = () => {};
@@ -27,7 +30,7 @@ export struct PullRequestsPanel {
   @State errors: string[] = [];
   @State loading: boolean = false;
   @State error: string = '';
-  @State selected: PullRequestRow | undefined = undefined;
+  @State @Watch('selectedChanged') selected: PullRequestRow | undefined = undefined;
   @State detail: PullRequestDetailView | undefined = undefined;
   @State activity: PullRequestActivityView | undefined = undefined;
   @State tab: string = 'overview';
@@ -218,6 +221,10 @@ export struct PullRequestsPanel {
     finally { this.guideBusy = false; }
   }
 
+  private selectedChanged(): void {
+    this.onDetailChange(!!this.selected);
+  }
+
   private async runAction(action: string, mergeMethod: string = ''): Promise<void> {
     const connection = this.connection;
     if (!connection || this.busy) return;
@@ -380,14 +387,16 @@ export struct PullRequestsPanel {
   @Builder
   header() {
     Row({ space: 6 }) {
-      Button('‹').backgroundColor(Color.Transparent).fontColor($r('app.color.ink')).fontSize(24)
-        .width(40).height(40).onClick(() => {
-          if (this.selected) { this.closeDetail(); return; }
-          this.onBack();
-        })
+      if (!this.embedded || !!this.selected) {
+        Button('‹').backgroundColor(Color.Transparent).fontColor($r('app.color.ink')).fontSize(24)
+          .width(40).height(40).onClick(() => {
+            if (this.selected) { this.closeDetail(); return; }
+            this.onBack();
+          })
+      }
       Column({ space: 2 }) {
         Text(this.detail ? '#' + this.detail.number : this.selected ? '#' + this.selected.number : '拉取请求')
-          .fontSize(17).fontWeight(FontWeight.Medium).width('100%').maxLines(1)
+          .fontSize(this.embedded && !this.selected ? 20 : 17).fontWeight(FontWeight.Medium).width('100%').maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         Text(this.detail?.repository || this.selected?.repository || this.projectLabel || (this.projectId ? '当前项目' : '所有项目')).fontSize(11)
           .fontColor($r('app.color.muted')).width('100%')
@@ -396,7 +405,8 @@ export struct PullRequestsPanel {
         Button('刷新').fontSize(12).backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
           .onClick(() => { if (this.selected) void this.open(this.selected); })
       }
-    }.width('100%').padding({ left: 8, right: 8, top: 4, bottom: 4 })
+    }.width('100%').constraintSize({ minHeight: 52 })
+      .padding({ left: !this.embedded || !!this.selected ? 8 : 16, right: 8, top: 4, bottom: 4 })
   }
 
   @Builder
@@ -456,6 +466,7 @@ export struct PullRequestsPanel {
           }
         }
       }.width('100%').layoutWeight(1)
+        .contentEndOffset(this.embedded && !this.selected ? this.bottomInset : 0)
     }.width('100%').layoutWeight(1).padding(10)
   }
 
