@@ -193,6 +193,7 @@ export interface ChatMessage {
   role: string;
   text: string;
   streaming: boolean;
+  runId?: string;
   attachmentNames?: string[];
   timestamp?: string;
 }
@@ -204,6 +205,7 @@ export class ThreadState {
   notices: string = '';
   requests: Record<string, Object>[] = [];
   items: Record<string, Object>[] = [];
+  checkpoints: Record<string, Object>[] = [];
   details: Record<string, Object> = {};
   runs: Record<string, Object>[] = [];
   messageRecords: Record<string, Object>[] = [];
@@ -242,6 +244,7 @@ export class ThreadState {
       this.messages = [];
       for (const message of messages) this.upsert(record(message));
       this.requests = projection.runtimeRequests ? objects(projection.runtimeRequests).map(record) : [];
+      this.checkpoints = projection.checkpoints ? objects(projection.checkpoints).map(record) : [];
       this.items = visible.length ? visible : (projection.turnItems ? objects(projection.turnItems).map(record) : []);
       for (const item of this.items) this.upsertItemMessage(item);
       this.historyCursor = typeof item.historyCursor === 'string' ? item.historyCursor : '';
@@ -263,6 +266,7 @@ export class ThreadState {
       this.upsertItemMessage(payload);
     }
     else if (type === 'runtime-request.updated') this.merge(this.requests, record(event.payload));
+    else if (type === 'checkpoint.captured' || type === 'checkpoint.updated') this.merge(this.checkpoints, record(event.payload));
     else if (type === 'run.created' || type === 'run.updated') {
       const run = record(event.payload);
       this.merge(this.runs, run);
@@ -287,6 +291,7 @@ export class ThreadState {
     const streaming = payload.type === 'assistant_message' && payload.streaming === true;
     this.upsert({ id: payload.messageId, threadId: this.threadId, role,
       text: payload.text, streaming,
+      runId: typeof payload.runId === 'string' ? payload.runId : '',
       timestamp: typeof payload.completedAt === 'string' ? payload.completedAt :
         typeof payload.startedAt === 'string' ? payload.startedAt : undefined,
       attachmentNames: payload.attachments ? objects(payload.attachments).map((a: Object) => text(record(a).name)) : [] });
@@ -297,14 +302,20 @@ export class ThreadState {
     for (const item of items) {
       if (item.type === 'user_message' && typeof item.messageId === 'string' && typeof item.text === 'string') {
         const names = item.attachments ? objects(item.attachments).map((a: Object) => text(record(a).name)) : [];
-        if (item.text.trim() || names.length) older.push({ id: item.messageId, role: 'user', text: item.text,
-          streaming: false, timestamp: typeof item.createdAt === 'string' ? item.createdAt : undefined,
-          attachmentNames: names });
+        if (item.text.trim() || names.length) {
+          const entry: ChatMessage = { id: item.messageId, role: 'user', text: item.text,
+            streaming: false, timestamp: typeof item.createdAt === 'string' ? item.createdAt : undefined,
+            attachmentNames: names };
+          if (typeof item.runId === 'string' && item.runId) entry.runId = item.runId;
+          older.push(entry);
+        }
       } else if (item.type === 'assistant_message' && typeof item.messageId === 'string' && typeof item.text === 'string') {
-        older.push({ id: item.messageId, role: 'assistant', text: item.text, streaming: item.streaming === true,
+        const entry: ChatMessage = { id: item.messageId, role: 'assistant', text: item.text, streaming: item.streaming === true,
           timestamp: typeof item.completedAt === 'string' ? item.completedAt :
             typeof item.createdAt === 'string' ? item.createdAt : undefined,
-          attachmentNames: item.attachments ? objects(item.attachments).map((a: Object) => text(record(a).name)) : [] });
+          attachmentNames: item.attachments ? objects(item.attachments).map((a: Object) => text(record(a).name)) : [] };
+        if (typeof item.runId === 'string' && item.runId) entry.runId = item.runId;
+        older.push(entry);
       }
       this.merge(this.items, item);
     }
@@ -340,6 +351,9 @@ export class ThreadState {
         Array.isArray(message.attachmentNames) ? (message.attachmentNames as Object[]).map((name: Object) => text(name)) : []
     };
     const index = this.messages.findIndex((entry: ChatMessage) => entry.id === next.id);
+    const runId = typeof message.runId === 'string' && message.runId ? message.runId :
+      (index >= 0 ? this.messages[index].runId : undefined);
+    if (runId) next.runId = runId;
     if (index < 0) this.messages.push(next);
     else this.messages[index] = next;
   }

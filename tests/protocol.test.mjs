@@ -212,3 +212,37 @@ test('nonfatal stream first-frame timeout interrupts only its subscription and k
  assert.deepEqual(await next,{ok:true});
  assert.equal(sent.some(x=>x.tag==='terminal.close'),false);
 });
+
+test('ThreadState parses projection.checkpoints, updates on checkpoint.captured, and preserves message runId', () => {
+  const state = new ThreadState('thread-cp');
+  state.apply({
+    kind: 'snapshot',
+    snapshotSequence: 1,
+    projection: {
+      thread: { id: 'thread-cp' },
+      messages: [
+        { id: 'u1', threadId: 'thread-cp', role: 'user', text: 'fix', streaming: false, runId: 'run-1' },
+        { id: 'a1', threadId: 'thread-cp', role: 'assistant', text: 'done', streaming: false, runId: 'run-1' }
+      ],
+      checkpoints: [
+        { id: 'cp-1', runId: 'run-1', status: 'ready', files: [{ path: 'a.ts', kind: 'modified', additions: 5, deletions: 2 }] }
+      ]
+    }
+  });
+  assert.equal(state.messages[0].runId, 'run-1');
+  assert.equal(state.messages[1].runId, 'run-1');
+  assert.equal(state.checkpoints.length, 1);
+  assert.equal(state.checkpoints[0].id, 'cp-1');
+
+  state.apply({
+    kind: 'event',
+    sequence: 2,
+    event: {
+      threadId: 'thread-cp',
+      type: 'checkpoint.captured',
+      payload: { id: 'cp-2', runId: 'run-2', status: 'ready', files: [] }
+    }
+  });
+  assert.equal(state.checkpoints.length, 2);
+  assert.equal(state.checkpoints[1].id, 'cp-2');
+});

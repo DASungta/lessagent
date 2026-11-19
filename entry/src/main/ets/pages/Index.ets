@@ -29,8 +29,11 @@ import { BranchView, branches, ComposerContextRecord, ComposerDraft, composerDra
 import { draftStore } from '../storage/DraftStore';
 import { ComposerCommandPanel } from '../components/ComposerCommandPanel';
 import { ThreadExtrasPanel } from '../components/ThreadExtrasPanel';
-import { ThreadActivity } from '../components/ThreadActivity';
-import { ActivityLine, isPlainUserText } from '../protocol/ThreadItems';
+import { MessageWorkSlot, ThreadActivity } from '../components/ThreadActivity';
+import {
+  ActivityLine, emptyWorkMap, groupWorkByMessage, isPlainUserText,
+  MessageWorkMap, TurnWorkGroup, visibleWorkItems
+} from '../protocol/ThreadItems';
 import { TaskSettingsPanel } from '../components/TaskSettingsPanel';
 import { QueuePanel } from '../components/QueuePanel';
 import { PeerLinkForm } from '../components/PeerLinkForm';
@@ -227,6 +230,10 @@ struct Index {
   @State homeTabDetailOpen: boolean = false;
   @State showTools: boolean = false;
   @State threadTerminalEnabled: boolean = false;
+  @Provide('t3CanOpenDiff') canOpenDiff: boolean = false;
+  @Provide('t3WorkMap') workMap: MessageWorkMap = emptyWorkMap();
+  @Provide('t3ExpandedWork') expandedWorkGroups: Record<string, boolean> = {};
+  private lastWorkThreadKey: string = '';
   @State panelOpen: boolean = false;
   @State panel: string = 'server';
   @State address: string = '';
@@ -357,14 +364,18 @@ struct Index {
         const current = this.linkItems.find((item: LinkRequestView) => item.id === this.activeLink?.id);
         if (current && current.status !== 'pending') this.panelOpen = false;
       }
-      this.tools = !this.draftMode && client.thread ? client.thread.items.filter((row: Record<string, Object>) =>
-        row.type !== 'assistant_message' && row.type !== 'user_message' &&
-        row.type !== 'link_request' && row.type !== 'secret_request' && row.type !== 'user_input_request' && row.type !== 'approval_request')
-        .map((row: Record<string, Object>) => String(row.type) + ' · ' + String(row.status) +
-          (typeof row.title === 'string' ? ' · ' + row.title : '') +
-          (typeof row.input === 'string' ? '\n' + row.input : '') +
-          (typeof row.output === 'string' ? '\n' + row.output : '') +
-          (row.outputOmitted === true ? '\n工具输出未随快照提供' : '')) : [];
+      const workKey = this.selectedLocalId + ':' + (client.thread ? client.thread.threadId : '');
+      if (workKey !== this.lastWorkThreadKey) {
+        this.lastWorkThreadKey = workKey;
+        this.expandedWorkGroups = {};
+      }
+      this.workMap = !this.draftMode && client.thread
+        ? groupWorkByMessage(client.thread.items, client.thread.runs, client.thread.checkpoints, this.messages)
+        : emptyWorkMap();
+      this.tools = !this.draftMode && client.thread && this.workMap.hasVisible
+        ? visibleWorkItems(client.thread.items).map((row: Record<string, Object>) => String(row.type) + ' · ' + String(row.status))
+        : [];
+      this.canOpenDiff = !this.draftMode && !!this.currentWorkspace();
       if (client.thread && !this.draftMode) {
         this.threadId = client.thread.threadId;
         if (this.page === 'chat') {
@@ -605,6 +616,9 @@ struct Index {
       this.draftMode = false;
       if (next) next.draftScope = '';
       this.messages = []; this.source.update([]); this.actions = []; this.tools = [];
+      this.workMap = { before: {}, afterUser: {}, hasVisible: false, revision: '' };
+      this.expandedWorkGroups = {};
+      this.canOpenDiff = false;
       this.projectId = ''; this.modelIndex = 0;
       if (!this.savingShare || this.page !== 'share') this.page = 'sessions';
       this.threadId = next?.thread?.threadId || next?.recovery?.threadId || '';
@@ -1409,6 +1423,8 @@ struct Index {
     client.bindDraftAttachments(client.draftScope);
     this.branches = []; this.branchesLoading = false; this.commandPanel = '';
     this.messages = []; this.source.update([]); this.actions = []; this.tools = []; this.linkItems = [];
+    this.workMap = { before: {}, afterUser: {}, hasVisible: false, revision: '' };
+    this.expandedWorkGroups = {}; this.canOpenDiff = false;
     this.queued = []; this.extraPlans = []; this.extraSubagents = []; this.extraBackground = [];
     this.extraGuest = undefined; this.extraUsage = undefined;
     this.page = 'chat'; this.panelOpen = false; this.sendMode = 'auto';
@@ -1826,6 +1842,9 @@ struct Index {
     try {
       await client.watch(id);
       this.page = 'chat'; this.showTools = false; this.panelOpen = false;
+      this.expandedWorkGroups = {};
+      this.lastWorkThreadKey = this.selectedLocalId + ':' + id;
+      this.canOpenDiff = !this.draftMode && !!this.currentWorkspace();
       this.threadTerminalEnabled = this.ready && !this.draftMode && !!this.currentWorkspace() && client.canScope('terminal:read') !== false;
       const thread = this.scopedThreads.find((item: ScopedThread) => item.localId === this.selectedLocalId && item.id === id);
       if (thread && !thread.archivedAt) this.rememberProject(thread.projectId);
@@ -2692,6 +2711,43 @@ struct Index {
       .accessibilityText('回复：' + message.text)
   }
 
+  private toggleWorkGroup(group: TurnWorkGroup): void {
+    const next: Record<string, boolean> = {};
+    for (const key of Object.keys(this.expandedWorkGroups)) {
+      next[key] = this.expandedWorkGroups[key];
+    }
+    const current = next[group.groupId] !== undefined ? next[group.groupId] : group.defaultExpanded;
+    next[group.groupId] = !current;
+    this.expandedWorkGroups = next;
+  }
+
+  @Builder
+  turnWorkView(group: TurnWorkGroup) {
+    ThreadActivity({
+      connection: client,
+      groupId: group.groupId,
+      items: group.items,
+      prominentItems: group.prominent,
+      headerLabel: group.runMeta ? group.runMeta.headerLabel : '',
+      summaryLabel: group.summary.label,
+      failureLabel: group.summary.failureLabel,
+      checkpointText: group.checkpoint ? group.checkpoint.label : '',
+      checkpointAdditions: group.checkpoint ? group.checkpoint.additionsText : '',
+      checkpointDeletions: group.checkpoint ? group.checkpoint.deletionsText : '',
+      checkpointFiles: group.checkpoint ? group.checkpoint.filePaths.join('\n') : '',
+      checkpointAccessible: group.checkpoint ? group.checkpoint.accessibleLabel : '',
+      isRunning: group.runMeta ? group.runMeta.running : group.summary.running,
+      isInterrupted: group.runMeta ? group.runMeta.interrupted : false,
+      defaultExpanded: group.defaultExpanded,
+      canOpenDiff: this.canOpenDiff,
+      revision: group.revision,
+      onToggleGroup: () => this.toggleWorkGroup(group),
+      onCopy: (value: string) => { void this.copy(value); },
+      onReference: (line: ActivityLine) => this.addTerminalContext(line),
+      onOpenDiff: () => this.openReview()
+    })
+  }
+
   @Builder
   chatPage() {
     if (this.draftMode) {
@@ -2734,25 +2790,47 @@ struct Index {
       }
       LazyForEach(this.source, (message: ChatMessage) => {
         ListItem() {
-          Column({ space: 4 }) {
-            if (message.role === 'user') {
-              this.userBubble(message)
-            } else {
-              this.assistantBlock(message)
+          Column({ space: 0 }) {
+            if (message.role !== 'user' && !this.draftMode) {
+              MessageWorkSlot({
+                connection: client,
+                messageId: message.id,
+                slotKind: 'before',
+                onToggleGroup: (group: TurnWorkGroup) => this.toggleWorkGroup(group),
+                onCopy: (value: string) => { void this.copy(value); },
+                onReference: (line: ActivityLine) => this.addTerminalContext(line),
+                onOpenDiff: () => this.openReview()
+              })
             }
-            if (this.messageTime(message.timestamp)) {
-              Text(this.messageTime(message.timestamp)).fontSize(FontSize.badge).fontColor($r('app.color.muted'))
-                .width('100%').textAlign(message.role === 'user' ? TextAlign.End : TextAlign.Start)
+            Column({ space: 4 }) {
+              if (message.role === 'user') {
+                this.userBubble(message)
+              } else {
+                this.assistantBlock(message)
+              }
+              if (this.messageTime(message.timestamp)) {
+                Text(this.messageTime(message.timestamp)).fontSize(FontSize.badge).fontColor($r('app.color.muted'))
+                  .width('100%').textAlign(message.role === 'user' ? TextAlign.End : TextAlign.Start)
+              }
+            }.width('100%')
+              .bindContextMenu(this.messageMenu(message), ResponseType.LongPress)
+            if (message.role === 'user' && !this.draftMode) {
+              MessageWorkSlot({
+                connection: client,
+                messageId: message.id,
+                slotKind: 'afterUser',
+                onToggleGroup: (group: TurnWorkGroup) => this.toggleWorkGroup(group),
+                onCopy: (value: string) => { void this.copy(value); },
+                onReference: (line: ActivityLine) => this.addTerminalContext(line),
+                onOpenDiff: () => this.openReview()
+              })
             }
           }.width('100%')
-            .bindContextMenu(this.messageMenu(message), ResponseType.LongPress)
         }
       }, (message: ChatMessage) => JSON.stringify(message))
-      if (!this.draftMode && client.thread && this.tools.length > 0) {
+      if (!this.draftMode && this.workMap.tail) {
         ListItem() {
-          ThreadActivity({ connection: client, items: client.thread.items,
-            onCopy: (value: string) => { void this.copy(value); },
-            onReference: (line: ActivityLine) => this.addTerminalContext(line) })
+          this.turnWorkView(this.workMap.tail)
         }
       }
       ForEach(this.actions, (card: ActionCard) => { ListItem() { RequestCard({ card, connection: client }) } }, (card: ActionCard) => this.selectedLocalId + ':' + card.id)
