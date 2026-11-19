@@ -1,0 +1,28 @@
+{
+  "device": "23E0224122000135",
+  "checkedAt": "2026-11-16T21:00:24.180747+08:00",
+  "ordinaryProductTestEpoch": 109,
+  "results": [
+    {
+      "mode": "warm",
+      "systemUriResolved": true,
+      "addressStaged": true,
+      "confirmationVisible": true,
+      "directoryUnchanged": true,
+      "grantUnconsumed": true,
+      "newProcess": false
+    },
+    {
+      "mode": "cold",
+      "systemUriResolved": true,
+      "addressStaged": true,
+      "confirmationVisible": true,
+      "directoryUnchanged": true,
+      "grantUnconsumed": true,
+      "newProcess": true
+    }
+  ],
+  "maliciousInnerUrlRejected": true,
+  "noAutomaticPairing": true,
+  "cameraRecognitionProven": false
+}

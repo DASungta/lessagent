@@ -1,0 +1,70 @@
+{
+  "texts": [
+    "Harmony 新会话",
+    "R1 isolated A",
+    "上次提交结果未知；已同步完整快照，请核对后确认，禁止自动重发",
+    "开始对话",
+    "描述你想完成的任务。",
+    "核对上次提交",
+    "同步原会话并核对结果后，才能再次发送。",
+    "同步会话",
+    "已核对提交结果",
+    "核对提交结果",
+    "设置",
+    "18, :, 17",
+    "18",
+    ":",
+    "17",
+    "78"
+  ],
+  "controls": [
+    {
+      "text": "",
+      "description": "",
+      "enabled": "true",
+      "bounds": "[65,143][208,286]"
+    },
+    {
+      "text": "",
+      "description": "",
+      "enabled": "true",
+      "bounds": "[1052,143][1195,286]"
+    },
+    {
+      "text": "同步会话",
+      "description": "",
+      "enabled": "true",
+      "bounds": "[500,1110][761,1253]"
+    },
+    {
+      "text": "已核对提交结果",
+      "description": "",
+      "enabled": "true",
+      "bounds": "[419,1286][842,1429]"
+    },
+    {
+      "text": "核对提交结果",
+      "description": "",
+      "enabled": "true",
+      "bounds": "[65,2271][378,2414]"
+    },
+    {
+      "text": "",
+      "description": "",
+      "enabled": "true",
+      "bounds": "[1052,2271][1195,2414]"
+    },
+    {
+      "text": "",
+      "description": "",
+      "enabled": "true",
+      "bounds": "[40,2450][183,2593]"
+    },
+    {
+      "text": "",
+      "description": "",
+      "enabled": "false",
+      "bounds": "[1064,2437][1207,2580]"
+    }
+  ]
+}

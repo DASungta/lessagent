@@ -1,0 +1,12 @@
+{
+  "device": "23E0224122000135",
+  "checkedAt": "2026-11-16T21:36:34.993380+08:00",
+  "ordinaryProductTestEpoch": 109,
+  "freshCameraGrantConsumedOnlyAfterRecordedExplicitConfirmation": true,
+  "bothEnvironmentsConnected": true,
+  "knownBDirectoryBytesUnchanged": true,
+  "environmentCount": 2,
+  "cameraPixelsCaptured": false,
+  "noAutomaticPairingEvidence": "camera-physical-before-confirm-native.json",
+  "firstPhysicalAddNote": "After prior B removal the first physical QR produced B; its confirmation timing was not captured, so the no-auto gate was repeated with a fresh code."
+}

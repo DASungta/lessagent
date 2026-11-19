@@ -1,0 +1,8 @@
+{
+  "settingsTests": 7,
+  "build": "successful",
+  "installed": true,
+  "hapSha256": "f07aa62561e2dca00350da959faa56296a699c20da5fcc1b1582f6e5beb8ad1d",
+  "liveAsyncCountAcceptance": "project count 2 -> 3 -> 2; environment/archive not separately exercised",
+  "liveProjectCountAcceptance": true
+}

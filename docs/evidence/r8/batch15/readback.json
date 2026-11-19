@@ -1,0 +1,12 @@
+{
+  "launcherMenu": [
+    "\u65b0\u4efb\u52a1",
+    "\u4f1a\u8bdd\u5217\u8868"
+  ],
+  "realLauncherLongPress": true,
+  "coldSessions": true,
+  "coldNewTask": "project-picker after reconnect",
+  "hotSessionsFromChat": true,
+  "autoSend": false,
+  "widgetImplemented": false
+}

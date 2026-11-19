@@ -1,0 +1,64 @@
+{
+  "color": [
+    {
+      "name": "canvas",
+      "value": "#121214"
+    },
+    {
+      "name": "surface",
+      "value": "#1c1c1f"
+    },
+    {
+      "name": "ink",
+      "value": "#f4f4f5"
+    },
+    {
+      "name": "muted",
+      "value": "#a1a1aa"
+    },
+    {
+      "name": "selected",
+      "value": "#2a2a2e"
+    },
+    {
+      "name": "danger",
+      "value": "#ff8a8a"
+    },
+    {
+      "name": "border",
+      "value": "#2e2e33"
+    },
+    {
+      "name": "composer",
+      "value": "#1c1c1f"
+    },
+    {
+      "name": "start_window_background",
+      "value": "#121214"
+    },
+    {
+      "name": "primary",
+      "value": "#6f9bff"
+    },
+    {
+      "name": "on_primary",
+      "value": "#0b0b0d"
+    },
+    {
+      "name": "diff_add",
+      "value": "#12351f"
+    },
+    {
+      "name": "diff_add_ink",
+      "value": "#7ee2a8"
+    },
+    {
+      "name": "diff_del",
+      "value": "#3a1518"
+    },
+    {
+      "name": "diff_del_ink",
+      "value": "#ff9aa2"
+    }
+  ]
+}

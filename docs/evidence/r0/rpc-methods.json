@@ -1,0 +1,3672 @@
+[
+  {
+    "symbol": "projectsListEntries",
+    "wire": "projects.listEntries",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 418,
+      "source": "projectsListEntries: \"projects.listEntries\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1387,
+        "source": "const WsProjectsListEntriesRpc = Rpc.make(WS_METHODS.projectsListEntries, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "projectsListIgnoredFiles",
+    "wire": "projects.listIgnoredFiles",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 419,
+      "source": "projectsListIgnoredFiles: \"projects.listIgnoredFiles\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1393,
+        "source": "const WsProjectsListIgnoredFilesRpc = Rpc.make(WS_METHODS.projectsListIgnoredFiles, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "projectsReadFile",
+    "wire": "projects.readFile",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 420,
+      "source": "projectsReadFile: \"projects.readFile\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1399,
+        "source": "const WsProjectsReadFileRpc = Rpc.make(WS_METHODS.projectsReadFile, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "projectsSearchContents",
+    "wire": "projects.searchContents",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 421,
+      "source": "projectsSearchContents: \"projects.searchContents\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1381,
+        "source": "const WsProjectsSearchContentsRpc = Rpc.make(WS_METHODS.projectsSearchContents, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "projectsSearchEntries",
+    "wire": "projects.searchEntries",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 422,
+      "source": "projectsSearchEntries: \"projects.searchEntries\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1375,
+        "source": "const WsProjectsSearchEntriesRpc = Rpc.make(WS_METHODS.projectsSearchEntries, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "projectsWriteFile",
+    "wire": "projects.writeFile",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 423,
+      "source": "projectsWriteFile: \"projects.writeFile\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1405,
+        "source": "const WsProjectsWriteFileRpc = Rpc.make(WS_METHODS.projectsWriteFile, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "projectsMutate",
+    "wire": "projects.mutate",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 424,
+      "source": "projectsMutate: \"projects.mutate\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1411,
+        "source": "const WsProjectsMutateRpc = Rpc.make(WS_METHODS.projectsMutate, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "projectsEnsureScratch",
+    "wire": "projects.ensureScratch",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 425,
+      "source": "projectsEnsureScratch: \"projects.ensureScratch\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1417,
+        "source": "const WsProjectsEnsureScratchRpc = Rpc.make(WS_METHODS.projectsEnsureScratch, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "projectsCreateNew",
+    "wire": "projects.createNew",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 426,
+      "source": "projectsCreateNew: \"projects.createNew\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1423,
+        "source": "const WsProjectsCreateNewRpc = Rpc.make(WS_METHODS.projectsCreateNew, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "projectsCreateFromThread",
+    "wire": "projects.createFromThread",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 427,
+      "source": "projectsCreateFromThread: \"projects.createFromThread\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1429,
+        "source": "const WsProjectsCreateFromThreadRpc = Rpc.make(WS_METHODS.projectsCreateFromThread, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 45,
+        "source": "[WS_METHODS.projectsCreateFromThread]: AuthOrchestrationOperateScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "shellOpenInEditor",
+    "wire": "shell.openInEditor",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 429,
+      "source": "shellOpenInEditor: \"shell.openInEditor\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1435,
+        "source": "const WsShellOpenInEditorRpc = Rpc.make(WS_METHODS.shellOpenInEditor, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "filesystemBrowse",
+    "wire": "filesystem.browse",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 431,
+      "source": "filesystemBrowse: \"filesystem.browse\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1446,
+        "source": "const WsFilesystemBrowseRpc = Rpc.make(WS_METHODS.filesystemBrowse, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "filesystemGetMetadata",
+    "wire": "filesystem.getMetadata",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 432,
+      "source": "filesystemGetMetadata: \"filesystem.getMetadata\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1440,
+        "source": "const WsFilesystemGetMetadataRpc = Rpc.make(WS_METHODS.filesystemGetMetadata, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "agentSessionsScan",
+    "wire": "agentSessions.scan",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 433,
+      "source": "agentSessionsScan: \"agentSessions.scan\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1452,
+        "source": "const WsAgentSessionsScanRpc = Rpc.make(WS_METHODS.agentSessionsScan, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "agentSessionsImport",
+    "wire": "agentSessions.import",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 434,
+      "source": "agentSessionsImport: \"agentSessions.import\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1458,
+        "source": "const WsAgentSessionsImportRpc = Rpc.make(WS_METHODS.agentSessionsImport, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "assetsCreateUrl",
+    "wire": "assets.createUrl",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 435,
+      "source": "assetsCreateUrl: \"assets.createUrl\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1469,
+        "source": "const WsAssetsCreateUrlRpc = Rpc.make(WS_METHODS.assetsCreateUrl, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "assetsPersistChatAttachments",
+    "wire": "assets.persistChatAttachments",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 436,
+      "source": "assetsPersistChatAttachments: \"assets.persistChatAttachments\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1475,
+        "source": "const WsAssetsPersistChatAttachmentsRpc = Rpc.make(WS_METHODS.assetsPersistChatAttachments, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "attachmentsCreateUploadUrl",
+    "wire": "attachments.createUploadUrl",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 437,
+      "source": "attachmentsCreateUploadUrl: \"attachments.createUploadUrl\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1481,
+        "source": "const WsAttachmentsCreateUploadUrlRpc = Rpc.make(WS_METHODS.attachmentsCreateUploadUrl, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "attachmentsDelete",
+    "wire": "attachments.delete",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 438,
+      "source": "attachmentsDelete: \"attachments.delete\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1487,
+        "source": "const WsAttachmentsDeleteRpc = Rpc.make(WS_METHODS.attachmentsDelete, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "mcpAppsCallTool",
+    "wire": "mcpApps.callTool",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 440,
+      "source": "mcpAppsCallTool: \"mcpApps.callTool\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1492,
+        "source": "const WsMcpAppsCallToolRpc = Rpc.make(WS_METHODS.mcpAppsCallTool, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "mcpAppsToolInfo",
+    "wire": "mcpApps.toolInfo",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 441,
+      "source": "mcpAppsToolInfo: \"mcpApps.toolInfo\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1498,
+        "source": "const WsMcpAppsToolInfoRpc = Rpc.make(WS_METHODS.mcpAppsToolInfo, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "mcpAppsReadResource",
+    "wire": "mcpApps.readResource",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 442,
+      "source": "mcpAppsReadResource: \"mcpApps.readResource\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1509,
+        "source": "const WsMcpAppsReadResourceRpc = Rpc.make(WS_METHODS.mcpAppsReadResource, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "mcpAppsUpdateModelContext",
+    "wire": "mcpApps.updateModelContext",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 443,
+      "source": "mcpAppsUpdateModelContext: \"mcpApps.updateModelContext\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1504,
+        "source": "const WsMcpAppsUpdateModelContextRpc = Rpc.make(WS_METHODS.mcpAppsUpdateModelContext, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "providerUploadFeedback",
+    "wire": "provider.uploadFeedback",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 445,
+      "source": "providerUploadFeedback: \"provider.uploadFeedback\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1515,
+        "source": "const WsProviderUploadFeedbackRpc = Rpc.make(WS_METHODS.providerUploadFeedback, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "providerAuthStart",
+    "wire": "provider.auth.start",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 446,
+      "source": "providerAuthStart: \"provider.auth.start\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 711,
+        "source": "const WsProviderAuthStartRpc = Rpc.make(WS_METHODS.providerAuthStart, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "providerConsumeResetCredit",
+    "wire": "provider.consumeResetCredit",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 447,
+      "source": "providerConsumeResetCredit: \"provider.consumeResetCredit\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 705,
+        "source": "const WsProviderConsumeResetCreditRpc = Rpc.make(WS_METHODS.providerConsumeResetCredit, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "providerAuthComplete",
+    "wire": "provider.auth.complete",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 448,
+      "source": "providerAuthComplete: \"provider.auth.complete\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 723,
+        "source": "const WsProviderAuthCompleteRpc = Rpc.make(WS_METHODS.providerAuthComplete, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "chatGptReconnectProfile",
+    "wire": "provider.chatgpt.reconnect-profile",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 449,
+      "source": "chatGptReconnectProfile: \"provider.chatgpt.reconnect-profile\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 729,
+        "source": "const WsChatGptReconnectProfileRpc = Rpc.make(WS_METHODS.chatGptReconnectProfile, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "chatGptImportProfile",
+    "wire": "provider.chatgpt.import-profile",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 450,
+      "source": "chatGptImportProfile: \"provider.chatgpt.import-profile\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 734,
+        "source": "const WsChatGptImportProfileRpc = Rpc.make(WS_METHODS.chatGptImportProfile, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "chatGptHandoffSubscribe",
+    "wire": "provider.chatgpt.handoff.subscribe",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 451,
+      "source": "chatGptHandoffSubscribe: \"provider.chatgpt.handoff.subscribe\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 739,
+        "source": "const WsChatGptHandoffSubscribeRpc = Rpc.make(WS_METHODS.chatGptHandoffSubscribe, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "providerAuthRespond",
+    "wire": "provider.auth.respond",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 452,
+      "source": "providerAuthRespond: \"provider.auth.respond\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 717,
+        "source": "const WsProviderAuthRespondRpc = Rpc.make(WS_METHODS.providerAuthRespond, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "providerAuthCancel",
+    "wire": "provider.auth.cancel",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 453,
+      "source": "providerAuthCancel: \"provider.auth.cancel\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 746,
+        "source": "const WsProviderAuthCancelRpc = Rpc.make(WS_METHODS.providerAuthCancel, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "providerAuthRemoveMethod",
+    "wire": "provider.auth.removeMethod",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 454,
+      "source": "providerAuthRemoveMethod: \"provider.auth.removeMethod\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 752,
+        "source": "const WsProviderAuthRemoveMethodRpc = Rpc.make(WS_METHODS.providerAuthRemoveMethod, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 20,
+        "source": "[WS_METHODS.providerAuthRemoveMethod]: AuthProvidersManageScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "providerAuthLogout",
+    "wire": "provider.auth.logout",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 455,
+      "source": "providerAuthLogout: \"provider.auth.logout\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 758,
+        "source": "const WsProviderAuthLogoutRpc = Rpc.make(WS_METHODS.providerAuthLogout, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "providerAuthSubscribe",
+    "wire": "provider.auth.subscribe",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 456,
+      "source": "providerAuthSubscribe: \"provider.auth.subscribe\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 764,
+        "source": "const WsProviderAuthSubscribeRpc = Rpc.make(WS_METHODS.providerAuthSubscribe, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "providerInstallStart",
+    "wire": "provider.install.start",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 457,
+      "source": "providerInstallStart: \"provider.install.start\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 771,
+        "source": "const WsProviderInstallStartRpc = Rpc.make(WS_METHODS.providerInstallStart, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "providerInstallCancel",
+    "wire": "provider.install.cancel",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 458,
+      "source": "providerInstallCancel: \"provider.install.cancel\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 777,
+        "source": "const WsProviderInstallCancelRpc = Rpc.make(WS_METHODS.providerInstallCancel, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "providerInstallSubscribe",
+    "wire": "provider.install.subscribe",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 459,
+      "source": "providerInstallSubscribe: \"provider.install.subscribe\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 783,
+        "source": "const WsProviderInstallSubscribeRpc = Rpc.make(WS_METHODS.providerInstallSubscribe, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "providerInstallRemove",
+    "wire": "provider.install.remove",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 460,
+      "source": "providerInstallRemove: \"provider.install.remove\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 790,
+        "source": "const WsProviderInstallRemoveRpc = Rpc.make(WS_METHODS.providerInstallRemove, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "vcsPull",
+    "wire": "vcs.pull",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 462,
+      "source": "vcsPull: \"vcs.pull\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1541,
+        "source": "const WsVcsPullRpc = Rpc.make(WS_METHODS.vcsPull, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 56,
+        "source": "[WS_METHODS.vcsPull]: AuthSourceControlWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "vcsRefreshStatus",
+    "wire": "vcs.refreshStatus",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 463,
+      "source": "vcsRefreshStatus: \"vcs.refreshStatus\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1547,
+        "source": "const WsVcsRefreshStatusRpc = Rpc.make(WS_METHODS.vcsRefreshStatus, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "vcsListRefs",
+    "wire": "vcs.listRefs",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 464,
+      "source": "vcsListRefs: \"vcs.listRefs\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1588,
+        "source": "const WsVcsListRefsRpc = Rpc.make(WS_METHODS.vcsListRefs, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "vcsCreateWorktree",
+    "wire": "vcs.createWorktree",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 465,
+      "source": "vcsCreateWorktree: \"vcs.createWorktree\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1594,
+        "source": "const WsVcsCreateWorktreeRpc = Rpc.make(WS_METHODS.vcsCreateWorktree, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 59,
+        "source": "[WS_METHODS.vcsCreateWorktree]: AuthSourceControlWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "vcsRemoveWorktree",
+    "wire": "vcs.removeWorktree",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 466,
+      "source": "vcsRemoveWorktree: \"vcs.removeWorktree\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1601,
+        "source": "const WsVcsRemoveWorktreeRpc = Rpc.make(WS_METHODS.vcsRemoveWorktree, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 60,
+        "source": "[WS_METHODS.vcsRemoveWorktree]: AuthSourceControlWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "vcsCreateRef",
+    "wire": "vcs.createRef",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 467,
+      "source": "vcsCreateRef: \"vcs.createRef\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1606,
+        "source": "const WsVcsCreateRefRpc = Rpc.make(WS_METHODS.vcsCreateRef, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 61,
+        "source": "[WS_METHODS.vcsCreateRef]: AuthSourceControlWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "vcsSwitchRef",
+    "wire": "vcs.switchRef",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 468,
+      "source": "vcsSwitchRef: \"vcs.switchRef\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1612,
+        "source": "const WsVcsSwitchRefRpc = Rpc.make(WS_METHODS.vcsSwitchRef, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 62,
+        "source": "[WS_METHODS.vcsSwitchRef]: AuthSourceControlWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "vcsInit",
+    "wire": "vcs.init",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 469,
+      "source": "vcsInit: \"vcs.init\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1618,
+        "source": "const WsVcsInitRpc = Rpc.make(WS_METHODS.vcsInit, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 63,
+        "source": "[WS_METHODS.vcsInit]: AuthSourceControlWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "gitRunStackedAction",
+    "wire": "git.runStackedAction",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 471,
+      "source": "gitRunStackedAction: \"git.runStackedAction\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1569,
+        "source": "const WsGitRunStackedActionRpc = Rpc.make(WS_METHODS.gitRunStackedAction, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 57,
+        "source": "[WS_METHODS.gitRunStackedAction]: AuthSourceControlWriteScope,"
+      },
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 96,
+        "source": "if (method === WS_METHODS.gitRunStackedAction && input !== undefined) {"
+      }
+    ]
+  },
+  {
+    "symbol": "gitResolvePullRequest",
+    "wire": "git.resolvePullRequest",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 472,
+      "source": "gitResolvePullRequest: \"git.resolvePullRequest\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1576,
+        "source": "const WsGitResolvePullRequestRpc = Rpc.make(WS_METHODS.gitResolvePullRequest, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "gitPreparePullRequestThread",
+    "wire": "git.preparePullRequestThread",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 473,
+      "source": "gitPreparePullRequestThread: \"git.preparePullRequestThread\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1582,
+        "source": "const WsGitPreparePullRequestThreadRpc = Rpc.make(WS_METHODS.gitPreparePullRequestThread, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 58,
+        "source": "[WS_METHODS.gitPreparePullRequestThread]: AuthSourceControlWriteScope,"
+      },
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 91,
+        "source": "if (method === WS_METHODS.gitPreparePullRequestThread && input !== undefined) {"
+      }
+    ]
+  },
+  {
+    "symbol": "reviewGetBranchCommits",
+    "wire": "review.getBranchCommits",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 475,
+      "source": "reviewGetBranchCommits: \"review.getBranchCommits\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1623,
+        "source": "const WsReviewGetBranchCommitsRpc = Rpc.make(WS_METHODS.reviewGetBranchCommits, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "reviewGetDiffPreview",
+    "wire": "review.getDiffPreview",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 476,
+      "source": "reviewGetDiffPreview: \"review.getDiffPreview\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1629,
+        "source": "const WsReviewGetDiffPreviewRpc = Rpc.make(WS_METHODS.reviewGetDiffPreview, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "reviewGetDiffFileContents",
+    "wire": "review.getDiffFileContents",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 477,
+      "source": "reviewGetDiffFileContents: \"review.getDiffFileContents\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1635,
+        "source": "const WsReviewGetDiffFileContentsRpc = Rpc.make(WS_METHODS.reviewGetDiffFileContents, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "terminalOpen",
+    "wire": "terminal.open",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 479,
+      "source": "terminalOpen: \"terminal.open\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1641,
+        "source": "const WsTerminalOpenRpc = Rpc.make(WS_METHODS.terminalOpen, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "terminalAttach",
+    "wire": "terminal.attach",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 480,
+      "source": "terminalAttach: \"terminal.attach\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1647,
+        "source": "const WsTerminalAttachRpc = Rpc.make(WS_METHODS.terminalAttach, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "terminalObserve",
+    "wire": "terminal.observe",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 481,
+      "source": "terminalObserve: \"terminal.observe\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1654,
+        "source": "const WsTerminalObserveRpc = Rpc.make(WS_METHODS.terminalObserve, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "terminalWrite",
+    "wire": "terminal.write",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 482,
+      "source": "terminalWrite: \"terminal.write\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1661,
+        "source": "const WsTerminalWriteRpc = Rpc.make(WS_METHODS.terminalWrite, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "terminalResize",
+    "wire": "terminal.resize",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 483,
+      "source": "terminalResize: \"terminal.resize\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1666,
+        "source": "const WsTerminalResizeRpc = Rpc.make(WS_METHODS.terminalResize, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "terminalClear",
+    "wire": "terminal.clear",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 484,
+      "source": "terminalClear: \"terminal.clear\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1671,
+        "source": "const WsTerminalClearRpc = Rpc.make(WS_METHODS.terminalClear, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "terminalClose",
+    "wire": "terminal.close",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 485,
+      "source": "terminalClose: \"terminal.close\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1676,
+        "source": "const WsTerminalCloseRpc = Rpc.make(WS_METHODS.terminalClose, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "previewOpen",
+    "wire": "preview.open",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 487,
+      "source": "previewOpen: \"preview.open\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1681,
+        "source": "const WsPreviewOpenRpc = Rpc.make(WS_METHODS.previewOpen, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "previewResize",
+    "wire": "preview.resize",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 488,
+      "source": "previewResize: \"preview.resize\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1687,
+        "source": "const WsPreviewResizeRpc = Rpc.make(WS_METHODS.previewResize, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "previewAdjust",
+    "wire": "preview.adjust",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 489,
+      "source": "previewAdjust: \"preview.adjust\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1693,
+        "source": "const WsPreviewAdjustRpc = Rpc.make(WS_METHODS.previewAdjust, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "previewClose",
+    "wire": "preview.close",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 490,
+      "source": "previewClose: \"preview.close\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1699,
+        "source": "const WsPreviewCloseRpc = Rpc.make(WS_METHODS.previewClose, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 21,
+        "source": "[WS_METHODS.previewClose]: AuthPreviewOperateScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "previewList",
+    "wire": "preview.list",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 491,
+      "source": "previewList: \"preview.list\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1704,
+        "source": "const WsPreviewListRpc = Rpc.make(WS_METHODS.previewList, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "previewClearProfile",
+    "wire": "preview.clearProfile",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 492,
+      "source": "previewClearProfile: \"preview.clearProfile\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1710,
+        "source": "const WsPreviewClearProfileRpc = Rpc.make(WS_METHODS.previewClearProfile, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "previewReportProfiles",
+    "wire": "preview.reportProfiles",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 493,
+      "source": "previewReportProfiles: \"preview.reportProfiles\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1715,
+        "source": "const WsPreviewReportProfilesRpc = Rpc.make(WS_METHODS.previewReportProfiles, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "previewReportStatus",
+    "wire": "preview.reportStatus",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 494,
+      "source": "previewReportStatus: \"preview.reportStatus\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1720,
+        "source": "const WsPreviewReportStatusRpc = Rpc.make(WS_METHODS.previewReportStatus, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "previewStopLocalServer",
+    "wire": "preview.stopLocalServer",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 495,
+      "source": "previewStopLocalServer: \"preview.stopLocalServer\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1732,
+        "source": "const WsPreviewStopLocalServerRpc = Rpc.make(WS_METHODS.previewStopLocalServer, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 23,
+        "source": "[WS_METHODS.previewStopLocalServer]: AuthTerminalOperateScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "deviceConfigure",
+    "wire": "device.configure",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 497,
+      "source": "deviceConfigure: \"device.configure\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1770,
+        "source": "const WsDeviceConfigureRpc = Rpc.make(WS_METHODS.deviceConfigure, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "deviceList",
+    "wire": "device.list",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 498,
+      "source": "deviceList: \"device.list\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1764,
+        "source": "const WsDeviceListRpc = Rpc.make(WS_METHODS.deviceList, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "deviceTestHost",
+    "wire": "device.testHost",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 499,
+      "source": "deviceTestHost: \"device.testHost\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1746,
+        "source": "const WsDeviceTestHostRpc = Rpc.make(WS_METHODS.deviceTestHost, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "deviceEasAccount",
+    "wire": "device.easAccount",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 500,
+      "source": "deviceEasAccount: \"device.easAccount\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1752,
+        "source": "const WsDeviceEasAccountRpc = Rpc.make(WS_METHODS.deviceEasAccount, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "deviceSimlockIdentity",
+    "wire": "device.simlockIdentity",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 501,
+      "source": "deviceSimlockIdentity: \"device.simlockIdentity\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1758,
+        "source": "const WsDeviceSimlockIdentityRpc = Rpc.make(WS_METHODS.deviceSimlockIdentity, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "deviceOpen",
+    "wire": "device.open",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 502,
+      "source": "deviceOpen: \"device.open\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1776,
+        "source": "const WsDeviceOpenRpc = Rpc.make(WS_METHODS.deviceOpen, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "deviceClose",
+    "wire": "device.close",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 503,
+      "source": "deviceClose: \"device.close\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1782,
+        "source": "const WsDeviceCloseRpc = Rpc.make(WS_METHODS.deviceClose, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "deviceShutdown",
+    "wire": "device.shutdown",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 504,
+      "source": "deviceShutdown: \"device.shutdown\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1787,
+        "source": "const WsDeviceShutdownRpc = Rpc.make(WS_METHODS.deviceShutdown, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "deviceDetail",
+    "wire": "device.detail",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 505,
+      "source": "deviceDetail: \"device.detail\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1792,
+        "source": "const WsDeviceDetailRpc = Rpc.make(WS_METHODS.deviceDetail, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "deviceAction",
+    "wire": "device.action",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 506,
+      "source": "deviceAction: \"device.action\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1798,
+        "source": "const WsDeviceActionRpc = Rpc.make(WS_METHODS.deviceAction, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverProbe",
+    "wire": "server.probe",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 508,
+      "source": "serverProbe: \"server.probe\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 646,
+        "source": "const WsServerProbeRpc = Rpc.make(WS_METHODS.serverProbe, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverGetConfig",
+    "wire": "server.getConfig",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 509,
+      "source": "serverGetConfig: \"server.getConfig\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 652,
+        "source": "const WsServerGetConfigRpc = Rpc.make(WS_METHODS.serverGetConfig, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverGetNpmRelease",
+    "wire": "server.getNpmRelease",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 510,
+      "source": "serverGetNpmRelease: \"server.getNpmRelease\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 796,
+        "source": "const WsServerGetNpmReleaseRpc = Rpc.make(WS_METHODS.serverGetNpmRelease, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverRefreshProviders",
+    "wire": "server.refreshProviders",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 511,
+      "source": "serverRefreshProviders: \"server.refreshProviders\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 658,
+        "source": "export const WsServerRefreshProvidersRpc = Rpc.make(WS_METHODS.serverRefreshProviders, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 31,
+        "source": "[WS_METHODS.serverRefreshProviders]: AuthOrchestrationReadScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "serverUpdateProvider",
+    "wire": "server.updateProvider",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 512,
+      "source": "serverUpdateProvider: \"server.updateProvider\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 697,
+        "source": "const WsServerUpdateProviderRpc = Rpc.make(WS_METHODS.serverUpdateProvider, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverUpdateServer",
+    "wire": "server.updateServer",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 513,
+      "source": "serverUpdateServer: \"server.updateServer\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 802,
+        "source": "const WsServerUpdateServerRpc = Rpc.make(WS_METHODS.serverUpdateServer, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverUpdateServerWithProgress",
+    "wire": "server.updateServerWithProgress",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 514,
+      "source": "serverUpdateServerWithProgress: \"server.updateServerWithProgress\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 808,
+        "source": "const WsServerUpdateServerWithProgressRpc = Rpc.make(WS_METHODS.serverUpdateServerWithProgress, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverCommitDesktopUpdate",
+    "wire": "server.commitDesktopUpdate",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 515,
+      "source": "serverCommitDesktopUpdate: \"server.commitDesktopUpdate\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 815,
+        "source": "const WsServerCommitDesktopUpdateRpc = Rpc.make(WS_METHODS.serverCommitDesktopUpdate, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverUpsertKeybinding",
+    "wire": "server.upsertKeybinding",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 516,
+      "source": "serverUpsertKeybinding: \"server.upsertKeybinding\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 634,
+        "source": "const WsServerUpsertKeybindingRpc = Rpc.make(WS_METHODS.serverUpsertKeybinding, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverRemoveKeybinding",
+    "wire": "server.removeKeybinding",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 517,
+      "source": "serverRemoveKeybinding: \"server.removeKeybinding\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 640,
+        "source": "const WsServerRemoveKeybindingRpc = Rpc.make(WS_METHODS.serverRemoveKeybinding, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverRunStorageCleanup",
+    "wire": "server.runStorageCleanup",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 518,
+      "source": "serverRunStorageCleanup: \"server.runStorageCleanup\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 821,
+        "source": "const WsServerRunStorageCleanupRpc = Rpc.make(WS_METHODS.serverRunStorageCleanup, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 24,
+        "source": "[WS_METHODS.serverRunStorageCleanup]: AuthSettingsWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "serverGetStorageCleanupReport",
+    "wire": "server.getStorageCleanupReport",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 519,
+      "source": "serverGetStorageCleanupReport: \"server.getStorageCleanupReport\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 826,
+        "source": "const WsServerGetStorageCleanupReportRpc = Rpc.make(WS_METHODS.serverGetStorageCleanupReport, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverGetDatabaseStorage",
+    "wire": "server.getDatabaseStorage",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 520,
+      "source": "serverGetDatabaseStorage: \"server.getDatabaseStorage\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 833,
+        "source": "const WsServerGetDatabaseStorageRpc = Rpc.make(WS_METHODS.serverGetDatabaseStorage, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverReclaimDatabaseSpace",
+    "wire": "server.reclaimDatabaseSpace",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 521,
+      "source": "serverReclaimDatabaseSpace: \"server.reclaimDatabaseSpace\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 840,
+        "source": "const WsServerReclaimDatabaseSpaceRpc = Rpc.make(WS_METHODS.serverReclaimDatabaseSpace, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 26,
+        "source": "[WS_METHODS.serverReclaimDatabaseSpace]: AuthEnvironmentMaintainScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "peerLinksList",
+    "wire": "peerLinks.list",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 522,
+      "source": "peerLinksList: \"peerLinks.list\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 845,
+        "source": "const WsPeerLinksListRpc = Rpc.make(WS_METHODS.peerLinksList, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "peerLinksLink",
+    "wire": "peerLinks.link",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 523,
+      "source": "peerLinksLink: \"peerLinks.link\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 851,
+        "source": "const WsPeerLinksLinkRpc = Rpc.make(WS_METHODS.peerLinksLink, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 77,
+        "source": "[WS_METHODS.peerLinksLink]: AuthAccessWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "peerLinksUnlink",
+    "wire": "peerLinks.unlink",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 524,
+      "source": "peerLinksUnlink: \"peerLinks.unlink\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 857,
+        "source": "const WsPeerLinksUnlinkRpc = Rpc.make(WS_METHODS.peerLinksUnlink, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 78,
+        "source": "[WS_METHODS.peerLinksUnlink]: AuthAccessWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "peerLinksAnswerRequest",
+    "wire": "peerLinks.answerRequest",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 525,
+      "source": "peerLinksAnswerRequest: \"peerLinks.answerRequest\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 863,
+        "source": "const WsPeerLinksAnswerRequestRpc = Rpc.make(WS_METHODS.peerLinksAnswerRequest, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 80,
+        "source": "[WS_METHODS.peerLinksAnswerRequest]: AuthAccessWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "serverGetSettings",
+    "wire": "server.getSettings",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 526,
+      "source": "serverGetSettings: \"server.getSettings\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 869,
+        "source": "const WsServerGetSettingsRpc = Rpc.make(WS_METHODS.serverGetSettings, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverUpdateSettings",
+    "wire": "server.updateSettings",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 527,
+      "source": "serverUpdateSettings: \"server.updateSettings\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 875,
+        "source": "const WsServerUpdateSettingsRpc = Rpc.make(WS_METHODS.serverUpdateSettings, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverDiscoverSourceControl",
+    "wire": "server.discoverSourceControl",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 528,
+      "source": "serverDiscoverSourceControl: \"server.discoverSourceControl\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 884,
+        "source": "const WsServerDiscoverSourceControlRpc = Rpc.make(WS_METHODS.serverDiscoverSourceControl, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverCheckSecretSource",
+    "wire": "server.checkSecretSource",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 529,
+      "source": "serverCheckSecretSource: \"server.checkSecretSource\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 890,
+        "source": "const WsServerCheckSecretSourceRpc = Rpc.make(WS_METHODS.serverCheckSecretSource, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 28,
+        "source": "[WS_METHODS.serverCheckSecretSource]: AuthSettingsWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "serverSearchAcpRegistry",
+    "wire": "server.searchAcpRegistry",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 530,
+      "source": "serverSearchAcpRegistry: \"server.searchAcpRegistry\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 896,
+        "source": "const WsServerSearchAcpRegistryRpc = Rpc.make(WS_METHODS.serverSearchAcpRegistry, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverPrepareAcpRegistryAgent",
+    "wire": "server.prepareAcpRegistryAgent",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 531,
+      "source": "serverPrepareAcpRegistryAgent: \"server.prepareAcpRegistryAgent\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 902,
+        "source": "const WsServerPrepareAcpRegistryAgentRpc = Rpc.make(WS_METHODS.serverPrepareAcpRegistryAgent, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverUninstallAcpRegistryManagedBinary",
+    "wire": "server.uninstallAcpRegistryManagedBinary",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 532,
+      "source": "serverUninstallAcpRegistryManagedBinary: \"server.uninstallAcpRegistryManagedBinary\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 909,
+        "source": "WS_METHODS.serverUninstallAcpRegistryManagedBinary,"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverAcceptAcpRegistryUrlAuth",
+    "wire": "server.acceptAcpRegistryUrlAuth",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 533,
+      "source": "serverAcceptAcpRegistryUrlAuth: \"server.acceptAcpRegistryUrlAuth\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 917,
+        "source": "const WsServerAcceptAcpRegistryUrlAuthRpc = Rpc.make(WS_METHODS.serverAcceptAcpRegistryUrlAuth, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverListAcpRegistrySessions",
+    "wire": "server.listAcpRegistrySessions",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 534,
+      "source": "serverListAcpRegistrySessions: \"server.listAcpRegistrySessions\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 923,
+        "source": "const WsServerListAcpRegistrySessionsRpc = Rpc.make(WS_METHODS.serverListAcpRegistrySessions, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverImportAcpRegistrySession",
+    "wire": "server.importAcpRegistrySession",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 535,
+      "source": "serverImportAcpRegistrySession: \"server.importAcpRegistrySession\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 929,
+        "source": "const WsServerImportAcpRegistrySessionRpc = Rpc.make(WS_METHODS.serverImportAcpRegistrySession, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverDeleteAcpRegistrySession",
+    "wire": "server.deleteAcpRegistrySession",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 536,
+      "source": "serverDeleteAcpRegistrySession: \"server.deleteAcpRegistrySession\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 935,
+        "source": "const WsServerDeleteAcpRegistrySessionRpc = Rpc.make(WS_METHODS.serverDeleteAcpRegistrySession, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverListAcpRegistryProviders",
+    "wire": "server.listAcpRegistryProviders",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 537,
+      "source": "serverListAcpRegistryProviders: \"server.listAcpRegistryProviders\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 941,
+        "source": "const WsServerListAcpRegistryProvidersRpc = Rpc.make(WS_METHODS.serverListAcpRegistryProviders, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverSetAcpRegistryProvider",
+    "wire": "server.setAcpRegistryProvider",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 538,
+      "source": "serverSetAcpRegistryProvider: \"server.setAcpRegistryProvider\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 947,
+        "source": "const WsServerSetAcpRegistryProviderRpc = Rpc.make(WS_METHODS.serverSetAcpRegistryProvider, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverDisableAcpRegistryProvider",
+    "wire": "server.disableAcpRegistryProvider",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 539,
+      "source": "serverDisableAcpRegistryProvider: \"server.disableAcpRegistryProvider\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 954,
+        "source": "WS_METHODS.serverDisableAcpRegistryProvider,"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverLogoutAcpRegistry",
+    "wire": "server.logoutAcpRegistry",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 540,
+      "source": "serverLogoutAcpRegistry: \"server.logoutAcpRegistry\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 962,
+        "source": "const WsServerLogoutAcpRegistryRpc = Rpc.make(WS_METHODS.serverLogoutAcpRegistry, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverGetTraceDiagnostics",
+    "wire": "server.getTraceDiagnostics",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 541,
+      "source": "serverGetTraceDiagnostics: \"server.getTraceDiagnostics\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 968,
+        "source": "const WsServerGetTraceDiagnosticsRpc = Rpc.make(WS_METHODS.serverGetTraceDiagnostics, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverGetProcessDiagnostics",
+    "wire": "server.getProcessDiagnostics",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 542,
+      "source": "serverGetProcessDiagnostics: \"server.getProcessDiagnostics\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 974,
+        "source": "const WsServerGetProcessDiagnosticsRpc = Rpc.make(WS_METHODS.serverGetProcessDiagnostics, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverGetHostResources",
+    "wire": "server.getHostResources",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 543,
+      "source": "serverGetHostResources: \"server.getHostResources\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 980,
+        "source": "const WsServerGetHostResourcesRpc = Rpc.make(WS_METHODS.serverGetHostResources, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverGetProcessResourceHistory",
+    "wire": "server.getProcessResourceHistory",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 544,
+      "source": "serverGetProcessResourceHistory: \"server.getProcessResourceHistory\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 986,
+        "source": "const WsServerGetProcessResourceHistoryRpc = Rpc.make(WS_METHODS.serverGetProcessResourceHistory, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverGetResourceTelemetryHistory",
+    "wire": "server.getResourceTelemetryHistory",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 545,
+      "source": "serverGetResourceTelemetryHistory: \"server.getResourceTelemetryHistory\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 993,
+        "source": "WS_METHODS.serverGetResourceTelemetryHistory,"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverRetryResourceTelemetry",
+    "wire": "server.retryResourceTelemetry",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 546,
+      "source": "serverRetryResourceTelemetry: \"server.retryResourceTelemetry\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1001,
+        "source": "const WsServerRetryResourceTelemetryRpc = Rpc.make(WS_METHODS.serverRetryResourceTelemetry, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverCheckOtlpEndpoint",
+    "wire": "server.checkOtlpEndpoint",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 547,
+      "source": "serverCheckOtlpEndpoint: \"server.checkOtlpEndpoint\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1007,
+        "source": "const WsServerCheckOtlpEndpointRpc = Rpc.make(WS_METHODS.serverCheckOtlpEndpoint, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 27,
+        "source": "[WS_METHODS.serverCheckOtlpEndpoint]: AuthSettingsWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "serverListTextGeneratorModels",
+    "wire": "server.listTextGeneratorModels",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 548,
+      "source": "serverListTextGeneratorModels: \"server.listTextGeneratorModels\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1013,
+        "source": "const WsServerListTextGeneratorModelsRpc = Rpc.make(WS_METHODS.serverListTextGeneratorModels, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 30,
+        "source": "[WS_METHODS.serverListTextGeneratorModels]: AuthSettingsWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "serverPrepareTriage",
+    "wire": "server.prepareTriage",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 549,
+      "source": "serverPrepareTriage: \"server.prepareTriage\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1019,
+        "source": "const WsServerPrepareTriageRpc = Rpc.make(WS_METHODS.serverPrepareTriage, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 66,
+        "source": "[WS_METHODS.serverPrepareTriage]: AuthOrchestrationOperateScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "serverSignalProcess",
+    "wire": "server.signalProcess",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 550,
+      "source": "serverSignalProcess: \"server.signalProcess\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1037,
+        "source": "const WsServerSignalProcessRpc = Rpc.make(WS_METHODS.serverSignalProcess, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverReportClientActivity",
+    "wire": "server.reportClientActivity",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 551,
+      "source": "serverReportClientActivity: \"server.reportClientActivity\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1056,
+        "source": "const WsServerReportClientActivityRpc = Rpc.make(WS_METHODS.serverReportClientActivity, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverGetUsageSummary",
+    "wire": "server.getUsageSummary",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 552,
+      "source": "serverGetUsageSummary: \"server.getUsageSummary\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1025,
+        "source": "const WsServerGetUsageSummaryRpc = Rpc.make(WS_METHODS.serverGetUsageSummary, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "serverRefreshUsageRates",
+    "wire": "server.refreshUsageRates",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 553,
+      "source": "serverRefreshUsageRates: \"server.refreshUsageRates\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1031,
+        "source": "const WsServerRefreshUsageRatesRpc = Rpc.make(WS_METHODS.serverRefreshUsageRates, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "scheduledTasksSubscribe",
+    "wire": "scheduledTasks.subscribe",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 555,
+      "source": "scheduledTasksSubscribe: \"scheduledTasks.subscribe\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 2025,
+        "source": "const WsScheduledTasksSubscribeRpc = Rpc.make(WS_METHODS.scheduledTasksSubscribe, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "scheduledTasksUpsert",
+    "wire": "scheduledTasks.upsert",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 556,
+      "source": "scheduledTasksUpsert: \"scheduledTasks.upsert\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 2032,
+        "source": "const WsScheduledTasksUpsertRpc = Rpc.make(WS_METHODS.scheduledTasksUpsert, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 67,
+        "source": "[WS_METHODS.scheduledTasksUpsert]: AuthOrchestrationOperateScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "scheduledTasksSetEnabled",
+    "wire": "scheduledTasks.setEnabled",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 557,
+      "source": "scheduledTasksSetEnabled: \"scheduledTasks.setEnabled\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 2038,
+        "source": "const WsScheduledTasksSetEnabledRpc = Rpc.make(WS_METHODS.scheduledTasksSetEnabled, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 68,
+        "source": "[WS_METHODS.scheduledTasksSetEnabled]: AuthOrchestrationOperateScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "scheduledTasksDelete",
+    "wire": "scheduledTasks.delete",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 558,
+      "source": "scheduledTasksDelete: \"scheduledTasks.delete\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 2044,
+        "source": "const WsScheduledTasksDeleteRpc = Rpc.make(WS_METHODS.scheduledTasksDelete, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 69,
+        "source": "[WS_METHODS.scheduledTasksDelete]: AuthOrchestrationOperateScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "scheduledTasksRunNow",
+    "wire": "scheduledTasks.runNow",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 559,
+      "source": "scheduledTasksRunNow: \"scheduledTasks.runNow\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 2050,
+        "source": "const WsScheduledTasksRunNowRpc = Rpc.make(WS_METHODS.scheduledTasksRunNow, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 70,
+        "source": "[WS_METHODS.scheduledTasksRunNow]: AuthOrchestrationOperateScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "scheduledTasksRotateWebhookToken",
+    "wire": "scheduledTasks.rotateWebhookToken",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 560,
+      "source": "scheduledTasksRotateWebhookToken: \"scheduledTasks.rotateWebhookToken\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 2057,
+        "source": "WS_METHODS.scheduledTasksRotateWebhookToken,"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 71,
+        "source": "[WS_METHODS.scheduledTasksRotateWebhookToken]: AuthOrchestrationOperateScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "secretsAnswerRequest",
+    "wire": "secrets.answerRequest",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 561,
+      "source": "secretsAnswerRequest: \"secrets.answerRequest\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 2071,
+        "source": "const WsSecretsAnswerRequestRpc = Rpc.make(WS_METHODS.secretsAnswerRequest, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "guestShareCreate",
+    "wire": "guestShare.create",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 562,
+      "source": "guestShareCreate: \"guestShare.create\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 2065,
+        "source": "const WsGuestShareCreateRpc = Rpc.make(WS_METHODS.guestShareCreate, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 76,
+        "source": "[WS_METHODS.guestShareCreate]: AuthAccessWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "scheduledTasksListWebhookDeliveries",
+    "wire": "scheduledTasks.listWebhookDeliveries",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 563,
+      "source": "scheduledTasksListWebhookDeliveries: \"scheduledTasks.listWebhookDeliveries\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 2077,
+        "source": "WS_METHODS.scheduledTasksListWebhookDeliveries,"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "scheduledTasksGetWebhookDelivery",
+    "wire": "scheduledTasks.getWebhookDelivery",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 564,
+      "source": "scheduledTasksGetWebhookDelivery: \"scheduledTasks.getWebhookDelivery\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 2086,
+        "source": "WS_METHODS.scheduledTasksGetWebhookDelivery,"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "cloudGetRelayClientStatus",
+    "wire": "cloud.getRelayClientStatus",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 566,
+      "source": "cloudGetRelayClientStatus: \"cloud.getRelayClientStatus\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1043,
+        "source": "const WsCloudGetRelayClientStatusRpc = Rpc.make(WS_METHODS.cloudGetRelayClientStatus, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "cloudInstallRelayClient",
+    "wire": "cloud.installRelayClient",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 567,
+      "source": "cloudInstallRelayClient: \"cloud.installRelayClient\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1049,
+        "source": "const WsCloudInstallRelayClientRpc = Rpc.make(WS_METHODS.cloudInstallRelayClient, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsList",
+    "wire": "pullRequests.list",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 569,
+      "source": "pullRequestsList: \"pullRequests.list\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1067,
+        "source": "const WsPullRequestsListRpc = Rpc.make(WS_METHODS.pullRequestsList, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsListStats",
+    "wire": "pullRequests.listStats",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 570,
+      "source": "pullRequestsListStats: \"pullRequests.listStats\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1074,
+        "source": "const WsPullRequestsListStatsRpc = Rpc.make(WS_METHODS.pullRequestsListStats, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsFilterOptions",
+    "wire": "pullRequests.filterOptions",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 571,
+      "source": "pullRequestsFilterOptions: \"pullRequests.filterOptions\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1080,
+        "source": "const WsPullRequestsFilterOptionsRpc = Rpc.make(WS_METHODS.pullRequestsFilterOptions, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsSummary",
+    "wire": "pullRequests.summary",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 572,
+      "source": "pullRequestsSummary: \"pullRequests.summary\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1098,
+        "source": "const WsPullRequestsSummaryRpc = Rpc.make(WS_METHODS.pullRequestsSummary, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsRouting",
+    "wire": "pullRequests.routing",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 573,
+      "source": "pullRequestsRouting: \"pullRequests.routing\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1086,
+        "source": "const WsPullRequestsRoutingRpc = Rpc.make(WS_METHODS.pullRequestsRouting, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsRoutingIdentity",
+    "wire": "pullRequests.routingIdentity",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 574,
+      "source": "pullRequestsRoutingIdentity: \"pullRequests.routingIdentity\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1092,
+        "source": "const WsPullRequestsRoutingIdentityRpc = Rpc.make(WS_METHODS.pullRequestsRoutingIdentity, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsStack",
+    "wire": "pullRequests.stack",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 575,
+      "source": "pullRequestsStack: \"pullRequests.stack\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1104,
+        "source": "const WsPullRequestsStackRpc = Rpc.make(WS_METHODS.pullRequestsStack, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsLinkedThreads",
+    "wire": "pullRequests.linkedThreads",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 576,
+      "source": "pullRequestsLinkedThreads: \"pullRequests.linkedThreads\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1110,
+        "source": "const WsPullRequestsLinkedThreadsRpc = Rpc.make(WS_METHODS.pullRequestsLinkedThreads, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsDetail",
+    "wire": "pullRequests.detail",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 577,
+      "source": "pullRequestsDetail: \"pullRequests.detail\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1116,
+        "source": "const WsPullRequestsDetailRpc = Rpc.make(WS_METHODS.pullRequestsDetail, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsPreview",
+    "wire": "pullRequests.preview",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 578,
+      "source": "pullRequestsPreview: \"pullRequests.preview\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1122,
+        "source": "const WsPullRequestsPreviewRpc = Rpc.make(WS_METHODS.pullRequestsPreview, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsChecks",
+    "wire": "pullRequests.checks",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 579,
+      "source": "pullRequestsChecks: \"pullRequests.checks\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1128,
+        "source": "const WsPullRequestsChecksRpc = Rpc.make(WS_METHODS.pullRequestsChecks, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsActivity",
+    "wire": "pullRequests.activity",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 580,
+      "source": "pullRequestsActivity: \"pullRequests.activity\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1134,
+        "source": "const WsPullRequestsActivityRpc = Rpc.make(WS_METHODS.pullRequestsActivity, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsReviewGuide",
+    "wire": "pullRequests.reviewGuide",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 581,
+      "source": "pullRequestsReviewGuide: \"pullRequests.reviewGuide\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1140,
+        "source": "const WsPullRequestsReviewGuideRpc = Rpc.make(WS_METHODS.pullRequestsReviewGuide, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsGenerateReviewGuide",
+    "wire": "pullRequests.generateReviewGuide",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 582,
+      "source": "pullRequestsGenerateReviewGuide: \"pullRequests.generateReviewGuide\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1146,
+        "source": "const WsPullRequestsGenerateReviewGuideRpc = Rpc.make(WS_METHODS.pullRequestsGenerateReviewGuide, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 44,
+        "source": "[WS_METHODS.pullRequestsGenerateReviewGuide]: AuthOrchestrationOperateScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "pullRequestsThreadComments",
+    "wire": "pullRequests.threadComments",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 583,
+      "source": "pullRequestsThreadComments: \"pullRequests.threadComments\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1152,
+        "source": "const WsPullRequestsThreadCommentsRpc = Rpc.make(WS_METHODS.pullRequestsThreadComments, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsDiffFileContents",
+    "wire": "pullRequests.diffFileContents",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 584,
+      "source": "pullRequestsDiffFileContents: \"pullRequests.diffFileContents\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1158,
+        "source": "const WsPullRequestsDiffFileContentsRpc = Rpc.make(WS_METHODS.pullRequestsDiffFileContents, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsFilesViewed",
+    "wire": "pullRequests.filesViewed",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 585,
+      "source": "pullRequestsFilesViewed: \"pullRequests.filesViewed\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1164,
+        "source": "const WsPullRequestsFilesViewedRpc = Rpc.make(WS_METHODS.pullRequestsFilesViewed, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsChangeBreakdown",
+    "wire": "pullRequests.changeBreakdown",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 586,
+      "source": "pullRequestsChangeBreakdown: \"pullRequests.changeBreakdown\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1170,
+        "source": "const WsPullRequestsChangeBreakdownRpc = Rpc.make(WS_METHODS.pullRequestsChangeBreakdown, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsSetFilesViewed",
+    "wire": "pullRequests.setFilesViewed",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 587,
+      "source": "pullRequestsSetFilesViewed: \"pullRequests.setFilesViewed\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1176,
+        "source": "const WsPullRequestsSetFilesViewedRpc = Rpc.make(WS_METHODS.pullRequestsSetFilesViewed, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 40,
+        "source": "[WS_METHODS.pullRequestsSetFilesViewed]: AuthSourceControlWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "pullRequestsRunAction",
+    "wire": "pullRequests.runAction",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 588,
+      "source": "pullRequestsRunAction: \"pullRequests.runAction\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1182,
+        "source": "const WsPullRequestsRunActionRpc = Rpc.make(WS_METHODS.pullRequestsRunAction, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 32,
+        "source": "[WS_METHODS.pullRequestsRunAction]: AuthSourceControlWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "pullRequestsUpdate",
+    "wire": "pullRequests.update",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 589,
+      "source": "pullRequestsUpdate: \"pullRequests.update\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1189,
+        "source": "const WsPullRequestsUpdateRpc = Rpc.make(WS_METHODS.pullRequestsUpdate, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 33,
+        "source": "[WS_METHODS.pullRequestsUpdate]: AuthSourceControlWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "pullRequestsComment",
+    "wire": "pullRequests.comment",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 590,
+      "source": "pullRequestsComment: \"pullRequests.comment\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1195,
+        "source": "const WsPullRequestsCommentRpc = Rpc.make(WS_METHODS.pullRequestsComment, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 34,
+        "source": "[WS_METHODS.pullRequestsComment]: AuthSourceControlWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "pullRequestsUpdateComment",
+    "wire": "pullRequests.updateComment",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 591,
+      "source": "pullRequestsUpdateComment: \"pullRequests.updateComment\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1201,
+        "source": "const WsPullRequestsUpdateCommentRpc = Rpc.make(WS_METHODS.pullRequestsUpdateComment, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 35,
+        "source": "[WS_METHODS.pullRequestsUpdateComment]: AuthSourceControlWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "pullRequestsSubmitReview",
+    "wire": "pullRequests.submitReview",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 592,
+      "source": "pullRequestsSubmitReview: \"pullRequests.submitReview\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1207,
+        "source": "const WsPullRequestsSubmitReviewRpc = Rpc.make(WS_METHODS.pullRequestsSubmitReview, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 36,
+        "source": "[WS_METHODS.pullRequestsSubmitReview]: AuthSourceControlWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "pullRequestsReplyToThread",
+    "wire": "pullRequests.replyToThread",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 593,
+      "source": "pullRequestsReplyToThread: \"pullRequests.replyToThread\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1213,
+        "source": "const WsPullRequestsReplyToThreadRpc = Rpc.make(WS_METHODS.pullRequestsReplyToThread, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 37,
+        "source": "[WS_METHODS.pullRequestsReplyToThread]: AuthSourceControlWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "pullRequestsSetThreadResolution",
+    "wire": "pullRequests.setThreadResolution",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 594,
+      "source": "pullRequestsSetThreadResolution: \"pullRequests.setThreadResolution\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1219,
+        "source": "const WsPullRequestsSetThreadResolutionRpc = Rpc.make(WS_METHODS.pullRequestsSetThreadResolution, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 38,
+        "source": "[WS_METHODS.pullRequestsSetThreadResolution]: AuthSourceControlWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "pullRequestsSetReaction",
+    "wire": "pullRequests.setReaction",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 595,
+      "source": "pullRequestsSetReaction: \"pullRequests.setReaction\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1225,
+        "source": "const WsPullRequestsSetReactionRpc = Rpc.make(WS_METHODS.pullRequestsSetReaction, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 39,
+        "source": "[WS_METHODS.pullRequestsSetReaction]: AuthSourceControlWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "pullRequestsInvalidate",
+    "wire": "pullRequests.invalidate",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 596,
+      "source": "pullRequestsInvalidate: \"pullRequests.invalidate\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1231,
+        "source": "const WsPullRequestsInvalidateRpc = Rpc.make(WS_METHODS.pullRequestsInvalidate, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsReportState",
+    "wire": "pullRequests.reportState",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 597,
+      "source": "pullRequestsReportState: \"pullRequests.reportState\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1237,
+        "source": "const WsPullRequestsReportStateRpc = Rpc.make(WS_METHODS.pullRequestsReportState, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsSubscribeRefreshes",
+    "wire": "pullRequests.subscribeRefreshes",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 598,
+      "source": "pullRequestsSubscribeRefreshes: \"pullRequests.subscribeRefreshes\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1243,
+        "source": "const WsPullRequestsSubscribeRefreshesRpc = Rpc.make(WS_METHODS.pullRequestsSubscribeRefreshes, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsSubscribeLinkedThreadRefreshes",
+    "wire": "pullRequests.subscribeLinkedThreadRefreshes",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 599,
+      "source": "pullRequestsSubscribeLinkedThreadRefreshes: \"pullRequests.subscribeLinkedThreadRefreshes\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1252,
+        "source": "WS_METHODS.pullRequestsSubscribeLinkedThreadRefreshes,"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsReviewerCandidates",
+    "wire": "pullRequests.reviewerCandidates",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 600,
+      "source": "pullRequestsReviewerCandidates: \"pullRequests.reviewerCandidates\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1262,
+        "source": "const WsPullRequestsReviewerCandidatesRpc = Rpc.make(WS_METHODS.pullRequestsReviewerCandidates, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsRequestReviewers",
+    "wire": "pullRequests.requestReviewers",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 601,
+      "source": "pullRequestsRequestReviewers: \"pullRequests.requestReviewers\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1268,
+        "source": "const WsPullRequestsRequestReviewersRpc = Rpc.make(WS_METHODS.pullRequestsRequestReviewers, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 41,
+        "source": "[WS_METHODS.pullRequestsRequestReviewers]: AuthSourceControlWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "pullRequestsLabelCandidates",
+    "wire": "pullRequests.labelCandidates",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 602,
+      "source": "pullRequestsLabelCandidates: \"pullRequests.labelCandidates\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1274,
+        "source": "const WsPullRequestsLabelCandidatesRpc = Rpc.make(WS_METHODS.pullRequestsLabelCandidates, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "pullRequestsSetLabels",
+    "wire": "pullRequests.setLabels",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 603,
+      "source": "pullRequestsSetLabels: \"pullRequests.setLabels\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1280,
+        "source": "const WsPullRequestsSetLabelsRpc = Rpc.make(WS_METHODS.pullRequestsSetLabels, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 42,
+        "source": "[WS_METHODS.pullRequestsSetLabels]: AuthSourceControlWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "sourceControlLookupRepository",
+    "wire": "sourceControl.lookupRepository",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 605,
+      "source": "sourceControlLookupRepository: \"sourceControl.lookupRepository\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1286,
+        "source": "const WsSourceControlLookupRepositoryRpc = Rpc.make(WS_METHODS.sourceControlLookupRepository, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "sourceControlCloneRepository",
+    "wire": "sourceControl.cloneRepository",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 606,
+      "source": "sourceControlCloneRepository: \"sourceControl.cloneRepository\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1292,
+        "source": "const WsSourceControlCloneRepositoryRpc = Rpc.make(WS_METHODS.sourceControlCloneRepository, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 46,
+        "source": "[WS_METHODS.sourceControlCloneRepository]: AuthSourceControlWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "sourceControlPublishRepository",
+    "wire": "sourceControl.publishRepository",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 607,
+      "source": "sourceControlPublishRepository: \"sourceControl.publishRepository\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1369,
+        "source": "const WsSourceControlPublishRepositoryRpc = Rpc.make(WS_METHODS.sourceControlPublishRepository, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 47,
+        "source": "[WS_METHODS.sourceControlPublishRepository]: AuthSourceControlWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "sourceControlSignInStart",
+    "wire": "sourceControl.signInStart",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 608,
+      "source": "sourceControlSignInStart: \"sourceControl.signInStart\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1299,
+        "source": "const WsSourceControlSignInStartRpc = Rpc.make(WS_METHODS.sourceControlSignInStart, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 50,
+        "source": "[WS_METHODS.sourceControlSignInStart]: AuthSettingsWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "sourceControlSignInWait",
+    "wire": "sourceControl.signInWait",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 609,
+      "source": "sourceControlSignInWait: \"sourceControl.signInWait\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1306,
+        "source": "const WsSourceControlSignInWaitRpc = Rpc.make(WS_METHODS.sourceControlSignInWait, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 51,
+        "source": "[WS_METHODS.sourceControlSignInWait]: AuthSettingsWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "sourceControlSignInCancel",
+    "wire": "sourceControl.signInCancel",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 610,
+      "source": "sourceControlSignInCancel: \"sourceControl.signInCancel\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1313,
+        "source": "const WsSourceControlSignInCancelRpc = Rpc.make(WS_METHODS.sourceControlSignInCancel, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 52,
+        "source": "[WS_METHODS.sourceControlSignInCancel]: AuthSettingsWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "sourceControlAppAccess",
+    "wire": "sourceControl.appAccess",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 611,
+      "source": "sourceControlAppAccess: \"sourceControl.appAccess\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1319,
+        "source": "const WsSourceControlAppAccessRpc = Rpc.make(WS_METHODS.sourceControlAppAccess, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "sourceControlStarred",
+    "wire": "sourceControl.starred",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 612,
+      "source": "sourceControlStarred: \"sourceControl.starred\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1326,
+        "source": "const WsSourceControlStarredRpc = Rpc.make(WS_METHODS.sourceControlStarred, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "sourceControlStar",
+    "wire": "sourceControl.star",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 613,
+      "source": "sourceControlStar: \"sourceControl.star\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1333,
+        "source": "const WsSourceControlStarRpc = Rpc.make(WS_METHODS.sourceControlStar, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 48,
+        "source": "[WS_METHODS.sourceControlStar]: AuthSourceControlWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "projectCloneStart",
+    "wire": "projectClone.start",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 614,
+      "source": "projectCloneStart: \"projectClone.start\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1340,
+        "source": "const WsProjectCloneStartRpc = Rpc.make(WS_METHODS.projectCloneStart, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 53,
+        "source": "[WS_METHODS.projectCloneStart]: AuthSourceControlWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "projectCloneCancel",
+    "wire": "projectClone.cancel",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 615,
+      "source": "projectCloneCancel: \"projectClone.cancel\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1350,
+        "source": "const WsProjectCloneCancelRpc = Rpc.make(WS_METHODS.projectCloneCancel, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 54,
+        "source": "[WS_METHODS.projectCloneCancel]: AuthSourceControlWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "projectCloneRetry",
+    "wire": "projectClone.retry",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 616,
+      "source": "projectCloneRetry: \"projectClone.retry\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1356,
+        "source": "const WsProjectCloneRetryRpc = Rpc.make(WS_METHODS.projectCloneRetry, {"
+      }
+    ],
+    "permissionReferences": [
+      {
+        "file": "packages/contracts/src/clientRpcPermissions.ts",
+        "line": 55,
+        "source": "[WS_METHODS.projectCloneRetry]: AuthSourceControlWriteScope,"
+      }
+    ]
+  },
+  {
+    "symbol": "subscribeProjectClones",
+    "wire": "subscribeProjectClones",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 617,
+      "source": "subscribeProjectClones: \"subscribeProjectClones\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1362,
+        "source": "const WsSubscribeProjectClonesRpc = Rpc.make(WS_METHODS.subscribeProjectClones, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "subscribeVcsStatus",
+    "wire": "subscribeVcsStatus",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 619,
+      "source": "subscribeVcsStatus: \"subscribeVcsStatus\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1534,
+        "source": "const WsSubscribeVcsStatusRpc = Rpc.make(WS_METHODS.subscribeVcsStatus, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "subscribeVcsBranch",
+    "wire": "subscribeVcsBranch",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 620,
+      "source": "subscribeVcsBranch: \"subscribeVcsBranch\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1521,
+        "source": "const WsSubscribeVcsBranchRpc = Rpc.make(WS_METHODS.subscribeVcsBranch, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "vcsRefreshBranch",
+    "wire": "vcs.refreshBranch",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 621,
+      "source": "vcsRefreshBranch: \"vcs.refreshBranch\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1528,
+        "source": "const WsVcsRefreshBranchRpc = Rpc.make(WS_METHODS.vcsRefreshBranch, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "subscribeWorktreeSetup",
+    "wire": "subscribeWorktreeSetup",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 622,
+      "source": "subscribeWorktreeSetup: \"subscribeWorktreeSetup\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1556,
+        "source": "const WsSubscribeWorktreeSetupRpc = Rpc.make(WS_METHODS.subscribeWorktreeSetup, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "worktreeSetupCancel",
+    "wire": "worktreeSetup.cancel",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 623,
+      "source": "worktreeSetupCancel: \"worktreeSetup.cancel\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1563,
+        "source": "const WsWorktreeSetupCancelRpc = Rpc.make(WS_METHODS.worktreeSetupCancel, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "subscribeTerminalMetadata",
+    "wire": "subscribeTerminalMetadata",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 624,
+      "source": "subscribeTerminalMetadata: \"subscribeTerminalMetadata\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1987,
+        "source": "const WsSubscribeTerminalMetadataRpc = Rpc.make(WS_METHODS.subscribeTerminalMetadata, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "subscribePreviewEvents",
+    "wire": "subscribePreviewEvents",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 625,
+      "source": "subscribePreviewEvents: \"subscribePreviewEvents\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1725,
+        "source": "const WsSubscribePreviewEventsRpc = Rpc.make(WS_METHODS.subscribePreviewEvents, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "subscribeDiscoveredLocalServers",
+    "wire": "subscribeDiscoveredLocalServers",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 626,
+      "source": "subscribeDiscoveredLocalServers: \"subscribeDiscoveredLocalServers\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1737,
+        "source": "const WsSubscribeDiscoveredLocalServersRpc = Rpc.make(WS_METHODS.subscribeDiscoveredLocalServers, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "subscribeDeviceState",
+    "wire": "subscribeDeviceState",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 627,
+      "source": "subscribeDeviceState: \"subscribeDeviceState\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1804,
+        "source": "const WsSubscribeDeviceStateRpc = Rpc.make(WS_METHODS.subscribeDeviceState, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "subscribeServerConfig",
+    "wire": "subscribeServerConfig",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 628,
+      "source": "subscribeServerConfig: \"subscribeServerConfig\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 1994,
+        "source": "export const WsSubscribeServerConfigRpc = Rpc.make(WS_METHODS.subscribeServerConfig, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "subscribeServerLifecycle",
+    "wire": "subscribeServerLifecycle",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 629,
+      "source": "subscribeServerLifecycle: \"subscribeServerLifecycle\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 2018,
+        "source": "const WsSubscribeServerLifecycleRpc = Rpc.make(WS_METHODS.subscribeServerLifecycle, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "subscribeAuthAccess",
+    "wire": "subscribeAuthAccess",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 630,
+      "source": "subscribeAuthAccess: \"subscribeAuthAccess\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 2094,
+        "source": "const WsSubscribeAuthAccessRpc = Rpc.make(WS_METHODS.subscribeAuthAccess, {"
+      }
+    ],
+    "permissionReferences": []
+  },
+  {
+    "symbol": "subscribeResourceTelemetry",
+    "wire": "subscribeResourceTelemetry",
+    "declaration": {
+      "file": "packages/contracts/src/rpc.ts",
+      "line": 631,
+      "source": "subscribeResourceTelemetry: \"subscribeResourceTelemetry\","
+    },
+    "schemaBindings": [
+      {
+        "file": "packages/contracts/src/rpc.ts",
+        "line": 2101,
+        "source": "const WsSubscribeResourceTelemetryRpc = Rpc.make(WS_METHODS.subscribeResourceTelemetry, {"
+      }
+    ],
+    "permissionReferences": []
+  }
+]

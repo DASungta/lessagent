@@ -1,0 +1,7 @@
+{
+  "fullTests": 403,
+  "targetedAfterConnectionFix": 20,
+  "build": "successful",
+  "installed": true,
+  "hapSha256": "dd21ee8a63ff3b050b2a2504ccdb9be6c13fe82273e36d041c01c273222b9f1e"
+}

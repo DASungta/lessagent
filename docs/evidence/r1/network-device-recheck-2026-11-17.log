@@ -1,0 +1,12 @@
+device=23E0224122000135
+wlan0     Link encap:Ethernet  HWaddr 92:dd:13:9c:cf:37
+          inet addr:192.168.3.78  Bcast:192.168.3.255  Mask:255.255.255.0 
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:1801376 errors:0 dropped:0 overruns:0 frame:0 
+          TX packets:382964 errors:0 dropped:0 overruns:0 carrier:0 
+          collisions:0 txqueuelen:1000 
+          RX bytes:2409676370 TX bytes:93610184 
+
+ipv6_addr:
+/bin/sh: ip: inaccessible or not found
+/bin/sh: cat: /proc/net/if_inet6: Permission denied

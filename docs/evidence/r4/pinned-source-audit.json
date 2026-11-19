@@ -1,0 +1,195 @@
+{
+  "commit": "ad1b1365999c92c3fc7a054e7f3af84623f74fee",
+  "kind": "S-pinned-source-audit",
+  "schemaExecuted": false,
+  "effectRuntimeExecuted": false,
+  "sources": [
+    {
+      "file": "packages/contracts/src/orchestrationV2.ts",
+      "sha256": "48b4b074c0db33d863c8874d1e8a74c0d4e72b60767747d1698b7532ad8dd40b",
+      "hits": [
+        {
+          "term": "OrchestrationV2ThreadLaunchInput",
+          "lines": [
+            3890,
+            3911,
+            4551
+          ]
+        },
+        {
+          "term": "initialMessage",
+          "lines": [
+            3117,
+            3902
+          ]
+        },
+        {
+          "term": "queue_after_active",
+          "lines": [
+            3390
+          ]
+        },
+        {
+          "term": "queued-run.edit",
+          "lines": [
+            3473
+          ]
+        },
+        {
+          "term": "queued-run.reorder",
+          "lines": [
+            3460
+          ]
+        },
+        {
+          "term": "queue.resume",
+          "lines": [
+            3449
+          ]
+        },
+        {
+          "term": "thread.model-selection.set",
+          "lines": [
+            3336
+          ]
+        },
+        {
+          "term": "thread.runtime-mode.set",
+          "lines": [
+            3324
+          ]
+        },
+        {
+          "term": "thread.interaction-mode.set",
+          "lines": [
+            3330
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/client-runtime/src/operations/commands.ts",
+      "sha256": "e2a0657c7c60aa7138d4f6a8b469742b94a9d97ddab265f5cd8a38a5a00c2507",
+      "hits": [
+        {
+          "term": "ORCHESTRATION_V2_WS_METHODS.launchThread",
+          "lines": [
+            787
+          ]
+        },
+        {
+          "term": "deliveryIntent: requestedMode",
+          "lines": [
+            863
+          ]
+        },
+        {
+          "term": "dispatchMode",
+          "lines": [
+            197,
+            546,
+            808,
+            833,
+            839,
+            864
+          ]
+        }
+      ]
+    },
+    {
+      "file": "apps/mobile/src/lib/projectThreadStartTurn.ts",
+      "sha256": "1c9bc510e2bb7adeebdfe7e66357ab2e203903b68572c92429d89b983c3ab53b",
+      "hits": [
+        {
+          "term": "bootstrap:",
+          "lines": [
+            61
+          ]
+        },
+        {
+          "term": "createThread:",
+          "lines": [
+            62
+          ]
+        },
+        {
+          "term": "modelSelection: spec.modelSelection",
+          "lines": [
+            57,
+            65
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/contracts/src/model.ts",
+      "sha256": "754f9f6611fadefcd72ccc1211102379a878026643092abca27e5f90fee00cf9",
+      "hits": [
+        {
+          "term": "optionDescriptors",
+          "lines": [
+            103
+          ]
+        },
+        {
+          "term": "boolean",
+          "lines": [
+            7,
+            37,
+            85,
+            94,
+            95
+          ]
+        },
+        {
+          "term": "select",
+          "lines": [
+            7,
+            26,
+            64,
+            93,
+            96,
+            155
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/contracts/src/managedPolicy.ts",
+      "sha256": "1773adae5c5dd92015190ff564a29f5727765a8f475788a1b753ecbdee1c77a9",
+      "hits": [
+        {
+          "term": "maxRuntimeMode",
+          "lines": [
+            75,
+            91,
+            105,
+            187,
+            202
+          ]
+        },
+        {
+          "term": "allowedDrivers",
+          "lines": [
+            38,
+            101,
+            235
+          ]
+        }
+      ]
+    },
+    {
+      "file": "packages/contracts/src/composerContext.ts",
+      "sha256": "690caedf2ffcd8cb376320b5e86c7a9f188f35d27bb06c67fe9895d973228ce1",
+      "hits": [
+        {
+          "term": "OrchestrationMessageContext",
+          "lines": [
+            312,
+            333
+          ]
+        }
+      ]
+    }
+  ]
+}

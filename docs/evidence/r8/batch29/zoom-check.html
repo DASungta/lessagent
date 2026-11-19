@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Zoom check</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;color:#14233b;background:#edf3f9;font:22px sans-serif}
+button{position:fixed;min-width:58px;height:52px;background:#174eba;color:white;font:bold 19px sans-serif;border:0;border-radius:7px}
+#nw{top:12%;left:8%}#se{bottom:12%;right:8%}main{position:fixed;top:40%;width:100%;text-align:center}p{margin:8px}
+</style>
+<button id="nw">NW</button><main><strong id="size"></strong><p id="result">No clicks</p></main><button id="se">SE</button>
+<script>
+const size=document.getElementById('size'),result=document.getElementById('result');let count=0;
+function measure(){size.textContent=innerWidth+' × '+innerHeight}
+measure();addEventListener('resize',measure);
+addEventListener('click',e=>result.textContent=(e.target.closest('button')?.id.toUpperCase()||'MISS')+' · '+(++count));
+</script></html>

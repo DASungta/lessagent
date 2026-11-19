@@ -1,0 +1,40 @@
+{
+  "cleanedAt": "2026-11-17T15:02:03+0800",
+  "revokedSessionsBeforeCleanup": 9,
+  "remainingSessions": 0,
+  "remainingPairingTokens": 0,
+  "temporaryCredentialFilesRemoved": 9,
+  "isolatedService": {
+    "base": "http://127.0.0.1:47891",
+    "stopped": true,
+    "port47891Listening": false
+  },
+  "deviceEnvironmentRemoved": {
+    "localId": "23d8690e-fafc-4f42-bb1d-683187c073dd",
+    "environmentId": "df071d1f-faad-4ee3-b082-693b78d7cafa",
+    "base": "http://127.0.0.1:47891"
+  },
+  "survivingEnvironments": [
+    {
+      "localId": "legacy-v1",
+      "environmentId": "633dac07-9196-4071-be08-9936a249debd",
+      "base": "http://127.0.0.1:47831"
+    },
+    {
+      "localId": "9efa8cb3-ce78-45d7-aaa7-0677de8f2e6a",
+      "environmentId": "13c32a79-8e73-4c09-9e59-738dff57907b",
+      "base": "http://192.168.10.75:47832"
+    }
+  ],
+  "selectedLocalId": "legacy-v1",
+  "reverseRoutes": [
+    "23E0224122000135    tcp:3773 tcp:3773    [Reverse]",
+    "23E0224122000135    tcp:47831 tcp:47831    [Reverse]"
+  ],
+  "preservedServices": [
+    "tcp:3773",
+    "tcp:47831"
+  ],
+  "note": "只清理 R3 隔离服务及其环境；未操作 R1 A/B 环境、3773/47831 或真实工作项目。",
+  "deviceState": "unlocked after system collaborative-update reboot; final HAP installed and auto-settle immediate menu verified before cleanup"
+}

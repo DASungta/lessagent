@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-11-16T21:08:23.080120+08:00",
+  "localTestsPassed": 109,
+  "ordinaryBuildPassed": true,
+  "ordinaryHap": "/tmp/r1-product-109.hap",
+  "sha256": "3963f8233dec970ff898492a54a23d1b4becd5ac70dce70220cc85d082afd6ec",
+  "installed": true,
+  "nativeEvidence": [
+    "transport-negative-accepted.json",
+    "credential-refresh-native.json",
+    "ordinary-after-independent-native.json",
+    "known-address-product-native.json",
+    "deeplink-native.json",
+    "dual-product-ui-native.json"
+  ],
+  "physicalCameraRecognitionVerified": false
+}

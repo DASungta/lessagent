@@ -1,0 +1,5 @@
+[
+  {"kind":"snapshot","snapshotSequence":10,"projection":{"thread":{"id":"thread-test"},"messages":[]}},
+  {"kind":"event","sequence":12,"event":{"type":"message.updated","threadId":"thread-test","payload":{"id":"message-test","threadId":"thread-test","role":"assistant","text":"你","streaming":true}}},
+  {"kind":"event","sequence":14,"event":{"type":"message.updated","threadId":"thread-test","payload":{"id":"message-test","threadId":"thread-test","role":"assistant","text":"你好 👋","streaming":false}}}
+]

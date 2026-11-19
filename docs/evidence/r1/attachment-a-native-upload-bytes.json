@@ -1,0 +1,14 @@
+{
+  "a": {
+    "pendingFiles": 1,
+    "exactExpectedABytes": 1,
+    "sha256": [
+      "052f0a6c31c1e12cca51f0c55c4436e75d8bf447ce550352697b43763ef588a9"
+    ]
+  },
+  "b": {
+    "pendingFiles": 0,
+    "exactExpectedABytes": 0,
+    "sha256": []
+  }
+}

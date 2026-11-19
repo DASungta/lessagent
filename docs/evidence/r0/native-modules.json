@@ -1,0 +1,12 @@
+[
+  "t3-agent-notifications",
+  "t3-composer-editor",
+  "t3-highlights",
+  "t3-native-controls",
+  "t3-review-diff",
+  "t3-source-text",
+  "t3-terminal",
+  "t3-voice-transcription",
+  "t3-web-socket",
+  "t3-widget-expiry"
+]

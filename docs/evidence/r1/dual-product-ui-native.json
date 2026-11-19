@@ -1,0 +1,28 @@
+{
+  "device": "23E0224122000135",
+  "checkedAt": "2026-11-16T21:38:22.947194+08:00",
+  "ordinaryProductTestEpoch": 109,
+  "bothConnected": true,
+  "homeShowsTwoIdenticalThreadIds": true,
+  "sameProjectAndThreadIds": true,
+  "aToBToAToBDraftIsolation": true,
+  "aDisabledWithoutLosingBDraft": true,
+  "aReenabledWithoutCodeAndADraftPreserved": true,
+  "distinctCredentialAndRecoveryReferences": true,
+  "messageSendClicked": false,
+  "serverCounts": {
+    "a": {
+      "orchestration_v2_projection_messages": 0,
+      "orchestration_v2_projection_runs": 0,
+      "orchestration_v2_projection_provider_sessions": 0
+    },
+    "b": {
+      "orchestration_v2_projection_messages": 0,
+      "orchestration_v2_projection_runs": 0,
+      "orchestration_v2_projection_provider_sessions": 0
+    }
+  },
+  "pairingEntry": "new B from physical camera QR; fresh-code no-auto gate verified before a single explicit native confirmation",
+  "rerunAfterPhysicalCameraPairing": true,
+  "cameraPairingEvidence": "camera-physical-pairing-native.json"
+}

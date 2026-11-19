@@ -1,0 +1,8 @@
+[
+{
+  "directory": "/Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/.cxx/default/default/debug/arm64-v8a",
+  "command": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/native/llvm/bin/clang++ --target=aarch64-linux-ohos --gcc-toolchain=/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/native/llvm --sysroot=/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/native/sysroot -Dt3device_EXPORTS -I/Applications/DevEco-Studio.app/Contents/sdk/default/hms/native/sysroot/usr/include -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -fno-addrsig -Wa,--noexecstack -Wformat -Werror=format-security   -D__MUSL__ -O0 -g -fno-limit-debug-info  -std=gnu++17 -fPIC -Wall -Wextra -o CMakeFiles/t3device.dir/decoder.cpp.o -c /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/cpp/decoder.cpp",
+  "file": "/Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/cpp/decoder.cpp",
+  "output": "CMakeFiles/t3device.dir/decoder.cpp.o"
+}
+]

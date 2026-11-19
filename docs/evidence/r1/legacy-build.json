@@ -1,0 +1,8 @@
+{
+  "sourceArchiveSha256": "0f9254bc05d02296c4e85f9a1b19a198e121f8554cd88c5db2f1569ddac5ae30",
+  "artifactSha256": "fe73a950bc4504c591275cb9e18e6e5289565ec596630e01e8f8ac479c871788",
+  "artifactPath": "/tmp/r1-legacy-v1-signed.hap",
+  "kind": "archived actual v1 startup and UI",
+  "productionSourceChanged": false,
+  "temporaryForegroundKeepScreenOn": true
+}

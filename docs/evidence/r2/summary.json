@@ -1,0 +1,56 @@
+{
+  "upstream": "ad1b1365999c92c3fc7a054e7f3af84623f74fee",
+  "archiveSha256": "595b64affe9ae78510bbfdcd1cb4f282cade542aa4f8f7c704ea02998321e30a",
+  "r2ClientImplemented": true,
+  "r2Accepted": false,
+  "realClerkVerified": false,
+  "realRelayVerified": false,
+  "realEnvironmentLinkVerified": false,
+  "realDeviceApprovalVerified": false,
+  "tests": {
+    "count": 153,
+    "failed": 0,
+    "log": "r2-local-tests.log"
+  },
+  "build": {
+    "passed": true,
+    "hap": "r2-candidate-signed.hap",
+    "sha256": "75fb05fdc3463b3c709cb884cf5e331a0180170a67215ce8f9b36df4f523755b",
+    "log": "r2-build.log"
+  },
+  "upstreamContractAudit": {
+    "checked": 14,
+    "failed": 0,
+    "evidence": "upstream-contract.json"
+  },
+  "sourceArchive": {
+    "file": "r2-source.tar.gz",
+    "sha256": "387b8e2eabfd77da0f82403af178b64ba1917d7d45a9f2461d1ba8acb60e3e9a"
+  },
+  "dpopDiagnostic": {
+    "hap": "cloud-dpop-check-signed.hap",
+    "sha256": "fd0329ccd57342471a3092210a87b89a864eb0f4d67e34687a66f7d95802b586",
+    "build": "pass",
+    "execution": "not-run",
+    "reason": "authorized phone had product app foreground; R1 coordination retained",
+    "huksUsed": false,
+    "assetLockBehaviorReverified": false
+  },
+  "externalBlockers": [
+    "no Clerk publishable key/JWT template/HTTPS relay URL",
+    "no registered Harmony OAuth client and redirect",
+    "no isolated cloud account/linked relay environment",
+    "no real cross-network relay/ticket/session/approval run",
+    "DPoP diagnostic not executed on device"
+  ],
+  "preserved": [
+    "R1 direct Bearer behavior and 119 tests",
+    "unknown-submit recovery and removal guard",
+    "environment/credential/route isolation",
+    "no WebView client replacement",
+    "mobile SSH remains unsupported"
+  ],
+  "gitInitialized": false,
+  "existing3773ServiceRestarted": false,
+  "capturedAt": "2026-11-17T01:37:16+08:00"
+}

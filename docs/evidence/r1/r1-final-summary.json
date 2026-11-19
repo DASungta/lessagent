@@ -1,0 +1,56 @@
+{
+  "upstreamBaseline": "ad1b1365999c92c3fc7a054e7f3af84623f74fee",
+  "upstreamArchive": "docs/baselines/t3code-ad1b136.tar.gz",
+  "upstreamArchiveSha256": "595b64affe9ae78510bbfdcd1cb4f282cade542aa4f8f7c704ea02998321e30a",
+  "r1ClientScopeImplemented": true,
+  "r1NativeVerificationClosedForClientScope": true,
+  "device": "23E0224122000135",
+  "model": "ALN-AL80",
+  "tests": {
+    "count": 119,
+    "failed": 0,
+    "log": "docs/evidence/r1/r1-final-tests.log"
+  },
+  "build": {
+    "passed": true,
+    "hap": "docs/evidence/r1/final-product-119-signed.hap",
+    "sha256": "9a3d43f81743682b321a7dfcb31274bb36b8233ed2123bd5091470be0f3e672f"
+  },
+  "upstreamConformance": "pass",
+  "hostDpopSelfcheck": "pass-host-only",
+  "nativeEvidence": [
+    "v1-to-v2 upgrade",
+    "unknown submission preservation",
+    "screen-lock Asset denial/recovery",
+    "physical QR before confirmation and pairing",
+    "deep links",
+    "network negative cases",
+    "credential expiry/repair",
+    "dual-environment isolation",
+    "attachment isolation",
+    "multi-route isolation",
+    "C05 approve/decline/revoke/unlink",
+    "PR routing permissions and trust revocation",
+    "environment edit/unknown guard",
+    "final reinstall/restart",
+    "system file-manager cleanup"
+  ],
+  "remainingExternalBlockers": [
+    "original mobile B01 visual/operation evidence",
+    "Tailnet and IPv6 real-network combinations",
+    "cellular handoff/public-network loss during task"
+  ],
+  "notExpanded": [
+    "R2 T3 Connect/cloud/DPoP/relay",
+    "R3/R4/R5 business flows",
+    "terminal/preview/push",
+    "mobile SSH"
+  ],
+  "existing3773ServiceRestarted": false,
+  "gitInitialized": false,
+  "privateRuntimeRemoved": true,
+  "capturedAt": "2026-11-16T23:46:35.358580+08:00",
+  "networkReadinessRecheck": "network-readiness-recheck.json",
+  "t3DeviceAccessRecheckedAt": "2026-11-16T23:52:17.702066+08:00",
+  "t3DeviceAccessAvailable": false
+}

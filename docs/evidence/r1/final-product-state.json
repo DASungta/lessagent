@@ -1,0 +1,37 @@
+{
+  "device": "23E0224122000135",
+  "model": "ALN-AL80",
+  "bundleName": "com.dasungta.t3code.harmony",
+  "versionCode": 2,
+  "versionName": "0.1.1",
+  "hapSha256": "9a3d43f81743682b321a7dfcb31274bb36b8233ed2123bd5091470be0f3e672f",
+  "installed": true,
+  "installMode": "install -r",
+  "ordinaryProduct": true,
+  "processAliveAfterReinstall": true,
+  "environmentCount": 2,
+  "environments": [
+    {
+      "environmentId": "633dac07-9196-4071-be08-9936a249debd",
+      "label": "633dac07-9196-4071-be08-9936a249debd",
+      "base": "http://127.0.0.1:47831",
+      "alternateRouteCount": 0,
+      "prRouting": "off",
+      "recoveryReferenceCount": 1
+    },
+    {
+      "environmentId": "13c32a79-8e73-4c09-9e59-738dff57907b",
+      "label": "奋斗的iMac Pro",
+      "base": "http://192.168.10.75:47832",
+      "alternateRouteCount": 0,
+      "prRouting": "off",
+      "recoveryReferenceCount": 1
+    }
+  ],
+  "directoryContainsSecrets": false,
+  "bothEnvironmentsConnectedAfterRestart": true,
+  "unknownSubmissionMessagesPreserved": true,
+  "temporaryCEnvironmentRemoved": true,
+  "temporaryHttpsRoutesRemoved": true,
+  "capturedAt": "2026-11-16T23:42:22.692344+08:00"
+}

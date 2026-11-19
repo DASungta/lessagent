@@ -1,0 +1,21 @@
+{
+  "device": "23E0224122000135",
+  "model": "ALN-AL80",
+  "cLabelBefore": "奋斗的iMac Pro",
+  "cLabelAfter": "R1 Replay source",
+  "cCredentialReferenceUnchanged": true,
+  "cRecoveryAliasesUnchanged": true,
+  "aNameEditWithUnknownMarker": {
+    "blocked": true,
+    "visibleError": "请先核对正在连接、提交或结果未知的请求",
+    "unknownMarkerPreserved": true
+  },
+  "bNameEditWithUnknownMarker": {
+    "blocked": true,
+    "unknownMarkerPreserved": true
+  },
+  "restartAfterEditPreservedDirectoryAndSecrets": true,
+  "testEnvironmentRemovedAfterValidation": true,
+  "aAndBEntriesUnchangedByCremoval": true,
+  "capturedAt": "2026-11-16T23:42:22.689319+08:00"
+}

@@ -1,0 +1,165 @@
+{
+  "upstream": "ad1b1365999c92c3fc7a054e7f3af84623f74fee",
+  "archive": "docs/baselines/t3code-ad1b136.tar.gz",
+  "archiveSha256": "595b64affe9ae78510bbfdcd1cb4f282cade542aa4f8f7c704ea02998321e30a",
+  "result": "pass",
+  "checks": [
+    {
+      "id": "public-config-gating",
+      "path": "apps/mobile/src/features/cloud/publicConfig.ts",
+      "markers": [
+        "publishableKey",
+        "jwtTemplate",
+        "normalizeSecureRelayUrl",
+        "hasCloudPublicConfig"
+      ],
+      "pass": true
+    },
+    {
+      "id": "secure-relay-origin",
+      "path": "packages/shared/src/relayUrl.ts",
+      "markers": [
+        "url.protocol !== \"https:\"",
+        "url.username.length",
+        "url.pathname",
+        "return url.origin"
+      ],
+      "pass": true
+    },
+    {
+      "id": "dpop-jws",
+      "path": "packages/client-runtime/src/relay/dpopProof.ts",
+      "markers": [
+        "typ: \"dpop+jwt\"",
+        "alg: \"ES256\"",
+        "htm:",
+        "htu,",
+        "jti:",
+        "iat:",
+        "ath:",
+        "raw `r‖s`"
+      ],
+      "pass": true
+    },
+    {
+      "id": "dpop-thumbprint-order",
+      "path": "packages/client-runtime/src/relay/dpopProof.ts",
+      "markers": [
+        "{ crv: jwk.crv, kty: jwk.kty, x: jwk.x, y: jwk.y }"
+      ],
+      "pass": true
+    },
+    {
+      "id": "dpop-htu-normalization",
+      "path": "packages/shared/src/dpopCommon.ts",
+      "markers": [
+        "parsed.hash = \"\";",
+        "parsed.search = \"\";"
+      ],
+      "pass": true
+    },
+    {
+      "id": "relay-token-cache-binding",
+      "path": "packages/client-runtime/src/relay/managedRelay.ts",
+      "markers": [
+        "token.accountId === input.accountId",
+        "token.clientId === input.clientId",
+        "token.relayUrl === input.relayUrl",
+        "token.thumbprint === input.thumbprint",
+        "input.scopes.every",
+        "expiresAtMillis > input.nowMillis + 5_000"
+      ],
+      "pass": true
+    },
+    {
+      "id": "relay-invalid-bearer-retry",
+      "path": "packages/client-runtime/src/relay/managedRelay.ts",
+      "markers": [
+        "reason === \"invalid_bearer\"",
+        "refreshRejectedToken ? attempt(false)"
+      ],
+      "pass": true
+    },
+    {
+      "id": "relay-client-endpoints",
+      "path": "packages/contracts/src/relay.ts",
+      "markers": [
+        "\"/v1/client/dpop-token\"",
+        "\"/v1/environments\"",
+        "\"/v1/environments/:environmentId/status\"",
+        "\"/v1/environments/:environmentId/connect\"",
+        "\"/v1/client/environment-link-challenges\"",
+        "\"/v1/client/environment-links\"",
+        "authorization: TrimmedNonEmptyString",
+        "dpop: TrimmedNonEmptyString",
+        "clientKeyThumbprint"
+      ],
+      "pass": true
+    },
+    {
+      "id": "relay-connect-credential",
+      "path": "packages/contracts/src/relay.ts",
+      "markers": [
+        "credential: TrimmedNonEmptyString",
+        "expiresAt: TrimmedNonEmptyString",
+        "clientProofKeyThumbprint",
+        "providerKind"
+      ],
+      "pass": true
+    },
+    {
+      "id": "environment-dpop-exchange",
+      "path": "packages/client-runtime/src/authorization/service.ts",
+      "markers": [
+        "environmentEndpointUrl(bootstrap.endpoint.httpBaseUrl, \"/oauth/token\")",
+        "expiresAtEpochMs",
+        "dpopThumbprint"
+      ],
+      "pass": true
+    },
+    {
+      "id": "environment-link-http",
+      "path": "packages/contracts/src/environmentHttp.ts",
+      "markers": [
+        "\"/api/connect/link-proof\"",
+        "\"/api/connect/relay-config\"",
+        "RelayLinkProofRequest",
+        "RelayEnvironmentConfigRequest"
+      ],
+      "pass": true
+    },
+    {
+      "id": "device-approval-http",
+      "path": "packages/contracts/src/environmentHttp.ts",
+      "markers": [
+        "\"/api/auth/connect-devices/approve\"",
+        "\"/api/auth/connect-devices/revoke\"",
+        "\"/api/auth/pairing-links/revoke\""
+      ],
+      "pass": true
+    },
+    {
+      "id": "device-approval-stream",
+      "path": "packages/contracts/src/auth.ts",
+      "markers": [
+        "AuthConnectDeviceRequest",
+        "connectDeviceRequest",
+        "AuthAccessStreamEvent",
+        "pairingLinkUpserted",
+        "pairingLinkRemoved"
+      ],
+      "pass": true
+    },
+    {
+      "id": "account-cleanup-order",
+      "path": "packages/client-runtime/src/relay/cloudAccountService.ts",
+      "markers": [
+        "handlers.deactivate();",
+        "await handlers.cleanUp",
+        "state = { _tag: \"Active\""
+      ],
+      "pass": true
+    }
+  ],
+  "generatedAt": "2026-11-16T17:30:16.356Z"
+}

@@ -1,0 +1,19 @@
+{
+  "permissionErrorVisible": false,
+  "errorCategories": [
+    "\u5931\u8d25"
+  ],
+  "bHasNoAttachmentChip": true,
+  "bDraftIntact": true,
+  "aPendingCount": 1,
+  "bPendingCount": 0,
+  "aActualNativeSessionScopes": [
+    "orchestration:read",
+    "orchestration:operate"
+  ],
+  "bActualNativeSessionScopes": [
+    "orchestration:read"
+  ],
+  "nativeRequestRejected": true,
+  "nativeErrorPresentation": "generic RPC rejection; specific permission text not shown"
+}

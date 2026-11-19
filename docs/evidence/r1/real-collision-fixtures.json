@@ -1,0 +1,27 @@
+{
+  "results": [
+    {
+      "environmentId": "633dac07-9196-4071-be08-9936a249debd",
+      "projectId": "r1-collision-project",
+      "threadId": "r1-collision-thread",
+      "workspaceRoot": "/var/folders/l4/5zxkftbn7mv57l3pgw780r_r0000gn/T/t3-harmony-r1-real-7qdep8hl/a/empty-workspace",
+      "messages": 0,
+      "providerTurns": 0,
+      "runs": 0,
+      "providerSessions": 0,
+      "providerVerified": false
+    },
+    {
+      "environmentId": "13c32a79-8e73-4c09-9e59-738dff57907b",
+      "projectId": "r1-collision-project",
+      "threadId": "r1-collision-thread",
+      "workspaceRoot": "/var/folders/l4/5zxkftbn7mv57l3pgw780r_r0000gn/T/t3-harmony-r1-real-7qdep8hl/b/empty-workspace",
+      "messages": 0,
+      "providerTurns": 0,
+      "runs": 0,
+      "providerSessions": 0,
+      "providerVerified": false
+    }
+  ],
+  "noMessageCommandsSent": true
+}

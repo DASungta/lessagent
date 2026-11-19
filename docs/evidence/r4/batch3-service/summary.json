@@ -1,0 +1,58 @@
+{
+  "stage": "R4 batch 3",
+  "date": "2026-11-17",
+  "service": {
+    "version": "0.1.9",
+    "baseUrl": "http://127.0.0.1:47893",
+    "isolatedBaseDir": "/tmp/t3-r4-accept-gHC0QI"
+  },
+  "device": {
+    "model": "ALN-AL80",
+    "hdcTarget": "23E0224122000135",
+    "installed": true,
+    "versionName": "0.1.1",
+    "versionCode": 2,
+    "updateTime": "2026-11-17T16:36:35.730Z",
+    "reason": "installed; core model/message/queue/secret/attachment UI verified after physical unlock"
+  },
+  "localTests": {
+    "total": 208,
+    "passed": 208,
+    "failed": 0
+  },
+  "signedBuildPassed": true,
+  "hap": "docs/evidence/r4/batch3-service/r4-batch3-candidate.hap",
+  "hapSha256": "86b950e13afb6ac3b7a48226f8d6d570abf93706b8c4e84148e323f4d003092c",
+  "verified": [
+    "queue edit, reorder, promote, cancel, start, held resume and steer",
+    "force stop released the provider session and interrupted the run",
+    "manual continuation resumed an interrupted run",
+    "secret direct, file delivery and decline readback",
+    "70-byte image plus 12 MiB file multi-attachment association",
+    "exact-byte asset downloads for both attachments",
+    "guest share connect-unavailable error after isolated beta enable",
+    "original send menu, queue capsule/sheet, approval and secret visuals"
+  ],
+  "remaining": [
+    "structured request_user_input with a real provider",
+    "secret provider/reference success path",
+    "guest link creation over a real T3 Connect tunnel",
+    "usage-limit recovery with a real provider limit",
+    "history paging on a server advertising threadSnapshotPagination",
+    "system font scaling, screen reader, system file picker and pixel parity"
+  ],
+  "blockedAudit": {
+    "condition": "full R4 depends on missing provider, cloud, accessibility-consent and pixel-acceptance resources",
+    "required": [
+      "a provider exposing structured request_user_input",
+      "a configured secret provider for reference answers",
+      "a real T3 Connect tunnel/account for guest links",
+      "a real provider usage-limit failure",
+      "a service advertising threadSnapshotPagination for history paging",
+      "user consent/configuration for Care mode maximum font and screen reader checks",
+      "accepted pixel-level original/Harmony visual comparison"
+    ]
+  },
+  "fullR4Complete": false
+}
+

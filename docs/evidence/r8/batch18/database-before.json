@@ -1,0 +1,10 @@
+{
+  "quickCheck": "ok",
+  "counts": {
+    "orchestration_v2_projection_threads": 1,
+    "orchestration_v2_projection_messages": 6
+  },
+  "pageSize": 4096,
+  "pageCount": 307,
+  "freePages": 0
+}

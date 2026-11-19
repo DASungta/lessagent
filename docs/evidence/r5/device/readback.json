@@ -1,0 +1,53 @@
+{
+  "generatedAt": "2026-11-18T13:55:00+08:00",
+  "device": {
+    "model": "ALN-AL80 / HUAWEI Mate 60 Pro",
+    "hdcTarget": "23E0224122000135"
+  },
+  "app": {
+    "bundle": "com.dasungta.t3code.harmony",
+    "hapSha256": "6bb938588df22d2dc8cb26b3618b706b0537c616048758a28a32d98756b04c36",
+    "verifiedUiHapSha256": "e3951c67a6a5d82dbbf5ddf53d2265b093ebd48ad971efc4c86c9c9c08770d1c",
+    "install": "hdc install -r succeeded; bundle updateTime 2026-11-18T20:22:53+08:00 matches the checks build"
+  },
+  "environment": {
+    "kind": "isolated T3 0.1.9 on loopback lab base dir",
+    "baseUrl": "http://127.0.0.1:47893",
+    "connectionMethod": "hdc reverse tcp:47893"
+  },
+  "project": {
+    "namePrefix": "r5-accept-",
+    "purpose": "temporary files, Diff and local bare remote only"
+  },
+  "passed": [
+    "file tree shows only direct children after expanding directories",
+    "source view renders line numbers and clamps long lines",
+    "line select -> copy selection / add review-comment context",
+    "Markdown file renders heading, table, highlighted code, details, Unicode math",
+    "agent Markdown reply renders table, code fence, details and math natively",
+    "workspace image preview via assets.createUrl",
+    "4,080,000-byte / 120,000-line file shows 5000-line cap and scrolls",
+    "chmod 000 file shows error + retry without crash",
+    "Diff lists 3 files with rename and long line",
+    "Diff line select -> comment -> review-comment context chip",
+    "Git overview lists 5 changed files after refresh",
+    "UI commit+push on default branch asks confirmation, commits and pushes; remote has commit cf3d3d8",
+    "branch list shows main and r5-branch; current main has no false worktree-occupied label",
+    "PR page shows provider-less empty state",
+    "dark system mode: home, file tree, Markdown preview and Diff passed",
+    "file-level comment composer opened and produced review-comment context",
+    "Diff previous/next file switched nav-a.txt to nav-b.txt and rendered NAV-B (key collision fixed)"
+  ],
+  "failedOrUnverified": [
+    "real PR provider/account/repository write flow: providers=[] in isolated service",
+    "Mermaid diagram and KaTeX-grade math layout: not implemented",
+    "maximum font, dark/light, screen reader and pixel parity",
+    "very large multi-file Diff, previous/next file navigation",
+    "Git conflict, remote auth failure, worktree conflict recovery",
+    "video/PDF in-app playback and zoom",
+    "one transient black app window; force-stop + relaunch recovered; root cause not established",
+    "PR reaction/thread resolution and linked-PR/watch UI have no provider-backed live execution",
+    "screenshots for the last dark/diff checks were lost when /tmp was cleaned; only structured readback remains",
+    "old isolated lab directory was removed by /tmp cleanup; port 47893 was then taken by another session's new lab, so testing stopped"
+  ]
+}

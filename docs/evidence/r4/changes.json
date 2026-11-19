@@ -1,0 +1,110 @@
+[
+  {
+    "path": "README.md",
+    "status": "modified",
+    "sha256": "7e9ed455a8ab9c121cb95656914a6493a8cee4184b0b675c5267c2741c37f36b",
+    "previousSha256": "90c5390ab800d62e947b91913ca6c11a1d7ba257c23ae9ad492312d74f0238d6"
+  },
+  {
+    "path": "docs/full-mobile-migration-plan.md",
+    "status": "modified",
+    "sha256": "0970067bcc6476a378bc329dea4214935d38514f995c73f3c086a8f6eaf7c5e9",
+    "previousSha256": "c007167287459d84651e3df045dac20a4c05bdbfe16f8c612ae51322b9b91caf"
+  },
+  {
+    "path": "docs/r0-mobile-capability-matrix.md",
+    "status": "modified",
+    "sha256": "9f271ca1da9eaf822bb4d446f9c1dcf398ad11d4199dc174cea2423e868c85e2",
+    "previousSha256": "654693c43811c7bf815a6a60ca3739608b754d743ae5d5b3bcfee357f2b5ea77"
+  },
+  {
+    "path": "docs/r4-progress.md",
+    "status": "added",
+    "sha256": "ef8010c1435acef1a5648a0f607c0a944b6499a6808b88c8391ed802e727146a",
+    "previousSha256": null
+  },
+  {
+    "path": "entry/src/main/ets/components/QueuePanel.ets",
+    "status": "added",
+    "sha256": "5a11cbafa261fc5e98a60c97048081ab1e01fb2f12f4f079131654e5c05524e8",
+    "previousSha256": null
+  },
+  {
+    "path": "entry/src/main/ets/components/RequestCard.ets",
+    "status": "modified",
+    "sha256": "f688e1ec446fd0f4c421988bda7a99ed43781588011c0baaf7a32e618087975a",
+    "previousSha256": "a9ca41eca7ce75165c155ab8bbdaf859e40daee83e0489527e7218a5838caddc"
+  },
+  {
+    "path": "entry/src/main/ets/components/TaskSettingsPanel.ets",
+    "status": "added",
+    "sha256": "8366d421e876256e84b530de9d7936a8cddc95edd19db573dab8a7187614068f",
+    "previousSha256": null
+  },
+  {
+    "path": "entry/src/main/ets/pages/Index.ets",
+    "status": "modified",
+    "sha256": "a00f7bc7fa28f26f74ffcd7471b789083c3b9330d3751e3889dba4d91e9dde15",
+    "previousSha256": "dcde28c0df89fd1b9c34db0a9803c1ded2651772f3cb4b26faa0208e33678336"
+  },
+  {
+    "path": "entry/src/main/ets/protocol/Composer.ts",
+    "status": "added",
+    "sha256": "440f639f468d03d493946999b9226ecff8f6374ec3603ae06409e39736571f4a",
+    "previousSha256": null
+  },
+  {
+    "path": "entry/src/main/ets/protocol/Wire.ts",
+    "status": "modified",
+    "sha256": "cd9a76959183490bddb573ff5c9eadeed9bd4fdcec5fe70c53992adcbff96d58",
+    "previousSha256": "2946b9a06df85cd3c200f70061e789d166446f64ffd88acb1f6df9882a8be5c4"
+  },
+  {
+    "path": "entry/src/main/ets/services/AttachmentPicker.ets",
+    "status": "modified",
+    "sha256": "47f00fb2b1f6dd40aaa09a0610a82967051c2399382b16153debd9742ef7230f",
+    "previousSha256": "deafcafb3125de2a7cd632d49fed72ceb93fbdf713e6da74a950e0eeefa872af"
+  },
+  {
+    "path": "entry/src/main/ets/services/T3Client.ets",
+    "status": "modified",
+    "sha256": "d9ce5f6cf31ef2bd98f48ee6f363fe84d94d6b55351e653de5e70fc75b597854",
+    "previousSha256": "67d1832a73c3df341f9a7594d8872652191499eb80933366b4788029f40e749a"
+  },
+  {
+    "path": "tests/composer-ui.test.mjs",
+    "status": "added",
+    "sha256": "f463b80c6e5c55e3fa67d176e86bfb6a85890a60432fe55e68c480ddbcbc4ea9",
+    "previousSha256": null
+  },
+  {
+    "path": "tests/composer.test.mjs",
+    "status": "added",
+    "sha256": "f4320a56c0598626c860675c794e7e67c5ccfa7b8335d94127504a4d2d253db3",
+    "previousSha256": null
+  },
+  {
+    "path": "tests/load-core.mjs",
+    "status": "modified",
+    "sha256": "fd7cf70d39c246e24a0d7b4e0bf20d86b0d03be01a8fb4021ed4b01522f95efc",
+    "previousSha256": "f6aeea512671bfb9d3c31c519e974829f467591e2d56e3a8d2a90537642e8eb1"
+  },
+  {
+    "path": "tests/native-client.test.mjs",
+    "status": "modified",
+    "sha256": "dc2357daa54d37ea7655e17c871844d04391b92d572239f672bb6a6b7fdab9d2",
+    "previousSha256": "a41237b966b438ab08e0f1fd8cc23193ad95506f518f5b767a600a6d3faefa9c"
+  },
+  {
+    "path": "tests/request-card.test.mjs",
+    "status": "added",
+    "sha256": "b5612e4e9ab857692f9996912b7e6a765fd6ace7f74cb3e32f36f8f6532e08aa",
+    "previousSha256": null
+  },
+  {
+    "path": "tests/ui-state.test.mjs",
+    "status": "modified",
+    "sha256": "522cd3458ed1125724cca42813285eb2302c1d2ea502d1b731df12652c540500",
+    "previousSha256": "42d2df94d07832146542cbca62e50942bb7a91ae6d594c697f0391f87b90403a"
+  }
+]

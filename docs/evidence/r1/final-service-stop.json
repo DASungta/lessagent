@@ -1,0 +1,42 @@
+{
+  "device": "23E0224122000135",
+  "stoppedOnlyIsolatedServices": [
+    {
+      "pid": 79217,
+      "port": 47831,
+      "signal": "TERM"
+    },
+    {
+      "pid": 79219,
+      "port": 47832,
+      "signal": "TERM"
+    },
+    {
+      "pid": 31473,
+      "port": 47847,
+      "signal": "TERM"
+    }
+  ],
+  "final": [
+    {
+      "pid": 79217,
+      "alive": false,
+      "port": 47831,
+      "listenerPids": []
+    },
+    {
+      "pid": 79219,
+      "alive": false,
+      "port": 47832,
+      "listenerPids": []
+    },
+    {
+      "pid": 31473,
+      "alive": false,
+      "port": 47847,
+      "listenerPids": []
+    }
+  ],
+  "existing3773Restarted": false,
+  "capturedAt": "2026-11-16T23:44:28.301344+08:00"
+}

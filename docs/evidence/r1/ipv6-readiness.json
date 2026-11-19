@@ -1,0 +1,13 @@
+{
+  "hostNonLinkLocalIpv6Count": 0,
+  "deviceNonLinkLocalIpv6Count": null,
+  "checkedAt": "2026-11-16T21:04:19.243009+08:00",
+  "ipv6PairingVerified": false,
+  "networkConfigurationChanged": false,
+  "deviceQueryDiagnostics": {
+    "toolReturnCode": 0,
+    "totalInet6Addresses": 0,
+    "commandFailed": true
+  },
+  "deviceAddressAvailabilityConfirmed": false
+}

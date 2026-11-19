@@ -1,0 +1,11 @@
+{
+  "device": "23E0224122000135",
+  "model": "ALN-AL80",
+  "diagnosticInstall": "success",
+  "diagnosticStart": "10106102",
+  "executedAssertions": 0,
+  "ordinaryBuildRestored": true,
+  "realCredentialsRead": false,
+  "deviceDataMigrated": false,
+  "normalHapSha256": "428f6e1f00ee544a1c8a30c2a6d8bab65e82e1bbd6bcaa2b8def1583622bd1b3"
+}

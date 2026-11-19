@@ -1,0 +1,37 @@
+{
+  "date": "2026-11-16",
+  "kind": "read-only-host-and-device-discovery",
+  "observations": [
+    {
+      "command": "adb devices -l",
+      "result": "No attached Android devices; first invocation started host adb daemon only."
+    },
+    {
+      "command": "xcrun simctl list devices booted",
+      "result": "unable to find utility simctl, not a developer tool or in PATH"
+    },
+    {
+      "command": "hdc list targets",
+      "result": "23E0224122000135"
+    },
+    {
+      "command": "hdc -t 23E0224122000135 shell param get const.product.model",
+      "result": "ALN-AL80"
+    },
+    {
+      "command": "hdc -t 23E0224122000135 shell bm dump -a (filtered t3/expo)",
+      "result": [
+        "com.dasungta.t3code.harmony"
+      ]
+    },
+    {
+      "path": "~/.cache/t3code/native-clients",
+      "result": "No local artifact files listed; not a remote cache check."
+    }
+  ],
+  "appLaunched": false,
+  "appInstalled": false,
+  "businessTaskSubmitted": false,
+  "t3ServiceRestarted": false,
+  "originalMobileScreensCaptured": false
+}

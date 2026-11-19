@@ -1,0 +1,8 @@
+{
+  "task_id": "scheduled-task:e41d2b1d-013d-4e4c-9291-30ba5e898328",
+  "title": "Harmony-schedule-check-20261119",
+  "enabled": 1,
+  "schedule_json": "{\"type\":\"once\",\"runAt\":\"2050-01-20T01:00:00.000Z\"}",
+  "run_count": 0,
+  "next_run_at": "2050-01-20T01:00:00.000Z"
+}

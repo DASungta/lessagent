@@ -1,0 +1,23 @@
+{
+  "stage": "R4 batch 3 device UI",
+  "files": [
+    {"path": "docs/evidence/r4/batch3-device/README.md", "sha256": "b6447e92dae599531dbe08ccd4db9bd399ac2c5d01975da218205ab205803525"},
+    {"path": "docs/evidence/r4/batch3-device/readback.json", "sha256": "727038cb83be3bbad423f29083864c0005b3204ea5c5cb2dd1b0ba14578bfc18"},
+    {"path": "docs/evidence/r4/batch3-device/summary.json", "sha256": "ae32f520e97d0dc99d22e078d4688ace927d8f6f932a10ca506bda77896c2dbf"},
+    {"path": "docs/evidence/r4/batch3-device/r4b3-model-grouped.jpeg", "sha256": "3c3c5c71ac76a8f9cd6a0d76a9b78ad878d00b5611012cdb3571ca3398831e25"},
+    {"path": "docs/evidence/r4/batch3-device/r4b3-thread-copy.jpeg", "sha256": "2750381a2a4923bbb86344b1c40769160e748b4a1a94687d32ef4849f33daea5"},
+    {"path": "docs/evidence/r4/batch3-device/r4b3-queue-badge.jpeg", "sha256": "d17326840c3cb54f3a56ba77c3b7a0dccedbb07ba984ed6e0a35d190cf4a2e74"},
+    {"path": "docs/evidence/r4/batch3-device/r4b3-queue-sheet.jpeg", "sha256": "77b8cd579836bdab67ad4888f7c15d54e9bf518af674118206bece6936210c96"},
+    {"path": "docs/evidence/r4/batch3-device/r4b3-queue-edit.jpeg", "sha256": "8c8f59b13d719a350765309713b7fa9a5206ab6018077377aaa0fcaa4eb8e112"},
+    {"path": "docs/evidence/r4/batch3-device/r4b3-queue-edit-saved.jpeg", "sha256": "a781c2120d5a0d2ae992d28c927f992949142a0e4e23965200496658aee2c354"},
+    {"path": "docs/evidence/r4/batch3-device/r4b3-queue-removed.jpeg", "sha256": "b4d51d8239e839ab078e8d23e99970f6afdb8271085b7e1125fab08b5fe67bf8"},
+    {"path": "docs/evidence/r4/batch3-device/r4b3-attachment-preview.jpeg", "sha256": "553b0f75d321fd976e0c75f8746a8750f7bb72d2ba971d230e59be29a24d1eda"},
+    {"path": "docs/evidence/r4/batch3-device/r4b3-secret-card.jpeg", "sha256": "e5b9ec5eb6c787ece933f246b52e642fb2fd54022b1aec028161983eaff4ebe4"},
+    {"path": "docs/evidence/r4/batch3-device/r4b3-secret-saved-list.jpeg", "sha256": "a5f718083ecb7dc507a14f044f7d756dfc3191609dbcebf79eeca0a0ce63dc28"},
+    {"path": "docs/evidence/r4/batch3-device/r4b3-attachment-preview.jpeg", "sha256": "553b0f75d321fd976e0c75f8746a8750f7bb72d2ba971d230e59be29a24d1eda"},
+    {"path": "docs/evidence/r4/batch3-device/r4b3-attachment-share.jpeg", "sha256": "d909e7c310098510a0f3e3d1f6ab84d80e8405b4e471ea56bbb1299de740f7f0"},
+    {"path": "docs/evidence/r4/batch3-device/r4b3-dark-thread.jpeg", "sha256": "11d7cabfb4a0791c1283815a627a0f431f0e0200e0f48ee253e3d05100119ee2"},
+    {"path": "docs/evidence/r4/batch3-device/r4b3-max-font-thread.jpeg", "sha256": "0c2ae3e78ee2239b78700a50154ffd403dbbcbee34d06b3b6c1e926f92b6e2ec"},
+    {"path": "docs/evidence/r4/batch3-device/r4b3-attachment-save.jpeg", "sha256": "dcc85d2adbc0ee565388b27e5c2ef04ec265dee93ba06c4dd682dd2d84338248"}
+  ]
+}

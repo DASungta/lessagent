@@ -1,0 +1,32 @@
+{
+  "upstreamSha": "ad1b1365999c92c3fc7a054e7f3af84623f74fee",
+  "testsPassed": 65,
+  "signedBuild": "passed",
+  "upstreamConformance": "passed",
+  "deviceInstalled": true,
+  "v2MigrationActivated": false,
+  "changedSourceAndTests": [
+    "README.md",
+    "entry/src/main/ets/pages/Index.ets",
+    "entry/src/main/ets/protocol/Environment.ts",
+    "entry/src/main/ets/protocol/Pairing.ets",
+    "entry/src/main/ets/protocol/Wire.ts",
+    "entry/src/main/ets/storage/EnvironmentStore.ets",
+    "tests/environment-storage.test.mjs",
+    "tests/environment.test.mjs",
+    "tests/pairing.test.mjs",
+    "tests/protocol.test.mjs"
+  ],
+  "changedDocs": [
+    "README.md",
+    "docs/full-mobile-migration-plan.md",
+    "docs/r1-progress.md"
+  ],
+  "hapPath": "entry/build/default/outputs/default/entry-default-signed.hap",
+  "hapSha256": "05bb6ac14bedb0f78d02b937b71fb0ae44bcf6cd41b39e544daa4326eb98852b",
+  "deviceChecksPassed": 11,
+  "deviceChecksFailed": 0,
+  "nativeUiChecksPassed": 3,
+  "deviceAcceptanceComplete": false,
+  "restoredNormalHapSha256": "428f6e1f00ee544a1c8a30c2a6d8bab65e82e1bbd6bcaa2b8def1583622bd1b3"
+}

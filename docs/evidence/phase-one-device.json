@@ -1,0 +1,58 @@
+{
+  "date": "2026-11-16",
+  "milestone": "M1",
+  "result": "passed",
+  "device": {
+    "name": "HUAWEI Mate 70 Pro",
+    "model": "PLR-AL30",
+    "osBuild": "OpenHarmony-7.0.0.111",
+    "api": 26
+  },
+  "client": {
+    "version": "0.1.0",
+    "compatibleApi": 24,
+    "signedHapSha256": "a94eb7071c5f9a4912f6de5c0b280d61bf7fac45e30a44ba7328cb50296def77"
+  },
+  "server": {
+    "version": "0.1.9",
+    "orchestrationProtocol": 2,
+    "transport": "USB HDC reverse, device loopback:3773 to host loopback:3773"
+  },
+  "validation": {
+    "signedInstall": true,
+    "coldStart": true,
+    "wrongCredentialRejectedOnDevice": true,
+    "authenticatedIdentityCheck": true,
+    "threadCreatedOnDevice": true,
+    "realAgentReplyOnDevice": true,
+    "restoredReplyExactMatch": true,
+    "restoredReplyCharacters": 2244,
+    "serverStreamingEventObserved": true,
+    "deviceStreamingLabelObserved": true,
+    "deviceFinalReplyExactMatch": true,
+    "finalReplyCharacters": 2302,
+    "matchingFinalMessageCount": 1,
+    "submittedUserMessages": 4,
+    "uniqueUserMessages": 4,
+    "automaticResubmissions": 0
+  },
+  "checks": {
+    "unitAndAdapterTests": 16,
+    "strictTypeCheck": "passed",
+    "upstreamSchemaAndEffectRpc": "passed",
+    "signedHapBuild": "passed"
+  },
+  "notVerified": [
+    "public HTTPS path and TLS failure on device",
+    "cellular/Wi-Fi switching",
+    "locked-screen task recovery",
+    "server restart recovery",
+    "large-history performance"
+  ],
+  "cleanup": {
+    "temporarySessionsRevoked": 3,
+    "unusedPairingsRevoked": 0,
+    "remainingActiveTestCredentials": 0,
+    "credentialFilesRemoved": true
+  }
+}

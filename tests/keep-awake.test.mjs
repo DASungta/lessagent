@@ -1,0 +1,23 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {createRequire} from 'node:module';
+const ts=createRequire(import.meta.url)((process.env.DEVECO_HOME || '/Applications/DevEco-Studio.app/Contents')+'/sdk/default/openharmony/ets/build-tools/ets-loader/node_modules/typescript');
+const original=await readFile(new URL('../entry/src/main/ets/entryability/EntryAbility.ets',import.meta.url),'utf8');
+const storage=new Map();globalThis.AppStorage={get:k=>storage.get(k),setOrCreate:(k,v)=>storage.set(k,v)};
+const changes=[];let enabled=false;
+const main={async setWindowKeepScreenOn(v){enabled=v;changes.push(v)},getWindowProperties(){return {isKeepScreenOn:enabled}},getUIContext(){return {setKeyboardAvoidMode(){}}}};
+globalThis.__abilityKit={UIAbility:class{context={filesDir:'/synthetic'}},hilog:{info(){},warn(){}},acceptShortcutWant(){return false},acceptPairingLink(){},acceptCloudCallback(){},acceptIncomingShare:async()=>{},acceptNotificationWant(){},prepareLocalNotifications:async()=>{},client:{disconnect(){},onUpdate(){}},prepareEnvironments(){},prepareDrafts(){},prepareCloud:async()=>{},prepareAppearance:async()=>{},prepareWorkspacePreferences:async()=>{},cloud:undefined,environments:{async resume(){},suspend(){}},KeyboardAvoidMode:{RESIZE:1}};
+const source=original.replace(/^import .*;\n/gm,'');
+const compiled=ts.transpileModule('const {UIAbility,hilog,acceptShortcutWant,acceptPairingLink,acceptCloudCallback,acceptIncomingShare,acceptNotificationWant,prepareLocalNotifications,client,prepareEnvironments,prepareDrafts,prepareCloud,prepareAppearance,prepareWorkspacePreferences,cloud,environments,KeyboardAvoidMode}=globalThis.__abilityKit;\n'+source,{compilerOptions:{module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2022}}).outputText;
+const {default:Ability}=await import('data:text/javascript;base64,'+Buffer.from(compiled).toString('base64'));
+const settle=()=>new Promise(setImmediate);
+test('test keep-awake is opt-in, releases in background, restores in foreground, and does not persist',async()=>{
+ const ability=new Ability();ability.onCreate({});ability.onWindowStageCreate({async loadContent(){},getMainWindowSync(){return main}});await settle();assert.equal(enabled,false);
+ ability.onNewWant({parameters:{r1KeepAwake:true}});await settle();assert.equal(enabled,true);
+ ability.onBackground();await settle();assert.equal(enabled,false);
+ ability.onForeground();await settle();assert.equal(enabled,true);
+ ability.onNewWant({parameters:{r1KeepAwake:false}});await settle();assert.equal(enabled,false);
+ const next=new Ability();next.onCreate({});next.onWindowStageCreate({async loadContent(){},getMainWindowSync(){return main}});await settle();assert.equal(enabled,false);
+ assert.deepEqual(changes,[false,true,false,true,false,false]);
+});

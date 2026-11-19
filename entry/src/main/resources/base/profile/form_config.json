@@ -1,0 +1,16 @@
+{
+  "forms": [
+    {
+      "name": "T3Shortcuts",
+      "displayName": "$string:shortcut_form_name",
+      "description": "$string:shortcut_form_desc",
+      "src": "./ets/formextension/ShortcutCard.ets",
+      "uiSyntax": "arkts",
+      "isDynamic": false,
+      "isDefault": true,
+      "updateEnabled": false,
+      "defaultDimension": "2*2",
+      "supportDimensions": ["2*2"]
+    }
+  ]
+}

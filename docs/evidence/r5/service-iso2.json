@@ -1,0 +1,27 @@
+{
+  "generatedAt": "2026-11-18T17:12:00+08:00",
+  "purpose": "second isolated environment for cross-environment file/draft isolation",
+  "server": {
+    "version": "0.1.10",
+    "baseDir": "/tmp/t3-r5-iso2-09506a",
+    "listen": "127.0.0.1:47896",
+    "deviceForward": "hdc rport tcp:47896 tcp:47896"
+  },
+  "project": {
+    "id": "e2951c8c-0929-47d8-b285-e10fb712131d",
+    "title": "r5-iso2",
+    "workspaceRoot": "/tmp/t3-r5-iso2-09506a/data/projects/r5-iso2",
+    "files": ["README.md", "src/only2.ts"],
+    "remote": "/tmp/t3-r5-iso2-09506a/remote.git"
+  },
+  "device": "ALN-AL80 / 23E0224122000135",
+  "result": {
+    "env2": "file tree: src, README.md; content ISO-TWO ONLY / unique-env-two",
+    "env1": "file tree: assets, src, README.md; content R5 Remote Side + table, no env2 content",
+    "draftBinding": "iso2 picker showed a draft bound to project id e2951c8c; r5-round2 draft remained separate"
+  },
+  "screenshots": {
+    "device/round2/r5-iso2-readme.jpeg": "cd513bb92d588884d1f8b9917db3c8537c9aedbe92b8368f7e8a1bde71f7d6e9",
+    "device/round2/r5-env1-readme.jpeg": "c7e03147b79f2b2f9613f6d9e1d4c939394593830d699bf5a72766f277faf05c"
+  }
+}

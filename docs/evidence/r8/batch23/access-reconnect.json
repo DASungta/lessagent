@@ -1,0 +1,30 @@
+{
+  "device": "Mate60Pro",
+  "before": {
+    "installedBatch": "B23",
+    "readOnlyLabel": true,
+    "visibleEditButtonsEnabled": [
+      false,
+      false,
+      false
+    ],
+    "refreshEnabled": true
+  },
+  "hostTests": {
+    "passed": 432,
+    "failed": 0,
+    "skipped": 0
+  },
+  "deviceAfter": {
+    "installed": true,
+    "homeRoundTrip": true,
+    "initiallyReadOnlyWhileReconnecting": true,
+    "automaticallyEditableAfterReconnect": true,
+    "manualRefreshUsed": false,
+    "directoryEditorOpened": true,
+    "directoryEditorCancelled": true,
+    "settingsSaved": false
+  },
+  "cleanupRulesChanged": false,
+  "hapSha256": "4b8812845fbbfb7cd12129869e45008b787107b8c5568a947963d4c77a7bf415"
+}

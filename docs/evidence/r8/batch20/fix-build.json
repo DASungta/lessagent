@@ -1,0 +1,9 @@
+{
+  "tests": 420,
+  "build": "successful",
+  "installed": true,
+  "sourcePixelLimit": 8294400,
+  "outputPixelLimit": 2073600,
+  "compressedByteLimit": 2097152,
+  "hapSha256": "2a190f2ae46c8b58efa400c937b2cc9e6610983b917df36f6c461ecca31447a8"
+}

@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-11-16T22:22:32.480776+08:00",
+  "stage": "remove-active-route-switch",
+  "cause": "removeRoute treated persisted unknown recovery as an in-flight mutation",
+  "directoryStillHadBothRoutes": true,
+  "foreignCodeUnconsumed": true,
+  "productDirectoryTouched": false,
+  "fix": "allow non-in-flight route removal; whole environment removal still checks unknown recovery",
+  "grantStates": {
+    "primary": {
+      "consumed": true,
+      "revoked": false
+    },
+    "alternate": {
+      "consumed": true,
+      "revoked": false
+    },
+    "foreign": {
+      "consumed": false,
+      "revoked": false
+    }
+  }
+}

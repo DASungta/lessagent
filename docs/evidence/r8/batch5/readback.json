@@ -1,0 +1,29 @@
+{
+  "hapSha256": "c3e89c5ca183970fdf09aa1189dfa80e7fd4b6611ad9407d5f0829e66de66375",
+  "installedPackage": {
+    "name": "com.dasungta.t3code.harmony",
+    "versionName": "0.1.1",
+    "versionCode": 2,
+    "updateTime": 1795017989281
+  },
+  "testsPassed": 317,
+  "androidNativeRenderedObserved": [
+    12,
+    129,
+    48,
+    18,
+    21
+  ],
+  "androidNativeDroppedObserved": 0,
+  "voiceUserConfirmed": true,
+  "voiceRecognizedText": "请帮我检查这个项目的开发进度。",
+  "voiceServerMessages": 0,
+  "providerModelCountObserved": 27,
+  "followUpPersistedQueueAfterRestart": true,
+  "followUpRestored": "steer",
+  "isolatedDeviceSettingsAfter": {
+    "enableDeviceSupport": true,
+    "enableAgentDeviceAccess": null,
+    "deviceOnboardingCompleted": true
+  }
+}

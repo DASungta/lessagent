@@ -1,0 +1,32 @@
+{
+  "viewport": {
+    "_tag": "freeform",
+    "width": 390,
+    "height": 740
+  },
+  "zoom": 0.25,
+  "geometry": [
+    {
+      "width": 1560,
+      "height": 2960
+    }
+  ],
+  "frames": [
+    {
+      "width": 675,
+      "height": 1280,
+      "bytes": 6638
+    },
+    {
+      "width": 3120,
+      "height": 5920,
+      "bytes": 117956
+    },
+    {
+      "width": 675,
+      "height": 1280,
+      "bytes": 6638
+    }
+  ],
+  "sessionRevoked": true
+}

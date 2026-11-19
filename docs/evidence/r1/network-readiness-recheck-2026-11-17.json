@@ -1,0 +1,41 @@
+{
+  "checkedAt": "2026-11-17T09:14:00+08:00",
+  "host": {
+    "activeInterface": "en0",
+    "ipv4": "192.168.10.75",
+    "globalOrUlaIPv6": false,
+    "ipv6AddressesSeen": [
+      "::1/128",
+      "fe80::1%lo0",
+      "fe80::acfa:dbff:fe0f:71fd%awdl0",
+      "fe80::acfa:dbff:fe0f:71fd%llw0",
+      "fe80::aeaa:b4d1:ee30:bb2d%utun0",
+      "fe80::f505:8dd3:cbfd:5f1a%utun1",
+      "fe80::9b78:9c77:423b:4f80%utun2",
+      "fe80::ce81:b1c:bd2c:69e%utun3",
+      "fe80::18ab:8dff:fe33:96ce%en3",
+      "fe80::cc2:90ea:d90b:6441%en2"
+    ],
+    "directIPv6Probe": "curl: (7) Failed to connect to 2606:4700:4700::1111 port 80: Couldn't connect to server",
+    "tailscaleCliAvailable": false,
+    "tailscaleAppInstalled": false
+  },
+  "device": {
+    "id": "23E0224122000135",
+    "model": "ALN-AL80",
+    "wlan0IPv4": "192.168.3.78",
+    "wlan0IPv6ListedByIfconfig": false,
+    "ipv6DetailQuery": "blocked: /bin/sh: ip: inaccessible or not found; cat /proc/net/if_inet6: Permission denied",
+    "conclusion": "Device-side IPv6 presence is not established; the failed query is not evidence of absence."
+  },
+  "conclusion": "No Tailnet transport and no host global/ULA IPv6 address are available in the current environment, so Tailnet/IPv6 real-network acceptance cannot be executed. The public HTTPS route was already verified in R1; that does not substitute for Tailnet or IPv6.",
+  "notValidated": [
+    "Tailnet transport",
+    "IPv6 transport",
+    "cellular handoff"
+  ],
+  "evidenceLogs": [
+    "network-readiness-recheck-2026-11-17.log",
+    "network-device-recheck-2026-11-17.log"
+  ]
+}

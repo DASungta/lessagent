@@ -1,0 +1,2532 @@
+[
+  {
+    "file": "apps/mobile/src/features/connection/PullRequestRoutingSettings.tsx",
+    "line": 17,
+    "source": "import { SettingsSection } from \"../settings/components/SettingsSection\";"
+  },
+  {
+    "file": "apps/mobile/src/features/diagnostics/SettingsDiagnosticsRouteScreen.tsx",
+    "line": 18,
+    "source": "import { mobilePreferencesAtom, updateMobilePreferencesAtom } from \"../../state/preferences\";"
+  },
+  {
+    "file": "apps/mobile/src/features/diagnostics/SettingsDiagnosticsRouteScreen.tsx",
+    "line": 21,
+    "source": "import { SettingsScreen } from \"../settings/components/SettingsScreen\";"
+  },
+  {
+    "file": "apps/mobile/src/features/diagnostics/SettingsDiagnosticsRouteScreen.tsx",
+    "line": 22,
+    "source": "import { SettingsSection } from \"../settings/components/SettingsSection\";"
+  },
+  {
+    "file": "apps/mobile/src/features/diagnostics/SettingsDiagnosticsRouteScreen.tsx",
+    "line": 23,
+    "source": "import { SettingsSwitchRow } from \"../settings/components/SettingsSwitchRow\";"
+  },
+  {
+    "file": "apps/mobile/src/features/diagnostics/SettingsDiagnosticsRouteScreen.tsx",
+    "line": 152,
+    "source": "const preferences = useAtomValue(mobilePreferencesAtom);"
+  },
+  {
+    "file": "apps/mobile/src/features/diagnostics/SettingsDiagnosticsRouteScreen.tsx",
+    "line": 156,
+    "source": "const ready = AsyncResult.isSuccess(preferences) && !preferences.waiting;"
+  },
+  {
+    "file": "apps/mobile/src/features/diagnostics/SettingsDiagnosticsRouteScreen.tsx",
+    "line": 157,
+    "source": "const enabled = AsyncResult.isSuccess(preferences)"
+  },
+  {
+    "file": "apps/mobile/src/features/diagnostics/SettingsDiagnosticsRouteScreen.tsx",
+    "line": 158,
+    "source": "? preferences.value.crashReportsEnabled !== false"
+  },
+  {
+    "file": "apps/mobile/src/features/diagnostics/SettingsDiagnosticsRouteScreen.tsx",
+    "line": 168,
+    "source": "console.warn(\"[diagnostics] could not save the crash report setting\", exit.cause);"
+  },
+  {
+    "file": "apps/mobile/src/features/diagnostics/SettingsDiagnosticsRouteScreen.tsx",
+    "line": 174,
+    "source": "console.warn(\"[diagnostics] could not apply the crash report setting\", error);"
+  },
+  {
+    "file": "apps/mobile/src/features/diagnostics/SettingsDiagnosticsRouteScreen.tsx",
+    "line": 182,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ClaudeAccounts.tsx",
+    "line": 28,
+    "source": "import type { SettingsTarget } from \"./settings-environment-filter\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ClaudeAccounts.tsx",
+    "line": 68,
+    "source": "const instance = environment.serverConfig.settings.providerInstances[provider.instanceId];"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ClaudeAccounts.tsx",
+    "line": 201,
+    "source": "providerInstances: environment.serverConfig.settings.providerInstances,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ClaudeAccounts.tsx",
+    "line": 202,
+    "source": "policy: environment.serverConfig.managedPolicy,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ClaudeAccounts.tsx",
+    "line": 214,
+    "source": "function field(key: keyof ClaudeAccountDraft, label: string, placeholder: string) {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 193,
+    "source": "? configuredSecretSources(environment.serverConfig.settings.secretProviders)"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 215,
+    "source": "const stored = environment.serverConfig?.settings.cloudSpeechCredentials?.[provider];"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 247,
+    "source": "\"Check the environment connection and your settings permissions.\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 342,
+    "source": "const original = environment.serverConfig?.settings.cloudSpeechCredentials?.[provider];"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ScheduledTaskPickerScreens.tsx",
+    "line": 218,
+    "source": "...(needle ? [] : [{ key: \"new-thread\", title: NEW_THREAD_DESTINATION_LABEL, thread: null }]),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ScheduledTaskPickerScreens.tsx",
+    "line": 220,
+    "source": "? [{ key: threadId, title: currentLabel, thread: null }]"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ScheduledTaskPickerScreens.tsx",
+    "line": 234,
+    "source": "key: thread.id,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsAboutRouteScreen.tsx",
+    "line": 18,
+    "source": "import { SettingsRow } from \"./components/SettingsRow\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsAboutRouteScreen.tsx",
+    "line": 123,
+    "source": "<SettingsRow icon=\"internaldrive\" label=\"Client Storage\" target=\"SettingsClientStorage\" />"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsAboutRouteScreen.tsx",
+    "line": 124,
+    "source": "<SettingsRow icon=\"stethoscope\" label=\"Diagnostics\" target=\"SettingsDiagnostics\" />"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsAboutRouteScreen.tsx",
+    "line": 125,
+    "source": "<SettingsRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsAboutRouteScreen.tsx",
+    "line": 130,
+    "source": "<SettingsRow icon=\"doc.text\" label=\"Legal\" fullScreenTarget=\"SettingsLegal\" />"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsClientStorageRouteScreen.tsx",
+    "line": 64,
+    "source": "\"This removes offline data for every environment. Connections, credentials, account data, and app preferences stay intact.\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsClientStorageRouteScreen.tsx",
+    "line": 149,
+    "source": "appearance preferences."
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsFollowUpRouteScreen.tsx",
+    "line": 9,
+    "source": "import { mobilePreferencesAtom, updateMobilePreferencesAtom } from \"../../state/preferences\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsKeyboardRouteScreen.tsx",
+    "line": 12,
+    "source": "import { mobilePreferencesAtom, updateMobilePreferencesAtom } from \"../../state/preferences\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsLanguageRouteScreen.tsx",
+    "line": 9,
+    "source": "import { mobilePreferencesAtom, updateMobilePreferencesAtom } from \"../../state/preferences\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNavigationRouteScreen.tsx",
+    "line": 16,
+    "source": "import { mobilePreferencesAtom, updateMobilePreferencesAtom } from \"../../state/preferences\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNavigationRouteScreen.tsx",
+    "line": 35,
+    "source": "const preferences = useAtomValue(mobilePreferencesAtom);"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNavigationRouteScreen.tsx",
+    "line": 37,
+    "source": "const ready = customizable && AsyncResult.isSuccess(preferences) && !preferences.waiting;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 46,
+    "source": "import { mobilePreferencesAtom, updateMobilePreferencesAtom } from \"../../state/preferences\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 48,
+    "source": "import { SettingsRow } from \"./components/SettingsRow\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 50,
+    "source": "import { SettingsSwitchRow } from \"./components/SettingsSwitchRow\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 55,
+    "source": "* A policy that turns Connect off refuses relay links and preferences, which would fail the"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 59,
+    "source": "const policy = appAtomRegistry.get("
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 64,
+    "source": "managedCapabilityDenial(policy, \"connect\") === undefined"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 434,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 449,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 474,
+    "source": "<SettingsRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 481,
+    "source": "<SettingsRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectGroupingRouteScreen.tsx",
+    "line": 12,
+    "source": "import { mobilePreferencesAtom, updateMobilePreferencesAtom } from \"../../state/preferences\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 40,
+    "source": "import { SettingsSwitchRow } from \"./components/SettingsSwitchRow\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 42,
+    "source": "import { useSettingsEnvironmentFilter, type SettingsTarget } from \"./settings-environment-filter\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 43,
+    "source": "import { leaveSettingsPage } from \"./settings-navigation\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 353,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 36,
+    "source": "import { useSettingsEnvironmentFilter, type SettingsTarget } from \"./settings-environment-filter\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 61,
+    "source": "{`This session can view ${environment.label}'s providers but can't change their settings.`}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 117,
+    "source": "/** Providers the environment's managed policy allows; the rest cannot run or sign in. */"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 28,
+    "source": "import { SettingsRow } from \"./components/SettingsRow\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 31,
+    "source": "import type { SettingsPageTarget } from \"./components/settings-page-targets\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 33,
+    "source": "import { useSettingsEnvironmentFilter } from \"./settings-environment-filter\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 34,
+    "source": "import { filterSettingsSections } from \"./settings-search\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 105,
+    "source": "value: workspace.state.tabs.settings.query,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 107,
+    "source": "workspace.dispatch({ type: \"query\", tab: \"settings\", query }),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 108,
+    "source": "placeholder: gt(\"Search settings\"),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 120,
+    "source": "type SettingsListRow = ComponentProps<typeof SettingsRow> & { readonly id: string };"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 193,
+    "source": "const query = workspace?.state.tabs.settings.query ?? \"\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 226,
+    "source": "<SettingsRow key={id} {...row} />"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 234,
+    "source": "detail={gt(\"No settings match “{query}”.\", { query: query.trim() })}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 270,
+    "source": "// The same pages and groups as Settings on web, minus what mobile has no setting for."
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 75,
+    "source": "import { useSettingsEnvironmentFilter, type SettingsTarget } from \"./settings-environment-filter\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 85,
+    "source": "import { settingsTargetsForProject } from \"./settings-environment-filter.logic\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 780,
+    "source": "\"Invalid webhook settings\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 918,
+    "source": "!config?.settings ||"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 920,
+    "source": "config.settings,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1375,
+    "source": "// The server refuses an enabled webhook task under this policy."
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 2,
+    "source": "import { SettingsRow } from \"./components/SettingsRow\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 23,
+    "source": "} from \"../threads/thread-settings-options\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 30,
+    "source": "import { SettingsSwitchRow } from \"./components/SettingsSwitchRow\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 33,
+    "source": "import { useSettingsEnvironmentFilter } from \"./settings-environment-filter\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 42,
+    "source": "} from \"./settings-scoped-server\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 44,
+    "source": "import { AutoSettleSettingsRows } from \"./ThreadSettingsSections\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 45,
+    "source": "import { supportsSharedSettingsSync } from \"@t3tools/client-runtime/state/shared-settings\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 193,
+    "source": "const queuedPatch = useRef<{ key: string; patch: ServerSettingsPatch } | null>(null);"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 206,
+    "source": "const uniform = <K extends keyof ServerSettings>(key: K) =>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 209,
+    "source": "const isMixed = (key: keyof ServerSettings) =>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 211,
+    "source": "displayTargets.some((entry) => entry.settings[key] !== reference.settings[key]);"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 217,
+    "source": "key: targetsKey,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 269,
+    "source": "const managedSubtitle = (key: string, subtitle: string) => {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 277,
+    "source": "const disabledFor = (key: string) =>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 387,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 399,
+    "source": "<AutoSettleSettingsRows write={write} pending={pendingWrites > 0} />"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 416,
+    "source": "target.settings.offeredSourceControlProviders,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 421,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 437,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 450,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 463,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 478,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 544,
+    "source": "<SettingsRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 559,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 565,
+    "source": "? \"Environment-wide setting. Select All projects to change it.\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 573,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 586,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 592,
+    "source": "? \"Environment-wide setting. Select All projects to change it.\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 625,
+    "source": "/** Locked settings are refused when saved; say so before the user tries. */"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 630,
+    "source": "const policy = target.environment.serverConfig.managedPolicy;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 631,
+    "source": "return policy !== undefined && policy.lockedSettings.length > 0"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 632,
+    "source": "? [policy.organization]"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 640,
+    "source": "Some settings are managed by {organizations.join(\", \")} and cannot be changed here."
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceModelsRouteScreen.tsx",
+    "line": 76,
+    "source": "This connection can’t change settings on {label}."
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 20,
+    "source": "import { mobilePreferencesAtom, updateMobilePreferencesAtom } from \"../../state/preferences\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 232,
+    "source": "const [drag, setDrag] = useState<{ readonly key: string; readonly translation: number } | null>("
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 240,
+    "source": "const move = (key: string, steps: number) =>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 252,
+    "source": "const forget = (key: string) =>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsWorkspaceLayout.android.tsx",
+    "line": 12,
+    "source": "const SETTINGS_LIST_ROUTE = { key: \"settings-sidebar\", name: \"Settings\" };"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsWorkspaceLayout.android.tsx",
+    "line": 52,
+    "source": "<AppText className=\"text-foreground-muted\">Select a setting</AppText>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 17,
+    "source": "import { supportsSharedSettingsSync } from \"@t3tools/client-runtime/state/shared-settings\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 20,
+    "source": "import { mobilePreferencesAtom, updateMobilePreferencesAtom } from \"../../state/preferences\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 24,
+    "source": "import { SettingsSwitchRow } from \"./components/SettingsSwitchRow\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 27,
+    "source": "import { useSettingsEnvironmentFilter } from \"./settings-environment-filter\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 32,
+    "source": "} from \"./settings-scoped-server\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 50,
+    "source": "setting=\"linkedEnvironmentsEnabled\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 57,
+    "source": "setting=\"fastWorktreeCheckout\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 71,
+    "source": "export function AutoSettleSettingsRows(props: {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 94,
+    "source": "const referenceSettings = reference?.settings ?? null;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 111,
+    "source": "settings: referenceSettings,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 117,
+    "source": "settings: target.settings,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 130,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 138,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 149,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 156,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 199,
+    "source": "const preferences = useAtomValue(mobilePreferencesAtom);"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 201,
+    "source": "AsyncResult.isSuccess(preferences) && preferences.value.workingShelfEnabled !== false;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 206,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 224,
+    "source": "const preferences = useAtomValue(mobilePreferencesAtom);"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 226,
+    "source": "AsyncResult.isSuccess(preferences) && preferences.value.useLastProjectForNewThreads !== false;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 230,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 243,
+    "source": "/** One switch per connected machine that offers the beta, since each machine's own setting decides. */"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 248,
+    "source": "setting,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 252,
+    "source": "readonly icon: ComponentProps<typeof SettingsSwitchRow>[\"icon\"];"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 254,
+    "source": "readonly setting: MachineBetaSetting;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 265,
+    "source": "label: `${setting} beta update`,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 273,
+    "source": "const policy = environment.serverConfig?.managedPolicy;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 274,
+    "source": "const managed = isManagedSettingPath(policy, setting);"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 276,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 280,
+    "source": "{...(managed ? { subtitle: `Managed by ${policy?.organization}.` } : {})}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 281,
+    "source": "value={environment.serverConfig?.settings[setting] === true}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 288,
+    "source": "setting === \"linkedEnvironmentsEnabled\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 21,
+    "source": "import { mobilePreferencesAtom, updateMobilePreferencesAtom } from \"../../../state/preferences\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 22,
+    "source": "import type { Preferences } from \"../../../persistence/mobile-preferences\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 173,
+    "source": "* App-lifetime: applies theme preferences to the native runtime and holds the"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 195,
+    "source": "const preferences = useMemo("
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 220,
+    "source": "const { baseFontSize, codeFontSize, codeWordBreak, terminalFontSize } = preferences;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/CodeAppearanceSection.tsx",
+    "line": 7,
+    "source": "import { SettingsSwitchRow } from \"../../components/SettingsSwitchRow\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/CodeAppearanceSection.tsx",
+    "line": 30,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/CodeAppearanceSection.tsx",
+    "line": 50,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/TerminalAppearanceSection.tsx",
+    "line": 7,
+    "source": "import { SettingsSwitchRow } from \"../../components/SettingsSwitchRow\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/TerminalAppearanceSection.tsx",
+    "line": 27,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/TextAppearanceSection.tsx",
+    "line": 13,
+    "source": "import { SettingsSwitchRow } from \"../../components/SettingsSwitchRow\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/TextAppearanceSection.tsx",
+    "line": 34,
+    "source": "<SettingsSwitchRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ToolCallsAppearanceSection.tsx",
+    "line": 2,
+    "source": "import type { ToolCallVisibility } from \"@t3tools/contracts/settings\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ToolCallsAppearanceSection.tsx",
+    "line": 8,
+    "source": "import { mobilePreferencesAtom, updateMobilePreferencesAtom } from \"../../../../state/preferences\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ToolCallsAppearanceSection.tsx",
+    "line": 23,
+    "source": "const preferences = useAtomValue(mobilePreferencesAtom);"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ToolCallsAppearanceSection.tsx",
+    "line": 24,
+    "source": "const selected = AsyncResult.isSuccess(preferences)"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ToolCallsAppearanceSection.tsx",
+    "line": 25,
+    "source": "? (preferences.value.toolCallVisibility ?? \"showAll\")"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/autoSettleSettingsSync.ts",
+    "line": 12,
+    "source": "readonly settings: AutoSettleSettings | null;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/autoSettleSettingsSync.ts",
+    "line": 19,
+    "source": "readonly settings: AutoSettleSettings;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/autoSettleSettingsSync.ts",
+    "line": 24,
+    "source": "sidebarAutoSettleAfterDays: reference.settings.sidebarAutoSettleAfterDays,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/autoSettleSettingsSync.ts",
+    "line": 25,
+    "source": "sidebarAutoSettleOnMerge: reference.settings.sidebarAutoSettleOnMerge,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/autoSettleSettingsSync.ts",
+    "line": 31,
+    "source": "target.settings !== null &&"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/autoSettleSettingsSync.ts",
+    "line": 32,
+    "source": "(target.settings.sidebarAutoSettleAfterDays !== patch.sidebarAutoSettleAfterDays ||"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/autoSettleSettingsSync.ts",
+    "line": 33,
+    "source": "target.settings.sidebarAutoSettleOnMerge !== patch.sidebarAutoSettleOnMerge),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/claude-accounts.ts",
+    "line": 37,
+    "source": "readonly policy: ManagedPolicySummary | undefined;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/claude-accounts.ts",
+    "line": 57,
+    "source": "if (input.policy && isManagedSettingPath(input.policy, `providerInstances.${instanceId}`)) {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/claude-accounts.ts",
+    "line": 58,
+    "source": "return { error: `Managed by ${input.policy.organization}.` };"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/BranchNamingSettings.tsx",
+    "line": 25,
+    "source": "/** Per setting, since a policy can lock one and leave the others to the user. */"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/BranchNamingSettings.tsx",
+    "line": 32,
+    "source": "const savedValue = (field: Field) =>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/BranchNamingSettings.tsx",
+    "line": 34,
+    "source": "const edit = (field: Field, text: string) => {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/BranchNamingSettings.tsx",
+    "line": 38,
+    "source": "const take = (field: Field): ServerSettingsPatch => {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/BranchNamingSettings.tsx",
+    "line": 54,
+    "source": "// oxlint-disable-next-line t3code/no-unreasoned-state-sync -- saves unsent branch naming drafts to server settings when the section unmounts"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/DatabaseStorageNotice.tsx",
+    "line": 5,
+    "source": "import { mobilePreferencesAtom, updateMobilePreferencesAtom } from \"../../../state/preferences\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/DatabaseStorageNotice.tsx",
+    "line": 7,
+    "source": "import type { SettingsTarget } from \"../settings-environment-filter\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/DatabaseStorageNotice.tsx",
+    "line": 22,
+    "source": "const preferences = useAtomValue(mobilePreferencesAtom);"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/DatabaseStorageNotice.tsx",
+    "line": 24,
+    "source": "const dismissed = AsyncResult.isSuccess(preferences)"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/DatabaseStorageNotice.tsx",
+    "line": 25,
+    "source": "? (preferences.value.dismissedDatabaseStorageNotices ?? [])"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsEnvironmentFilterHeader.tsx",
+    "line": 5,
+    "source": "import { useSettingsEnvironmentFilter } from \"../settings-environment-filter\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsEnvironmentFilterHeader.tsx",
+    "line": 7,
+    "source": "/** The settings scope filter, as an `AppBar` menu. */"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsEnvironmentFilterHeader.tsx",
+    "line": 20,
+    "source": "title: \"Filter settings environments and projects\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsRow.tsx",
+    "line": 9,
+    "source": "import type { SettingsLegalDocumentTarget, SettingsPageTarget } from \"./settings-page-targets\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsRow.tsx",
+    "line": 11,
+    "source": "import { openSettings } from \"../settings-navigation\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsRow.tsx",
+    "line": 13,
+    "source": "export function SettingsRow(props: {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsSwitchRow.tsx",
+    "line": 5,
+    "source": "export function SettingsSwitchRow({"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SourceControlSignInSection.tsx",
+    "line": 18,
+    "source": "import type { SettingsTarget } from \"../settings-environment-filter\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SourceControlSignInSection.tsx",
+    "line": 19,
+    "source": "import { SettingsRow } from \"./SettingsRow\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SourceControlSignInSection.tsx",
+    "line": 106,
+    "source": "environment.serverConfig.settings,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SourceControlSignInSection.tsx",
+    "line": 192,
+    "source": "<SettingsRow"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/lib/legal-document-url.ts",
+    "line": 25,
+    "source": "const PRIVACY_POLICY_URL = marketingSiteDocumentUrl(\"privacy-policy\");"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/lib/legal-document-url.ts",
+    "line": 26,
+    "source": "const SECURITY_POLICY_URL = marketingSiteDocumentUrl(\"security-policy\");"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/scheduled-task-editor.tsx",
+    "line": 10,
+    "source": "import { useSettingsEnvironmentFilter } from \"./settings-environment-filter\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/scheduled-task-editor.tsx",
+    "line": 11,
+    "source": "import { settingsTargetsForProject } from \"./settings-environment-filter.logic\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/scheduledTaskDraft.ts",
+    "line": 36,
+    "source": "const settings = config?.settings ?? DEFAULT_SERVER_SETTINGS;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/scheduledTaskDraft.ts",
+    "line": 37,
+    "source": "const configured = resolveProjectSettings(settings, project?.id ?? null, project).settings"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/scheduledTaskDraft.ts",
+    "line": 41,
+    "source": "resolveDefaultableModelSelection(config, settings.defaultModelSelection, project?.id ?? null);"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/settings-environment-filter.tsx",
+    "line": 17,
+    "source": "import { toggleSettingsEnvironment } from \"./settings-environment-filter.logic\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/settings-environment-filter.tsx",
+    "line": 42,
+    "source": "groupingMode: Parameters<typeof buildProjectGroups>[0][\"settings\"][\"sidebarProjectGroupingMode\"],"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/settings-environment-filter.tsx",
+    "line": 50,
+    "source": "settings: { sidebarProjectGroupingMode: groupingMode, sidebarProjectGroupingOverrides: {} },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/settings-navigation.ts",
+    "line": 41,
+    "source": "* A `settings/...` link names only its page, so put the Settings tab's route under it. A bare"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/settings-navigation.ts",
+    "line": 42,
+    "source": "* `settings` link opens `page` beside the list when the window has columns."
+  },
+  {
+    "file": "apps/mobile/src/features/settings/settings-scoped-server.ts",
+    "line": 16,
+    "source": "import type { SettingsTarget } from \"./settings-environment-filter\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/settings-scoped-server.ts",
+    "line": 21,
+    "source": "readonly settings: ServerSettings;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/settings-scoped-server.ts",
+    "line": 26,
+    "source": "* \"Managed by <organization>.\" when any target's policy locks `path`: the server refuses the"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/settings-scoped-server.ts",
+    "line": 33,
+    "source": "const policy = targets"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/settings-scoped-server.ts",
+    "line": 36,
+    "source": "return policy === undefined ? undefined : `Managed by ${policy.organization}.`;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/settings-scoped-server.ts",
+    "line": 47,
+    "source": "...resolveProjectSettings(environment.serverConfig.settings, null),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/settings-scoped-server.ts",
+    "line": 58,
+    "source": "...resolveProjectSettings(environment.serverConfig.settings, member.id),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/settings-scoped-server.ts",
+    "line": 83,
+    "source": "target.environment.serverConfig.settings.projectSettingsOverrides[target.projectId] ?? {};"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/settings-scoped-server.ts",
+    "line": 106,
+    "source": "targets: readonly Pick<ScopedMobileSettingsTarget, \"settings\">[],"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/settings-scoped-server.ts",
+    "line": 107,
+    "source": "key: K,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/settings-scoped-server.ts",
+    "line": 111,
+    "source": "const value = reference.settings[key];"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/settings-scoped-server.ts",
+    "line": 112,
+    "source": "return targets.every((target) => target.settings[key] === value) ? value : null;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/settings-scoped-server.ts",
+    "line": 124,
+    "source": "target.environment.serverConfig.settings,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/settings-search.ts",
+    "line": 3,
+    "source": "import type { SettingsPageTarget } from \"./components/settings-page-targets\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/settings-search.ts",
+    "line": 5,
+    "source": "/** What each page holds besides its row's label, so search finds a setting by its own name. */"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/useSettingsWriter.ts",
+    "line": 10,
+    "source": "import type { ScopedMobileSettingsTarget } from \"./settings-scoped-server\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/useSettingsWriter.ts",
+    "line": 14,
+    "source": "label: \"environment settings update\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/useSettingsWriter.ts",
+    "line": 41,
+    "source": "Dialog.alert(\"Could not save settings\", failures.join(\"\\n\\n\"));"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsRows.android.tsx",
+    "line": 7,
+    "source": "} from \"./ThreadSettingsRows.shared\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsRows.tsx",
+    "line": 7,
+    "source": "} from \"./ThreadSettingsRows.shared\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 99,
+    "source": "import { mobilePreferencesAtom } from \"../../state/preferences\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 109,
+    "source": "import { ModelRow, ChoiceRow } from \"./ThreadSettingsRows\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 116,
+    "source": "} from \"./thread-settings-options\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 124,
+    "source": "} from \"./thread-settings-sheet-state\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 333,
+    "source": "const preferences = useAtomValue(mobilePreferencesAtom);"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 336,
+    "source": "const settings = config?.settings;"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 344,
+    "source": "new Map<string, { favorite: boolean; settings: ServerSettings; pending: boolean }>(),"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 359,
+    "source": "const legacyFavorites = AsyncResult.isSuccess(preferences)"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 360,
+    "source": "? (preferences.value.modelFavorites ?? EMPTY_MODEL_FAVORITES)"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 363,
+    "source": "settings !== undefined && (settings.favorites !== null || AsyncResult.isSuccess(preferences));"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 364,
+    "source": "const modelFavorites = resolveModelPreferences(settings ?? DEFAULT_SERVER_SETTINGS, {"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 368,
+    "source": "// oxlint-disable-next-line t3code/no-unreasoned-state-sync -- writes the one-time legacy model favorites migration to server settings once per connection"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 372,
+    "source": "!settings ||"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 373,
+    "source": "!AsyncResult.isSuccess(preferences) ||"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 378,
+    "source": "const patch = modelPreferencesMigrationPatch(settings, { favorites: legacyFavorites });"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 385,
+    "source": "preferences,"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 388,
+    "source": "settings,"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 396,
+    "source": "const currentSettings = registry.get(environmentServerConfigsAtom).get(environmentId)?.settings;"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 408,
+    "source": "previous && (previous.pending || previous.settings.favorites === currentSettings.favorites)"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 415,
+    "source": "const pending = { favorite: !previousFavorite, settings: currentSettings, pending: true };"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 435,
+    "source": "registry.get(environmentServerConfigsAtom).get(environmentId)?.settings.favorites ==="
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 444,
+    "source": "registry.get(environmentServerConfigsAtom).get(environmentId)?.settings.favorites ==="
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 445,
+    "source": "previous.settings.favorites"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 455,
+    "source": "!settings ||"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 681,
+    "source": "readonly key: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 694,
+    "source": "readonly key: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 699,
+    "source": "readonly key: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 706,
+    "source": "readonly key: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 711,
+    "source": "readonly key: \"empty\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 715,
+    "source": "readonly key: \"options\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 816,
+    "source": "key: group.providerKey,"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 828,
+    "source": "key: `provider:${group.providerKey}`,"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 833,
+    "source": "key: `model:${option.key}`,"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 842,
+    "source": "key: `notice:${group.providerKey}`,"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 997,
+    "source": "...(catalogItems.length === 0 ? ([{ kind: \"empty\", key: \"empty\" }] as const) : catalogItems),"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 998,
+    "source": "{ kind: \"options\", key: \"options\" },"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 1235,
+    "source": "title=\"Thread settings\""
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 1237,
+    "source": "closeAccessibilityLabel=\"Cancel thread settings\""
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 1331,
+    "source": "options={{ headerBackVisible: false, title: \"Thread settings\" }}"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-settings-options.ts",
+    "line": 43,
+    "source": "/** Set when a target environment's managed policy caps runtime modes below this one. */"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-settings-options.ts",
+    "line": 57,
+    "source": ".map((policy) => managedRuntimeModeDenial(policy, choice.mode))"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-settings-options.ts",
+    "line": 70,
+    "source": "policy: ManagedPolicySummary | undefined,"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-settings-options.ts",
+    "line": 72,
+    "source": "return draftMode !== undefined && managedRuntimeModeDenial(policy, draftMode) === undefined"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/use-thread-list-v2-shelf-preferences.ts",
+    "line": 4,
+    "source": "import { mobilePreferencesAtom, updateMobilePreferencesAtom } from \"../../state/preferences\";"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 17,
+    "source": "import { ToolCallVisibility } from \"@t3tools/contracts/settings\";"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 27,
+    "source": "const PREFERENCES_KEY = \"t3code.preferences\";"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 28,
+    "source": "const PREFERENCES_FALLBACK_KEY = \"t3code.preferences.fallback\";"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 55,
+    "source": "* that page's route key: reopening under the same key reuses the screen a tab kept mounted."
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 62,
+    "source": "key: Schema.optional(Schema.String),"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 72,
+    "source": "key: Schema.optional(Schema.String),"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 75,
+    "source": "settings: Schema.optional(Schema.String),"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 78,
+    "source": "threadsDraft: Schema.optional(Schema.Struct({ key: Schema.String, params: Schema.Unknown })),"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 125,
+    "source": "/** The client `language` setting: a locale code or \"system\". Unset means English. */"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 151,
+    "source": "return \"Failed to load mobile preferences.\";"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 160,
+    "source": "return \"Failed to save mobile preferences.\";"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 169,
+    "source": "readonly preferences: Preferences;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 183,
+    "source": ">()(\"@t3tools/mobile/persistence/mobile-preferences/MobilePreferencesStore\") {}"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 189,
+    "source": "const preferences: {"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 231,
+    "source": "preferences.hiddenNavigationTabs = parsed.hiddenNavigationTabs.filter("
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 237,
+    "source": "preferences.navigationTabOrder = parsed.navigationTabOrder.filter("
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 243,
+    "source": "preferences.pullRequestHideTestFiles = parsed.pullRequestHideTestFiles;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 247,
+    "source": "preferences.pullRequestActivityVisibility = parsed.pullRequestActivityVisibility;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 251,
+    "source": "preferences.pullRequestMergeMethod = parsed.pullRequestMergeMethod;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 255,
+    "source": "preferences.liveActivitiesEnabled = parsed.liveActivitiesEnabled;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 261,
+    "source": "preferences.themeId = parsed.themeId as MobileThemeId;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 267,
+    "source": "preferences.lightThemeId = parsed.lightThemeId as MobileThemeId;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 273,
+    "source": "preferences.darkThemeId = parsed.darkThemeId as MobileThemeId;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 280,
+    "source": "preferences.themeMode = parsed.themeMode;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 283,
+    "source": "preferences.androidNavigationStyle = parsed.androidNavigationStyle;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 285,
+    "source": "if (typeof parsed.baseFontSize === \"number\") preferences.baseFontSize = parsed.baseFontSize;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 287,
+    "source": "preferences.terminalFontSize = parsed.terminalFontSize;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 290,
+    "source": "preferences.markdownFontSize = parsed.markdownFontSize;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 293,
+    "source": "preferences.codeFontSize = parsed.codeFontSize;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 295,
+    "source": "if (typeof parsed.codeWordBreak === \"boolean\") preferences.codeWordBreak = parsed.codeWordBreak;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 297,
+    "source": "preferences.mathRenderingEnabled = parsed.mathRenderingEnabled;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 299,
+    "source": "preferences.crashReportsEnabled = parsed.crashReportsEnabled;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 302,
+    "source": "preferences.connectOnboardingOptOutAccounts = parsed.connectOnboardingOptOutAccounts.filter("
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 307,
+    "source": "preferences.collapsedProjectGroups = parsed.collapsedProjectGroups.filter("
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 312,
+    "source": "preferences.dismissedDatabaseStorageNotices = parsed.dismissedDatabaseStorageNotices.filter("
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 317,
+    "source": "preferences.composerEnterBehavior = parsed.composerEnterBehavior;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 320,
+    "source": "preferences.followUpBehavior = parsed.followUpBehavior;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 322,
+    "source": "if (typeof parsed.language === \"string\") preferences.language = parsed.language;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 324,
+    "source": "preferences.microphones = parsed.microphones.flatMap((entry): MicrophoneEntry[] => {"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 333,
+    "source": "preferences.projectGroupingEnabled = parsed.projectGroupingEnabled;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 340,
+    "source": "preferences.projectGroupingMode = parsed.projectGroupingMode;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 343,
+    "source": "preferences.toolCallVisibility = parsed.toolCallVisibility;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 346,
+    "source": "preferences.workingShelfEnabled = parsed.workingShelfEnabled;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 349,
+    "source": "preferences.useLastProjectForNewThreads = parsed.useLastProjectForNewThreads;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 352,
+    "source": "preferences.lastThreadProject = parsed.lastThreadProject;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 355,
+    "source": "preferences.modelFavorites = parsed.modelFavorites.filter("
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 366,
+    "source": "preferences.threadListSettledShelfExpanded = parsed.threadListSettledShelfExpanded;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 369,
+    "source": "preferences.threadListSnoozedShelfExpanded = parsed.threadListSnoozedShelfExpanded;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 372,
+    "source": "preferences.threadListWorkingShelfExpanded = parsed.threadListWorkingShelfExpanded;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 375,
+    "source": "preferences.threadListFilters = parsed.threadListFilters;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 378,
+    "source": "preferences.pullRequestListFilters = parsed.pullRequestListFilters;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 381,
+    "source": "preferences.workspaceSelections = parsed.workspaceSelections;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 383,
+    "source": "return preferences;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 400,
+    "source": "new MobileStorageDecodeError({ key: PREFERENCES_KEY, cause }),"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 417,
+    "source": "new MobileStorageDecodeError({ key: PREFERENCES_FALLBACK_KEY, cause }),"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 431,
+    "source": "const preferences = parsePayload(parsed.payload);"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 432,
+    "source": "return preferences === null"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 434,
+    "source": ": { payload: parsed.payload, updatedAt: parsed.updatedAt, preferences };"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 438,
+    "source": "key: string,"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 459,
+    "source": "yield* Effect.logWarning(\"Database unavailable; saving preferences to secure storage.\").pipe("
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 470,
+    "source": "Effect.logWarning(\"Could not remove the mobile preferences fallback.\").pipe("
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 484,
+    "source": "yield* Effect.logWarning(\"Database unavailable; loading fallback preferences.\").pipe("
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 496,
+    "source": "yield* Effect.logWarning(\"Could not inspect the mobile preferences fallback.\").pipe("
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 512,
+    "source": "parsed = fallback.preferences;"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 523,
+    "source": "Effect.logWarning(\"Could not remove a stale mobile preferences fallback.\").pipe("
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+    "line": 541,
+    "source": "Effect.logWarning(\"Could not remove migrated mobile preferences.\").pipe("
+  },
+  {
+    "file": "apps/mobile/src/state/preferences.ts",
+    "line": 4,
+    "source": "import * as MobilePreferences from \"../persistence/mobile-preferences\";"
+  },
+  {
+    "file": "apps/mobile/src/state/preferences.ts",
+    "line": 30,
+    "source": "Effect.logWarning(\"Could not load mobile preferences.\", error).pipe("
+  },
+  {
+    "file": "apps/mobile/src/state/preferences.ts",
+    "line": 36,
+    "source": ".pipe(Atom.keepAlive, Atom.withLabel(\"mobile:preferences:stored\"));"
+  },
+  {
+    "file": "apps/mobile/src/state/preferences.ts",
+    "line": 40,
+    "source": "Atom.withLabel(\"mobile:preferences:optimistic-patch\"),"
+  },
+  {
+    "file": "apps/mobile/src/state/preferences.ts",
+    "line": 44,
+    "source": "Atom.withLabel(\"mobile:preferences:confirmed\"),"
+  },
+  {
+    "file": "apps/mobile/src/state/preferences.ts",
+    "line": 52,
+    "source": "return AsyncResult.map(stored, (preferences) => ({"
+  },
+  {
+    "file": "apps/mobile/src/state/preferences.ts",
+    "line": 53,
+    "source": "...preferences,"
+  },
+  {
+    "file": "apps/mobile/src/state/preferences.ts",
+    "line": 57,
+    "source": "}).pipe(Atom.keepAlive, Atom.withLabel(\"mobile:preferences\"));"
+  },
+  {
+    "file": "apps/mobile/src/state/preferences.ts",
+    "line": 127,
+    "source": ".pipe(Atom.keepAlive, Atom.withLabel(\"mobile:preferences:update\"));"
+  },
+  {
+    "file": "packages/client-runtime/src/state/sharedSettings.ts",
+    "line": 42,
+    "source": "settings?: ServerSettings,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/sharedSettings.ts",
+    "line": 43,
+    "source": "sourceSettings = settings,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/sharedSettings.ts",
+    "line": 52,
+    "source": "(!settings ||"
+  },
+  {
+    "file": "packages/client-runtime/src/state/sharedSettings.ts",
+    "line": 55,
+    "source": "(settings.providerInstances[instanceId]?.driver ?? instanceId)) ||"
+  },
+  {
+    "file": "packages/client-runtime/src/state/sharedSettings.ts",
+    "line": 56,
+    "source": "!isModelSelectionProviderEnabled(settings, {"
+  },
+  {
+    "file": "packages/client-runtime/src/state/sharedSettings.ts",
+    "line": 57,
+    "source": "...settings.textGenerationModelSelection,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/sharedSettings.ts",
+    "line": 63,
+    "source": "return settings ? patch : Struct.omit(patch, [\"continueThreadsAfterServerUpdate\"]);"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 984,
+    "source": "* Unsaved settings to check before saving, such as from the add dialog. A redacted key keeps"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1076,
+    "source": "// default sub-fields before writing settings.json, and a toType target would reject them."
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1207,
+    "source": "/** Absent keys inherit; null is a value for nullable settings."
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1208,
+    "source": "* providerInstances overrides fields per instance; other keys replace the whole setting. */"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1254,
+    "source": "export function isNullableProjectSettingsOverride(key: ProjectScopedServerSettingKey): boolean {"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1360,
+    "source": "// Null means unmigrated; empty is authoritative and must not resurrect cleared preferences."
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1459,
+    "source": "/** Clients hide threads with these tags while `hideTaggedThreads` is on. Bad entries drop alone, so a hand edit cannot reset settings. */"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1593,
+    "source": "/** Sent by the Usage tab with each summary request to this environment; edit in settings.json. Invalid values are ignored. */"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1636,
+    "source": "settings: Pick<ServerSettings, \"providerInstances\" | \"projectSettingsOverrides\">,"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1643,
+    "source": ": settings.projectSettingsOverrides[projectId]?.providerInstances?.[instanceId]?.enabled;"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1645,
+    "source": "const instanceConfig = Object.hasOwn(settings.providerInstances, instanceId)"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1646,
+    "source": "? settings.providerInstances[instanceId]"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1655,
+    "source": "settings: Pick<ServerSettings, \"textGenerators\">,"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1658,
+    "source": "Object.hasOwn(settings.textGenerators, instanceId)"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1659,
+    "source": "? settings.textGenerators[instanceId]"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1664,
+    "source": "settings: Pick<"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1671,
+    "source": "textGeneratorForSelection(settings, instanceId)?.enabled ??"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1672,
+    "source": "resolveProjectProviderInstanceEnabled(settings, projectId, instanceId);"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1678,
+    "source": "/** The environment-wide idle compaction mode, from whichever field the settings carry. */"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1679,
+    "source": "export const globalIdleCompaction = (settings: IdleCompactionSettings): IdleCompactionMode =>"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1680,
+    "source": "settings.idleCompaction ??"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1681,
+    "source": "(typeof settings.compactIdleThreads === \"string\""
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1682,
+    "source": "? settings.compactIdleThreads"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1683,
+    "source": ": settings.compactIdleThreads"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1689,
+    "source": "settings: S,"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1691,
+    "source": "): S => ({ ...settings, idleCompaction: mode, compactIdleThreads: mode === \"beforeCacheExpires\" });"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1694,
+    "source": "export const readsIdleCompactionModes = (settings: IdleCompactionSettings) =>"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1695,
+    "source": "settings.idleCompaction !== undefined || typeof settings.compactIdleThreads === \"string\";"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1698,
+    "source": "* The patch that sets `mode` in the form the server's settings show it reads:"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1702,
+    "source": "export const idleCompactionPatch = (settings: IdleCompactionSettings, mode: IdleCompactionMode) =>"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1703,
+    "source": "settings.idleCompaction !== undefined"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1705,
+    "source": ": readsIdleCompactionModes(settings)"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1710,
+    "source": "settings: Pick<ServerSettings, \"providerInstances\" | \"compactIdleThreads\" | \"idleCompaction\">,"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1713,
+    "source": "const instance = Object.hasOwn(settings.providerInstances, instanceId)"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1714,
+    "source": "? settings.providerInstances[instanceId]"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1720,
+    "source": "return override === \"default\" ? globalIdleCompaction(settings) : override;"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1729,
+    "source": "\"read-project-settings\","
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1737,
+    "source": "\"write-managed-setting\","
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1742,
+    "source": "/** Why a provider the administrator's policy leaves out cannot be used. */"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1744,
+    "source": "`${organization === undefined ? \"Your organization\" : `${organization}'s`} policy does not allow the ${label} provider.`;"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1753,
+    "source": "/** For `write-managed-setting`: the locked dot path and who manages it. */"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1762,
+    "source": "if (this.operation === \"write-managed-setting\") {"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1763,
+    "source": "return `${this.managedSetting ?? \"This setting\"} is managed by ${this.managedBy ?? \"your organization\"} and cannot be changed.`;"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1777,
+    "source": "return `Server settings ${this.operation} failed${provider}${variable} at ${this.settingsPath}.`;"
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 1805,
+    "source": "// Applied under the settings service's write lock, only while still unset."
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 2010,
+    "source": "// Removing a secret provider also clears the settings fields that read from it."
+  },
+  {
+    "file": "packages/contracts/src/settings.ts",
+    "line": 2021,
+    "source": "/** Host-executed project scripts require settings-write authority in addition to orchestration:operate. */"
+  },
+  {
+    "file": "packages/contracts/src/settingsSecretValue.ts",
+    "line": 9,
+    "source": "* A credential setting: the literal, which is kept in the secret store and redacted for"
+  },
+  {
+    "file": "packages/contracts/src/settingsSecretValue.ts",
+    "line": 11,
+    "source": "* stored and shown as written. Typing a settings field with it is the whole declaration:"
+  },
+  {
+    "file": "packages/contracts/src/settingsSecretValue.ts",
+    "line": 21,
+    "source": "/** The literal a credential setting holds, or `\"\"` when it names a secret instead. */"
+  },
+  {
+    "file": "packages/contracts/src/settingsSecretValue.ts",
+    "line": 36,
+    "source": "* The literal a credential setting holds once its secret is resolved. A reference still in place"
+  },
+  {
+    "file": "packages/contracts/src/settingsSecretValue.ts",
+    "line": 63,
+    "source": "readonly field: string;"
+  },
+  {
+    "file": "packages/contracts/src/settingsSecretValue.ts",
+    "line": 68,
+    "source": "* Fields of a settings struct typed `SettingsSecretValue`, or a record of it such as one value"
+  },
+  {
+    "file": "packages/contracts/src/settingsSecretValue.ts",
+    "line": 75,
+    "source": "if (declaresSecretReference(type)) return [{ field: name, keyed: false }];"
+  },
+  {
+    "file": "packages/contracts/src/settingsSecretValue.ts",
+    "line": 78,
+    "source": "? [{ field: name, keyed: true }]"
+  },
+  {
+    "file": "packages/contracts/src/settingsSecretValue.ts",
+    "line": 85,
+    "source": "readonly field: string;"
+  },
+  {
+    "file": "packages/contracts/src/settingsSecretValue.ts",
+    "line": 86,
+    "source": "readonly key: string | undefined;"
+  },
+  {
+    "file": "packages/contracts/src/settingsSecretValue.ts",
+    "line": 93,
+    "source": "/** Each declared reference slot of `settings` that holds a reference, in field order. */"
+  },
+  {
+    "file": "packages/contracts/src/settingsSecretValue.ts",
+    "line": 96,
+    "source": "settings: unknown,"
+  },
+  {
+    "file": "packages/contracts/src/settingsSecretValue.ts",
+    "line": 98,
+    "source": "if (settings === null || typeof settings !== \"object\") return [];"
+  },
+  {
+    "file": "packages/contracts/src/settingsSecretValue.ts",
+    "line": 99,
+    "source": "const values = settings as Readonly<Record<string, unknown>>;"
+  },
+  {
+    "file": "packages/contracts/src/settingsSecretValue.ts",
+    "line": 104,
+    "source": "return isSecretReference(value) ? [{ field, key: undefined, reference: value }] : [];"
+  },
+  {
+    "file": "packages/contracts/src/settingsSecretValue.ts",
+    "line": 113,
+    "source": "/** `settings` with each slot set to its value, keeping the other keys of a record field. */"
+  },
+  {
+    "file": "packages/contracts/src/settingsSecretValue.ts",
+    "line": 115,
+    "source": "settings: Settings,"
+  },
+  {
+    "file": "packages/contracts/src/settingsSecretValue.ts",
+    "line": 118,
+    "source": "const next: Record<string, unknown> = { ...settings };"
+  },
+  {
+    "file": "packages/shared/src/backgroundActivitySettings.ts",
+    "line": 189,
+    "source": "settings: ServerSettings,"
+  },
+  {
+    "file": "packages/shared/src/backgroundActivitySettings.ts",
+    "line": 197,
+    "source": "settings.backgroundActivity.profile === defaultBackgroundActivity.profile &&"
+  },
+  {
+    "file": "packages/shared/src/backgroundActivitySettings.ts",
+    "line": 198,
+    "source": "settings.backgroundActivity.baseProfile === undefined &&"
+  },
+  {
+    "file": "packages/shared/src/backgroundActivitySettings.ts",
+    "line": 199,
+    "source": "Object.keys(settings.backgroundActivity.overrides).length === 0;"
+  },
+  {
+    "file": "packages/shared/src/backgroundActivitySettings.ts",
+    "line": 200,
+    "source": "const legacyProfile = settings.backgroundActivityProfile;"
+  },
+  {
+    "file": "packages/shared/src/backgroundActivitySettings.ts",
+    "line": 203,
+    "source": "Duration.toMillis(settings.automaticGitFetchInterval) !=="
+  },
+  {
+    "file": "packages/shared/src/backgroundActivitySettings.ts",
+    "line": 205,
+    "source": "Duration.toMillis(settings.providerHealthRefreshInterval) !=="
+  },
+  {
+    "file": "packages/shared/src/backgroundActivitySettings.ts",
+    "line": 211,
+    "source": "Duration.toMillis(settings.automaticGitFetchInterval) ==="
+  },
+  {
+    "file": "packages/shared/src/backgroundActivitySettings.ts",
+    "line": 215,
+    "source": "Duration.toMillis(settings.providerHealthRefreshInterval) ==="
+  },
+  {
+    "file": "packages/shared/src/backgroundActivitySettings.ts",
+    "line": 223,
+    "source": "...(Duration.toMillis(settings.automaticGitFetchInterval) !=="
+  },
+  {
+    "file": "packages/shared/src/backgroundActivitySettings.ts",
+    "line": 227,
+    "source": "? { automaticGitFetchInterval: settings.automaticGitFetchInterval }"
+  },
+  {
+    "file": "packages/shared/src/backgroundActivitySettings.ts",
+    "line": 229,
+    "source": "...(Duration.toMillis(settings.providerHealthRefreshInterval) !=="
+  },
+  {
+    "file": "packages/shared/src/backgroundActivitySettings.ts",
+    "line": 233,
+    "source": "? { providerHealthRefreshInterval: settings.providerHealthRefreshInterval }"
+  },
+  {
+    "file": "packages/shared/src/backgroundActivitySettings.ts",
+    "line": 238,
+    "source": "return resolveBackgroundActivitySettings(settings.backgroundActivity);"
+  },
+  {
+    "file": "packages/shared/src/backgroundActivitySettings.ts",
+    "line": 242,
+    "source": "settings: ServerSettings,"
+  },
+  {
+    "file": "packages/shared/src/backgroundActivitySettings.ts",
+    "line": 244,
+    "source": "const resolved = resolveServerBackgroundActivitySettings(settings);"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 28,
+    "source": "readonly settings: Settings;"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 40,
+    "source": "settings: Pick<ServerSettings, \"projectSettingsOverrides\">,"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 42,
+    "source": "for (const entry of Object.values(settings.projectSettingsOverrides)) {"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 56,
+    "source": "settings: ServerSettings,"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 61,
+    "source": "settings: ServerSettings,"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 67,
+    "source": "settings: ServerSettings,"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 72,
+    "source": "const resolved = resolveProjectOverrides(settings, projectId, project);"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 83,
+    "source": "if (resolved.settings[key] !== null) continue;"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 85,
+    "source": "effective ??= { ...resolved.settings };"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 92,
+    "source": ": { ...resolved, settings: effective as ServerSettings, sources };"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 96,
+    "source": "key: K,"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 97,
+    "source": "setting: ServerSettings[K],"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 100,
+    "source": "if (setting !== null) {"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 101,
+    "source": "return { value: setting as ResolvedServerSettings[K], source: \"environment\" };"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 111,
+    "source": "settings: ServerSettings,"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 115,
+    "source": "const stored = projectId === null ? undefined : settings.projectSettingsOverrides[projectId];"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 117,
+    "source": "project == null || settings.projectSettingsFolded"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 129,
+    "source": "return { settings, sources: ENVIRONMENT_SOURCES, overrides: EMPTY_OVERRIDES };"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 134,
+    "source": "const effective: Record<string, unknown> = { ...settings };"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 148,
+    "source": ")(settings, projectId, (value as ModelSelection).instanceId)"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 157,
+    "source": "const config = settings.providerInstances[instanceId]?.config as"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 161,
+    "source": "settings.providerModelPreferences?.[instanceId]?.hiddenModels.includes(model) &&"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 171,
+    "source": "if (!resolveTextGenerationSelectionEnabled(settings, projectId, textGeneration.instanceId)) {"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 173,
+    "source": "settings.providerInstances,"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 174,
+    "source": "(instanceId) => resolveProjectProviderInstanceEnabled(settings, projectId, instanceId),"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 179,
+    "source": "return { settings: effective as ServerSettings, sources, overrides };"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 189,
+    "source": "const configured = input.projectSettings.settings.defaultThreadEnvMode;"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 218,
+    "source": "settings: Pick<ServerSettings, \"projectSettingsOverrides\">,"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 222,
+    "source": "const current = settings.projectSettingsOverrides[projectId];"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 230,
+    "source": "settings: ServerSettings,"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 233,
+    "source": "const policy = resolveProjectSettings(settings, projectId).settings.worktreeCleanup;"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 234,
+    "source": "if (policy?.mode === \"custom\") return policy.rules;"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 235,
+    "source": "if (policy?.mode === \"off\")"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 237,
+    "source": "worktreeKeepWhen: settings.storageCleanup.worktreeKeepWhen,"
+  },
+  {
+    "file": "packages/shared/src/projectSettings.ts",
+    "line": 251,
+    "source": "} = settings.storageCleanup;"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 1,
+    "source": "import type { ModelPreferences } from \"@t3tools/contracts/settings\";"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 49,
+    "source": "settings: ServerSettings,"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 52,
+    "source": "const generator = textGeneratorForSelection(settings, selection.instanceId);"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 54,
+    "source": "const instanceConfig = Object.hasOwn(settings.providerInstances, selection.instanceId)"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 55,
+    "source": "? settings.providerInstances[selection.instanceId]"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 119,
+    "source": "/** A text generator, or a provider whose snapshot can generate text; no snapshots trusts settings. */"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 121,
+    "source": "settings: ServerSettings,"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 125,
+    "source": "if (providers === undefined || textGeneratorForSelection(settings, instanceId) !== undefined) {"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 137,
+    "source": "settings: ServerSettings,"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 141,
+    "source": "const selection = settings.sourceControlWriterModelSelection;"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 143,
+    "source": "resolveTextGenerationSelectionEnabled(settings, projectId, selection.instanceId) &&"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 144,
+    "source": "isTextGenerationTargetUsable(settings, providers, selection.instanceId)"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 146,
+    "source": ": settings.textGenerationModelSelection;"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 150,
+    "source": "settings: ServerSettings,"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 154,
+    "source": "const selection = settings.reviewGuideModelSelection;"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 157,
+    "source": "textGeneratorForSelection(settings, selection.instanceId) === undefined &&"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 158,
+    "source": "resolveProjectProviderInstanceEnabled(settings, projectId, selection.instanceId) &&"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 159,
+    "source": "isTextGenerationTargetUsable(settings, providers, selection.instanceId)"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 161,
+    "source": ": resolveSourceControlWriterModelSelection(settings, providers, projectId);"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 166,
+    "source": "settings: ServerSettings,"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 169,
+    "source": "const selection = settings.speechPostProcessingModelSelection;"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 171,
+    "source": "isModelSelectionProviderEnabled(settings, selection) &&"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 172,
+    "source": "isTextGenerationTargetUsable(settings, providers, selection.instanceId)"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 174,
+    "source": ": settings.textGenerationModelSelection;"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 285,
+    "source": "// Preserve downgraded storage, but reject new unknown writes so clients can detect unsupported settings."
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 297,
+    "source": "settings: Pick<ServerSettings, \"projectSettingsOverrides\">,"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 305,
+    "source": "for (const [projectId, entry] of Object.entries(settings.projectSettingsOverrides)) {"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 345,
+    "source": "key: K,"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 479,
+    "source": "const preferences = (Object.hasOwn(updated, change.provider)"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 485,
+    "source": "const hiddenModels = preferences.hiddenModels.filter((model) => model !== change.model);"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 487,
+    "source": "updated[change.provider] = { ...preferences, hiddenModels };"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 492,
+    "source": "const preferences = nextModelPreferences?.[setProviderModelOrder.provider] ?? {"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 499,
+    "source": "...preferences,"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 688,
+    "source": "settings: Pick<ServerSettings, \"favorites\" | \"providerModelPreferences\">,"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 692,
+    "source": "favorites: settings.favorites ?? legacy.favorites ?? [],"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 694,
+    "source": "settings.providerModelPreferences ?? legacy.providerModelPreferences ?? {},"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 700,
+    "source": "settings: Pick<ServerSettings, \"favorites\" | \"providerModelPreferences\">,"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 704,
+    "source": "settings.favorites === null && (legacy.favorites?.length ?? 0) > 0"
+  },
+  {
+    "file": "packages/shared/src/serverSettings.ts",
+    "line": 708,
+    "source": "settings.providerModelPreferences === null &&"
+  }
+]

@@ -1,0 +1,64 @@
+{
+  "date": "2026-11-16",
+  "milestone": "M1 device retest",
+  "result": "passed",
+  "device": {
+    "name": "HUAWEI Mate 60 Pro",
+    "role": "dedicated test device",
+    "model": "ALN-AL80",
+    "osBuild": "OpenHarmony-7.0.0.111",
+    "api": 26
+  },
+  "client": {
+    "version": "0.1.0",
+    "compatibleApi": 24,
+    "applicationCodeChanged": false,
+    "signingProfileRefreshed": true,
+    "signedHapSha256": "109d8f105649552990189056754565cb59cdfbb783d02e29cdbcb1db360ba7a0"
+  },
+  "server": {
+    "version": "0.1.9",
+    "orchestrationProtocol": 2,
+    "transport": "USB HDC reverse, device loopback:3773 to host loopback:3773"
+  },
+  "validation": {
+    "signedInstall": true,
+    "coldStart": true,
+    "wrongCredentialRejectedOnDevice": true,
+    "authenticatedIdentityCheck": true,
+    "threadCreatedOnDevice": true,
+    "serverStreamingEventObserved": true,
+    "deviceStreamingLabelObserved": true,
+    "deviceFinalReplyExactMatch": true,
+    "finalReplyCharacters": 707,
+    "matchingFinalMessageCount": 1,
+    "deviceDisconnectionObserved": true,
+    "serverCompletedAfterDisconnect": true,
+    "serverCompletionSecondsAfterDisconnect": 20.413,
+    "restoredReplyExactMatch": true,
+    "restoredReplyCharacters": 987,
+    "matchingRestoredMessageCount": 1,
+    "submittedUserMessages": 2,
+    "uniqueUserMessages": 2,
+    "automaticResubmissions": 0
+  },
+  "checks": {
+    "unitAndAdapterTests": 16,
+    "strictTypeCheck": "passed",
+    "upstreamSchemaAndEffectRpc": "passed",
+    "signedHapBuild": "passed"
+  },
+  "notVerified": [
+    "public HTTPS path and TLS failure on device",
+    "cellular/Wi-Fi switching",
+    "locked-screen task recovery",
+    "server restart recovery",
+    "large-history performance"
+  ],
+  "cleanup": {
+    "temporarySessionsRevoked": 3,
+    "unusedPairingsRevoked": 0,
+    "remainingActiveTestCredentials": 0,
+    "credentialFilesRemoved": true
+  }
+}

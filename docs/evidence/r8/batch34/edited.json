@@ -1,0 +1,9 @@
+{
+  "title": "B34-model-edit",
+  "enabled": 0,
+  "runs": 0,
+  "model": "gpt-6.2-sol",
+  "instance": "codex",
+  "optionsPresent": false,
+  "otherDigest": "502533f12990aa1193591c553e299b2d3ad4fb4bddf3dd4a4657b684b78c3db4"
+}

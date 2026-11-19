@@ -1,0 +1,9 @@
+{
+  "device": "23E0224122000135",
+  "environmentId": "13c32a79-8e73-4c09-9e59-738dff57907b",
+  "base": "http://127.0.0.1:47832",
+  "linkedEnvironmentsEnabledBefore": false,
+  "linkedEnvironmentsEnabledAfter": true,
+  "restartedService": false,
+  "businessMessagesSent": 0
+}

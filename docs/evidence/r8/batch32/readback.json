@@ -1,0 +1,26 @@
+{
+  "repo": "cli/cli",
+  "pr": 15068,
+  "providerState": "merged",
+  "readOnlyActions": true,
+  "codeFont": 18,
+  "systemFontStep": 5,
+  "theme": "dark",
+  "wrap": true,
+  "firstHunk": "@@ -40,9 +40,9 @@",
+  "firstPairBeforeHeightPx": 254,
+  "firstPairAfterHeightPx": 127,
+  "verifiedRows": [
+    40,
+    41,
+    42,
+    456,
+    457,
+    458,
+    459
+  ],
+  "files": [
+    ".github/skills/cli-exercise/scripts/package-lock.json",
+    ".github/skills/cli-exercise/scripts/package.json"
+  ]
+}

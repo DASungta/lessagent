@@ -1,0 +1,44 @@
+{
+  "stage": "R4 batch 2",
+  "date": "2026-11-17",
+  "device": {
+    "model": "ALN-AL80",
+    "hdcTarget": "23E0224122000135"
+  },
+  "service": {
+    "version": "0.1.9",
+    "baseUrl": "http://127.0.0.1:47893",
+    "isolatedBaseDir": "/tmp/t3-r4-accept-gHC0QI"
+  },
+  "localTests": {
+    "total": 195,
+    "passed": 195,
+    "failed": 0
+  },
+  "signedBuildPassed": true,
+  "hap": "docs/evidence/r4/batch2-device/r4-batch2-candidate.hap",
+  "hapSha256": "bfb1d6cb688ae4e6a54eaacc07fab50d63a0c6f2585e5d536038645f28a727d3",
+  "deviceInstalled": true,
+  "verified": [
+    "first launch without thread.create",
+    "streamed assistant response and tool activity",
+    "draft force-stop/relaunch persistence",
+    "branch list and new worktree setup",
+    "queue accepted while run active and queue count",
+    "approval allow and deny with server readback",
+    "side chat fork lineage",
+    "secret request card render",
+    "attachment exact-byte upload and message association"
+  ],
+  "remaining": [
+    "queue edit/cancel/reorder/promote real write",
+    "structured user input unavailable in Codex Default mode",
+    "secret reference/provider and answer submission",
+    "guest share real tunnel path",
+    "multi-attachment/media picker and preview/save/share",
+    "usage recovery and history pagination",
+    "original mobile visual comparison",
+    "max font/dark/light/accessibility checks"
+  ],
+  "fullR4Complete": false
+}

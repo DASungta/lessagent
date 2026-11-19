@@ -1,0 +1,103 @@
+{
+  "date": "2026-11-16",
+  "phase": "three",
+  "status": "implemented-specialist-acceptance-in-progress",
+  "m2Complete": false,
+  "device": {
+    "name": "HUAWEI Mate 60 Pro",
+    "model": "ALN-AL80",
+    "api": 26,
+    "system": "OpenHarmony-7.0.0.111"
+  },
+  "client": {
+    "version": "0.1.0",
+    "compatibleApi": 24,
+    "targetApi": 24,
+    "hapSha256": "ef391963c277fdc19669a087dc27290b28c349d79cdb78f33d1266587d5f384e",
+    "finalHapInstalled": true
+  },
+  "server": {
+    "version": "0.1.9",
+    "port": 3773,
+    "orchestrationProtocol": 2,
+    "runningGitShaVerified": false,
+    "researchCommit": "ad1b1365999c92c3fc7a054e7f3af84623f74fee",
+    "transport": "USB HDC reverse / loopback HTTP",
+    "restartedOrReconfigured": false
+  },
+  "checks": {
+    "localTestsPassed": 43,
+    "strictWireAndCoreTypes": true,
+    "pinnedUpstreamSchemas": true,
+    "effectSerializedRpc": true,
+    "signedBuild": true,
+    "newDependencies": 0
+  },
+  "deviceResults": {
+    "coldStartRestoresSelectedThread": true,
+    "processRestartSecureSessionReuse": true,
+    "reverseRemovedDuringTask": true,
+    "serverTaskContinued": true,
+    "reverseRestoreAutomaticSnapshot": true,
+    "cutReplyExpectedLines": 121,
+    "cutReplyVisibleMatchedLines": 121,
+    "lockStartError": 10106102,
+    "unlockedByUser": true,
+    "lockTaskCompletedOnServer": true,
+    "lockReplyExpectedLines": 101,
+    "lockReplyVisibleMatchedLines": 101,
+    "finalReplyExpectedLines": 161,
+    "finalReplyVisibleMatchedLines": 161,
+    "inputEnabledAfterSubmission": true,
+    "unsentDraftEnteredAndScrolled": true,
+    "unsentDraftAbsentFromServer": true,
+    "totalUserMessages": 6,
+    "uniqueUserMessages": 6,
+    "totalMessages": 12,
+    "uniqueMessages": 12,
+    "singleDocumentPickedAndUploaded": true,
+    "sentAttachmentBytes": 29,
+    "sentAttachmentType": "file",
+    "attachmentHistoryNameVisible": true,
+    "interruptedSelectionUploadManuallyRetried": true,
+    "uploadRetryDidNotSendMessage": true
+  },
+  "streamObservation": {
+    "streamingSeen": false,
+    "finalSeen": true
+  },
+  "provenance": {
+    "phoneActions": "explicit HDC automation on dedicated app and system document picker; manual unlock explicitly confirmed by user",
+    "attachmentRead": "transfer and server message metadata verified; model declined to read because test prompt forbade tools; content-read acceptance not claimed",
+    "streamInput": "draft entry and scrolling after submission verified; no captured intermediate streaming frame in the final run; rapid-stream performance not claimed"
+  },
+  "cleanup": {
+    "sessionRevoked": 3,
+    "sessionActiveAfter": 0,
+    "pairingRevoked": 0,
+    "pairingActiveAfter": 0,
+    "connectionRemovedAfterRestart": true,
+    "threadNotShown": true,
+    "temporaryDownloadFileRemoved": true,
+    "temporaryCredentialsRawProjectionsAndScriptsRemoved": true,
+    "reverseRestored": true,
+    "testThreadAndSentAttachmentRetainedOnServer": true,
+    "unreferencedPendingUploads": "server expiry sweep"
+  },
+  "unverified": [
+    "public HTTPS and certificate-failure device path",
+    "real cellular/Wi-Fi transitions",
+    "isolated server restart",
+    "thousands-of-messages device performance",
+    "rapid-stream input performance",
+    "system maximum font size, screen reader and dark/light acceptance",
+    "real lost-ack injection across process exit",
+    "model reading the uploaded document"
+  ],
+  "implementationLimits": [
+    "full server snapshot; UI lazy rendering only, no server history pagination",
+    "drafts, scroll position and file-selection retry are process-local",
+    "one generic document, maximum 10 MiB; no multi-attachment or image preview",
+    "all unknown modifying submissions remain blocked until snapshot plus explicit user reconciliation"
+  ]
+}

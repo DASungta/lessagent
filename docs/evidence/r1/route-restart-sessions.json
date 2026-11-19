@@ -1,0 +1,119 @@
+{
+  "before": [
+    {
+      "sessionId": "0cb048cd-5ee6-48a9-9208-0957cde3652e",
+      "label": "harmony-r1-attachment-A-only",
+      "ip": "127.0.0.1",
+      "last": "2026-11-16T14:40:44.109Z",
+      "scopes": "[\"orchestration:read\",\"orchestration:operate\"]"
+    },
+    {
+      "sessionId": "c603a8bf-3fef-40a5-b33c-a5980b7e55cf",
+      "label": "harmony-r1-product-route-ui",
+      "ip": "192.168.10.55",
+      "last": "2026-11-16T14:36:37.767Z",
+      "scopes": "[\"orchestration:read\",\"orchestration:operate\"]"
+    },
+    {
+      "sessionId": "8a9c789f-1f54-46df-937b-03f9cd489236",
+      "label": "harmony-r1-multi-route-fourth-alternate",
+      "ip": "192.168.10.55",
+      "last": "2026-11-16T14:26:57.362Z",
+      "scopes": "[\"orchestration:read\"]"
+    },
+    {
+      "sessionId": "a726b839-aada-4ac5-b2e5-a00091636c62",
+      "label": "harmony-r1-multi-route-fourth-primary",
+      "ip": "127.0.0.1",
+      "last": "2026-11-16T14:26:52.073Z",
+      "scopes": "[\"orchestration:read\"]"
+    },
+    {
+      "sessionId": "62d774e9-84e5-4c5a-a665-73debb99afae",
+      "label": "harmony-r1-multi-route-third-alternate",
+      "ip": "192.168.10.55",
+      "last": "2026-11-16T14:24:31.952Z",
+      "scopes": "[\"orchestration:read\"]"
+    },
+    {
+      "sessionId": "28aaabef-05a8-44a1-a58f-16232d0cdef3",
+      "label": "harmony-r1-multi-route-third-primary",
+      "ip": "127.0.0.1",
+      "last": "2026-11-16T14:24:26.633Z",
+      "scopes": "[\"orchestration:read\"]"
+    },
+    {
+      "sessionId": "bc02cbbb-9dc0-4c7d-b910-a4b104a9b863",
+      "label": "harmony-r1-multi-route-retry-alternate",
+      "ip": "192.168.10.55",
+      "last": "2026-11-16T14:23:03.867Z",
+      "scopes": "[\"orchestration:read\"]"
+    },
+    {
+      "sessionId": "a1c52423-f941-4079-b2ac-fa97444239b3",
+      "label": "harmony-r1-multi-route-retry-primary",
+      "ip": "127.0.0.1",
+      "last": "2026-11-16T14:22:58.600Z",
+      "scopes": "[\"orchestration:read\"]"
+    }
+  ],
+  "after": [
+    {
+      "sessionId": "c603a8bf-3fef-40a5-b33c-a5980b7e55cf",
+      "label": "harmony-r1-product-route-ui",
+      "ip": "192.168.10.55",
+      "last": "2026-11-16T14:42:15.797Z",
+      "scopes": "[\"orchestration:read\",\"orchestration:operate\"]"
+    },
+    {
+      "sessionId": "0cb048cd-5ee6-48a9-9208-0957cde3652e",
+      "label": "harmony-r1-attachment-A-only",
+      "ip": "127.0.0.1",
+      "last": "2026-11-16T14:40:44.109Z",
+      "scopes": "[\"orchestration:read\",\"orchestration:operate\"]"
+    },
+    {
+      "sessionId": "8a9c789f-1f54-46df-937b-03f9cd489236",
+      "label": "harmony-r1-multi-route-fourth-alternate",
+      "ip": "192.168.10.55",
+      "last": "2026-11-16T14:26:57.362Z",
+      "scopes": "[\"orchestration:read\"]"
+    },
+    {
+      "sessionId": "a726b839-aada-4ac5-b2e5-a00091636c62",
+      "label": "harmony-r1-multi-route-fourth-primary",
+      "ip": "127.0.0.1",
+      "last": "2026-11-16T14:26:52.073Z",
+      "scopes": "[\"orchestration:read\"]"
+    },
+    {
+      "sessionId": "62d774e9-84e5-4c5a-a665-73debb99afae",
+      "label": "harmony-r1-multi-route-third-alternate",
+      "ip": "192.168.10.55",
+      "last": "2026-11-16T14:24:31.952Z",
+      "scopes": "[\"orchestration:read\"]"
+    },
+    {
+      "sessionId": "28aaabef-05a8-44a1-a58f-16232d0cdef3",
+      "label": "harmony-r1-multi-route-third-primary",
+      "ip": "127.0.0.1",
+      "last": "2026-11-16T14:24:26.633Z",
+      "scopes": "[\"orchestration:read\"]"
+    },
+    {
+      "sessionId": "bc02cbbb-9dc0-4c7d-b910-a4b104a9b863",
+      "label": "harmony-r1-multi-route-retry-alternate",
+      "ip": "192.168.10.55",
+      "last": "2026-11-16T14:23:03.867Z",
+      "scopes": "[\"orchestration:read\"]"
+    },
+    {
+      "sessionId": "a1c52423-f941-4079-b2ac-fa97444239b3",
+      "label": "harmony-r1-multi-route-retry-primary",
+      "ip": "127.0.0.1",
+      "last": "2026-11-16T14:22:58.600Z",
+      "scopes": "[\"orchestration:read\"]"
+    }
+  ],
+  "checkedAt": "2026-11-16T22:42:16.019171+08:00"
+}

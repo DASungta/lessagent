@@ -1,0 +1,22 @@
+{
+  "device": "23E0224122000135",
+  "model": "ALN-AL80",
+  "testedValues": [
+    "read",
+    "read-write",
+    "off"
+  ],
+  "bothSidesReadPersisted": true,
+  "bothSidesReadWritePersisted": true,
+  "writeRequiresBothReadWrite": true,
+  "readRequiresBothEnabledAndNotOff": true,
+  "routeIdentityChangeRevokedTargetPrRouting": true,
+  "bRoutingBeforeRouteRemoval": "read-write",
+  "bRoutingAfterRouteRemoval": "off",
+  "aRoutingSurvivedOtherEnvironmentRouteChange": "read-write",
+  "finalAllModes": "off",
+  "actualPullRequestFeatureExecutionDeferredToR5": true,
+  "nativeSettingsUiVerified": true,
+  "settingsEvidence": "pr-routing-settings-native.json",
+  "capturedAt": "2026-11-16T23:42:22.690056+08:00"
+}

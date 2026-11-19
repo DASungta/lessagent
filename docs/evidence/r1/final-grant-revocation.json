@@ -1,0 +1,27 @@
+{
+  "device": "23E0224122000135",
+  "criterion": "active sessions or pairing tokens labeled harmony-r1-; T3 Code link target grants",
+  "services": {
+    "a": {
+      "revokedSessions": 25,
+      "revokedPairingLinks": 0,
+      "remainingTestSessions": 0,
+      "remainingTestPairingLinks": 0
+    },
+    "b": {
+      "revokedSessions": 20,
+      "revokedPairingLinks": 0,
+      "remainingTestSessions": 0,
+      "remainingTestPairingLinks": 0
+    },
+    "c": {
+      "revokedSessions": 3,
+      "revokedPairingLinks": 0,
+      "remainingTestSessions": 0,
+      "remainingTestPairingLinks": 0
+    }
+  },
+  "unknownSubmissionMarkersCleared": false,
+  "cleanupVerified": true,
+  "capturedAt": "2026-11-16T23:44:17.689240+08:00"
+}

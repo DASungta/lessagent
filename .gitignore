@@ -1,0 +1,17 @@
+.hvigor/
+.idea/
+oh_modules/
+**/build/
+local.properties
+*.p12
+*.p7b
+*.cer
+*.keystore
+.env*
+.DS_Store
+node_modules/
+
+# 大文件：GitHub 单文件上限 100MB，上游基线可按固定提交 ad1b136 重新获取
+docs/baselines/*.tar.gz
+# 交接压缩包为派生产物
+docs/*.zip

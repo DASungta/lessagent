@@ -1,0 +1,170 @@
+{
+  "baseline": "ad1b1365999c92c3fc7a054e7f3af84623f74fee",
+  "sourceCheck": {
+    "method": "rsync -rcn --exclude node_modules --exclude .cxx --exclude build",
+    "appsMobileSourceMatchesBaseline": true,
+    "appConfigSha256": "8fabb5e0b11f1bf2dddf2f1e73a6d5aa7f6912557237f7c96763570d03745688",
+    "mobileVersion": "2.3.0"
+  },
+  "device": {
+    "host": "local",
+    "id": "emulator-5554",
+    "name": "Pixel_6_API_30",
+    "platform": "android",
+    "version": "Android 11.0",
+    "resolution": "1080x2400",
+    "package": "com.t3tools.t3code.dev",
+    "build": "Expo Dev Client",
+    "devClientOverlay": "floating gear at top-right, not product UI; it overlaps the header check/+ button"
+  },
+  "server": {
+    "isolated": true,
+    "port": 47861,
+    "version": "0.1.9",
+    "addressUsedByEmulator": "10.0.2.2:47861",
+    "existing3773Untouched": true,
+    "pairingTokenRecorded": false
+  },
+  "steps": [
+    {
+      "id": "home-empty",
+      "screenshot": "01-home-empty-light.png",
+      "observed": "No environments connected; Add environment primary button; Chats/Pulls/Usage/Settings bottom tabs.",
+      "result": "pass"
+    },
+    {
+      "id": "title-tap-no-op-empty",
+      "screenshot": "02-title-tap-no-op-empty-light.png",
+      "observed": "Tapping the T3 Code title with zero connections does not open a Connections screen; the screen is byte-identical to home-empty.",
+      "result": "observed-no-op"
+    },
+    {
+      "id": "add-environment-empty",
+      "screenshot": "03-add-environment-empty-light.png",
+      "observed": "Full-screen Add environment page: scan card with outlined QR frame and 'Tap to scan', 'Or enter it', Address/Code card, footnote. Header check disabled while fields are empty.",
+      "result": "pass"
+    },
+    {
+      "id": "submit-failure",
+      "screenshot": "04-add-environment-failure-light.png",
+      "observed": "Invalid host 127.0.0.1:1 produced a real transport failure shown in red below the card; the card border turns red and the page stays open.",
+      "result": "pass"
+    },
+    {
+      "id": "camera-permission-first",
+      "screenshot": "05-camera-permission-light.png",
+      "observed": "System camera permission dialog: While using the app / Only this time / Deny.",
+      "result": "pass"
+    },
+    {
+      "id": "camera-denied",
+      "screenshot": "06-camera-denied-light.png",
+      "observed": "Deny returns to the form with no error banner; entered fields remain.",
+      "result": "pass"
+    },
+    {
+      "id": "camera-permission-second",
+      "screenshot": "07-camera-permission-second-request-light.png",
+      "observed": "Second scan attempt in the same session still shows the system permission dialog.",
+      "result": "pass"
+    },
+    {
+      "id": "back-from-add",
+      "screenshot": "08-settings-root-after-back-light.png",
+      "observed": "Back from Add environment returns to the Settings root (opener), not Home, because this entry is opened from Settings > Environments.",
+      "result": "pass"
+    },
+    {
+      "id": "camera-permanently-denied",
+      "screenshot": "09-camera-after-second-deny-light.png",
+      "observed": "After a second denial, scan shows app dialog 'Camera access needed' with Cancel / Open Settings.",
+      "result": "pass"
+    },
+    {
+      "id": "pairing-success",
+      "screenshot": "11-add-environment-success-opener-light.png",
+      "observed": "Real OAuth pairing against the isolated 0.1.9 server succeeded and returned to the opener (Settings root).",
+      "result": "pass"
+    },
+    {
+      "id": "environments-connected",
+      "screenshot": "12-environments-connected-light.png",
+      "observed": "One environment row: desktop icon, host name, http://10.0.2.2:47861/, Connected, Desktop; enable switch; PR routing section with Off.",
+      "result": "pass"
+    },
+    {
+      "id": "home-connected-no-projects",
+      "screenshot": "13-home-connected-empty-threads-light.png",
+      "observed": "With a connected environment that reports no projects: 'No projects found' empty state and New thread primary action.",
+      "result": "pass"
+    },
+    {
+      "id": "title-tap-no-op-connected",
+      "screenshot": "14-title-tap-no-op-connected-light.png",
+      "observed": "Tapping the title while connected and idle also does not open a Connections screen; identical to the previous screenshot.",
+      "result": "observed-no-op"
+    },
+    {
+      "id": "home-connected-dark",
+      "screenshot": "15-home-connected-empty-threads-dark.png",
+      "observed": "Dark appearance of the connected no-projects home and bottom tabs.",
+      "result": "pass"
+    },
+    {
+      "id": "environments-connected-dark",
+      "screenshot": "16-environments-connected-dark.png",
+      "observed": "Dark appearance of the connected environment row and PR routing section.",
+      "result": "pass"
+    },
+    {
+      "id": "add-environment-dark",
+      "screenshot": "17-add-environment-empty-dark.png",
+      "observed": "Dark appearance of the Add environment page; same structure as light.",
+      "result": "pass"
+    },
+    {
+      "id": "submit-connecting",
+      "screenshot": "18-add-environment-connecting-light.png",
+      "observed": "Submitting to a black-holed address replaced the header check with a spinner while the request was in flight.",
+      "result": "pass"
+    },
+    {
+      "id": "submit-timeout",
+      "screenshot": "19-add-environment-timeout-failure-light.png",
+      "observed": "The black-holed address produced a real transport failure with the same red error treatment.",
+      "result": "pass"
+    },
+    {
+      "id": "scan-camera-allowed",
+      "screenshot": "20-scan-screen-camera-allowed-light.png",
+      "observed": "After granting camera permission the scan card becomes an active black preview with the scan control disabled; the emulator's synthetic camera supplies no readable QR.",
+      "result": "observed-partial"
+    },
+    {
+      "id": "environment-manage",
+      "screenshot": "21-environment-manage-light.png",
+      "observed": "Manage opens connection details: version 0.1.9, Routes, Your permissions, Edit, Connected/Desktop.",
+      "result": "pass"
+    },
+    {
+      "id": "environment-edit",
+      "screenshot": "22-environment-edit-light.png",
+      "observed": "Edit reveals route removal and reorder controls; no environment-level remove action was found in this sheet.",
+      "result": "pass"
+    },
+    {
+      "id": "environment-retrying-after-server-stop",
+      "screenshot": "23-environment-disconnected-light.png",
+      "observed": "After stopping only the isolated 47861 service, the original environment row switches to 'did not answer, Retrying' and keeps the saved address; existing 3773 remained listening.",
+      "result": "pass"
+    }
+  ],
+  "notExecuted": [
+    {
+      "case": "successful or invalid QR scan",
+      "reason": "The headless Pixel_6_API_30 AVD uses hw.camera.back=emulated; its synthetic camera feed cannot present a QR, so camera recognition cannot be exercised on this device.",
+      "substituteRejected": "No Replay, source, Harmony screenshot or browser preview was used for this case."
+    }
+  ],
+  "conclusion": "B01 native visual and interaction evidence for the original app was obtained on the Android emulator: empty, add, submit connecting/failure, camera permission/denial/recovery, real pairing success back to opener, connected environment and dark appearance. Physical/synthetic QR recognition remains unavailable on this AVD."
+}

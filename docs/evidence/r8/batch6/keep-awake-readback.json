@@ -1,0 +1,12 @@
+{
+  "device": "23E0224122000135",
+  "systemLock": "PowerMgrKeepOnLock",
+  "enabled": true,
+  "originalScreenOffMs": 600000,
+  "screenOffMsAfterOnOffOn": 600000,
+  "survivedAppForceStop": true,
+  "survivedHapReinstall": true,
+  "appStartedAfterReinstall": true,
+  "selfTestsPassed": 4,
+  "manualPowerLockStillAllowed": true
+}

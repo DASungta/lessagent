@@ -1,0 +1,17 @@
+{
+  "kind": "O-host-only",
+  "checks": [
+    "P-256 coordinates",
+    "htu removes query/hash",
+    "ath binds token",
+    "thumbprint member order",
+    "ES256 raw signature length",
+    "valid signature",
+    "tamper rejection",
+    "DER is not raw"
+  ],
+  "passed": true,
+  "harmonyDeviceCryptoValidated": false,
+  "upstreamEffectTestsExecuted": false,
+  "relayValidated": false
+}

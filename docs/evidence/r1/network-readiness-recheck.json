@@ -1,0 +1,25 @@
+{
+  "device": "23E0224122000135",
+  "model": "ALN-AL80",
+  "checkedAt": "2026-11-16T23:52:04.542601+08:00",
+  "host": {
+    "activeInterface": "en0",
+    "ipv4": "192.168.10.75",
+    "globalOrUlaIPv6Count": 0,
+    "directIPv6Probe": "No route to host",
+    "tailscaleCliAvailable": false,
+    "tailscaleAppAvailable": false
+  },
+  "deviceNetwork": {
+    "wlan0IPv4": "192.168.3.78",
+    "wlan0IPv6ListedByIfconfig": false
+  },
+  "t3DeviceAccess": "disabled; turn on in Settings > Integrations > Devices and use a new agent session",
+  "conclusion": "Tailnet and IPv6 real-network acceptance cannot be executed in the current authoritative environment",
+  "notValidated": [
+    "Tailnet transport",
+    "IPv6 transport",
+    "cellular handoff"
+  ],
+  "evidenceLog": "docs/evidence/r1/network-readiness-recheck.log"
+}

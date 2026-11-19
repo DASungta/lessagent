@@ -1,0 +1,9 @@
+{
+  "sourceTime": "2026-11-16T19:32:09.718761+08:00",
+  "localTestsPassed": 91,
+  "c05CandidateSha256": "7f4e6d4685d512a8dad2d5bb902ff7d5e5719acb3ff513f1d1eed65a78b9fe23",
+  "installedSourceTestsEpoch": 87,
+  "c05Installed": false,
+  "nativeTransportExecuted": false,
+  "R1Complete": false
+}

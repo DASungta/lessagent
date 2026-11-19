@@ -1,0 +1,38 @@
+{
+  "hapSha256": "5c4a7c68bb796bc03d772c2eaa6b9344fba7505d4f77b0797c66b6f3d0eb30ad",
+  "testsPassed": 296,
+  "notificationTestRuns": [
+    {
+      "ordinal": 2,
+      "status": "completed",
+      "requestedAt": "2026-11-18T15:25:02.269Z",
+      "completedAt": "2026-11-18T15:25:12.032Z"
+    },
+    {
+      "ordinal": 3,
+      "status": "completed",
+      "requestedAt": "2026-11-18T15:29:33.348Z",
+      "completedAt": "2026-11-18T15:29:38.949Z"
+    }
+  ],
+  "notificationSystemAcceptedLocalTime": "23:29:49",
+  "notificationClickReceivedLocalTime": "23:30:34",
+  "notificationPreferenceAfterTest": false,
+  "fontBefore": {
+    "size": 2,
+    "weight": 1,
+    "displayScale": 1
+  },
+  "fontTest": {
+    "size": 5,
+    "label": "特大"
+  },
+  "fontAfter": {
+    "size": 2,
+    "weight": 1,
+    "displayScale": 1
+  },
+  "appThemeAfter": "light",
+  "microphonePermissionPath": "denied",
+  "audioRecorded": false
+}

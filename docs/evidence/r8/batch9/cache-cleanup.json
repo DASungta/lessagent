@@ -1,0 +1,24 @@
+{
+  "date": "2026-11-19",
+  "allBefore": {
+    "count": 2,
+    "bytes": 150
+  },
+  "selectedBefore": {
+    "count": 1,
+    "bytes": 80
+  },
+  "selectedAfter": {
+    "count": 0,
+    "bytes": 0
+  },
+  "allAfter": {
+    "count": 1,
+    "bytes": 70
+  },
+  "unknownPreserved": {
+    "count": 1,
+    "bytes": 70
+  },
+  "confirmedInNativeUI": true
+}

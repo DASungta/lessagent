@@ -1,0 +1,12 @@
+{
+  "desktopCardAdded": true,
+  "dimension": "2*2",
+  "targetsMinVp": 44,
+  "coldNewTask": "project-picker after connection",
+  "hotSessionsFromChat": true,
+  "cardLeftForUse": true,
+  "autoSend": false,
+  "businessDataInCard": false,
+  "backgroundConnectionInExtension": false,
+  "sameDirectAndNestedActionAcceptedOnce": true
+}

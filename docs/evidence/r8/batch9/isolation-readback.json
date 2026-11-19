@@ -1,0 +1,12 @@
+{
+  "date": "2026-11-19",
+  "round": 2,
+  "startedFromEmptyMetadata": true,
+  "createdTwoUniqueTerminals": true,
+  "closedAOnly": true,
+  "bRetainedHistory": true,
+  "bCommandAfterAClose": "R9-B-AFTER-A-CLOSED",
+  "bCommandOutputVerifiedVisually": true,
+  "bothTestTerminalsClosed": true,
+  "finalMetadataEmpty": true
+}

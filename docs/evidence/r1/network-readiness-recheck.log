@@ -1,0 +1,17 @@
+checked_at=2026-11-16T23:52:03+0800
+device=23E0224122000135
+ALN-AL80 
+wlan0     Link encap:Ethernet  HWaddr 92:dd:13:9c:cf:37
+          inet addr:192.168.3.78  Bcast:192.168.3.255  Mask:255.255.255.0 
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:118584 errors:0 dropped:0 overruns:0 frame:0 
+          TX packets:64697 errors:0 dropped:0 overruns:0 carrier:0 
+          collisions:0 txqueuelen:1000 
+          RX bytes:94064786 TX bytes:19377967 
+
+host_ipv4=192.168.10.75
+host_ipv6_global_or_ula_count=0
+tailscale_path=
+tailscale_app_count=0
+direct_ipv6_probe:
+curl: (7) Failed to connect to 2606:4700:4700::1111 port 443 after 0 ms: Couldn't connect to server

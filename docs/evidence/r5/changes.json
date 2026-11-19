@@ -1,0 +1,192 @@
+{
+  "generatedAt": "2026-11-18T20:25:00+08:00",
+  "note": "No project Git; hashes refreshed after the Mermaid subset change. Use this list for file-scoped rollback.",
+  "files": [
+    {
+      "path": "entry/src/main/ets/protocol/Markdown.ts",
+      "bytes": 26023,
+      "sha256": "864a2be6ad668bbedee6adaa196882ba35cd7330ee471ebcf186b3b47dd10876",
+      "status": "modified"
+    },
+    {
+      "path": "entry/src/main/ets/protocol/Files.ts",
+      "bytes": 7374,
+      "sha256": "617f999b74cb64dda890e73127f46dc1c57949e7a9890442c4ff342715038b42",
+      "status": "added"
+    },
+    {
+      "path": "entry/src/main/ets/protocol/R5.ts",
+      "bytes": 33439,
+      "sha256": "8f01c6b87afedf85000aba122033667bcc42778d1f949da09c733739fcbc9f6b",
+      "status": "added"
+    },
+    {
+      "path": "entry/src/main/ets/components/MarkdownView.ets",
+      "bytes": 13401,
+      "sha256": "92a369ca0fdf6e637aac3ba4428842589effa6f1e3ed1cd54854cc636772c4ca",
+      "status": "modified"
+    },
+    {
+      "path": "entry/src/main/ets/components/FilesPanel.ets",
+      "bytes": 19439,
+      "sha256": "04ff6ed6d5a742dec09f75877e043f2c77beda1654af89877f7c7c7ff38c89aa",
+      "status": "added"
+    },
+    {
+      "path": "entry/src/main/ets/components/ReviewPanel.ets",
+      "bytes": 14131,
+      "sha256": "5012978f4573feaf9c938a53f3e1d2f31cda50e6929fdde3e8df32f8bcb64430",
+      "status": "added"
+    },
+    {
+      "path": "entry/src/main/ets/components/GitPanel.ets",
+      "bytes": 13122,
+      "sha256": "553ab8668b2fda21e9fc83472a7d8ee70163e497b9b69284319d6ede50577098",
+      "status": "added"
+    },
+    {
+      "path": "entry/src/main/ets/components/PullRequestsPanel.ets",
+      "bytes": 40850,
+      "sha256": "b77287db8d2e4eb96797eb19eca8a43bdc351e3c4d6c8eb27b0a3c16f471d5a7",
+      "status": "added"
+    },
+    {
+      "path": "entry/src/main/ets/services/T3Client.ets",
+      "bytes": 88619,
+      "sha256": "ecd18e4c20db6d47c1fad78399d3bcbc44ee23237811a0c029f8599d49a6c6ab",
+      "status": "modified"
+    },
+    {
+      "path": "entry/src/main/ets/pages/Index.ets",
+      "bytes": 137301,
+      "sha256": "d55b102adbb9a5affd42ac13a618013c6ff0eb082c24f9bde92acdc828cc37ae",
+      "status": "modified"
+    },
+    {
+      "path": "entry/src/main/resources/base/element/color.json",
+      "bytes": 989,
+      "sha256": "56c9ae864c4fef3b6d832c2948bdbfb5031b81a4b6e1a8bd8c824521af80c8da",
+      "status": "modified"
+    },
+    {
+      "path": "tests/load-core.mjs",
+      "bytes": 2458,
+      "sha256": "3d28981dce4f204f1f3c805e85e927b9510f08730b03e5838c9cdae60e4f2580",
+      "status": "modified"
+    },
+    {
+      "path": "tests/r5.test.mjs",
+      "bytes": 8880,
+      "sha256": "22690fde3b08f45b5285dbed59c81234de640239148ec60d596fd9f4ed126a26",
+      "status": "added"
+    },
+    {
+      "path": "tests/native-client.test.mjs",
+      "bytes": 41126,
+      "sha256": "272936574615871bcdd943d79b6df5bbbca1627fed8286d7a05e5a1fd72bbd61",
+      "status": "modified"
+    },
+    {
+      "path": "README.md",
+      "bytes": 4973,
+      "sha256": "48d07fff74c22905a38e590720f26b752f360b2e210e96639c50e475153ce765",
+      "status": "modified"
+    },
+    {
+      "path": "docs/r0-mobile-capability-matrix.md",
+      "bytes": 27921,
+      "sha256": "ef2940094f957604d5e4834f58b672ae6b4be930e71d5780d87290489b7a273b",
+      "status": "modified"
+    },
+    {
+      "path": "docs/r5-progress.md",
+      "bytes": 12526,
+      "sha256": "a63977e6107dbae895a9876bd3732de9c89f0efebeddf7f64cc6556e085adf3d",
+      "status": "added"
+    },
+    {
+      "path": "docs/evidence/r5/README.md",
+      "bytes": 1381,
+      "sha256": "23539b6a137732198fe361b573b47f3c6d178c809a607941646d2c6f3e1d7ff9",
+      "status": "modified"
+    },
+    {
+      "path": "entry/src/main/resources/dark/element/color.json",
+      "bytes": 989,
+      "sha256": "9a411eb0d62d13d9a93cf86139b91a707c4a2523770fc4306e693b6fc1c56453",
+      "status": "added"
+    },
+    {
+      "path": "entry/src/main/resources/dark/media/ui_back.svg",
+      "bytes": 211,
+      "sha256": "d5087d9c265cc4bdfe5e554f3744ecb1846059e4252370c60a4216ec36f2c77a",
+      "status": "added"
+    },
+    {
+      "path": "entry/src/main/resources/dark/media/ui_compose.svg",
+      "bytes": 244,
+      "sha256": "732fc39ff883489a9026e90ec7932ddd05dd45be481d27a516f5c251938433a4",
+      "status": "added"
+    },
+    {
+      "path": "entry/src/main/resources/dark/media/ui_down.svg",
+      "bytes": 218,
+      "sha256": "cb3fb82485ca5b0a3240baf511b4cea9407b24a0b9fa43579fa9e143f0cbaa89",
+      "status": "added"
+    },
+    {
+      "path": "entry/src/main/resources/dark/media/ui_folder.svg",
+      "bytes": 217,
+      "sha256": "89cf87379c4e6a453e334c292b24c2ab916d862006d1b9203cccbb934b267106",
+      "status": "added"
+    },
+    {
+      "path": "entry/src/main/resources/dark/media/ui_globe.svg",
+      "bytes": 271,
+      "sha256": "81595c785f1928002220d769173ada1b1b75e29e51d1ed79e51b0d0d1c20779c",
+      "status": "added"
+    },
+    {
+      "path": "entry/src/main/resources/dark/media/ui_more.svg",
+      "bytes": 226,
+      "sha256": "5e02ffd96cbf3973216eb4046890d24c374b18bf2e71529bef6c81ff6cca4aec",
+      "status": "added"
+    },
+    {
+      "path": "entry/src/main/resources/dark/media/ui_plus.svg",
+      "bytes": 213,
+      "sha256": "980e36c356c765841d8b33778836577d63e37b4963c7505bff95e311276a6d6c",
+      "status": "added"
+    },
+    {
+      "path": "entry/src/main/ets/protocol/Mermaid.ts",
+      "bytes": 16227,
+      "sha256": "eb39dbaafa75c1c8db57d1888bfae9abb676cf722106c4810a3fe779a3fe9fca",
+      "status": "added"
+    },
+    {
+      "path": "entry/src/main/ets/components/MermaidView.ets",
+      "bytes": 2371,
+      "sha256": "484eef846eda66d0c85d7724d4dd0d32baccc33834f544fbfec8a0eac5c9bae7",
+      "status": "added"
+    },
+    {
+      "path": "entry/src/main/ets/components/SequenceView.ets",
+      "bytes": 2586,
+      "sha256": "75b0833bb78aeb148daa76bbf79f7dbe513f8570f280d5888c1e5422d5a463aa",
+      "status": "added"
+    },
+    {
+      "path": "entry/src/main/ets/components/ClassDiagramView.ets",
+      "bytes": 2568,
+      "sha256": "456b1d5af37ae2c6153867816a8a769aecc09f3544f426d2879bebe8312850dc",
+      "status": "added"
+    },
+    {
+      "path": "entry/src/main/ets/components/StateDiagramView.ets",
+      "bytes": 2226,
+      "sha256": "ccca0a01af24bdf15f70b4ee37f1384b721303111c7663d0cc595f693ad6277d",
+      "status": "added"
+    }
+  ]
+}

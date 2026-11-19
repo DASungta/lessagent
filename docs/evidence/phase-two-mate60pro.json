@@ -1,0 +1,89 @@
+{
+  "date": "2026-11-16",
+  "phase": "two",
+  "status": "core-business-loop-passed",
+  "device": {
+    "name": "HUAWEI Mate 60 Pro",
+    "model": "ALN-AL80",
+    "api": 26,
+    "system": "OpenHarmony-7.0.0.111"
+  },
+  "client": {
+    "version": "0.1.0",
+    "compatibleApi": 24,
+    "targetApi": 24,
+    "hapSha256": "209855a1fced60ed62b16d3c3b18b7de369724dbe34f6d56f5ee6a11697da3c3"
+  },
+  "server": {
+    "version": "0.1.9",
+    "port": 3773,
+    "orchestrationProtocol": 2,
+    "runningGitShaVerified": false,
+    "researchCommit": "ad1b1365999c92c3fc7a054e7f3af84623f74fee",
+    "transport": "USB HDC reverse / loopback HTTP",
+    "restartedOrReconfigured": false
+  },
+  "checks": {
+    "localTestsPassed": 30,
+    "strictWireAndCoreTypes": true,
+    "pinnedUpstreamSchemas": true,
+    "effectSerializedRpc": true,
+    "signedBuild": true,
+    "finalHapInstalled": true
+  },
+  "deviceResults": {
+    "secureSessionAfterReinstall": true,
+    "shellEnrichmentFixOnDevice": true,
+    "editFinalAllLinesMatch": true,
+    "editMarkerCount": 1,
+    "editReplyChars": 195,
+    "approvals": 3,
+    "allApproved": true,
+    "followupFinalAllLinesMatch": true,
+    "followupReplyChars": 624,
+    "followupMatchedLines": 13,
+    "followupExpectedLines": 13,
+    "codeClipboardRoundtrip": true,
+    "draftRetainedAcrossReconnect": true,
+    "secretValueAbsentFromProjection": true,
+    "secretCardStatus": [
+      "saved",
+      "saved"
+    ],
+    "stopRunStatus": "interrupted",
+    "inputOptionSubmittedByAutomation": true,
+    "inputFinalMatchesOnDevice": true,
+    "inputAnswerConfirmed": true,
+    "interactionModeRestored": true,
+    "totalUserMessages": 7,
+    "uniqueUserMessages": 7
+  },
+  "streaming": {
+    "streamingSeen": true,
+    "finalSeen": true,
+    "phoneStreamingLabelSeen": true
+  },
+  "provenance": {
+    "firstInputAndSecretCompletionSource": "unconfirmed; user said not manually operated; excluded as phone interaction evidence",
+    "verifiedSecret": "second request: automation entered random non-sensitive placeholder and submitted using native card; value absent from thread projection",
+    "verifiedInput": "second request: automation clicked Blue and submit; auto_color=Blue confirmed by server and final text matched on device"
+  },
+  "cleanup": {
+    "testSessionsRevoked": 3,
+    "activeTestSessionsAfterCleanup": 0,
+    "activeTestPairingsAfterCleanup": 0,
+    "localConnectionRemovedAfterRestart": true,
+    "temporaryCredentialsAndRawProjectionsRemoved": true,
+    "temporaryTaskFileRemoved": true
+  },
+  "unverified": [
+    "approval decline on device",
+    "multiple questions, multiple selections and custom answers on device",
+    "public HTTPS",
+    "cellular/Wi-Fi transitions",
+    "locked-screen task recovery",
+    "server restart recovery",
+    "large history performance",
+    "unknown submission recovery after process exit"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "signedHapSha256": "652d56326d3b1a1090edc3016eaa0b5a71fb9319b3e4e43aa69f462e266b5b26",
+  "testsPassed": 87,
+  "sourceEpoch": "2026-11-16 18:43",
+  "upgrade": true,
+  "scanAccepted": false,
+  "R1Complete": false
+}

@@ -1,0 +1,214 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import test from 'node:test';
+import { bootstrapForm, createThread, RpcClient, sendMessage, serverBase,
+  socketUrl, ThreadState, validateDescriptor } from '../entry/src/main/ets/protocol/Wire.ts';
+
+function setup() {
+  const sent = [];
+  const rpc = new RpcClient({ send: async (frame) => { sent.push(JSON.parse(frame)); } });
+  return { rpc, sent };
+}
+
+const fixtures = JSON.parse(await readFile(new URL('./fixtures/thread-stream.json', import.meta.url)));
+
+test('HTTP direct URLs validated; credentials encoded as OAuth form data', () => {
+  assert.equal(serverBase(' https://test.example:443/ '), 'https://test.example:443');
+  assert.equal(serverBase('http://127.0.0.1:8787'), 'http://127.0.0.1:8787');
+  for (const base of ['https://test:65536', 'http://test:0', 'https://user:pass@test', 'https://test/ws?token=x', 'wss://test', 'https://test/path']) {
+    assert.throws(() => serverBase(base));
+  }
+  assert.equal(serverBase('http://192.168.1.1:3000'), 'http://192.168.1.1:3000');
+  const params = new URLSearchParams(bootstrapForm('test +&中文'));
+  assert.equal(params.get('subject_token'), 'test +&中文');
+  assert.equal(params.get('grant_type'), 'urn:ietf:params:oauth:grant-type:token-exchange');
+  assert.equal(new URL(socketUrl('https://test', 'test+/=')).searchParams.get('wsTicket'), 'test+/=');
+  assert.throws(() => bootstrapForm(' '));
+});
+
+test('descriptor rejects missing/older/newer protocol before sending a credential', () => {
+  const base = { environmentId: 'env-test', label: 'Test', serverVersion: '0.1' };
+  assert.equal(validateDescriptor({ ...base, orchestrationProtocolVersion: 2 }).environmentId, 'env-test');
+  for (const version of [undefined, 1, 3, '2']) assert.throws(() => validateDescriptor({ ...base, orchestrationProtocolVersion: version }));
+});
+
+test('RPC correlates out-of-order replies and sanitizes server failures', async () => {
+  const { rpc, sent } = setup();
+  const first = rpc.request('one', {});
+  const second = rpc.request('two', {});
+  assert.deepEqual(sent[0], { _tag: 'Request', id: '1', tag: 'one', payload: {}, headers: [] });
+  rpc.receive(JSON.stringify([
+    { _tag: 'Exit', requestId: '2', exit: { _tag: 'Success', value: { ok: true } } },
+    { _tag: 'Exit', requestId: '1', exit: { _tag: 'Failure', cause: [{ _tag: 'Die', defect: 'SECRET' }] } }
+  ]));
+  assert.deepEqual(await second, { ok: true });
+  await assert.rejects(first, (error) => !error.message.includes('SECRET'));
+  rpc.fail('done');
+});
+
+test('streams ACK after applying batches; handles frame parts and Chinese', async () => {
+  const { rpc, sent } = setup();
+  const state = new ThreadState('thread-test');
+  const result = rpc.request('orchestration.subscribeThread', { threadId: 'thread-test' }, (item) => state.apply(item));
+  const frame = JSON.stringify({ _tag: 'Chunk', requestId: '1', values: fixtures });
+  rpc.receive('\u001e' + frame.slice(0, 40));
+  assert.equal(sent.length, 1);
+  rpc.receive(frame.slice(40));
+  assert.equal(state.messages[0].text, '你好 👋');
+  assert.equal(state.messages[0].streaming, false);
+  assert.deepEqual(sent[1], { _tag: 'Ack', requestId: '1' });
+  rpc.receive('{"_tag":"Exit","requestId":"1","exit":{"_tag":"Success"}}');
+  assert.equal(await result, undefined);
+  rpc.fail('done');
+});
+
+test('duplicate/stale events ignored, global sequence gaps permitted, snapshot resets state', () => {
+  const state = new ThreadState('thread-test');
+  fixtures.forEach((item) => state.apply(item));
+  state.apply(fixtures[1]);
+  state.apply(fixtures[2]);
+  assert.equal(state.cursor, 14);
+  assert.equal(state.messages.length, 1);
+  assert.equal(state.messages[0].text, '你好 👋');
+  state.apply({ kind: 'event', sequence: 99, event: { type: 'future.event', threadId: 'thread-test' } });
+  assert.equal(state.cursor, 99);
+  state.apply(fixtures[0]);
+  assert.equal(state.messages.length, 1);
+  assert.equal(state.cursor, 99);
+  state.apply({ ...fixtures[0], snapshotSequence: 100 });
+  assert.equal(state.messages.length, 0);
+  assert.equal(state.cursor, 100);
+  assert.throws(() => state.apply({ ...fixtures[1], sequence: 101, event: { ...fixtures[1].event, threadId: 'other' } }));
+  assert.throws(() => state.apply({ ...fixtures[1], sequence: -1 }));
+});
+
+test('malformed frames fail closed, without acknowledging rejected chunks', async () => {
+  for (const frame of ['not json', 'null', '{"_tag":"Unexpected"}', '{"_tag":"Chunk","requestId":"1","values":{}}']) {
+    const { rpc, sent } = setup();
+    const result = rpc.request('stream', {}, () => {});
+    rpc.receive(frame);
+    await assert.rejects(result, /协议/);
+    assert.equal(sent.length, 1);
+  }
+});
+
+test('timeout interrupts and closes; mutation is never retried', async () => {
+  const { rpc, sent } = setup();
+  await assert.rejects(rpc.request('orchestration.dispatchCommand', { commandId: 'cmd-test' }, undefined, 10), /结果未知/);
+  assert.equal(sent.filter((item) => item._tag === 'Request').length, 1);
+  assert.deepEqual(sent[1], { _tag: 'Interrupt', requestId: '1' });
+  await assert.rejects(rpc.request('again', {}), /断开/);
+});
+
+test('disconnect rejects all pending work; heartbeats follow Effect RPC envelopes', async () => {
+  const { rpc, sent } = setup();
+  rpc.ping();
+  rpc.receive('{"_tag":"Ping"}');
+  assert.deepEqual(sent, [{ _tag: 'Ping' }, { _tag: 'Pong' }]);
+  const result = rpc.request('stream', {}, () => {});
+  rpc.fail('连接断开，结果未知');
+  await assert.rejects(result, /结果未知/);
+  const count = sent.length;
+  rpc.ping();
+  assert.equal(sent.length, count);
+});
+
+test('command subset preserves IDs and uses approval-required mode', () => {
+  const command = createThread('cmd', 'thread', 'project', 'provider', 'model');
+  assert.equal(command.runtimeMode, 'approval-required');
+  assert.equal(command.creationSource, 'mobile');
+  assert.equal(command.commandId, 'cmd');
+  const message = sendMessage('cmd2', 'thread', 'message', 'hello');
+  assert.equal(message.type, 'message.dispatch');
+  assert.deepEqual(message.dispatchMode, { type: 'start_immediately' });
+  assert.throws(() => sendMessage('cmd', 'thread', 'message', ' '));
+  assert.throws(() => createThread('cmd', 'thread', '', 'provider', 'model'));
+});
+
+test('assistant turn items render live text and merge with the final conversation message', () => {
+  const state = new ThreadState('thread-test');
+  state.apply(fixtures[0]);
+  state.apply({ kind: 'event', sequence: 11, event: {
+    type: 'turn-item.updated', threadId: 'thread-test', payload: {
+      type: 'assistant_message', id: 'item-live', messageId: 'message-test', threadId: 'thread-test', text: '你', streaming: true
+    }
+  } });
+  assert.equal(state.messages[0].text, '你');
+  assert.equal(state.messages[0].streaming, true);
+  state.apply(fixtures[2]);
+  assert.equal(state.messages.length, 1);
+  assert.equal(state.messages[0].text, '你好 👋');
+  assert.equal(state.messages[0].streaming, false);
+});
+
+test('history keeps attachment names without retaining local paths or signed URLs',()=>{
+ const state=new ThreadState('thread-test');
+ state.apply({kind:'snapshot',snapshotSequence:1,projection:{thread:{id:'thread-test'},messages:[{id:'m',threadId:'thread-test',role:'user',text:'inspect',streaming:false,attachments:[{type:'file',id:'pending-test',name:'safe.txt',mimeType:'text/plain',sizeBytes:3,relativeUrl:'SECRET_URL',path:'PRIVATE_PATH'}]}]}});
+ assert.deepEqual(state.messages[0].attachmentNames,['safe.txt']);
+ assert.ok(!JSON.stringify(state.messages).includes('SECRET_URL'));assert.ok(!JSON.stringify(state.messages).includes('PRIVATE_PATH'));
+});
+
+test('a non-fatal read timeout rejects only that request and keeps the connection usable', async () => {
+  const sent=[];
+  const rpc=new RpcClient({send:async frame=>{sent.push(JSON.parse(frame));}});
+  const slow=rpc.request('slowRead',{},undefined,20,false);
+  await assert.rejects(slow,/请求超时/);
+  assert.ok(!sent.some(frame=>frame._tag==='Interrupt'));
+  const next=rpc.request('nextRead',{});
+  rpc.receive(JSON.stringify({_tag:'Exit',requestId:'2',exit:{_tag:'Success',value:{ok:true}}}));
+  assert.deepEqual(await next,{ok:true});
+  rpc.fail('done');
+});
+
+test('visible fork items keep inherited visibility across later item events',()=>{
+ const state=new ThreadState('child');
+ state.apply({kind:'snapshot',snapshotSequence:1,projection:{thread:{id:'child'},messages:[],
+  visibleTurnItems:[{position:0,visibility:'inherited',sourceThreadId:'parent',
+   item:{id:'secret',type:'secret_request',secretStatus:'pending',label:'Key',reason:'Need it'}}],turnItems:[]}});
+ assert.equal(state.items[0].visibility,'inherited');assert.equal(state.items[0].sourceThreadId,'parent');
+ state.apply({kind:'event',sequence:2,event:{threadId:'child',type:'turn-item.updated',
+  payload:{id:'secret',type:'secret_request',secretStatus:'saved',label:'Key',reason:'Need it'}}});
+ assert.equal(state.items[0].visibility,'inherited');assert.equal(state.items[0].sourceThreadId,'parent');
+});
+
+test('a cancelled queued run does not overwrite the active run status notice',()=>{
+ const state=new ThreadState('t');
+ state.apply({kind:'snapshot',snapshotSequence:1,projection:{thread:{id:'t'},messages:[],runs:[
+  {id:'active',status:'running'},{id:'queued',status:'queued',queuePosition:1}]}});
+ state.apply({kind:'event',sequence:2,event:{threadId:'t',type:'run.updated',
+  payload:{id:'queued',status:'cancelled'}}});
+ assert.equal(state.notices,'任务状态：running');
+});
+
+test('empty continuation messages are hidden but attachment-only messages remain',()=>{
+ const state=new ThreadState('t');
+ state.apply({kind:'snapshot',snapshotSequence:1,projection:{thread:{id:'t'},messages:[
+  {id:'empty',threadId:'t',role:'user',text:'',streaming:false},
+  {id:'files',threadId:'t',role:'user',text:'',streaming:false,
+   attachments:[{type:'file',id:'f',name:'a.txt',mimeType:'text/plain',sizeBytes:1}]}]}});
+ assert.deepEqual(state.messages.map(message=>message.id),['files']);
+});
+
+test('user message attachment names survive the turn-item projection update',()=>{
+ const state=new ThreadState('t');
+ state.apply({kind:'snapshot',snapshotSequence:1,projection:{thread:{id:'t'},messages:[
+  {id:'u',threadId:'t',role:'user',text:'attached',streaming:false,
+   attachments:[{type:'image',id:'i',name:'pixel.png',mimeType:'image/png',sizeBytes:1}]}],
+  turnItems:[{id:'tu',type:'user_message',messageId:'u',text:'attached',status:'completed',
+   attachments:[{type:'image',id:'i',name:'pixel.png',mimeType:'image/png',sizeBytes:1}]}]}});
+ assert.deepEqual(state.messages[0].attachmentNames,['pixel.png']);
+});
+
+test('nonfatal stream first-frame timeout interrupts only its subscription and keeps other RPCs alive',async()=>{
+ const {rpc,sent}=setup();const received=[];
+ const pending=rpc.request('subscribeTerminalMetadata',{},v=>received.push(v),1,false);
+ await assert.rejects(pending,/超时/);
+ const id=sent[0].id;
+ assert.deepEqual(sent[1],{_tag:'Interrupt',requestId:id});
+ rpc.receive(JSON.stringify({_tag:'Chunk',requestId:id,values:[{type:'snapshot',terminals:[]}]}));
+ assert.equal(received.length,0);
+ const next=rpc.request('server.getConfig',{});const request=sent.at(-1);
+ rpc.receive(JSON.stringify({_tag:'Exit',requestId:request.id,exit:{_tag:'Success',value:{ok:true}}}));
+ assert.deepEqual(await next,{ok:true});
+ assert.equal(sent.some(x=>x.tag==='terminal.close'),false);
+});

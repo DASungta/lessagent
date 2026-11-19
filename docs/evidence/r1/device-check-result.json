@@ -1,0 +1,26 @@
+{
+  "date": "2026-11-16",
+  "deviceTarget": "23E0224122000135",
+  "model": "ALN-AL80",
+  "diagnosticChecksPassed": 11,
+  "diagnosticChecksFailed": 0,
+  "firstPid": 28009,
+  "restartPid": 28539,
+  "nativeUi": {
+    "invalidFtpRejected": true,
+    "backDismissedSheet": true,
+    "normalHomeAfterRestart": true
+  },
+  "diagnosticSha256": "ea5d56e13b3b6b33577fc7f6a599a982b351e434af9f648fbba1b2004fa0b69b",
+  "restoredNormalHapSha256": "428f6e1f00ee544a1c8a30c2a6d8bab65e82e1bbd6bcaa2b8def1583622bd1b3",
+  "productionAliasesReadByDiagnostic": false,
+  "productionMigrationActivated": false,
+  "realServerRequestsSent": false,
+  "remaining": [
+    "actual LAN/IPv6 and TLS pairing transport",
+    "locked-device Asset access",
+    "real upgrade migration and rollback",
+    "multi-environment client binding",
+    "original mobile visual comparison"
+  ]
+}

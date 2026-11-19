@@ -1,0 +1,8 @@
+{
+  "fix": "clear old cleanup notice when changing scope or manually refreshing",
+  "build": "successful",
+  "installed": true,
+  "started": true,
+  "hapSha256": "e943f5e2d25f26c6ecd0383eeddd6a27b202c0b2d974870612e01ff707228d19",
+  "fullSuiteRerun": false
+}

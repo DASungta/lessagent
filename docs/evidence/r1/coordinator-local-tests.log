@@ -1,0 +1,442 @@
+TAP version 13
+# Subtest: picker handles short reads and always closes the selected document
+ok 1 - picker handles short reads and always closes the selected document
+  ---
+  duration_ms: 55.401544
+  type: 'test'
+  ...
+# Subtest: failed document upload is manually retryable only in its original server and thread
+ok 2 - failed document upload is manually retryable only in its original server and thread
+  ---
+  duration_ms: 6.286799
+  type: 'test'
+  ...
+# Subtest: shell updates deduplicate and remove archived threads and projects
+ok 3 - shell updates deduplicate and remove archived threads and projects
+  ---
+  duration_ms: 0.809963
+  type: 'test'
+  ...
+# Subtest: provider models preserve exact instance and model identifiers
+ok 4 - provider models preserve exact instance and model identifiers
+  ---
+  duration_ms: 0.434031
+  type: 'test'
+  ...
+# Subtest: snapshot and events expose only pending actionable requests and separate secrets
+ok 5 - snapshot and events expose only pending actionable requests and separate secrets
+  ---
+  duration_ms: 0.794627
+  type: 'test'
+  ...
+# Subtest: Markdown code blocks preserve literal content including incomplete streaming blocks
+ok 6 - Markdown code blocks preserve literal content including incomplete streaming blocks
+  ---
+  duration_ms: 0.638018
+  type: 'test'
+  ...
+# Subtest: input cards preserve custom option values, required flags and multiple selections
+ok 7 - input cards preserve custom option values, required flags and multiple selections
+  ---
+  duration_ms: 0.317174
+  type: 'test'
+  ...
+# Subtest: repository identity enrichment snapshots cannot erase project or thread pickers
+ok 8 - repository identity enrichment snapshots cannot erase project or thread pickers
+  ---
+  duration_ms: 0.191792
+  type: 'test'
+  ...
+# Subtest: input option selection reflects single and multiple answers
+ok 9 - input option selection reflects single and multiple answers
+  ---
+  duration_ms: 0.082661
+  type: 'test'
+  ...
+# Subtest: input question identifiers cannot mutate answer prototypes
+ok 10 - input question identifiers cannot mutate answer prototypes
+  ---
+  duration_ms: 0.173946
+  type: 'test'
+  ...
+# Subtest: an empty user input request remains an input card instead of an approval
+ok 11 - an empty user input request remains an input card instead of an approval
+  ---
+  duration_ms: 0.978482
+  type: 'test'
+  ...
+# Subtest: upload target rejects external, expired, traversal and oversized capabilities
+ok 12 - upload target rejects external, expired, traversal and oversized capabilities
+  ---
+  duration_ms: 1.398452
+  type: 'test'
+  ...
+# Subtest: atomic directory replacement survives interrupted writes, readback and rename; missing differs from corrupt
+ok 13 - atomic directory replacement survives interrupted writes, readback and rename; missing differs from corrupt
+  ---
+  duration_ms: 21.136377
+  type: 'test'
+  ...
+# Subtest: expired legacy session and unknown marker survive commit and idempotent restart
+ok 14 - expired legacy session and unknown marker survive commit and idempotent restart
+  ---
+  duration_ms: 2.546963
+  type: 'test'
+  ...
+# Subtest: migration failure at directory-read preserves v1, retry commits one entry
+ok 15 - migration failure at directory-read preserves v1, retry commits one entry
+  ---
+  duration_ms: 0.3502
+  type: 'test'
+  ...
+# Subtest: migration failure at legacy-read preserves v1, retry commits one entry
+ok 16 - migration failure at legacy-read preserves v1, retry commits one entry
+  ---
+  duration_ms: 0.217691
+  type: 'test'
+  ...
+# Subtest: migration failure at recovery-read preserves v1, retry commits one entry
+ok 17 - migration failure at recovery-read preserves v1, retry commits one entry
+  ---
+  duration_ms: 0.21576
+  type: 'test'
+  ...
+# Subtest: migration failure at session-write preserves v1, retry commits one entry
+ok 18 - migration failure at session-write preserves v1, retry commits one entry
+  ---
+  duration_ms: 0.206184
+  type: 'test'
+  ...
+# Subtest: migration failure at session-readback preserves v1, retry commits one entry
+ok 19 - migration failure at session-readback preserves v1, retry commits one entry
+  ---
+  duration_ms: 0.145106
+  type: 'test'
+  ...
+# Subtest: migration failure at recovery-write preserves v1, retry commits one entry
+ok 20 - migration failure at recovery-write preserves v1, retry commits one entry
+  ---
+  duration_ms: 0.184593
+  type: 'test'
+  ...
+# Subtest: migration failure at recovery-readback preserves v1, retry commits one entry
+ok 21 - migration failure at recovery-readback preserves v1, retry commits one entry
+  ---
+  duration_ms: 0.148141
+  type: 'test'
+  ...
+# Subtest: migration failure at commit preserves v1, retry commits one entry
+ok 22 - migration failure at commit preserves v1, retry commits one entry
+  ---
+  duration_ms: 0.336676
+  type: 'test'
+  ...
+# Subtest: mismatched, orphan and malformed legacy records remain quarantined without activation
+ok 23 - mismatched, orphan and malformed legacy records remain quarantined without activation
+  ---
+  duration_ms: 0.448278
+  type: 'test'
+  ...
+# Subtest: incorrect readback cannot commit, including lost pending marker
+ok 24 - incorrect readback cannot commit, including lost pending marker
+  ---
+  duration_ms: 0.712451
+  type: 'test'
+  ...
+# Subtest: schema rejects secrets, duplicate identities, bad references, scope and selection
+ok 25 - schema rejects secrets, duplicate identities, bad references, scope and selection
+  ---
+  duration_ms: 0.310433
+  type: 'test'
+  ...
+# Subtest: empty committed directory suppresses legacy resurrection
+ok 26 - empty committed directory suppresses legacy resurrection
+  ---
+  duration_ms: 0.100693
+  type: 'test'
+  ...
+# Subtest: existing directory checks every protected reference; lock or missing records fail closed
+ok 27 - existing directory checks every protected reference; lock or missing records fail closed
+  ---
+  duration_ms: 0.312578
+  type: 'test'
+  ...
+# Subtest: JSON null and scalar corruption are never interpreted as missing records
+ok 28 - JSON null and scalar corruption are never interpreted as missing records
+  ---
+  duration_ms: 0.413557
+  type: 'test'
+  ...
+# Subtest: deletion tombstone survives validation so interrupted cleanup can resume before credentials load
+ok 29 - deletion tombstone survives validation so interrupted cleanup can resume before credentials load
+  ---
+  duration_ms: 0.19686
+  type: 'test'
+  ...
+# Subtest: 2000 messages notify only the changed streaming row and appended row
+ok 30 - 2000 messages notify only the changed streaming row and appended row
+  ---
+  duration_ms: 2.85778
+  type: 'test'
+  ...
+# Subtest: native adapter runs auth, ticket, identity check, create, subscribe, send and reconnect
+ok 31 - native adapter runs auth, ticket, identity check, create, subscribe, send and reconnect
+  ---
+  duration_ms: 97.235175
+  type: 'test'
+  ...
+# Subtest: only a ticket 404 falls back to the bare endpoint
+ok 32 - only a ticket 404 falls back to the bare endpoint
+  ---
+  duration_ms: 44.99846
+  type: 'test'
+  ...
+# Subtest: bad credentials and incompatible versions stop before opening a socket
+ok 33 - bad credentials and incompatible versions stop before opening a socket
+  ---
+  duration_ms: 78.802702
+  type: 'test'
+  ...
+# Subtest: socket failures cannot echo tickets into UI diagnostics
+ok 34 - socket failures cannot echo tickets into UI diagnostics
+  ---
+  duration_ms: 41.185614
+  type: 'test'
+  ...
+# Subtest: identity mismatch blocks a connection
+ok 35 - identity mismatch blocks a connection
+  ---
+  duration_ms: 36.169945
+  type: 'test'
+  ...
+# Subtest: background/disconnect during metadata lookup prevents a stale credential exchange
+ok 36 - background/disconnect during metadata lookup prevents a stale credential exchange
+  ---
+  duration_ms: 38.544019
+  type: 'test'
+  ...
+# Subtest: secure session reuse does not exchange one-time pairing again; expiry and server mismatch fail closed
+ok 37 - secure session reuse does not exchange one-time pairing again; expiry and server mismatch fail closed
+  ---
+  duration_ms: 31.824126
+  type: 'test'
+  ...
+# Subtest: responses, secrets and stop use distinct contracts and reject stale requests
+ok 38 - responses, secrets and stop use distinct contracts and reject stale requests
+  ---
+  duration_ms: 31.814383
+  type: 'test'
+  ...
+# Subtest: unknown message submission requires a fresh snapshot before manual retry
+ok 39 - unknown message submission requires a fresh snapshot before manual retry
+  ---
+  duration_ms: 92.412851
+  type: 'test'
+  ...
+# Subtest: snapshot confirms a lost acknowledgement by message id without resending
+ok 40 - snapshot confirms a lost acknowledgement by message id without resending
+  ---
+  duration_ms: 27.4041
+  type: 'test'
+  ...
+# Subtest: process exit restores selected thread and unknown message without replay or persisted body
+ok 41 - process exit restores selected thread and unknown message without replay or persisted body
+  ---
+  duration_ms: 125.034963
+  type: 'test'
+  ...
+# Subtest: journal failure and duplicate clicks cannot send modifying frames
+ok 42 - journal failure and duplicate clicks cannot send modifying frames
+  ---
+  duration_ms: 33.304711
+  type: 'test'
+  ...
+# Subtest: background returns to the same thread using reads only; explicit disconnect stays disconnected
+ok 43 - background returns to the same thread using reads only; explicit disconnect stays disconnected
+  ---
+  duration_ms: 32.740501
+  type: 'test'
+  ...
+# Subtest: recovery record cannot cross server identities
+ok 44 - recovery record cannot cross server identities
+  ---
+  duration_ms: 22.584166
+  type: 'test'
+  ...
+# Subtest: double click while journal write waits sends only one command
+ok 45 - double click while journal write waits sends only one command
+  ---
+  duration_ms: 23.065019
+  type: 'test'
+  ...
+# Subtest: attachment sends exact bytes without bearer forwarding or redirects, and dispatches only on user send
+ok 46 - attachment sends exact bytes without bearer forwarding or redirects, and dispatches only on user send
+  ---
+  duration_ms: 21.558545
+  type: 'test'
+  ...
+# Subtest: invalid signed targets and failed uploads cannot attach or dispatch
+ok 47 - invalid signed targets and failed uploads cannot attach or dispatch
+  ---
+  duration_ms: 38.959603
+  type: 'test'
+  ...
+# Subtest: two native client instances with colliding thread IDs keep streams and reconnect independent
+ok 48 - two native client instances with colliding thread IDs keep streams and reconnect independent
+  ---
+  duration_ms: 38.349872
+  type: 'test'
+  ...
+# Subtest: catalog identity checks run before any credential exchange
+ok 49 - catalog identity checks run before any credential exchange
+  ---
+  duration_ms: 34.397902
+  type: 'test'
+  ...
+# Subtest: upstream IP, IPv6, hostname, tailnet, token and wrapper vectors
+ok 50 - upstream IP, IPv6, hostname, tailnet, token and wrapper vectors
+  ---
+  duration_ms: 2.084725
+  type: 'test'
+  ...
+# Subtest: bad inputs and conflicting codes fail without exposing input
+ok 51 - bad inputs and conflicting codes fail without exposing input
+  ---
+  duration_ms: 0.5115
+  type: 'test'
+  ...
+# Subtest: HTTP direct URLs validated; credentials encoded as OAuth form data
+ok 52 - HTTP direct URLs validated; credentials encoded as OAuth form data
+  ---
+  duration_ms: 1.316759
+  type: 'test'
+  ...
+# Subtest: descriptor rejects missing/older/newer protocol before sending a credential
+ok 53 - descriptor rejects missing/older/newer protocol before sending a credential
+  ---
+  duration_ms: 0.27791
+  type: 'test'
+  ...
+# Subtest: RPC correlates out-of-order replies and sanitizes server failures
+ok 54 - RPC correlates out-of-order replies and sanitizes server failures
+  ---
+  duration_ms: 1.072843
+  type: 'test'
+  ...
+# Subtest: streams ACK after applying batches; handles frame parts and Chinese
+ok 55 - streams ACK after applying batches; handles frame parts and Chinese
+  ---
+  duration_ms: 0.295459
+  type: 'test'
+  ...
+# Subtest: duplicate/stale events ignored, global sequence gaps permitted, snapshot resets state
+ok 56 - duplicate/stale events ignored, global sequence gaps permitted, snapshot resets state
+  ---
+  duration_ms: 0.18864
+  type: 'test'
+  ...
+# Subtest: malformed frames fail closed, without acknowledging rejected chunks
+ok 57 - malformed frames fail closed, without acknowledging rejected chunks
+  ---
+  duration_ms: 1.26731
+  type: 'test'
+  ...
+# Subtest: timeout interrupts and closes; mutation is never retried
+ok 58 - timeout interrupts and closes; mutation is never retried
+  ---
+  duration_ms: 11.552739
+  type: 'test'
+  ...
+# Subtest: disconnect rejects all pending work; heartbeats follow Effect RPC envelopes
+ok 59 - disconnect rejects all pending work; heartbeats follow Effect RPC envelopes
+  ---
+  duration_ms: 0.434072
+  type: 'test'
+  ...
+# Subtest: command subset preserves IDs and uses approval-required mode
+ok 60 - command subset preserves IDs and uses approval-required mode
+  ---
+  duration_ms: 0.264728
+  type: 'test'
+  ...
+# Subtest: assistant turn items render live text and merge with the final conversation message
+ok 61 - assistant turn items render live text and merge with the final conversation message
+  ---
+  duration_ms: 0.277093
+  type: 'test'
+  ...
+# Subtest: history keeps attachment names without retaining local paths or signed URLs
+ok 62 - history keeps attachment names without retaining local paths or signed URLs
+  ---
+  duration_ms: 0.286249
+  type: 'test'
+  ...
+# Subtest: directory serializes concurrent adds, rejects duplicate identities, and survives initialization
+ok 63 - directory serializes concurrent adds, rejects duplicate identities, and survives initialization
+  ---
+  duration_ms: 72.95484
+  type: 'test'
+  ...
+# Subtest: failed add commit leaves no active directory entry, client or orphan credential
+ok 64 - failed add commit leaves no active directory entry, client or orphan credential
+  ---
+  duration_ms: 32.50638
+  type: 'test'
+  ...
+# Subtest: per-thread recovery references persist independently and unknown state blocks removal
+ok 65 - per-thread recovery references persist independently and unknown state blocks removal
+  ---
+  duration_ms: 34.740894
+  type: 'test'
+  ...
+# Subtest: removal refuses active mutations and leaves a resumable tombstone on interrupted cleanup
+ok 66 - removal refuses active mutations and leaves a resumable tombstone on interrupted cleanup
+  ---
+  duration_ms: 23.361097
+  type: 'test'
+  ...
+# Subtest: Asset storage roundtrip, replacement, delete and locked-device fail closed
+ok 67 - Asset storage roundtrip, replacement, delete and locked-device fail closed
+  ---
+  duration_ms: 61.878734
+  type: 'test'
+  ...
+# Subtest: recovery alias stays separate from credentials and contains metadata only
+ok 68 - recovery alias stays separate from credentials and contains metadata only
+  ---
+  duration_ms: 14.186197
+  type: 'test'
+  ...
+# Subtest: send acknowledgement clears only the submitted draft, preserving text typed while waiting
+ok 69 - send acknowledgement clears only the submitted draft, preserving text typed while waiting
+  ---
+  duration_ms: 0.624462
+  type: 'test'
+  ...
+# Subtest: failed send retains the draft and exposes the error
+ok 70 - failed send retains the draft and exposes the error
+  ---
+  duration_ms: 0.13344
+  type: 'test'
+  ...
+# Subtest: light and dark text pairs meet normal text contrast
+ok 71 - light and dark text pairs meet normal text contrast
+  ---
+  duration_ms: 2.663406
+  type: 'test'
+  ...
+# Subtest: native back dismisses the sheet first, then returns to the list
+ok 72 - native back dismisses the sheet first, then returns to the list
+  ---
+  duration_ms: 2.12464
+  type: 'test'
+  ...
+1..72
+# tests 72
+# suites 0
+# pass 72
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2184.603666

@@ -1,0 +1,19 @@
+{
+  "warmupRows": 100,
+  "timedRows": 1600,
+  "batchRows": 10,
+  "intervalSeconds": 0.25,
+  "runs": 2,
+  "observedScrollbackLimit": 500,
+  "firstSnapshotRows": [
+    228,
+    240
+  ],
+  "snapshotUnchanged": true,
+  "reopenedSnapshotRows": [
+    1528,
+    1540
+  ],
+  "firstRunTail": "OUTPUT COMPLETE 1700",
+  "terminalClosed": true
+}

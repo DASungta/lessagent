@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-11-16T20:47:00.160571+08:00",
+  "tests": 108,
+  "testsPassed": 108,
+  "testCommand": "node --experimental-strip-types --test tests/*.test.mjs",
+  "testLog": "/tmp/t3-r1-readback-tests.log",
+  "ordinaryBuildPassed": true,
+  "buildCommand": "./scripts/build.sh",
+  "buildLog": "/tmp/t3-r1-final-candidate-build.log",
+  "candidate": "/tmp/r1-c05-current-candidate.hap",
+  "sha256": "1c335453a1d8521afd5d0da4a625e1b46ddcc9e04041cdcdecc5c22af8c2da75",
+  "candidateInstalled": false,
+  "nativeRefreshDiagnosticBuilt": true,
+  "nativeRefreshDiagnosticExecuted": false
+}

@@ -1,0 +1,35 @@
+{
+  "device": "23E0224122000135",
+  "model": "ALN-AL80",
+  "sourceEnvironmentId": "cf3c1ea6-d785-4ed9-83f8-6d2c0ca903e1",
+  "targetEnvironmentId": "13c32a79-8e73-4c09-9e59-738dff57907b",
+  "targetLabel": "奋斗的iMac Pro",
+  "sourcePeerExpiresAt": "2026-12-16T15:19:23.854Z",
+  "sourcePeerInitiallyReachablePreRevoke": true,
+  "targetAuthorizedClientSessionId": "1e9f99f5-0e15-47b9-adf9-2e860cf99f9d",
+  "targetAuthorizedClientScopes": [
+    "orchestration:read"
+  ],
+  "targetOwnerRevokedSession": true,
+  "peerTokenStatusCodeAfterTargetRevoke": 401,
+  "peerTokenRejectedAfterTargetRevoke": true,
+  "sourceLinkRowsAfterTargetRevoke": 1,
+  "sourceListAfterTargetRevoke": [
+    {
+      "environmentId": "13c32a79-8e73-4c09-9e59-738dff57907b",
+      "label": "奋斗的iMac Pro",
+      "access": "read-only",
+      "expiresAt": "2026-12-16T15:19:23.854Z",
+      "status": "reachable",
+      "lastError": null
+    }
+  ],
+  "sourceLocalUnlinkRemoved": true,
+  "sourceLinkRowsAfterUnlink": 0,
+  "sourcePeerSecretRemoved": true,
+  "targetSessionRevokedAt": "2026-11-16T15:22:51.289Z",
+  "note": "Mobile upstream only lists linked environments; target-side revocation is owned by the target Sharing & access/Authorized clients surface. Source-local peerLinks.unlink remains the protocol-supported forget operation.",
+  "nativeUiEntryUsedForApproval": true,
+  "revokeExecutedThroughOriginalEnvironmentHttpContract": true,
+  "businessMessagesSentToTarget": 0
+}

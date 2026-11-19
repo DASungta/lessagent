@@ -1,0 +1,30 @@
+{
+  "stage": "R4 batch 3 device UI",
+  "date": "2026-11-17",
+  "device": {
+    "model": "ALN-AL80",
+    "hdcTarget": "23E0224122000135",
+    "versionName": "0.1.1",
+    "versionCode": 2,
+    "updateTime": "2026-11-17T16:36:35.730Z"
+  },
+  "hapSha256": "86b950e13afb6ac3b7a48226f8d6d570abf93706b8c4e84148e323f4d003092c",
+  "verified": [
+    "grouped model rows and fixed save/close header",
+    "message copy without timestamp and hidden empty continuation",
+    "queue badge, sheet, edit, remove confirmation",
+    "secret card direct input and service saved readback",
+    "active queue start hidden",
+    "attachment preview and system share sheet",
+    "attachment save through system DocumentViewPicker",
+    "system dark mode"
+  ],
+  "remaining": [
+    "maximum-font care-mode flow not verified",
+    "screen reader",
+    "attachment picker from system Files for a new selection",
+    "full original pixel-level visual comparison"
+  ],
+  "fullR4Complete": false
+}
+

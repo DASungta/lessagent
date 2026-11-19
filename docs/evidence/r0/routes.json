@@ -1,0 +1,625 @@
+[
+  {
+    "name": "Settings",
+    "line": 162,
+    "screen": "SettingsRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "registration": "screen: SettingsRouteScreen,\n    linking: \"settings\",\n    options: {\n      ...pageRoute({ title: \"Settings\", itemStyle: \"standard\", root: true }),\n      ...(Platform.OS === \"android\" ? { animation: \"none\" as const } : {}),\n    },"
+  },
+  {
+    "name": "SettingsEnvironments",
+    "line": 170,
+    "screen": "SettingsEnvironmentsRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentsRouteScreen.tsx",
+    "registration": "screen: SettingsEnvironmentsRouteScreen,\n    linking: \"settings/environments\",\n    options: settingsPage(\"Environments\"),"
+  },
+  {
+    "name": "SettingsEnvironmentDetail",
+    "line": 175,
+    "screen": "SettingsEnvironmentDetailRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+    "registration": "screen: SettingsEnvironmentDetailRouteScreen,\n    linking: \"settings/environments/:environmentId\",\n    options: settingsPage(\"Environment\"),"
+  },
+  {
+    "name": "SettingsEnvironmentNewThreads",
+    "line": 181,
+    "screen": "SettingsThreadsRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "registration": "screen: SettingsThreadsRouteScreen,\n    linking: \"settings/new-threads\",\n    options: settingsPage(\"Threads\"),"
+  },
+  {
+    "name": "SettingsEnvironmentSourceControl",
+    "line": 186,
+    "screen": "SettingsEnvironmentSourceControlRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "registration": "screen: SettingsEnvironmentSourceControlRouteScreen,\n    linking: \"settings/source-control\",\n    options: settingsPage(\"Source control\"),"
+  },
+  {
+    "name": "SettingsEnvironmentAgentBehavior",
+    "line": 191,
+    "screen": "SettingsThreadsRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "registration": "screen: SettingsThreadsRouteScreen,\n    linking: \"settings/agent-behavior\",\n    options: settingsPage(\"Threads\"),"
+  },
+  {
+    "name": "SettingsWorktrees",
+    "line": 196,
+    "screen": "SettingsWorktreesRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "registration": "screen: SettingsWorktreesRouteScreen,\n    linking: \"settings/worktrees\",\n    options: settingsPage(\"Worktrees\"),"
+  },
+  {
+    "name": "SettingsLabs",
+    "line": 201,
+    "screen": "SettingsLabsRouteScreen",
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "registration": "screen: SettingsLabsRouteScreen,\n    linking: \"settings/labs\",\n    options: settingsPage(\"Labs\"),"
+  },
+  {
+    "name": "SettingsProviderAccounts",
+    "line": 206,
+    "screen": "SettingsProviderAccountsRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "registration": "screen: SettingsProviderAccountsRouteScreen,\n    linking: \"settings/provider-accounts\",\n    options: settingsPage(\"Providers\"),"
+  },
+  {
+    "name": "SettingsEnvironmentMaintenance",
+    "line": 211,
+    "screen": "SettingsEnvironmentMaintenanceRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "registration": "screen: SettingsEnvironmentMaintenanceRouteScreen,\n    linking: \"settings/maintenance\",\n    options: settingsPage(\"Maintenance\"),"
+  },
+  {
+    "name": "SettingsNotifications",
+    "line": 216,
+    "screen": "SettingsNotificationsRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "registration": "screen: SettingsNotificationsRouteScreen,\n    linking: \"settings/notifications\",\n    options: settingsPage(\"Notifications\"),"
+  },
+  {
+    "name": "SettingsThreads",
+    "line": 221,
+    "screen": "SettingsThreadsRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "registration": "screen: SettingsThreadsRouteScreen,\n    linking: \"settings/thread-preferences\",\n    options: settingsPage(\"Threads\"),"
+  },
+  {
+    "name": "SettingsAbout",
+    "line": 226,
+    "screen": "SettingsAboutRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsAboutRouteScreen.tsx",
+    "registration": "screen: SettingsAboutRouteScreen,\n    linking: \"settings/about\",\n    options: settingsPage(\"About\"),"
+  },
+  {
+    "name": "SettingsEnvironmentNew",
+    "line": 231,
+    "screen": "ConnectionsNewRouteScreen",
+    "file": "apps/mobile/src/features/connection/ConnectionsNewRouteScreen.tsx",
+    "registration": "screen: ConnectionsNewRouteScreen,\n    linking: \"settings/environment-new\",\n    options: settingsPage(\"Add Environment\"),"
+  },
+  {
+    "name": "SettingsArchive",
+    "line": 236,
+    "screen": "ArchivedThreadsRouteScreen",
+    "file": "apps/mobile/src/features/archive/ArchivedThreadsRouteScreen.tsx",
+    "registration": "screen: ArchivedThreadsRouteScreen,\n    linking: \"settings/archive\",\n    options: settingsPage(\"Archive\"),"
+  },
+  {
+    "name": "SettingsNavigation",
+    "line": 241,
+    "screen": "SettingsNavigationRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsNavigationRouteScreen.tsx",
+    "registration": "screen: SettingsNavigationRouteScreen,\n    linking: \"settings/navigation-tabs\",\n    options: settingsPage(\"Navigation tabs\"),"
+  },
+  {
+    "name": "SettingsAppearance",
+    "line": 246,
+    "screen": "SettingsAppearanceRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsAppearanceRouteScreen.tsx",
+    "registration": "screen: SettingsAppearanceRouteScreen,\n    linking: \"settings/appearance\",\n    options: settingsPage(\"Appearance\"),"
+  },
+  {
+    "name": "SettingsProjectGrouping",
+    "line": 251,
+    "screen": "SettingsProjectGroupingRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsProjectGroupingRouteScreen.tsx",
+    "registration": "screen: SettingsProjectGroupingRouteScreen,\n    linking: \"settings/project-grouping\",\n    options: settingsPage(\"General\"),"
+  },
+  {
+    "name": "SettingsOrganization",
+    "line": 256,
+    "screen": "SettingsProjectGroupingRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsProjectGroupingRouteScreen.tsx",
+    "registration": "screen: SettingsProjectGroupingRouteScreen,\n    linking: \"settings/organization\",\n    options: settingsPage(\"General\"),"
+  },
+  {
+    "name": "SettingsLanguage",
+    "line": 261,
+    "screen": "SettingsLanguageRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsLanguageRouteScreen.tsx",
+    "registration": "screen: SettingsLanguageRouteScreen,\n    linking: \"settings/language\",\n    options: settingsPage(\"Language\"),"
+  },
+  {
+    "name": "SettingsProjectOverview",
+    "line": 266,
+    "screen": "SettingsProjectOverviewRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "registration": "screen: SettingsProjectOverviewRouteScreen,\n    linking: \"settings/project\",\n    options: settingsPage(\"Projects\"),"
+  },
+  {
+    "name": "SettingsKeyboard",
+    "line": 271,
+    "screen": "SettingsKeyboardRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsKeyboardRouteScreen.tsx",
+    "registration": "screen: SettingsKeyboardRouteScreen,\n    linking: \"settings/keyboard\",\n    options: settingsPage(\"Keyboard\"),"
+  },
+  {
+    "name": "SettingsVoice",
+    "line": 276,
+    "screen": "SettingsVoiceRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "registration": "screen: SettingsVoiceRouteScreen,\n    linking: { path: \"settings/voice\", alias: [\"settings/microphone\"] },\n    options: settingsPage(\"Voice\"),"
+  },
+  {
+    "name": "SettingsVoiceModels",
+    "line": 281,
+    "screen": "SettingsVoiceModelsRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsVoiceModelsRouteScreen.tsx",
+    "registration": "screen: SettingsVoiceModelsRouteScreen,\n    options: SEARCH_SHEET_ROUTE,"
+  },
+  {
+    "name": "SettingsFollowUp",
+    "line": 285,
+    "screen": "SettingsFollowUpRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsFollowUpRouteScreen.tsx",
+    "registration": "screen: SettingsFollowUpRouteScreen,\n    linking: \"settings/follow-ups\",\n    options: settingsPage(\"Chat\"),"
+  },
+  {
+    "name": "SettingsScheduledTasks",
+    "line": 290,
+    "screen": "SettingsScheduledTasksRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "registration": "screen: SettingsScheduledTasksRouteScreen,\n    linking: \"settings/scheduled-tasks\",\n    options: {\n      ...settingsPage(\"Scheduled tasks\"),\n      headerTitleStyle: { fontSize: 16, fontWeight: \"800\" },\n    },"
+  },
+  {
+    "name": "SettingsScheduledTaskNew",
+    "line": 298,
+    "screen": "SettingsScheduledTaskNewRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "registration": "screen: SettingsScheduledTaskNewRouteScreen,\n    linking: \"settings/scheduled-tasks/new\",\n    options: settingsPage(\"New scheduled task\"),"
+  },
+  {
+    "name": "SettingsScheduledTaskEdit",
+    "line": 303,
+    "screen": "SettingsScheduledTaskEditRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "registration": "screen: SettingsScheduledTaskEditRouteScreen,\n    options: settingsPage(\"Edit scheduled task\"),"
+  },
+  {
+    "name": "SettingsScheduledTaskBranch",
+    "line": 307,
+    "screen": "ScheduledTaskBranchPickerRouteScreen",
+    "file": "apps/mobile/src/features/settings/ScheduledTaskPickerScreens.tsx",
+    "registration": "screen: ScheduledTaskBranchPickerRouteScreen,\n    options: settingsPage(\"Base branch\"),"
+  },
+  {
+    "name": "SettingsScheduledTaskThread",
+    "line": 311,
+    "screen": "ScheduledTaskThreadPickerRouteScreen",
+    "file": "apps/mobile/src/features/settings/ScheduledTaskPickerScreens.tsx",
+    "registration": "screen: ScheduledTaskThreadPickerRouteScreen,\n    options: settingsPage(\"Destination\"),"
+  },
+  {
+    "name": "SettingsScheduledTaskModel",
+    "line": 315,
+    "screen": "ScheduledTaskModelPickerRouteScreen",
+    "file": "apps/mobile/src/features/settings/ScheduledTaskPickerScreens.tsx",
+    "registration": "screen: ScheduledTaskModelPickerRouteScreen,\n    options: THREAD_SETTINGS_ROUTE,"
+  },
+  {
+    "name": "SettingsClientStorage",
+    "line": 319,
+    "screen": "SettingsClientStorageRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsClientStorageRouteScreen.tsx",
+    "registration": "screen: SettingsClientStorageRouteScreen,\n    linking: \"settings/client-storage\",\n    options: settingsPage(\"Client Storage\"),"
+  },
+  {
+    "name": "SettingsDiagnostics",
+    "line": 324,
+    "screen": "SettingsDiagnosticsRouteScreen",
+    "file": "apps/mobile/src/features/diagnostics/SettingsDiagnosticsRouteScreen.tsx",
+    "registration": "screen: SettingsDiagnosticsRouteScreen,\n    linking: \"settings/diagnostics\",\n    options: settingsPage(\"Diagnostics\"),"
+  },
+  {
+    "name": "SettingsUsageAccount",
+    "line": 331,
+    "screen": "UsageLimitAccountScreen",
+    "file": "apps/mobile/src/features/usage/UsageLimitsPooled.tsx",
+    "registration": "screen: UsageLimitAccountScreen,\n    options: settingsPage(\"Account\"),"
+  },
+  {
+    "name": "SettingsOpenSourceLicenses",
+    "line": 335,
+    "screen": "SettingsOpenSourceLicensesRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsOpenSourceLicensesRouteScreen.tsx",
+    "registration": "screen: SettingsOpenSourceLicensesRouteScreen,\n    linking: \"settings/open-source-licenses\",\n    options: settingsPage(\"Open source licenses\"),"
+  },
+  {
+    "name": "SettingsOpenSourceLicense",
+    "line": 340,
+    "screen": "SettingsOpenSourceLicenseRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsOpenSourceLicensesRouteScreen.tsx",
+    "registration": "screen: SettingsOpenSourceLicenseRouteScreen,\n    linking: \"settings/open-source-licenses/:entryKey\",\n    options: settingsPage(\"License notice\"),"
+  },
+  {
+    "name": "SettingsUsage",
+    "line": 345,
+    "screen": "UsageRouteScreen",
+    "file": "apps/mobile/src/features/usage/UsageRouteScreen.tsx",
+    "registration": "screen: UsageRouteScreen,\n    linking: \"settings/usage\",\n    options: settingsPage(\"Usage\"),"
+  },
+  {
+    "name": "SettingsAuth",
+    "line": 350,
+    "screen": "SettingsAuthRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsAuthRouteScreen.tsx",
+    "registration": "screen: SettingsAuthRouteScreen,\n    linking: \"settings/auth\",\n    options: { headerShown: false, presentation: \"modal\" },"
+  },
+  {
+    "name": "SettingsWaitlist",
+    "line": 355,
+    "screen": "SettingsAuthRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsAuthRouteScreen.tsx",
+    "registration": "screen: SettingsAuthRouteScreen,\n    linking: \"settings/waitlist\",\n    options: { headerShown: false, presentation: \"modal\" },"
+  },
+  {
+    "name": "ComponentCatalog",
+    "line": 486,
+    "screen": "ComponentCatalogScreen",
+    "file": "apps/mobile/src/features/development/ComponentCatalogScreen.tsx",
+    "registration": "screen: ComponentCatalogScreen,\n            linking: \"dev/components\",\n            options: { title: \"UI components\" },"
+  },
+  {
+    "name": "Home",
+    "line": 493,
+    "screen": "WorkspaceRootScreen",
+    "file": "apps/mobile/src/features/layout/workspace/WorkspaceRootScreen.tsx",
+    "registration": "screen: WorkspaceRootScreen,\n      linking: \"\",\n      listeners: ({ navigation }) => ({\n        transitionStart: ({ data }) => recordHomeTransitionStart(data.closing),\n        transitionEnd: ({ data }) => recordHomeTransitionEnd(data.closing, navigation.isFocused()),\n        focus: recordHomeFocus,\n      }),\n      options: {\n        ...pageRoute({ duoMinimize: \"never\", root: true }),\n        contentStyle: { backgroundColor: \"transparent\" },\n        ...getCompactBrandHeaderOptions(),\n      },"
+  },
+  {
+    "name": "PullRequest",
+    "line": 507,
+    "screen": "PullRequestRouteScreen",
+    "file": "apps/mobile/src/features/pull-requests/PullRequestRouteScreen.tsx",
+    "registration": "screen: PullRequestRouteScreen,\n      linking: {\n        path: \"pull-requests/:environmentId/:projectId/:repository/:number\",\n        parse: { number: Number },\n      },\n      options: pageRoute({ duoMinimize: \"never\" }),"
+  },
+  {
+    "name": "PullRequestGuideStop",
+    "line": 515,
+    "screen": "PullRequestGuideStopScreen",
+    "file": "apps/mobile/src/features/pull-requests/guide/PullRequestGuideScreen.tsx",
+    "registration": "screen: PullRequestGuideStopScreen,\n      options: pageRoute(),"
+  },
+  {
+    "name": "PullRequestFile",
+    "line": 519,
+    "screen": "PullRequestFileRouteScreen",
+    "file": "apps/mobile/src/features/pull-requests/PullRequestRouteScreen.tsx",
+    "registration": "screen: PullRequestFileRouteScreen,\n      options: pageRoute(),"
+  },
+  {
+    "name": "PullRequestFiles",
+    "line": 523,
+    "screen": "PullRequestFilesSheet",
+    "file": "apps/mobile/src/features/pull-requests/PullRequestFiles.tsx",
+    "registration": "screen: PullRequestFilesSheet,\n      options: sheetRoute({ detent: 0.6 }),"
+  },
+  {
+    "name": "PullRequestReviewers",
+    "line": 527,
+    "screen": "PullRequestReviewersScreen",
+    "file": "apps/mobile/src/features/pull-requests/PullRequestReviewersScreen.tsx",
+    "registration": "screen: PullRequestReviewersScreen,\n      options: sheetRoute({ detent: 0.75, itemStyle: \"editor\", duoMinimize: \"never\" }),"
+  },
+  {
+    "name": "PullRequestLabels",
+    "line": 531,
+    "screen": "PullRequestLabelsScreen",
+    "file": "apps/mobile/src/features/pull-requests/PullRequestLabelsScreen.tsx",
+    "registration": "screen: PullRequestLabelsScreen,\n      options: SEARCH_SHEET_ROUTE,"
+  },
+  {
+    "name": "PullRequestFilterSearch",
+    "line": 535,
+    "screen": "PullRequestFilterSearchScreen",
+    "file": "apps/mobile/src/features/pull-requests/PullRequestFilterSearchScreen.tsx",
+    "registration": "screen: PullRequestFilterSearchScreen,\n      options: SEARCH_SHEET_ROUTE,"
+  },
+  {
+    "name": "PullRequestDiscussion",
+    "line": 539,
+    "screen": "PullRequestDiscussionScreen",
+    "file": "apps/mobile/src/features/pull-requests/PullRequestDiscussionScreen.tsx",
+    "registration": "screen: PullRequestDiscussionScreen,\n      options: pageRoute(),"
+  },
+  {
+    "name": "PullRequestInlineComment",
+    "line": 543,
+    "screen": "PullRequestInlineCommentScreen",
+    "file": "apps/mobile/src/features/pull-requests/PullRequestInlineCommentScreen.tsx",
+    "registration": "screen: PullRequestInlineCommentScreen,\n      options: sheetRoute({ detent: 0.75, android: \"fullScreen\" }),"
+  },
+  {
+    "name": "PullRequestReview",
+    "line": 547,
+    "screen": "PullRequestReviewSheet",
+    "file": "apps/mobile/src/features/pull-requests/PullRequestReviewSheet.tsx",
+    "registration": "screen: PullRequestReviewSheet,\n      options: sheetRoute({ detent: 0.75, androidFit: true }),"
+  },
+  {
+    "name": "PullRequestEdit",
+    "line": 551,
+    "screen": "PullRequestEditScreen",
+    "file": "apps/mobile/src/features/pull-requests/PullRequestEditScreen.tsx",
+    "registration": "screen: PullRequestEditScreen,\n      options: sheetRoute({ detent: 0.75, androidFit: true }),"
+  },
+  {
+    "name": "Thread",
+    "line": 555,
+    "screen": "ThreadRouteScreen",
+    "file": "apps/mobile/src/features/threads/ThreadRouteScreen.tsx",
+    "registration": "screen: ThreadRouteScreen,\n      linking: { path: \"threads/:environmentId?/:threadId?\", alias: [\"new/draft\"] },\n      options: pageRoute({ duoMinimize: \"onScrollUp\" }),"
+  },
+  {
+    "name": "NewTaskProject",
+    "line": 560,
+    "screen": "NewTaskRouteScreen",
+    "file": "apps/mobile/src/features/threads/NewTaskRouteScreen.tsx",
+    "registration": "screen: NewTaskRouteScreen,\n      linking: { path: \"new\", alias: [\"new/project\"] },\n      options: pageRoute({ title: \"Choose project\" }),"
+  },
+  {
+    "name": "NewTaskEnvironment",
+    "line": 565,
+    "screen": "NewTaskEnvironmentPickerRouteScreen",
+    "file": "apps/mobile/src/features/threads/NewTaskContextPickerScreens.tsx",
+    "registration": "linking: \"new/draft/environment\",\n      screen: NewTaskEnvironmentPickerRouteScreen,\n      options: pageRoute({ title: \"Environment\" }),"
+  },
+  {
+    "name": "NewTaskBranch",
+    "line": 570,
+    "screen": "NewTaskBranchPickerRouteScreen",
+    "file": "apps/mobile/src/features/threads/NewTaskContextPickerScreens.tsx",
+    "registration": "linking: \"new/draft/branch\",\n      screen: NewTaskBranchPickerRouteScreen,\n      options: pageRoute({ title: \"Branch\" }),"
+  },
+  {
+    "name": "AddProject",
+    "line": 575,
+    "screen": "AddProjectSourceRoute",
+    "file": "apps/mobile/src/features/projects/AddProjectSourceRoute.tsx",
+    "registration": "linking: \"new/add-project\",\n      screen: AddProjectSourceRoute,\n\n      options: pageRoute({ title: \"Add project\" }),"
+  },
+  {
+    "name": "AddProjectRepository",
+    "line": 581,
+    "screen": "AddProjectRepositoryRoute",
+    "file": "apps/mobile/src/features/projects/AddProjectRepositoryRoute.tsx",
+    "registration": "linking: \"new/add-project/repository\",\n      screen: AddProjectRepositoryRoute,\n      options: pageRoute(),"
+  },
+  {
+    "name": "AddProjectDestination",
+    "line": 586,
+    "screen": "AddProjectDestinationRoute",
+    "file": "apps/mobile/src/features/projects/AddProjectDestinationRoute.tsx",
+    "registration": "linking: \"new/add-project/destination\",\n      screen: AddProjectDestinationRoute,\n      options: pageRoute(),"
+  },
+  {
+    "name": "AddProjectLocal",
+    "line": 591,
+    "screen": "AddProjectLocalRoute",
+    "file": "apps/mobile/src/features/projects/AddProjectLocalRoute.tsx",
+    "registration": "linking: \"new/add-project/local\",\n      screen: AddProjectLocalRoute,\n      options: pageRoute(),"
+  },
+  {
+    "name": "AddProjectNew",
+    "line": 596,
+    "screen": "AddProjectNewRoute",
+    "file": "apps/mobile/src/features/projects/AddProjectNewRoute.tsx",
+    "registration": "linking: \"new/add-project/new\",\n      screen: AddProjectNewRoute,\n      options: pageRoute(),"
+  },
+  {
+    "name": "NewTaskFiles",
+    "line": 601,
+    "screen": "ThreadFilesTreeScreen",
+    "file": "apps/mobile/src/features/files/ThreadFilesRouteScreen.tsx",
+    "registration": "linking: \"new/draft/files\",\n      screen: ThreadFilesTreeScreen,\n      options: pageRoute({ header: \"solid\" }),"
+  },
+  {
+    "name": "NewTaskFile",
+    "line": 606,
+    "screen": "ThreadFileScreen",
+    "file": "apps/mobile/src/features/files/ThreadFilesRouteScreen.tsx",
+    "registration": "linking: \"new/draft/files/:path*\",\n      screen: ThreadFileScreen,\n      options: pageRoute({ header: \"solid\" }),"
+  },
+  {
+    "name": "NewTaskAttachment",
+    "line": 611,
+    "screen": "AttachmentFileScreen",
+    "file": "apps/mobile/src/features/files/AttachmentFileScreen.tsx",
+    "registration": "screen: AttachmentFileScreen,\n      linking: \"new/draft/attachments/:attachmentId\",\n      options: pageRoute({ header: \"solid\" }),"
+  },
+  {
+    "name": "NewTaskThreadSettings",
+    "line": 616,
+    "screen": "NewTaskThreadSettingsRouteScreen",
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "registration": "screen: NewTaskThreadSettingsRouteScreen,\n      linking: \"new/draft/settings\",\n      options: THREAD_SETTINGS_ROUTE,"
+  },
+  {
+    "name": "ThreadTerminal",
+    "line": 621,
+    "screen": "ThreadTerminalRouteScreen",
+    "file": "apps/mobile/src/features/terminal/ThreadTerminalRouteScreen.tsx",
+    "registration": "screen: ThreadTerminalRouteScreen,\n      linking: `${THREAD_LINKING_PREFIX}/terminal`,\n      options: pageRoute({ header: \"solid\" }),"
+  },
+  {
+    "name": "ThreadInspectorFullscreen",
+    "line": 626,
+    "screen": "FullscreenThreadRouteScreen",
+    "file": "apps/mobile/src/features/threads/ThreadRouteScreen.tsx",
+    "registration": "screen: FullscreenThreadRouteScreen,\n      options: modalRoute({ header: \"glass\", itemStyle: \"editor\", duoMinimize: \"onScrollUp\" }),"
+  },
+  {
+    "name": "ThreadDevicePreview",
+    "line": 630,
+    "screen": "DevicePreviewRouteScreen",
+    "file": "apps/mobile/src/features/devices/DevicePreviewRouteScreen.tsx",
+    "registration": "screen: DevicePreviewRouteScreen,\n      linking: `${THREAD_LINKING_PREFIX}/devices`,\n      options: immersiveRoute({ hideSystemBars: true }),"
+  },
+  {
+    "name": "ThreadBrowserPreview",
+    "line": 635,
+    "screen": "BrowserPreviewRouteScreen",
+    "file": "apps/mobile/src/features/browser/BrowserPreviewRouteScreen.tsx",
+    "registration": "screen: BrowserPreviewRouteScreen,\n      linking: `${THREAD_LINKING_PREFIX}/browser`,\n      options: { ...modalRoute({ header: \"solid\" }), gestureEnabled: false },"
+  },
+  {
+    "name": "ThreadReview",
+    "line": 640,
+    "screen": "ReviewSheet",
+    "file": "apps/mobile/src/features/review/ReviewSheet.tsx",
+    "registration": "screen: ReviewSheet,\n      linking: `${THREAD_LINKING_PREFIX}/review`,\n      options: pageRoute(),"
+  },
+  {
+    "name": "ThreadReviewComment",
+    "line": 645,
+    "screen": "ReviewCommentComposerSheet",
+    "file": "apps/mobile/src/features/review/ReviewCommentComposerSheet.tsx",
+    "registration": "screen: ReviewCommentComposerSheet,\n      linking: `${THREAD_LINKING_PREFIX}/review-comment`,\n      options: sheetRoute({ detent: 0.55, android: \"fullScreen\" }),"
+  },
+  {
+    "name": "ThreadFiles",
+    "line": 650,
+    "screen": "ThreadFilesTreeScreen",
+    "file": "apps/mobile/src/features/files/ThreadFilesRouteScreen.tsx",
+    "registration": "screen: ThreadFilesTreeScreen,\n      linking: `${THREAD_LINKING_PREFIX}/files`,\n      options: pageRoute({ title: \"Files\" }),"
+  },
+  {
+    "name": "ThreadFile",
+    "line": 655,
+    "screen": "ThreadFileScreen",
+    "file": "apps/mobile/src/features/files/ThreadFilesRouteScreen.tsx",
+    "registration": "screen: ThreadFileScreen,\n      linking: `${THREAD_LINKING_PREFIX}/files/:path*`,\n      options: pageRoute(),"
+  },
+  {
+    "name": "ThreadMcpApp",
+    "line": 660,
+    "screen": "McpAppFullscreenScreen",
+    "file": "apps/mobile/src/features/threads/McpAppFullscreenScreen.tsx",
+    "registration": "screen: McpAppFullscreenScreen,\n      linking: `${THREAD_LINKING_PREFIX}/apps/:itemId`,\n      options: { ...modalRoute({ header: \"solid\" }), gestureEnabled: false },"
+  },
+  {
+    "name": "ThreadAttachment",
+    "line": 665,
+    "screen": "AttachmentFileScreen",
+    "file": "apps/mobile/src/features/files/AttachmentFileScreen.tsx",
+    "registration": "screen: AttachmentFileScreen,\n      linking: `${THREAD_LINKING_PREFIX}/attachments/:attachmentId`,\n      options: pageRoute({ header: \"solid\" }),"
+  },
+  {
+    "name": "ThreadSettingsSheet",
+    "line": 670,
+    "screen": "ExistingThreadSettingsRouteScreen",
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "registration": "screen: ExistingThreadSettingsRouteScreen,\n      options: THREAD_SETTINGS_ROUTE,"
+  },
+  {
+    "name": "ThreadQueue",
+    "line": 674,
+    "screen": "ThreadQueueSheet",
+    "file": "apps/mobile/src/features/threads/ThreadQueueControl.tsx",
+    "registration": "screen: ThreadQueueSheet,\n      options: sheetRoute({ detent: 0.65, androidMaxDetent: 0.95 }),"
+  },
+  {
+    "name": "ThreadBackgroundWork",
+    "line": 678,
+    "screen": "ThreadBackgroundWorkSheet",
+    "file": "apps/mobile/src/features/threads/ThreadBackgroundWorkSheet.tsx",
+    "registration": "screen: ThreadBackgroundWorkSheet,\n      options: sheetRoute({ detent: 0.5, androidMaxDetent: 0.9 }),"
+  },
+  {
+    "name": "ThreadAgents",
+    "line": 682,
+    "screen": "ThreadAgentsSheet",
+    "file": "apps/mobile/src/features/threads/ThreadAgentsSheet.tsx",
+    "registration": "screen: ThreadAgentsSheet,\n      options: sheetRoute({ detent: 0.5, androidMaxDetent: 0.9 }),"
+  },
+  {
+    "name": "GitOverview",
+    "line": 686,
+    "screen": "GitOverviewSheet",
+    "file": "apps/mobile/src/features/threads/git/GitOverviewSheet.tsx",
+    "registration": "screen: GitOverviewSheet,\n      linking: `${THREAD_LINKING_PREFIX}/git`,\n      options: sheetRoute({ detent: 0.55 }),"
+  },
+  {
+    "name": "ThreadPullRequests",
+    "line": 691,
+    "screen": "ThreadPullRequestsSheet",
+    "file": "apps/mobile/src/features/threads/ThreadPullRequestsSheet.tsx",
+    "registration": "screen: ThreadPullRequestsSheet,\n      linking: `${THREAD_LINKING_PREFIX}/pull-requests`,\n      options: sheetRoute({ detent: 0.55 }),"
+  },
+  {
+    "name": "GitCommit",
+    "line": 696,
+    "screen": "GitCommitSheet",
+    "file": "apps/mobile/src/features/threads/git/GitCommitSheet.tsx",
+    "registration": "screen: GitCommitSheet,\n      linking: `${THREAD_LINKING_PREFIX}/git/commit`,\n      options: sheetRoute({ detent: 0.8, androidFit: true }),"
+  },
+  {
+    "name": "GitBranches",
+    "line": 701,
+    "screen": "GitBranchesSheet",
+    "file": "apps/mobile/src/features/threads/git/GitBranchesSheet.tsx",
+    "registration": "screen: GitBranchesSheet,\n      linking: `${THREAD_LINKING_PREFIX}/git/branches`,\n      options: sheetRoute({ detent: 0.55, androidFit: true }),"
+  },
+  {
+    "name": "GitConfirm",
+    "line": 706,
+    "screen": "GitConfirmSheet",
+    "file": "apps/mobile/src/features/threads/git/GitConfirmSheet.tsx",
+    "registration": "screen: GitConfirmSheet,\n      linking: `${THREAD_LINKING_PREFIX}/git-confirm`,\n      options: sheetRoute({ detent: 0.55, maxDetent: 0.7, androidFit: true }),"
+  },
+  {
+    "name": "SettingsLegal",
+    "line": 712,
+    "screen": "SettingsLegalRouteScreen",
+    "file": "apps/mobile/src/features/settings/SettingsLegalRouteScreen.tsx",
+    "registration": "screen: SettingsLegalRouteScreen,\n      linking: \"settings/legal\",\n      options: modalRoute({ header: \"solid\", title: \"Legal\" }),"
+  },
+  {
+    "name": "ConnectOnboarding",
+    "line": 717,
+    "screen": "ConnectOnboardingRouteScreen",
+    "file": "apps/mobile/src/features/cloud/ConnectOnboardingRouteScreen.tsx",
+    "registration": "screen: ConnectOnboardingRouteScreen,\n      linking: \"connect-onboarding\",\n      options: sheetRoute({\n        title: \"Set up T3 Connect\",\n        header: \"solid\",\n        detent: 0.6,\n        androidMaxDetent: 0.95,\n      }),"
+  },
+  {
+    "name": "Connections",
+    "line": 727,
+    "screen": "ConnectionsRouteScreen",
+    "file": "apps/mobile/src/features/connection/ConnectionsRouteScreen.tsx",
+    "registration": "screen: ConnectionsRouteScreen,\n      linking: \"connections\",\n      options: sheetRoute({ title: \"Environments\", detent: 0.55, maxDetent: 0.7, android: \"card\" }),"
+  },
+  {
+    "name": "ConnectionsNew",
+    "line": 732,
+    "screen": "ConnectionsNewRouteScreen",
+    "file": "apps/mobile/src/features/connection/ConnectionsNewRouteScreen.tsx",
+    "registration": "screen: ConnectionsNewRouteScreen,\n      linking: \"connections/new\",\n      options: sheetRoute({ title: \"Add Environment\", detent: 0.55, maxDetent: 0.7 }),"
+  },
+  {
+    "name": "NotFound",
+    "line": 737,
+    "screen": "NotFoundScreen",
+    "file": null,
+    "registration": "screen: NotFoundScreen,\n      linking: \"*\","
+  }
+]

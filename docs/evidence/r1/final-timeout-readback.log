@@ -1,0 +1,42 @@
+
+-------------------------------[ability]-------------------------------
+
+
+----------------------------------PowerManagerService----------------------------------
+POWER STATE DUMP:
+Current State: AWAKE  Reason: 35  Time: 876977883
+ScreenOffTime: Timeout=600000ms
+DUMP DETAILS:
+Last Screen On: 882452987
+Last Screen Off: 861684145
+Last SuspendDevice: 0
+Last WakeupDevice: 876977869
+Last Refresh: 882452987
+DUMP EACH STATES:
+State: AWAKE   Reason: PICKUP   Time: 876977883
+   Failure: UNKNOWN   Reason:    From: UNKNOWN   Time: 0
+
+State: FREEZE   Reason: INIT   Time: 0
+   Failure: UNKNOWN   Reason:    From: UNKNOWN   Time: 0
+
+State: INACTIVE   Reason: HARD_KEY   Time: 861685936
+   Failure: HARD_KEY   Reason: Already in the state   From: INACTIVE   Time: 853340926
+
+State: STAND_BY   Reason: INIT   Time: 0
+   Failure: UNKNOWN   Reason:    From: UNKNOWN   Time: 0
+
+State: DOZE   Reason: INIT   Time: 0
+   Failure: INIT   Reason:    From: AWAKE   Time: 0
+
+State: SLEEP   Reason: HARD_KEY   Time: 861685938
+   Failure: APPLICATION   Reason: Already in the state   From: SLEEP   Time: 849555092
+
+State: HIBERNATE   Reason: INIT   Time: 0
+   Failure: INIT   Reason:    From: AWAKE   Time: 0
+
+State: SHUTDOWN   Reason: INIT   Time: 0
+   Failure: UNKNOWN   Reason:    From: UNKNOWN   Time: 0
+
+State: DIM   Reason: TIMEOUT   Time: 859553260
+   Failure: TIMEOUT   Reason: Blocked by running lock   From: AWAKE   Time: 864917124
+

@@ -1,0 +1,13 @@
+11-16 17:24:58.681 28009 28009 I A00000/com.dasungta.t3code.harmony/R1DeviceCheck: PASS pairing-ipv4-ipv6-tailnet
+11-16 17:24:58.681 28009 28009 I A00000/com.dasungta.t3code.harmony/R1DeviceCheck: PASS pairing-hosted-query-hash-unicode
+11-16 17:24:58.682 28009 28009 I A00000/com.dasungta.t3code.harmony/R1DeviceCheck: PASS pairing-wrapper-wss
+11-16 17:24:58.683 28009 28009 I A00000/com.dasungta.t3code.harmony/R1DeviceCheck: PASS pairing-invalid-input-rejected
+11-16 17:24:58.738 28009 28009 I A00000/com.dasungta.t3code.harmony/R1DeviceCheck: PASS actual-asset-save-read-and-size-limit
+11-16 17:24:58.790 28009 28009 I A00000/com.dasungta.t3code.harmony/R1DeviceCheck: PASS migration-identity-mismatch-keeps-v1
+11-16 17:24:58.884 28009 28009 I A00000/com.dasungta.t3code.harmony/R1DeviceCheck: PASS real-asset-and-file-migration
+11-16 17:24:58.884 28009 28009 I A00000/com.dasungta.t3code.harmony/R1DeviceCheck: PASS directory-schema-refuses-cross-environment-recovery
+11-16 17:24:58.885 28009 28009 I A00000/com.dasungta.t3code.harmony/R1DeviceCheck: PASS directory-corruption-fails-closed
+11-16 17:24:58.885 28009 28009 I A00000/com.dasungta.t3code.harmony/R1DeviceCheck: DONE passed=9 failed=0
+11-16 17:25:05.442 28539 28539 I A00000/com.dasungta.t3code.harmony/R1DeviceCheck: PASS restart-preserves-directory-and-unknown-marker
+11-16 17:25:05.485 28539 28539 I A00000/com.dasungta.t3code.harmony/R1DeviceCheck: PASS cleanup-test-records
+11-16 17:25:05.485 28539 28539 I A00000/com.dasungta.t3code.harmony/R1DeviceCheck: DONE passed=2 failed=0

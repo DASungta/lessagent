@@ -1,0 +1,27 @@
+终端失败回归样例 · t3-b39-terminal-red.log
+not ok 8 - copy includes a later write into the padding left by a deferred wide wrap
+# tests 8
+# pass 7
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+
+终端专项 · t3-b39-terminal.log
+# tests 49
+# pass 49
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+
+最终全量 · t3-b39-all.log
+# tests 537
+# pass 537
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+
+签名构建 · t3-b39-build.log
+> hvigor BUILD SUCCESSFUL in 26 s 568 ms 

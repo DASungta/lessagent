@@ -1,0 +1,41 @@
+{
+  "viewport": {
+    "_tag": "freeform",
+    "width": 390,
+    "height": 740
+  },
+  "geometry": [
+    {
+      "width": 390,
+      "height": 740
+    }
+  ],
+  "frames": [
+    {
+      "width": 675,
+      "height": 1280,
+      "bytes": 12489
+    },
+    {
+      "width": 780,
+      "height": 1480,
+      "bytes": 16805
+    },
+    {
+      "width": 675,
+      "height": 1280,
+      "bytes": 12489
+    },
+    {
+      "width": 780,
+      "height": 1480,
+      "bytes": 16805
+    },
+    {
+      "width": 675,
+      "height": 1280,
+      "bytes": 12489
+    }
+  ],
+  "sessionRevoked": true
+}

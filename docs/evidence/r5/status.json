@@ -1,0 +1,33 @@
+{
+  "generatedAt": "2026-11-18T20:30:00+08:00",
+  "goalStatus": "blocked",
+  "tests": { "count": 235, "failed": 0, "log": "evidence/r5/r5-local-tests.log" },
+  "hap": {
+    "path": "evidence/r5/r5-candidate-signed.hap",
+    "sha256": "6bb938588df22d2dc8cb26b3618b706b0537c616048758a28a32d98756b04c36",
+    "installedUpdateTime": "2026-11-18T20:22:53+08:00"
+  },
+  "environments": [
+    { "role": "env1", "baseUrl": "http://127.0.0.1:47895", "baseDir": "/tmp/t3-r5-accept-00fcea" },
+    { "role": "env2", "baseUrl": "http://127.0.0.1:47896", "baseDir": "/tmp/t3-r5-iso2-09506a" },
+    { "role": "read-only-pr", "baseUrl": "http://127.0.0.1:47895", "project": "pr-read", "remote": "https://github.com/cli/cli.git" }
+  ],
+  "verified": [
+    "files/source search/select/copy/context/large file/permission retry",
+    "Markdown GFM + math degradation + Mermaid flowchart/sequence/class/state",
+    "workspace/branch diff, selection, review context, prev/next file",
+    "git commit/push/pull/branch and remote-unavailable/conflict no-retry paths",
+    "PR read-only list/detail/files/discussion/checks on real GitHub PR #15068",
+    "PR guide empty and error states without fabricated content",
+    "two-environment file/draft isolation",
+    "dark resources and maximum font spot checks"
+  ],
+  "blocked": [
+    "PR comment/review/reaction/labels/reviewers/edit/merge/close/reopen/stack writes",
+    "PR review guide generation (server rejected; reviewGuidesEnabled/model configuration needed)",
+    "KaTeX-level math, gantt and other Mermaid diagram types",
+    "screen reader and pixel-perfect parity"
+  ],
+  "requires": "an explicitly authorized dedicated GitHub/GitLab test repo and PR plus a write-scope token for the isolated server; reviewGuidesEnabled and a working model/account for guide generation",
+  "noWritesToRealRepos": true
+}

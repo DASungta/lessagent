@@ -1,0 +1,14 @@
+{
+  "device": "23E0224122000135",
+  "checkedAt": "2026-11-16T22:44:01.909227+08:00",
+  "ordinaryProductTestEpoch": 119,
+  "activeRoute": "loopback 127.0.0.1",
+  "latestSession": {
+    "label": "harmony-r1-attachment-A-only",
+    "ip": "127.0.0.1"
+  },
+  "routeRowRefreshedWithoutStaleLan": true,
+  "singleRouteCannotBeRemovedIndividually": true,
+  "addRouteStillAvailable": true,
+  "unknownRecoveryStillVisible": true
+}

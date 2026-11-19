@@ -1,0 +1,9 @@
+{
+  "settingsTests": 6,
+  "build": "successful",
+  "installed": true,
+  "darkPersistedAcrossRestart": true,
+  "lightSelectionUpdatedImmediately": true,
+  "restoredAppearance": "light",
+  "hapSha256": "4ead8eb08389424b324f06adfd6de8ab2d3c4c8404269c739e23a3fc57691283"
+}

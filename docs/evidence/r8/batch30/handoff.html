@@ -1,0 +1,5 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Handoff test</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#edf3f9;color:#102441;font:24px sans-serif}button{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:55%;height:16%;border:0;border-radius:12px;background:#174eba;color:white;font:bold 28px sans-serif}p{position:absolute;width:100%;top:23%;text-align:center}</style>
+<p>Viewer handoff</p><button>Clicks: 0</button><script>
+let count=0;document.querySelector('button').onclick=e=>{e.currentTarget.textContent='Clicks: '+(++count);fetch('/clicked/'+count,{method:'POST'}).catch(()=>{});};
+</script></html>

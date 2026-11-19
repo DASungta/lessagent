@@ -1,0 +1,28 @@
+{
+  "pid": 93918,
+  "startedAt": 1794826958321,
+  "selfCheck": true,
+  "redirect": {
+    "descriptor": 0,
+    "oauth": 0
+  },
+  "capture": {
+    "requests": 0
+  },
+  "protocol": {
+    "descriptor": 0,
+    "oauth": 0
+  },
+  "tls": {
+    "httpRequests": 0,
+    "errors": [
+      "ECONNRESET"
+    ]
+  },
+  "certificate": {
+    "validFrom": "Nov 16 11:02:38 2026 GMT",
+    "validTo": "Nov 17 11:02:38 2026 GMT",
+    "fingerprint256": "83:8D:11:C1:74:10:0C:AB:01:3B:D0:7A:2B:26:B5:48:B8:E6:BF:A6:2A:94:46:A4:F8:88:6B:96:92:D0:26:89",
+    "subjectAltName": "IP Address:192.168.10.75, DNS:r1-negative.invalid"
+  }
+}

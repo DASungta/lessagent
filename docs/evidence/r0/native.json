@@ -1,0 +1,4702 @@
+[
+  {
+    "file": "apps/mobile/app.config.ts",
+    "line": 1,
+    "source": "import type { ExpoConfig } from \"expo/config\";"
+  },
+  {
+    "file": "apps/mobile/index.ts",
+    "line": 6,
+    "source": "import { registerRootComponent } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/index.ts",
+    "line": 8,
+    "source": "import { LogBox } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/index.ts",
+    "line": 9,
+    "source": "import { featureFlags } from \"react-native-screens\";"
+  },
+  {
+    "file": "apps/mobile/modules/t3-highlights/src/T3Highlights.nitro.ts",
+    "line": 1,
+    "source": "import type { CustomType, HybridObject } from \"react-native-nitro-modules\";"
+  },
+  {
+    "file": "apps/mobile/modules/t3-source-text/src/SourceText.tsx",
+    "line": 2,
+    "source": "import { Platform, StyleSheet, Text, type TextProps, type TextStyle } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/modules/t3-source-text/src/T3SourceTextNativeComponent.ts",
+    "line": 1,
+    "source": "import { codegenNativeComponent, type CodegenTypes } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/modules/t3-source-text/src/T3SourceTextNativeComponent.ts",
+    "line": 2,
+    "source": "import type { ViewProps } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/modules/t3-source-text/src/T3SourceTextRunNativeComponent.ts",
+    "line": 1,
+    "source": "import { codegenNativeComponent, type CodegenTypes } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/modules/t3-source-text/src/T3SourceTextRunNativeComponent.ts",
+    "line": 2,
+    "source": "import type { ColorValue, ViewProps } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/modules/t3-source-text/src/util.ts",
+    "line": 1,
+    "source": "import { I18nManager, type StyleProp, StyleSheet, type TextStyle } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/scripts/sync-link-icons.ts",
+    "line": 72,
+    "source": "`import type { ImageSourcePropType } from \"react-native\";\\n\\nexport const SOURCE_CONTROL_LINK_ICON_SOURCES: Readonly<Record<string, ImageSourcePropType>> = {\\n${kinds"
+  },
+  {
+    "file": "apps/mobile/src/App.tsx",
+    "line": 4,
+    "source": "import * as Linking from \"expo-linking\";"
+  },
+  {
+    "file": "apps/mobile/src/App.tsx",
+    "line": 5,
+    "source": "import * as SplashScreen from \"expo-splash-screen\";"
+  },
+  {
+    "file": "apps/mobile/src/App.tsx",
+    "line": 6,
+    "source": "import { requireNativeModule } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/App.tsx",
+    "line": 8,
+    "source": "import { Platform, StatusBar } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/App.tsx",
+    "line": 9,
+    "source": "import { GestureHandlerRootView } from \"react-native-gesture-handler\";"
+  },
+  {
+    "file": "apps/mobile/src/App.tsx",
+    "line": 10,
+    "source": "import { KeyboardProvider } from \"react-native-keyboard-controller\";"
+  },
+  {
+    "file": "apps/mobile/src/App.tsx",
+    "line": 11,
+    "source": "import { SafeAreaProvider } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/App.tsx",
+    "line": 276,
+    "source": "void requireNativeModule<{ setNavigationBarStyle(light: boolean): Promise<void> }>("
+  },
+  {
+    "file": "apps/mobile/src/Stack.tsx",
+    "line": 16,
+    "source": "import { Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/BrandMark.tsx",
+    "line": 1,
+    "source": "import Constants from \"expo-constants\";"
+  },
+  {
+    "file": "apps/mobile/src/components/BrandMark.tsx",
+    "line": 2,
+    "source": "import { Image } from \"expo-image\";"
+  },
+  {
+    "file": "apps/mobile/src/components/BrandMark.tsx",
+    "line": 3,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/CompactBrandTitle.tsx",
+    "line": 2,
+    "source": "import Constants from \"expo-constants\";"
+  },
+  {
+    "file": "apps/mobile/src/components/CompactBrandTitle.tsx",
+    "line": 4,
+    "source": "import { Platform, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ComposerAttachmentStrip.tsx",
+    "line": 8,
+    "source": "import { Paths } from \"expo-file-system\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ComposerAttachmentStrip.tsx",
+    "line": 9,
+    "source": "import { Image, Pressable, ScrollView, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ComposerContextAttachment.tsx",
+    "line": 6,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ComposerContextAttachment.tsx",
+    "line": 7,
+    "source": "import { Image } from \"expo-image\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ComposerContextSheet.tsx",
+    "line": 16,
+    "source": "import { Pressable, ScrollView, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ComposerContextSheet.tsx",
+    "line": 17,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ComposerToolbar.tsx",
+    "line": 13,
+    "source": "} from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ComposerToolbar.tsx",
+    "line": 15,
+    "source": "import Animated, { FadeIn, useReducedMotion } from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/components/LoadingScreen.tsx",
+    "line": 1,
+    "source": "import { StatusBar, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/LoadingScreen.tsx",
+    "line": 2,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/components/MediaActionsMenu.tsx",
+    "line": 3,
+    "source": "import { Platform, View, type PressableProps, type StyleProp, type ViewStyle } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/MediaPreviewHeader.tsx",
+    "line": 1,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/MediaSourceCaption.tsx",
+    "line": 1,
+    "source": "import { ScrollView } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/MediaVideoPlayer.tsx",
+    "line": 1,
+    "source": "import { useEvent } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/components/MediaVideoPlayer.tsx",
+    "line": 2,
+    "source": "import { useVideoPlayer, VideoView } from \"expo-video\";"
+  },
+  {
+    "file": "apps/mobile/src/components/MediaVideoPlayer.tsx",
+    "line": 5,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/NewThreadButton.shared.tsx",
+    "line": 1,
+    "source": "import { Pressable, type StyleProp, type ViewStyle } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/PdfPreview.android.tsx",
+    "line": 6,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/PdfPreview.android.tsx",
+    "line": 7,
+    "source": "import Pdf from \"react-native-pdf-jsi\";"
+  },
+  {
+    "file": "apps/mobile/src/components/PdfPreview.tsx",
+    "line": 2,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/PdfPreview.tsx",
+    "line": 3,
+    "source": "import { WebView } from \"react-native-webview\";"
+  },
+  {
+    "file": "apps/mobile/src/components/PierreEntryIcon.tsx",
+    "line": 2,
+    "source": "import { Image, type ImageStyle, type StyleProp } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ProjectFavicon.tsx",
+    "line": 3,
+    "source": "import { Image } from \"expo-image\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ProjectFavicon.tsx",
+    "line": 5,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ProviderIcon.tsx",
+    "line": 1,
+    "source": "import { Image } from \"expo-image\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ProviderIcon.tsx",
+    "line": 2,
+    "source": "import { Defs, LinearGradient, Path, Stop, Svg } from \"react-native-svg\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ProviderIcon.tsx",
+    "line": 3,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/RenderErrorBoundary.tsx",
+    "line": 1,
+    "source": "import { Observe } from \"expo-observe\";"
+  },
+  {
+    "file": "apps/mobile/src/components/RenderErrorBoundary.tsx",
+    "line": 3,
+    "source": "import { ScrollView, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ScrollComposeButton.android.tsx",
+    "line": 11,
+    "source": "import { I18nManager, Pressable, View, type StyleProp, type ViewStyle } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/StatusPill.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/T3Wordmark.tsx",
+    "line": 1,
+    "source": "import type { ColorValue } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/T3Wordmark.tsx",
+    "line": 2,
+    "source": "import Svg, { Path } from \"react-native-svg\";"
+  },
+  {
+    "file": "apps/mobile/src/components/VideoAttachmentTile.tsx",
+    "line": 1,
+    "source": "import { Platform, Pressable, View, type StyleProp, type ViewStyle } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/VideoThumbnailImage.tsx",
+    "line": 4,
+    "source": "import { Image } from \"expo-image\";"
+  },
+  {
+    "file": "apps/mobile/src/components/VideoThumbnailImage.tsx",
+    "line": 6,
+    "source": "import type { VideoThumbnail } from \"expo-video\";"
+  },
+  {
+    "file": "apps/mobile/src/components/VideoThumbnailImage.tsx",
+    "line": 8,
+    "source": "import { StyleSheet } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/brandAssets.ts",
+    "line": 1,
+    "source": "import Constants from \"expo-constants\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/AndroidAnchoredMenu.android.tsx",
+    "line": 4,
+    "source": "import type { StyleProp, ViewInstance, ViewStyle } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/AndroidAnchoredMenu.android.tsx",
+    "line": 5,
+    "source": "import { Pressable, ScrollView, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/AndroidAnchoredMenu.android.tsx",
+    "line": 6,
+    "source": "import { useKeyboardState } from \"react-native-keyboard-controller\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/AndroidScreenHeader.android.tsx",
+    "line": 4,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/AppActivityIndicator.android.tsx",
+    "line": 4,
+    "source": "import { StyleSheet, View, type ActivityIndicatorProps } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/AppActivityIndicator.tsx",
+    "line": 1,
+    "source": "import { ActivityIndicator } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/AppBar.android.tsx",
+    "line": 2,
+    "source": "import { Keyboard, type TextInputInstance, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/AppBar.tsx",
+    "line": 3,
+    "source": "import type { HeaderBarButtonMailSearchToolbarItem, SearchBarCommands } from \"react-native-screens\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/AppBar.tsx",
+    "line": 6,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/AppBar.types.ts",
+    "line": 2,
+    "source": "import type { ColorValue } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/AppSymbol.android.tsx",
+    "line": 143,
+    "source": "import type { AndroidSymbol, SFSymbol, SymbolViewProps } from \"expo-symbols\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/AppSymbol.android.tsx",
+    "line": 144,
+    "source": "import { StyleSheet, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/AppSymbol.android.tsx",
+    "line": 352,
+    "source": "export type { SFSymbol } from \"expo-symbols\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/AppSymbol.tsx",
+    "line": 6,
+    "source": "import type { SFSymbol } from \"expo-symbols\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/AppSymbol.tsx",
+    "line": 10,
+    "source": "import { SymbolView as ExpoSymbolView } from \"expo-symbols\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/AppSymbol.tsx",
+    "line": 14,
+    "source": "export type { SFSymbol } from \"expo-symbols\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/AppText.tsx",
+    "line": 8,
+    "source": "} from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/Button.android.tsx",
+    "line": 14,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/Button.tsx",
+    "line": 2,
+    "source": "import { Pressable } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/Chip.tsx",
+    "line": 1,
+    "source": "import { GlassView } from \"expo-glass-effect\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/Chip.tsx",
+    "line": 2,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/ContentBand.android.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/ContentBand.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/ControlPill.tsx",
+    "line": 2,
+    "source": "import { Platform, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/Dialog.android.tsx",
+    "line": 20,
+    "source": "import type { Alert, AlertButton } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/Dialog.tsx",
+    "line": 1,
+    "source": "import { Alert } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/EmptyState.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/FilePreviewModal.android.tsx",
+    "line": 4,
+    "source": "import { Modal, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/FilePreviewModal.android.tsx",
+    "line": 5,
+    "source": "import ImageViewing from \"react-native-image-viewing\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/FilePreviewModal.android.tsx",
+    "line": 6,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/FilePreviewModal.tsx",
+    "line": 2,
+    "source": "import { requireNativeModule } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/FilePreviewModal.tsx",
+    "line": 18,
+    "source": "const NativeControls = requireNativeModule<{"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/FitSheet.android.tsx",
+    "line": 2,
+    "source": "import { ScrollView, useWindowDimensions, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/FitSheet.android.tsx",
+    "line": 3,
+    "source": "import { KeyboardAvoidingView } from \"react-native-keyboard-controller\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/FitSheet.android.tsx",
+    "line": 4,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/FitSheet.tsx",
+    "line": 2,
+    "source": "import { ScrollView, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/FitSheet.tsx",
+    "line": 3,
+    "source": "import { KeyboardAvoidingView } from \"react-native-keyboard-controller\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/FitSheet.tsx",
+    "line": 4,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/FitSheet.types.ts",
+    "line": 2,
+    "source": "import type { ScrollViewProps } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/FloatingActionButton.android.tsx",
+    "line": 11,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/FloatingActionButton.tsx",
+    "line": 1,
+    "source": "import { Pressable } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/FloatingActionButton.types.ts",
+    "line": 1,
+    "source": "import type { StyleProp, ViewStyle } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/FormSection.android.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/FormSection.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/FrostedCutout.android.tsx",
+    "line": 2,
+    "source": "import { StyleSheet, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/FrostedCutout.android.tsx",
+    "line": 3,
+    "source": "import Svg, { Path } from \"react-native-svg\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/FrostedCutout.tsx",
+    "line": 1,
+    "source": "import { requireNativeView } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/FrostedCutout.tsx",
+    "line": 2,
+    "source": "import { StyleSheet, type ViewProps } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/FrostedCutout.tsx",
+    "line": 6,
+    "source": "const NativeFrostedCutout = requireNativeView<ViewProps & FrostedCutoutProps>("
+  },
+  {
+    "file": "apps/mobile/src/components/ui/GlassBackdrop.tsx",
+    "line": 1,
+    "source": "import { BlurView } from \"expo-blur\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/GlassBackdrop.tsx",
+    "line": 2,
+    "source": "import { Platform, StyleSheet, View, type ColorValue } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/GlassSurface.tsx",
+    "line": 1,
+    "source": "import { GlassView, isGlassEffectAPIAvailable } from \"expo-glass-effect\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/GlassSurface.tsx",
+    "line": 10,
+    "source": "} from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/IconButton.android.tsx",
+    "line": 9,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/IconButton.tsx",
+    "line": 3,
+    "source": "import { Pressable } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/KeyboardSheetBody.android.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/KeyboardSheetBody.android.tsx",
+    "line": 2,
+    "source": "import { KeyboardAvoidingView, KeyboardStickyView } from \"react-native-keyboard-controller\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/KeyboardSheetBody.android.tsx",
+    "line": 3,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/KeyboardSheetBody.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/KeyboardSheetBody.tsx",
+    "line": 2,
+    "source": "import { KeyboardAvoidingView } from \"react-native-keyboard-controller\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/KeyboardSheetBody.tsx",
+    "line": 3,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/ListActionRow.tsx",
+    "line": 1,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/ListChoiceRow.tsx",
+    "line": 2,
+    "source": "import { Platform, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/ListRow.tsx",
+    "line": 1,
+    "source": "import { Platform, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/ListRowLayout.tsx",
+    "line": 2,
+    "source": "import { Platform, useWindowDimensions, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/ListSection.tsx",
+    "line": 3,
+    "source": "import { Platform, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/ListToggleRow.tsx",
+    "line": 1,
+    "source": "import { Pressable } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/LoadingStrip.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/Menu.android.tsx",
+    "line": 1,
+    "source": "import * as Haptics from \"expo-haptics\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/Menu.tsx",
+    "line": 10,
+    "source": "import type { ColorValue, PressableProps } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/Menu.types.ts",
+    "line": 3,
+    "source": "import type { AccessibilityProps } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/MenuPopup.android.tsx",
+    "line": 12,
+    "source": "import { Pressable } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/NativePresentation.android.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/NativePresentation.tsx",
+    "line": 1,
+    "source": "import { requireNativeView } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/NativePresentation.tsx",
+    "line": 3,
+    "source": "import type { ViewProps } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/NativePresentation.tsx",
+    "line": 10,
+    "source": "const NativeSource: ComponentType<PresentationSourceProps> = requireNativeView("
+  },
+  {
+    "file": "apps/mobile/src/components/ui/NativeSwitch.android.tsx",
+    "line": 3,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/NativeSwitch.tsx",
+    "line": 1,
+    "source": "export { Switch as NativeSwitch } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/NativeSwitch.types.ts",
+    "line": 1,
+    "source": "import type { SwitchProps } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/NavigationRow.tsx",
+    "line": 2,
+    "source": "import { Platform, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/Notice.tsx",
+    "line": 2,
+    "source": "import { AccessibilityInfo, Platform, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/NumberField.android.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/OverlayPortal.tsx",
+    "line": 2,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/PaneListItem.android.tsx",
+    "line": 1,
+    "source": "import { Pressable } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/PaneListItem.tsx",
+    "line": 1,
+    "source": "import { Pressable } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/PaneSheet.android.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/PaneSheet.android.tsx",
+    "line": 2,
+    "source": "import { FormSheet } from \"react-native-screens\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/PaneSheet.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/PaneSheet.tsx",
+    "line": 2,
+    "source": "import { FormSheet } from \"react-native-screens\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/PaneSheet.types.ts",
+    "line": 2,
+    "source": "import type { FormSheet } from \"react-native-screens\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/Progress.android.tsx",
+    "line": 3,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/Progress.android.tsx",
+    "line": 4,
+    "source": "import { useReducedMotion } from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/Progress.tsx",
+    "line": 3,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/Progress.tsx",
+    "line": 4,
+    "source": "import { useReducedMotion } from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/RadioIndicator.android.tsx",
+    "line": 3,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/RefreshControl.android.tsx",
+    "line": 3,
+    "source": "import { RefreshControl as NativeRefreshControl } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/RefreshControl.android.tsx",
+    "line": 4,
+    "source": "import { View, type RefreshControlProps } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/RefreshControl.tsx",
+    "line": 2,
+    "source": "export { RefreshControl } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/RowPressable.tsx",
+    "line": 2,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/RowPressable.tsx",
+    "line": 3,
+    "source": "import { GestureDetector } from \"react-native-gesture-handler\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/ScreenContent.tsx",
+    "line": 2,
+    "source": "import { Platform, View, type LayoutChangeEvent } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/ScreenScrollView.tsx",
+    "line": 2,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SearchField.tsx",
+    "line": 2,
+    "source": "import { Pressable, TextInput, type TextInputInstance, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SecretRevealButton.tsx",
+    "line": 1,
+    "source": "import { Pressable } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SecretTextInput.android.tsx",
+    "line": 1,
+    "source": "import { requireNativeView } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SecretTextInput.android.tsx",
+    "line": 3,
+    "source": "import { processColor, View, type NativeSyntheticEvent, type ViewProps } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SecretTextInput.android.tsx",
+    "line": 24,
+    "source": "const NativeSecretInput = requireNativeView<NativeSecretInputProps>(\"T3SecretInput\");"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SecretTextInput.tsx",
+    "line": 2,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SegmentedControl.shared.tsx",
+    "line": 2,
+    "source": "import { I18nManager, Platform, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SegmentedControl.shared.tsx",
+    "line": 8,
+    "source": "} from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SegmentedControl.tsx",
+    "line": 1,
+    "source": "import { requireNativeView } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SegmentedControl.tsx",
+    "line": 2,
+    "source": "import { View, type NativeSyntheticEvent, type ViewProps } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SegmentedControl.tsx",
+    "line": 11,
+    "source": "const NativeSegmentedControl = requireNativeView<"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SelectionRow.tsx",
+    "line": 2,
+    "source": "import { Platform, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/Sheet.android.tsx",
+    "line": 2,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/Sheet.android.tsx",
+    "line": 3,
+    "source": "import { FormSheet } from \"react-native-screens\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/Sheet.tsx",
+    "line": 2,
+    "source": "import { Platform, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/Sheet.tsx",
+    "line": 3,
+    "source": "import { FormSheet, ScreenStack } from \"react-native-screens\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SheetHeader.android.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SheetHeader.tsx",
+    "line": 1,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SheetIntro.android.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SheetIntro.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SheetPane.android.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SheetPane.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SliderRow.android.tsx",
+    "line": 3,
+    "source": "import * as Haptics from \"expo-haptics\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SliderRow.android.tsx",
+    "line": 5,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SliderRow.tsx",
+    "line": 8,
+    "source": "import * as Haptics from \"expo-haptics\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SliderRow.tsx",
+    "line": 10,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SplitButton.android.tsx",
+    "line": 21,
+    "source": "import { Pressable } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/SplitButton.tsx",
+    "line": 1,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/ThemedSwitch.tsx",
+    "line": 1,
+    "source": "import { Platform, Switch } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/Toast.tsx",
+    "line": 4,
+    "source": "import { AccessibilityInfo, Platform, StyleSheet, View, useWindowDimensions } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/Toast.tsx",
+    "line": 5,
+    "source": "import { GestureDetector, usePanGesture } from \"react-native-gesture-handler\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/Toast.tsx",
+    "line": 16,
+    "source": "} from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/Toolbar.tsx",
+    "line": 1,
+    "source": "import { GlassContainer } from \"expo-glass-effect\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/VideoPreviewModal.android.tsx",
+    "line": 3,
+    "source": "import { Modal, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/VideoPreviewModal.android.tsx",
+    "line": 4,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/VideoPreviewModal.tsx",
+    "line": 2,
+    "source": "import { requireNativeModule } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/VideoPreviewModal.tsx",
+    "line": 22,
+    "source": "const NativeControls = requireNativeModule<{"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/WorkspaceAppBar.android.tsx",
+    "line": 12,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/useAndroidControlSizing.ts",
+    "line": 1,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/useBarInset.ts",
+    "line": 3,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/useBarInset.ts",
+    "line": 9,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/useToolbarLayout.ts",
+    "line": 1,
+    "source": "import { useWindowDimensions } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/components/ui/useToolbarLayout.ts",
+    "line": 2,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/connection/background-activity.ts",
+    "line": 17,
+    "source": "import { AppState } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/connection/platform.ts",
+    "line": 16,
+    "source": "import Constants from \"expo-constants\";"
+  },
+  {
+    "file": "apps/mobile/src/connection/platform.ts",
+    "line": 17,
+    "source": "import * as Network from \"expo-network\";"
+  },
+  {
+    "file": "apps/mobile/src/connection/platform.ts",
+    "line": 18,
+    "source": "import { AppState } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/agent-awareness/agentLiveActivity.ts",
+    "line": 1,
+    "source": "import type { LiveActivity } from \"expo-widgets\";"
+  },
+  {
+    "file": "apps/mobile/src/features/agent-awareness/androidNotifications.ts",
+    "line": 1,
+    "source": "import Constants from \"expo-constants\";"
+  },
+  {
+    "file": "apps/mobile/src/features/agent-awareness/androidNotifications.ts",
+    "line": 2,
+    "source": "import { requireOptionalNativeModule } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/features/agent-awareness/androidNotifications.ts",
+    "line": 3,
+    "source": "import { Linking, Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/agent-awareness/capabilities.ts",
+    "line": 1,
+    "source": "import Constants from \"expo-constants\";"
+  },
+  {
+    "file": "apps/mobile/src/features/agent-awareness/capabilities.ts",
+    "line": 2,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/agent-awareness/foregroundNotificationBehavior.ts",
+    "line": 1,
+    "source": "import type { Notification, NotificationBehavior } from \"expo-notifications\";"
+  },
+  {
+    "file": "apps/mobile/src/features/agent-awareness/notificationNavigation.ts",
+    "line": 1,
+    "source": "import * as Notifications from \"expo-notifications\";"
+  },
+  {
+    "file": "apps/mobile/src/features/agent-awareness/notificationPermissions.ts",
+    "line": 1,
+    "source": "import * as Notifications from \"expo-notifications\";"
+  },
+  {
+    "file": "apps/mobile/src/features/agent-awareness/notificationPermissions.ts",
+    "line": 4,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/agent-awareness/notificationResponseConsumer.ts",
+    "line": 1,
+    "source": "import type { NotificationResponse } from \"expo-notifications\";"
+  },
+  {
+    "file": "apps/mobile/src/features/agent-awareness/remoteRegistration.ts",
+    "line": 1,
+    "source": "import { type LiveActivity } from \"expo-widgets\";"
+  },
+  {
+    "file": "apps/mobile/src/features/agent-awareness/remoteRegistration.ts",
+    "line": 6,
+    "source": "import Constants from \"expo-constants\";"
+  },
+  {
+    "file": "apps/mobile/src/features/agent-awareness/remoteRegistration.ts",
+    "line": 7,
+    "source": "import * as Notifications from \"expo-notifications\";"
+  },
+  {
+    "file": "apps/mobile/src/features/agent-awareness/remoteRegistration.ts",
+    "line": 12,
+    "source": "import { AppState, Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/archive/ArchivedThreadsScreen.tsx",
+    "line": 19,
+    "source": "import { useWindowDimensions, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/archive/ArchivedThreadsScreen.tsx",
+    "line": 21,
+    "source": "import { GestureDetector, useNativeGesture } from \"react-native-gesture-handler\";"
+  },
+  {
+    "file": "apps/mobile/src/features/archive/ArchivedThreadsScreen.tsx",
+    "line": 22,
+    "source": "import type { SwipeableMethods } from \"react-native-gesture-handler/ReanimatedSwipeable\";"
+  },
+  {
+    "file": "apps/mobile/src/features/browser/BrowserPreviewRouteScreen.tsx",
+    "line": 9,
+    "source": "import { Platform, TextInput, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/browser/BrowserPreviewRouteScreen.tsx",
+    "line": 10,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/browser/PreviewStreamWebView.tsx",
+    "line": 4,
+    "source": "import previewStreamScript from \"@t3tools/mobile-preview-stream\";"
+  },
+  {
+    "file": "apps/mobile/src/features/browser/PreviewStreamWebView.tsx",
+    "line": 22,
+    "source": "import { Platform, Pressable, TextInput, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/browser/PreviewStreamWebView.tsx",
+    "line": 23,
+    "source": "import { WebView } from \"react-native-webview\";"
+  },
+  {
+    "file": "apps/mobile/src/features/browser/PreviewStreamWebView.tsx",
+    "line": 24,
+    "source": "import * as Clipboard from \"expo-clipboard\";"
+  },
+  {
+    "file": "apps/mobile/src/features/browser/PreviewStreamWebView.tsx",
+    "line": 68,
+    "source": "const { getDocumentAsync } = await import(\"expo-document-picker\");"
+  },
+  {
+    "file": "apps/mobile/src/features/browser/ThreadBrowserFloat.tsx",
+    "line": 6,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/browser/ThreadBrowserFloat.tsx",
+    "line": 7,
+    "source": "import Animated, { FadeIn, FadeOut, ReduceMotion } from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/browser/browser-preview-button.tsx",
+    "line": 1,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/cloud/CloudAuthProvider.tsx",
+    "line": 1,
+    "source": "import { ClerkProvider, getClerkInstance } from \"@clerk/expo\";"
+  },
+  {
+    "file": "apps/mobile/src/features/cloud/CloudAuthProvider.tsx",
+    "line": 2,
+    "source": "import { tokenCache } from \"@clerk/expo/token-cache\";"
+  },
+  {
+    "file": "apps/mobile/src/features/cloud/ConnectOnboardingRouteScreen.tsx",
+    "line": 5,
+    "source": "import { useAuth } from \"@clerk/expo\";"
+  },
+  {
+    "file": "apps/mobile/src/features/cloud/ConnectOnboardingRouteScreen.tsx",
+    "line": 8,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/cloud/ConnectOnboardingRouteScreen.tsx",
+    "line": 10,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/cloud/T3ConnectProfilePage.tsx",
+    "line": 10,
+    "source": "import { Pressable, ScrollView, Text, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/cloud/cloudAccountService.ts",
+    "line": 1,
+    "source": "import type { getClerkInstance } from \"@clerk/expo\";"
+  },
+  {
+    "file": "apps/mobile/src/features/cloud/dpop.testing.ts",
+    "line": 14,
+    "source": "* Return it from a mocked `expo` `requireNativeModule`."
+  },
+  {
+    "file": "apps/mobile/src/features/cloud/dpop.ts",
+    "line": 8,
+    "source": "import * as ExpoCrypto from \"expo-crypto\";"
+  },
+  {
+    "file": "apps/mobile/src/features/cloud/dpop.ts",
+    "line": 9,
+    "source": "import * as SecureStore from \"expo-secure-store\";"
+  },
+  {
+    "file": "apps/mobile/src/features/cloud/dpop.ts",
+    "line": 88,
+    "source": "(await import(\"expo\")).requireNativeModule<NativeDpopKeys>(\"T3NativeControls\");"
+  },
+  {
+    "file": "apps/mobile/src/features/cloud/managedRelayTokenStore.ts",
+    "line": 4,
+    "source": "import * as SecureStore from \"expo-secure-store\";"
+  },
+  {
+    "file": "apps/mobile/src/features/cloud/publicConfig.ts",
+    "line": 1,
+    "source": "import Constants from \"expo-constants\";"
+  },
+  {
+    "file": "apps/mobile/src/features/connection/CloudEnvironmentRows.tsx",
+    "line": 4,
+    "source": "import { useAuth } from \"@clerk/expo\";"
+  },
+  {
+    "file": "apps/mobile/src/features/connection/CloudEnvironmentRows.tsx",
+    "line": 18,
+    "source": "import { Pressable, type TextLayoutEvent, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/connection/ConnectionDiagnosisDetails.tsx",
+    "line": 12,
+    "source": "import Constants from \"expo-constants\";"
+  },
+  {
+    "file": "apps/mobile/src/features/connection/ConnectionDiagnosisDetails.tsx",
+    "line": 14,
+    "source": "import { Linking, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/connection/ConnectionEnvironmentRow.tsx",
+    "line": 11,
+    "source": "import { Platform, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/connection/ConnectionEnvironmentRow.tsx",
+    "line": 12,
+    "source": "import Animated, { FadeIn, FadeOut, LinearTransition } from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/connection/ConnectionFormField.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/connection/ConnectionStatusDot.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/connection/ConnectionsNewRouteScreen.tsx",
+    "line": 4,
+    "source": "import { useAuth } from \"@clerk/expo\";"
+  },
+  {
+    "file": "apps/mobile/src/features/connection/ConnectionsNewRouteScreen.tsx",
+    "line": 5,
+    "source": "import { CameraView, useCameraPermissions } from \"expo-camera\";"
+  },
+  {
+    "file": "apps/mobile/src/features/connection/ConnectionsNewRouteScreen.tsx",
+    "line": 6,
+    "source": "import * as Haptics from \"expo-haptics\";"
+  },
+  {
+    "file": "apps/mobile/src/features/connection/ConnectionsNewRouteScreen.tsx",
+    "line": 16,
+    "source": "import { Linking, Pressable, StyleSheet, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/connection/ConnectionsNewRouteScreen.tsx",
+    "line": 17,
+    "source": "import Svg, { Defs, RadialGradient, Rect, Stop } from \"react-native-svg\";"
+  },
+  {
+    "file": "apps/mobile/src/features/connection/ConnectionsNewRouteScreen.tsx",
+    "line": 18,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/connection/ConnectionsRouteScreen.tsx",
+    "line": 6,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/connection/ConnectionsRouteScreen.tsx",
+    "line": 7,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/connection/EnvironmentConnectionNotice.tsx",
+    "line": 9,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/connection/LinkedEnvironmentsSection.tsx",
+    "line": 8,
+    "source": "import { AppState, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/connection/LocalEnvironmentList.tsx",
+    "line": 3,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/connection/PullRequestRoutingSettings.tsx",
+    "line": 11,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/connection/permissionUpdateNotice.ts",
+    "line": 4,
+    "source": "import * as SecureStore from \"expo-secure-store\";"
+  },
+  {
+    "file": "apps/mobile/src/features/development/ComponentCatalogScreen.tsx",
+    "line": 6,
+    "source": "import { View, type TextInputInstance } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/development/ComponentCatalogScreen.tsx",
+    "line": 7,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/development/NativeAppBarExample.android.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/development/behavior-probe.ts",
+    "line": 279,
+    "source": "const { Linking } = require(\"react-native\") as typeof import(\"react-native\");"
+  },
+  {
+    "file": "apps/mobile/src/features/development/behavior-probe.ts",
+    "line": 285,
+    "source": "const { DevSettings } = require(\"react-native\") as typeof import(\"react-native\");"
+  },
+  {
+    "file": "apps/mobile/src/features/development/behavior-probe.ts",
+    "line": 315,
+    "source": "require(\"react-native-worklets\") as typeof import(\"react-native-worklets\");"
+  },
+  {
+    "file": "apps/mobile/src/features/development/behavior-probe.ts",
+    "line": 327,
+    "source": "require(\"react-native-worklets\") as typeof import(\"react-native-worklets\");"
+  },
+  {
+    "file": "apps/mobile/src/features/development/render-counter.ts",
+    "line": 140,
+    "source": "const { Linking } = require(\"react-native\") as typeof import(\"react-native\");"
+  },
+  {
+    "file": "apps/mobile/src/features/development/render-counter.ts",
+    "line": 146,
+    "source": "const { DevSettings } = require(\"react-native\") as typeof import(\"react-native\");"
+  },
+  {
+    "file": "apps/mobile/src/features/devices/DevicePreviewRouteScreen.tsx",
+    "line": 13,
+    "source": "import * as Haptics from \"expo-haptics\";"
+  },
+  {
+    "file": "apps/mobile/src/features/devices/DevicePreviewRouteScreen.tsx",
+    "line": 14,
+    "source": "import { Accelerometer } from \"expo-sensors\";"
+  },
+  {
+    "file": "apps/mobile/src/features/devices/DevicePreviewRouteScreen.tsx",
+    "line": 15,
+    "source": "import { Pressable, StatusBar, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/devices/DevicePreviewRouteScreen.tsx",
+    "line": 16,
+    "source": "import Animated, { FadeIn, FadeOut, ReduceMotion } from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/devices/DevicePreviewRouteScreen.tsx",
+    "line": 17,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/devices/DeviceStreamWebView.tsx",
+    "line": 2,
+    "source": "import deviceStreamScript from \"@t3tools/mobile-device-stream\";"
+  },
+  {
+    "file": "apps/mobile/src/features/devices/DeviceStreamWebView.tsx",
+    "line": 11,
+    "source": "import { Platform, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/devices/DeviceStreamWebView.tsx",
+    "line": 12,
+    "source": "import { WebView } from \"react-native-webview\";"
+  },
+  {
+    "file": "apps/mobile/src/features/devices/device-preview-button.tsx",
+    "line": 1,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/devices/device-stream-document.ts",
+    "line": 3,
+    "source": "import type { PlatformOSType } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/diagnostics/SettingsDiagnosticsRouteScreen.tsx",
+    "line": 3,
+    "source": "import * as Application from \"expo-application\";"
+  },
+  {
+    "file": "apps/mobile/src/features/diagnostics/SettingsDiagnosticsRouteScreen.tsx",
+    "line": 4,
+    "source": "import Constants from \"expo-constants\";"
+  },
+  {
+    "file": "apps/mobile/src/features/diagnostics/SettingsDiagnosticsRouteScreen.tsx",
+    "line": 5,
+    "source": "import * as Updates from \"expo-updates\";"
+  },
+  {
+    "file": "apps/mobile/src/features/diagnostics/SettingsDiagnosticsRouteScreen.tsx",
+    "line": 12,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/diagnostics/SettingsDiagnosticsRouteScreen.tsx",
+    "line": 13,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/diffs/nativeReviewDiffSurface.ts",
+    "line": 11,
+    "source": "import { View, type NativeSyntheticEvent, type ViewProps } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/diffs/nativeReviewDiffSurface.ts",
+    "line": 12,
+    "source": "import { requireNativeView } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/features/diffs/nativeReviewDiffSurface.ts",
+    "line": 437,
+    "source": "cachedNativeReviewDiffRawView = requireNativeView<NativeReviewDiffRawViewProps>("
+  },
+  {
+    "file": "apps/mobile/src/features/diffs/nativeReviewDiffTrace.ts",
+    "line": 8,
+    "source": "let fileSink: Promise<import(\"expo-file-system\").File | null> | undefined;"
+  },
+  {
+    "file": "apps/mobile/src/features/diffs/nativeReviewDiffTrace.ts",
+    "line": 18,
+    "source": "fileSink ??= import(\"expo-file-system\")"
+  },
+  {
+    "file": "apps/mobile/src/features/files/AttachmentDocumentBody.tsx",
+    "line": 2,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/files/AttachmentFileScreen.tsx",
+    "line": 9,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/files/AudioFilePreview.tsx",
+    "line": 2,
+    "source": "import { useAudioPlayerStatus } from \"expo-audio\";"
+  },
+  {
+    "file": "apps/mobile/src/features/files/AudioFilePreview.tsx",
+    "line": 4,
+    "source": "import { AppState, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/files/DelimitedFilePreview.tsx",
+    "line": 2,
+    "source": "import { ScrollView, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/files/FileMarkdownPreview.tsx",
+    "line": 8,
+    "source": "import { ScrollView, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/files/FilePreviewFeedback.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/files/FileTreeBrowser.tsx",
+    "line": 8,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/files/SourceFileSurface.tsx",
+    "line": 14,
+    "source": "} from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/files/SourceFileSurface.tsx",
+    "line": 17,
+    "source": "import { WebView } from \"react-native-webview\";"
+  },
+  {
+    "file": "apps/mobile/src/features/files/SourceFileSurface.tsx",
+    "line": 18,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/files/SourceFileSurface.tsx",
+    "line": 39,
+    "source": "import { SourceText } from \"@t3tools/mobile-source-text\";"
+  },
+  {
+    "file": "apps/mobile/src/features/files/ThreadFilesRouteScreen.tsx",
+    "line": 12,
+    "source": "import { Platform, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/files/ThreadFilesRouteScreen.tsx",
+    "line": 13,
+    "source": "import Svg, { Defs, LinearGradient, Rect, Stop } from \"react-native-svg\";"
+  },
+  {
+    "file": "apps/mobile/src/features/files/WorkspaceFileImagePreview.tsx",
+    "line": 2,
+    "source": "import { Image, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/files/WorkspaceFilePreviewError.tsx",
+    "line": 2,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/files/WorkspaceFileVideoPreview.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/files/WorkspaceFileWebPreview.tsx",
+    "line": 2,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/files/WorkspaceFileWebPreview.tsx",
+    "line": 3,
+    "source": "import { WebView } from \"react-native-webview\";"
+  },
+  {
+    "file": "apps/mobile/src/features/files/WorkspaceFileWebPreview.tsx",
+    "line": 4,
+    "source": "import { SafeAreaView } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/files/ZipArchiveView.tsx",
+    "line": 16,
+    "source": "import { fetch } from \"expo/fetch\";"
+  },
+  {
+    "file": "apps/mobile/src/features/files/ZipArchiveView.tsx",
+    "line": 17,
+    "source": "import { File } from \"expo-file-system\";"
+  },
+  {
+    "file": "apps/mobile/src/features/files/ZipArchiveView.tsx",
+    "line": 20,
+    "source": "import { Keyboard, Pressable, ScrollView, TextInput, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/home/AndroidHomeFab.android.tsx",
+    "line": 7,
+    "source": "} from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/home/AndroidHomeFab.android.tsx",
+    "line": 8,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/home/FabScrollContext.ts",
+    "line": 2,
+    "source": "import type { NativeScrollEvent, NativeSyntheticEvent } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/home/HomeRouteScreen.tsx",
+    "line": 7,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/home/HomeScreen.tsx",
+    "line": 37,
+    "source": "} from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/home/HomeScreen.tsx",
+    "line": 39,
+    "source": "import { GestureDetector, useNativeGesture } from \"react-native-gesture-handler\";"
+  },
+  {
+    "file": "apps/mobile/src/features/home/HomeScreen.tsx",
+    "line": 40,
+    "source": "import type { SwipeableMethods } from \"react-native-gesture-handler/ReanimatedSwipeable\";"
+  },
+  {
+    "file": "apps/mobile/src/features/home/HomeScreen.tsx",
+    "line": 41,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/home/ThreadListFilters.tsx",
+    "line": 1,
+    "source": "import { Pressable, ScrollView } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/home/ThreadUndoNotice.tsx",
+    "line": 3,
+    "source": "import { useKeyboardState } from \"react-native-keyboard-controller\";"
+  },
+  {
+    "file": "apps/mobile/src/features/home/ThreadUndoNotice.tsx",
+    "line": 4,
+    "source": "import { Platform, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/home/ThreadUndoNotice.tsx",
+    "line": 5,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/home/WorkspaceConnectionTitle.tsx",
+    "line": 2,
+    "source": "import { Animated, Platform, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/home/thread-swipe-actions.tsx",
+    "line": 4,
+    "source": "import * as Haptics from \"expo-haptics\";"
+  },
+  {
+    "file": "apps/mobile/src/features/home/thread-swipe-actions.tsx",
+    "line": 23,
+    "source": "} from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/home/thread-swipe-actions.tsx",
+    "line": 24,
+    "source": "import { Platform, Pressable, View, useWindowDimensions } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/home/thread-swipe-actions.tsx",
+    "line": 27,
+    "source": "} from \"react-native-gesture-handler/ReanimatedSwipeable\";"
+  },
+  {
+    "file": "apps/mobile/src/features/home/thread-swipe-actions.tsx",
+    "line": 41,
+    "source": "} from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/home/useThreadListActions.ts",
+    "line": 8,
+    "source": "import * as Haptics from \"expo-haptics\";"
+  },
+  {
+    "file": "apps/mobile/src/features/keyboard/CommandPalette.tsx",
+    "line": 32,
+    "source": "} from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/keyboard/CommandPalette.tsx",
+    "line": 34,
+    "source": "import { GestureHandlerRootView } from \"react-native-gesture-handler\";"
+  },
+  {
+    "file": "apps/mobile/src/features/keyboard/HardwareKeyboardCommandProvider.tsx",
+    "line": 2,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/keyboard/useSoftKeyboardShowing.ts",
+    "line": 2,
+    "source": "import { KeyboardController, KeyboardEvents } from \"react-native-keyboard-controller\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/AdaptiveWorkspaceLayout.tsx",
+    "line": 6,
+    "source": "import { SafeAreaInsetsContext, useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/AdaptiveWorkspaceLayout.tsx",
+    "line": 36,
+    "source": "} from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/AdaptiveWorkspaceLayout.tsx",
+    "line": 43,
+    "source": "} from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/WorkspaceEmptyDetail.tsx",
+    "line": 2,
+    "source": "import { Platform, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/createWorkspaceStackNavigator.ios.tsx",
+    "line": 31,
+    "source": "import { StyleSheet, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/createWorkspaceStackNavigator.ios.tsx",
+    "line": 32,
+    "source": "import { Split, type SplitHostCommands } from \"react-native-screens\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/createWorkspaceStackNavigator.ios.tsx",
+    "line": 33,
+    "source": "import { SafeAreaView } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/createWorkspaceStackNavigator.ios.tsx",
+    "line": 34,
+    "source": "import { GestureHandlerRootView } from \"react-native-gesture-handler\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/inspector-host.android.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/inspector-host.tsx",
+    "line": 2,
+    "source": "import { Split, Stack } from \"react-native-screens\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/native-mail-search-toolbar.ts",
+    "line": 1,
+    "source": "import type { HeaderBarButtonMailSearchToolbarItem } from \"react-native-screens\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/nested-stacks.tsx",
+    "line": 3,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/route-options.ts",
+    "line": 1,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/useOpenWorkspaceDetail.ts",
+    "line": 2,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace-content-width.ts",
+    "line": 2,
+    "source": "import type { SharedValue } from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace-inspector-pane.tsx",
+    "line": 10,
+    "source": "} from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace-inspector-sheet.tsx",
+    "line": 2,
+    "source": "import { SafeAreaInsetsContext, useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace-pane-animation.ts",
+    "line": 1,
+    "source": "import { Easing, ReduceMotion } from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace-pane-divider.tsx",
+    "line": 2,
+    "source": "import { Platform, Pressable, StyleSheet, View, type AccessibilityActionEvent } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace-pane-divider.tsx",
+    "line": 3,
+    "source": "import { Gesture, GestureDetector } from \"react-native-gesture-handler\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace-pane-divider.tsx",
+    "line": 4,
+    "source": "import { runOnJS } from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/AndroidWorkspaceNavigation.android.tsx",
+    "line": 2,
+    "source": "import { requireNativeView } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/AndroidWorkspaceNavigation.android.tsx",
+    "line": 11,
+    "source": "} from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/AndroidWorkspaceNavigation.android.tsx",
+    "line": 12,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/AndroidWorkspaceNavigation.android.tsx",
+    "line": 58,
+    "source": "const NativeNavigation = requireNativeView<NativeNavigationProps>(\"T3WorkspaceNavigation\");"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/AndroidWorkspaceSidebar.android.tsx",
+    "line": 6,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/AndroidWorkspaceSidebar.android.tsx",
+    "line": 9,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/AndroidWorkspaceTabsProvider.tsx",
+    "line": 3,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/ListFilterMenu.tsx",
+    "line": 1,
+    "source": "import { Pressable } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/PullRequestToolbar.android.tsx",
+    "line": 3,
+    "source": "import { BackHandler, Keyboard } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/WorkspaceListEmptyDetail.tsx",
+    "line": 1,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/WorkspaceListHeader.android.tsx",
+    "line": 3,
+    "source": "import { BackHandler, Keyboard } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/WorkspaceListHeader.tsx",
+    "line": 2,
+    "source": "import type { SearchBarCommands } from \"react-native-screens\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/WorkspaceNativeTabs.ios.tsx",
+    "line": 15,
+    "source": "import { View, useWindowDimensions, type NativeSyntheticEvent } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/WorkspaceNativeTabs.ios.tsx",
+    "line": 21,
+    "source": "} from \"react-native-screens\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/WorkspaceNoTabs.tsx",
+    "line": 2,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/WorkspaceRootScreen.android.tsx",
+    "line": 7,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/WorkspaceRootScreen.android.tsx",
+    "line": 8,
+    "source": "import { SafeAreaInsetsContext, useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/WorkspaceRootScreen.tsx",
+    "line": 8,
+    "source": "import { View, useWindowDimensions } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/WorkspaceRootScreen.tsx",
+    "line": 9,
+    "source": "import { useKeyboardState } from \"react-native-keyboard-controller\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/WorkspaceRootScreen.tsx",
+    "line": 10,
+    "source": "import { SafeAreaInsetsContext, useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/WorkspaceSidebarColumn.tsx",
+    "line": 2,
+    "source": "import { StyleSheet, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/WorkspaceSidebarTabs.ios.tsx",
+    "line": 2,
+    "source": "import { requireNativeView } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/WorkspaceSidebarTabs.ios.tsx",
+    "line": 3,
+    "source": "import type { NativeSyntheticEvent, ViewProps } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/WorkspaceSidebarTabs.ios.tsx",
+    "line": 9,
+    "source": "const NativeSidebarTabBar = requireNativeView<"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/WorkspaceTabPanes.tsx",
+    "line": 2,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/WorkspaceToolbar.tsx",
+    "line": 9,
+    "source": "import type { SearchBarCommands } from \"react-native-screens\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/brand-header-options.tsx",
+    "line": 2,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/navigation-tabs.ts",
+    "line": 3,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/useAndroidWorkspaceNavigation.ts",
+    "line": 3,
+    "source": "import { BackHandler, Keyboard, Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/useSelectWorkspaceTab.ts",
+    "line": 1,
+    "source": "import { Keyboard } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/useSystemWorkspaceTabBar.ts",
+    "line": 2,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/workspace-list-insets.ts",
+    "line": 1,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/workspace-selection-store.ts",
+    "line": 3,
+    "source": "import * as Linking from \"expo-linking\";"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/workspace-selection-store.ts",
+    "line": 4,
+    "source": "import { AppState, Dimensions, Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/observability/observe.ts",
+    "line": 1,
+    "source": "import Constants from \"expo-constants\";"
+  },
+  {
+    "file": "apps/mobile/src/features/observability/observe.ts",
+    "line": 2,
+    "source": "import { Observe } from \"expo-observe\";"
+  },
+  {
+    "file": "apps/mobile/src/features/observability/tracing.ts",
+    "line": 1,
+    "source": "import Constants from \"expo-constants\";"
+  },
+  {
+    "file": "apps/mobile/src/features/projects/AddProjectScreen.tsx",
+    "line": 72,
+    "source": "import { Platform, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/projects/AddProjectScreen.tsx",
+    "line": 73,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/projects/SourceControlIcon.tsx",
+    "line": 3,
+    "source": "import Svg, { Defs, LinearGradient, Path, Stop } from \"react-native-svg\";"
+  },
+  {
+    "file": "apps/mobile/src/features/projects/suggestAppAccess.ts",
+    "line": 8,
+    "source": "import { Linking } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestActivityFilters.tsx",
+    "line": 1,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestCompletionSuggestions.tsx",
+    "line": 1,
+    "source": "import { Pressable, ScrollView, StyleSheet, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestControls.tsx",
+    "line": 2,
+    "source": "import Animated from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestControls.tsx",
+    "line": 8,
+    "source": "import { Platform, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestControls.tsx",
+    "line": 9,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestDescription.tsx",
+    "line": 9,
+    "source": "import { Platform, Pressable, ScrollView, StyleSheet, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestDescription.tsx",
+    "line": 10,
+    "source": "import Svg, { Defs, LinearGradient, Rect, Stop } from \"react-native-svg\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestDiscussionScreen.tsx",
+    "line": 16,
+    "source": "import { ScrollView, View, type ScrollViewInstance } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestDiscussionScreen.tsx",
+    "line": 17,
+    "source": "import { KeyboardAvoidingView, useKeyboardState } from \"react-native-keyboard-controller\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestDiscussionScreen.tsx",
+    "line": 19,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestEntryRow.tsx",
+    "line": 2,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestFiles.tsx",
+    "line": 7,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestFiles.tsx",
+    "line": 8,
+    "source": "import Animated from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestFilterSearchScreen.tsx",
+    "line": 14,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestInlineCommentScreen.tsx",
+    "line": 6,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestLabelDot.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestLabelsScreen.tsx",
+    "line": 9,
+    "source": "import { Platform, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestListFilters.tsx",
+    "line": 5,
+    "source": "import { Platform, ScrollView } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestListRow.tsx",
+    "line": 6,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestMarkdown.tsx",
+    "line": 7,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestMedia.tsx",
+    "line": 9,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestMedia.tsx",
+    "line": 10,
+    "source": "import { Image } from \"expo-image\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestMergeControls.tsx",
+    "line": 9,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestOverviewLoading.tsx",
+    "line": 4,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestPresentation.tsx",
+    "line": 5,
+    "source": "import { Image } from \"expo-image\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestPresentation.tsx",
+    "line": 6,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestReactions.tsx",
+    "line": 17,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestReviewSheet.tsx",
+    "line": 9,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestReviewersScreen.tsx",
+    "line": 17,
+    "source": "import { Pressable, ScrollView, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestRouteScreen.tsx",
+    "line": 20,
+    "source": "import Animated from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestRouteScreen.tsx",
+    "line": 33,
+    "source": "import * as Clipboard from \"expo-clipboard\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestRouteScreen.tsx",
+    "line": 62,
+    "source": "import { Linking, Platform, Pressable, StyleSheet, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestRouteScreen.tsx",
+    "line": 65,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestSearchSheet.tsx",
+    "line": 3,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestSheetContent.tsx",
+    "line": 4,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestStackCard.tsx",
+    "line": 3,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestStatusRows.tsx",
+    "line": 10,
+    "source": "import Animated from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestStatusRows.tsx",
+    "line": 13,
+    "source": "import { Linking, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestTimeline.tsx",
+    "line": 6,
+    "source": "import Svg, { Defs, LinearGradient, Rect, Stop } from \"react-native-svg\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestTimeline.tsx",
+    "line": 16,
+    "source": "import { Pressable, StyleSheet, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestsScreen.tsx",
+    "line": 12,
+    "source": "import { Keyboard, Platform, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/PullRequestsScreen.tsx",
+    "line": 15,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/SourceControlAppAccessNotice.tsx",
+    "line": 6,
+    "source": "import { Linking, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/guide/GuideNotice.tsx",
+    "line": 2,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/guide/GuideNotice.tsx",
+    "line": 3,
+    "source": "import Animated, { FadeIn, ReduceMotion } from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/guide/GuideOutline.tsx",
+    "line": 4,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/guide/PullRequestGuideScreen.tsx",
+    "line": 6,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/guide/PullRequestGuideScreen.tsx",
+    "line": 8,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/guide/PullRequestGuideScreen.tsx",
+    "line": 25,
+    "source": "import Animated from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/guide/ReviewGuideExcerpt.tsx",
+    "line": 2,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/pullRequestAnimations.ts",
+    "line": 8,
+    "source": "} from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/pullRequestLink.ts",
+    "line": 2,
+    "source": "import { Platform, Share } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/usePullRequestAgentActions.ts",
+    "line": 1,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/usePullRequestCompletions.ts",
+    "line": 12,
+    "source": "import type { TextInputSelectionChangeEvent } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/usePullRequestListActions.ts",
+    "line": 11,
+    "source": "import { Linking } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/usePullRequestReviewDraft.ts",
+    "line": 3,
+    "source": "import { AppState } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/usePullRequestReviewDraft.ts",
+    "line": 28,
+    "source": "const { Directory, File, Paths } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/features/review/ReviewCommentCard.tsx",
+    "line": 3,
+    "source": "import { ScrollView, StyleSheet, Text as NativeText, View, type ColorValue } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/review/ReviewCommentComposerSheet.tsx",
+    "line": 2,
+    "source": "import { TextInputWrapper } from \"expo-paste-input\";"
+  },
+  {
+    "file": "apps/mobile/src/features/review/ReviewCommentComposerSheet.tsx",
+    "line": 5,
+    "source": "import { ScrollView, View, useWindowDimensions } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/review/ReviewSheet.tsx",
+    "line": 12,
+    "source": "import { Pressable, ScrollView, type NativeSyntheticEvent, StyleSheet, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/review/ReviewSheet.tsx",
+    "line": 14,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/review/reviewDiffRendering.tsx",
+    "line": 1,
+    "source": "import { Platform, Text as NativeText, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/review/useNativeReviewDiffBridge.ts",
+    "line": 2,
+    "source": "import type { NativeSyntheticEvent } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/review/useReviewCommentSelectionController.ts",
+    "line": 2,
+    "source": "import type { NativeSyntheticEvent } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ClaudeAccounts.tsx",
+    "line": 13,
+    "source": "import { TextInput, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 22,
+    "source": "import Constants from \"expo-constants\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 25,
+    "source": "import { ScrollView, TextInput, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/EnvironmentRoutesSection.tsx",
+    "line": 23,
+    "source": "import { Platform, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/EnvironmentRoutesSection.tsx",
+    "line": 24,
+    "source": "import Reanimated, { ReduceMotion, useAnimatedStyle, withTiming } from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/OutdatedServerUpdateSection.tsx",
+    "line": 6,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ScheduledTaskPickerScreens.tsx",
+    "line": 5,
+    "source": "import * as Haptics from \"expo-haptics\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ScheduledTaskPickerScreens.tsx",
+    "line": 7,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ScheduledTaskPickerScreens.tsx",
+    "line": 8,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsAboutRouteScreen.tsx",
+    "line": 3,
+    "source": "import Constants from \"expo-constants\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsAboutRouteScreen.tsx",
+    "line": 6,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsAboutRouteScreen.tsx",
+    "line": 7,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsAppearanceRouteScreen.tsx",
+    "line": 1,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsAppearanceRouteScreen.tsx",
+    "line": 4,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsAuthRouteScreen.tsx",
+    "line": 1,
+    "source": "import { useAuth } from \"@clerk/expo\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsAuthRouteScreen.tsx",
+    "line": 6,
+    "source": "} from \"@clerk/expo/native-components\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsAuthRouteScreen.tsx",
+    "line": 9,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsClientStorageRouteScreen.tsx",
+    "line": 8,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsClientStorageRouteScreen.tsx",
+    "line": 9,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+    "line": 17,
+    "source": "import { Linking, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+    "line": 18,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentsRouteScreen.tsx",
+    "line": 8,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsFollowUpRouteScreen.tsx",
+    "line": 4,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsFollowUpRouteScreen.tsx",
+    "line": 5,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsKeyboardRouteScreen.tsx",
+    "line": 4,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsKeyboardRouteScreen.tsx",
+    "line": 5,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsLanguageRouteScreen.tsx",
+    "line": 4,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNavigationRouteScreen.tsx",
+    "line": 4,
+    "source": "import { Platform, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNavigationRouteScreen.tsx",
+    "line": 5,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 11,
+    "source": "import { useAuth } from \"@clerk/expo\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 13,
+    "source": "import * as Notifications from \"expo-notifications\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 18,
+    "source": "import { Linking, Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 19,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsOpenSourceLicensesRouteScreen.tsx",
+    "line": 14,
+    "source": "import { Linking, Platform, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsOpenSourceLicensesRouteScreen.tsx",
+    "line": 15,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectGroupingRouteScreen.tsx",
+    "line": 5,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 19,
+    "source": "import { Platform, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 20,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 15,
+    "source": "import { Linking, Pressable, ScrollView, TextInput, useWindowDimensions, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 16,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 17,
+    "source": "import { useAuth, useUser } from \"@clerk/expo\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 20,
+    "source": "import { Platform, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 23,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 45,
+    "source": "import { AppState, Platform, Pressable, TextInput as RNTextInput, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 46,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 17,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 18,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceModelsRouteScreen.tsx",
+    "line": 8,
+    "source": "import { Platform, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 4,
+    "source": "import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from \"expo-audio\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 6,
+    "source": "import { Linking, Platform, useWindowDimensions, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 7,
+    "source": "import Reanimated, { ReduceMotion, useAnimatedStyle, withTiming } from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 8,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsWorkspaceLayout.android.tsx",
+    "line": 3,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 13,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 14,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/VoiceModelSection.tsx",
+    "line": 15,
+    "source": "import { Platform, Text as NativeText, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 2,
+    "source": "import { AppState, Appearance, Platform, useColorScheme } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 4,
+    "source": "import { manufacturer } from \"expo-device\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/components/AppearancePreviews.tsx",
+    "line": 1,
+    "source": "import { Platform, ScrollView, type StyleProp, type TextStyle, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/AndroidNavigationAppearanceSection.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 2,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 3,
+    "source": "import Svg, { Circle, Defs, RadialGradient, Stop } from \"react-native-svg\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ToolCallsAppearanceSection.tsx",
+    "line": 4,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/useScaledTextRole.ts",
+    "line": 1,
+    "source": "import { Platform, useWindowDimensions } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/BranchNamingSettings.tsx",
+    "line": 3,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/ScheduledTaskPromptField.tsx",
+    "line": 1,
+    "source": "import { TextInput, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsDragHandle.tsx",
+    "line": 2,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsDragHandle.tsx",
+    "line": 3,
+    "source": "import { Gesture, GestureDetector } from \"react-native-gesture-handler\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsLegalDocumentRouteScreen.tsx",
+    "line": 4,
+    "source": "import { Linking, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsLegalDocumentRouteScreen.tsx",
+    "line": 5,
+    "source": "import { WebView } from \"react-native-webview\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsProjectOverridesSection.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsRow.tsx",
+    "line": 3,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsScreen.tsx",
+    "line": 3,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsSection.tsx",
+    "line": 2,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SourceControlSignInSection.tsx",
+    "line": 9,
+    "source": "import * as Clipboard from \"expo-clipboard\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SourceControlSignInSection.tsx",
+    "line": 11,
+    "source": "import { Linking } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/useSettingsPageBack.ts",
+    "line": 2,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/sharing/IncomingShareProvider.tsx",
+    "line": 2,
+    "source": "import Constants from \"expo-constants\";"
+  },
+  {
+    "file": "apps/mobile/src/features/sharing/IncomingShareProvider.tsx",
+    "line": 3,
+    "source": "import * as Crypto from \"expo-crypto\";"
+  },
+  {
+    "file": "apps/mobile/src/features/sharing/IncomingShareProvider.tsx",
+    "line": 11,
+    "source": "} from \"expo-sharing\";"
+  },
+  {
+    "file": "apps/mobile/src/features/sharing/IncomingShareProvider.tsx",
+    "line": 13,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/sharing/IncomingShareProvider.tsx",
+    "line": 89,
+    "source": "const { File } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/features/sharing/IncomingShareProvider.tsx",
+    "line": 94,
+    "source": "const { File } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/features/sharing/IncomingShareProvider.tsx",
+    "line": 103,
+    "source": "const { File, Paths } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/features/sharing/incoming-share-inbox.ts",
+    "line": 1,
+    "source": "import type { SharePayload } from \"expo-sharing\";"
+  },
+  {
+    "file": "apps/mobile/src/features/sharing/incoming-share-model.ts",
+    "line": 12,
+    "source": "import type { ResolvedSharePayload, SharePayload } from \"expo-sharing\";"
+  },
+  {
+    "file": "apps/mobile/src/features/sharing/incoming-share-native.ts",
+    "line": 1,
+    "source": "import type { SharePayload } from \"expo-sharing\";"
+  },
+  {
+    "file": "apps/mobile/src/features/sharing/incoming-share-storage.ts",
+    "line": 2,
+    "source": "import type { File } from \"expo-file-system\";"
+  },
+  {
+    "file": "apps/mobile/src/features/sharing/incoming-share-storage.ts",
+    "line": 28,
+    "source": "const { Directory, Paths } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/features/sharing/incoming-share-storage.ts",
+    "line": 35,
+    "source": "const { File } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/features/sharing/incoming-share-storage.ts",
+    "line": 43,
+    "source": "const { File } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/features/sharing/incoming-share-storage.ts",
+    "line": 57,
+    "source": "const { File } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/features/shortcuts/appShortcuts.ts",
+    "line": 1,
+    "source": "import type { Action } from \"expo-quick-actions\";"
+  },
+  {
+    "file": "apps/mobile/src/features/shortcuts/appShortcutsRuntime.ts",
+    "line": 1,
+    "source": "import * as QuickActions from \"expo-quick-actions\";"
+  },
+  {
+    "file": "apps/mobile/src/features/shortcuts/appShortcutsRuntime.ts",
+    "line": 2,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/showcase/ShowcaseCaptureCoordinator.tsx",
+    "line": 2,
+    "source": "import { Appearance, Keyboard, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/showcase/ShowcaseCaptureCoordinator.tsx",
+    "line": 11,
+    "source": "import { requireOptionalNativeModule } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/features/showcase/nativeShowcaseScene.ts",
+    "line": 1,
+    "source": "import { requireOptionalNativeModule } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/features/showcase/stageShowcaseAgentActivity.ts",
+    "line": 1,
+    "source": "import * as Notifications from \"expo-notifications\";"
+  },
+  {
+    "file": "apps/mobile/src/features/showcase/stageShowcaseAgentActivity.ts",
+    "line": 2,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/terminal/NativeTerminalSurface.tsx",
+    "line": 16,
+    "source": "} from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/terminal/TerminalContextSheet.tsx",
+    "line": 10,
+    "source": "import { Pressable, ScrollView, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/terminal/TerminalContextSheet.tsx",
+    "line": 11,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/terminal/ThreadTerminalRouteScreen.tsx",
+    "line": 19,
+    "source": "import { Platform, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/terminal/ThreadTerminalRouteScreen.tsx",
+    "line": 20,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/terminal/ThreadTerminalRouteScreen.tsx",
+    "line": 24,
+    "source": "import * as Clipboard from \"expo-clipboard\";"
+  },
+  {
+    "file": "apps/mobile/src/features/terminal/ThreadTerminalRouteScreen.tsx",
+    "line": 31,
+    "source": "} from \"react-native-keyboard-controller\";"
+  },
+  {
+    "file": "apps/mobile/src/features/terminal/nativeTerminalModule.ts",
+    "line": 2,
+    "source": "import type { NativeSyntheticEvent, ViewProps } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/terminal/nativeTerminalModule.ts",
+    "line": 3,
+    "source": "import { requireNativeView, requireOptionalNativeModule } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/features/terminal/nativeTerminalModule.ts",
+    "line": 80,
+    "source": "cachedNativeTerminalSurfaceView = requireNativeView<NativeTerminalSurfaceProps>("
+  },
+  {
+    "file": "apps/mobile/src/features/terminal/terminalKeyboardShowing.ts",
+    "line": 1,
+    "source": "import { KeyboardController, KeyboardEvents } from \"react-native-keyboard-controller\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/BrowserAppIcon.tsx",
+    "line": 1,
+    "source": "import type { ColorValue } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/BrowserAppIcon.tsx",
+    "line": 2,
+    "source": "import Svg, { Circle, Path } from \"react-native-svg\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ChatGptSharingStatus.tsx",
+    "line": 4,
+    "source": "import { Linking, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ChildThreadApprovals.tsx",
+    "line": 10,
+    "source": "import { ScrollView, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ChildThreadApprovals.tsx",
+    "line": 11,
+    "source": "import Animated, { useAnimatedStyle, type DerivedValue } from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ComposerAttachmentButton.tsx",
+    "line": 2,
+    "source": "import { Pressable } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ComposerCommandPopover.tsx",
+    "line": 15,
+    "source": "import { Pressable, ScrollView, StyleSheet, View, type ViewStyle } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ComposerErrorNotice.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ComposerFeedback.tsx",
+    "line": 6,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ComposerPopoverAnchor.android.tsx",
+    "line": 3,
+    "source": "import { View, type ViewInstance } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ComposerPopoverAnchor.tsx",
+    "line": 3,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ComposerPopoverHost.tsx",
+    "line": 3,
+    "source": "import { View, type ViewInstance } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ComposerPopoverHost.tsx",
+    "line": 4,
+    "source": "import type { SharedValue } from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ComposerQueuedEdit.tsx",
+    "line": 3,
+    "source": "import { Image } from \"expo-image\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ComposerQueuedEdit.tsx",
+    "line": 4,
+    "source": "import { Pressable, ScrollView, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ComposerUsageLimits.tsx",
+    "line": 3,
+    "source": "import { Pressable, ScrollView, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/CopyTextButton.tsx",
+    "line": 4,
+    "source": "import { Pressable, type ColorValue } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/CustomSnoozeSheet.android.tsx",
+    "line": 29,
+    "source": "import { requireNativeModule } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/CustomSnoozeSheet.android.tsx",
+    "line": 31,
+    "source": "import { AppState, useWindowDimensions } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/CustomSnoozeSheet.android.tsx",
+    "line": 60,
+    "source": "return requireNativeModule<{ is24HourFormat(): boolean }>(\"T3NativeControls\").is24HourFormat();"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/CustomSnoozeSheet.tsx",
+    "line": 33,
+    "source": "import { ScrollView, useWindowDimensions, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/DraftEnvironmentControl.tsx",
+    "line": 1,
+    "source": "import { Pressable } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/FreshSessionNotice.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/GitActionProgressOverlay.tsx",
+    "line": 2,
+    "source": "import Animated, { FadeIn, FadeOut, ReduceMotion } from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/HtmlRenderWebView.tsx",
+    "line": 13,
+    "source": "import { Platform, Pressable, View, type ColorValue } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/HtmlRenderWebView.tsx",
+    "line": 14,
+    "source": "import { WebView, type WebViewMessageEvent } from \"react-native-webview\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/LinkRequestCard.tsx",
+    "line": 30,
+    "source": "import { Pressable, ScrollView, View, type ColorValue } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/LinkRequestCard.tsx",
+    "line": 31,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/LinkedPullRequestList.tsx",
+    "line": 13,
+    "source": "import { Pressable, useWindowDimensions, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ManagedRuntimeModeNotice.tsx",
+    "line": 7,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/McpAppFullscreenScreen.tsx",
+    "line": 7,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/McpAppFullscreenScreen.tsx",
+    "line": 8,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/McpAppWebView.tsx",
+    "line": 25,
+    "source": "import Constants from \"expo-constants\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/McpAppWebView.tsx",
+    "line": 28,
+    "source": "import { Platform, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/McpAppWebView.tsx",
+    "line": 29,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/McpAppWebView.tsx",
+    "line": 30,
+    "source": "import { WebView, type WebViewMessageEvent } from \"react-native-webview\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/NativeChildWorkSheet.tsx",
+    "line": 7,
+    "source": "import { ScrollView, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/NativeChildWorkSheet.tsx",
+    "line": 8,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/NewTaskContextPickerScreens.tsx",
+    "line": 19,
+    "source": "import * as Haptics from \"expo-haptics\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/NewTaskContextPickerScreens.tsx",
+    "line": 23,
+    "source": "import { Platform, Pressable, ScrollView, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/NewTaskContextPickerScreens.tsx",
+    "line": 24,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/NewTaskDraftRouteScreen.tsx",
+    "line": 10,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/NewTaskDraftScreen.tsx",
+    "line": 30,
+    "source": "import { Platform, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/NewTaskDraftScreen.tsx",
+    "line": 32,
+    "source": "import { KeyboardController } from \"react-native-keyboard-controller\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/NewTaskRouteScreen.tsx",
+    "line": 21,
+    "source": "import { Platform, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/NewTaskRouteScreen.tsx",
+    "line": 22,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/PendingApprovalCard.tsx",
+    "line": 12,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/PendingUserInputCard.tsx",
+    "line": 12,
+    "source": "import { Platform, Pressable, ScrollView, View, type LayoutChangeEvent } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/PendingUserInputCard.tsx",
+    "line": 18,
+    "source": "} from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ProjectCloneBanner.tsx",
+    "line": 7,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ProposedPlanCard.tsx",
+    "line": 9,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ProviderSubagentBar.tsx",
+    "line": 7,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/QuestionAnswerHistory.tsx",
+    "line": 6,
+    "source": "import { Image } from \"expo-image\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/QuestionAnswerHistory.tsx",
+    "line": 7,
+    "source": "import { Linking, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/QuestionAttachments.tsx",
+    "line": 4,
+    "source": "import { TextInputWrapper } from \"expo-paste-input\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/QuestionAttachments.tsx",
+    "line": 10,
+    "source": "import { View, type TextInputInstance } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/SecretRequestCard.tsx",
+    "line": 25,
+    "source": "import { View, type ColorValue } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/SubagentRow.tsx",
+    "line": 14,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/SubagentStatusDot.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/SubagentStopButton.tsx",
+    "line": 4,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadAgentsSheet.tsx",
+    "line": 17,
+    "source": "import * as Haptics from \"expo-haptics\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadAgentsSheet.tsx",
+    "line": 19,
+    "source": "import { Pressable, ScrollView, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadAgentsSheet.tsx",
+    "line": 20,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadArrangementSheet.tsx",
+    "line": 9,
+    "source": "import { Animated, Modal, Pressable, useWindowDimensions, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadArrangementSheet.tsx",
+    "line": 10,
+    "source": "import { Gesture, GestureDetector, GestureHandlerRootView } from \"react-native-gesture-handler\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadArrangementSheet.tsx",
+    "line": 11,
+    "source": "import Reanimated, { ReduceMotion, useAnimatedStyle, withTiming } from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadArrangementSheet.tsx",
+    "line": 13,
+    "source": "import { SafeAreaProvider, SafeAreaView } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadBackgroundWorkSheet.tsx",
+    "line": 9,
+    "source": "import * as Haptics from \"expo-haptics\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadBackgroundWorkSheet.tsx",
+    "line": 10,
+    "source": "import { Pressable, ScrollView, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadBackgroundWorkSheet.tsx",
+    "line": 11,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadComposer.tsx",
+    "line": 37,
+    "source": "import { I18nManager, Keyboard, Platform, View, type ViewStyle } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadComposer.tsx",
+    "line": 55,
+    "source": "} from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadCreationFailedCard.tsx",
+    "line": 2,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadDetailScreen.tsx",
+    "line": 82,
+    "source": "import * as Haptics from \"expo-haptics\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadDetailScreen.tsx",
+    "line": 99,
+    "source": "} from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadDetailScreen.tsx",
+    "line": 105,
+    "source": "} from \"react-native-keyboard-controller\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadDetailScreen.tsx",
+    "line": 117,
+    "source": "} from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadDetailScreen.tsx",
+    "line": 118,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadFeed.tsx",
+    "line": 38,
+    "source": "import * as Haptics from \"expo-haptics\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadFeed.tsx",
+    "line": 137,
+    "source": "} from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadFeed.tsx",
+    "line": 138,
+    "source": "import { Image as ExpoImage } from \"expo-image\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadFeed.tsx",
+    "line": 160,
+    "source": "import Animated, { FadeIn, FadeInDown, type SharedValue } from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadFeed.tsx",
+    "line": 1765,
+    "source": "readonly iconSubtleColor: string | import(\"react-native\").ColorValue;"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadFeed.tsx",
+    "line": 1768,
+    "source": "readonly userBubbleColor: string | import(\"react-native\").ColorValue;"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadGuestShareBar.tsx",
+    "line": 16,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadInlineFilePreview.tsx",
+    "line": 3,
+    "source": "import { useAudioPlayerStatus } from \"expo-audio\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadInlineFilePreview.tsx",
+    "line": 5,
+    "source": "import { AppState, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadMarkdownImage.tsx",
+    "line": 7,
+    "source": "import { Image } from \"expo-image\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadMarkdownImage.tsx",
+    "line": 9,
+    "source": "import { fetch } from \"expo/fetch\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadMarkdownImage.tsx",
+    "line": 10,
+    "source": "import { parse, SvgAst, type JsxAST } from \"react-native-svg\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadMarkdownImage.tsx",
+    "line": 11,
+    "source": "import { Pressable, StyleSheet, View, type ViewStyle } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadNavigationSidebar.tsx",
+    "line": 18,
+    "source": "import { Platform, StyleSheet, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadNavigationSidebar.tsx",
+    "line": 19,
+    "source": "import { GestureDetector, useNativeGesture } from \"react-native-gesture-handler\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadNavigationSidebar.tsx",
+    "line": 20,
+    "source": "import type { SwipeableMethods } from \"react-native-gesture-handler/ReanimatedSwipeable\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadNavigationSidebar.tsx",
+    "line": 22,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadPullRequestsSheet.tsx",
+    "line": 4,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadPullRequestsSheet.tsx",
+    "line": 5,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadQueueControl.tsx",
+    "line": 15,
+    "source": "import { Image } from \"expo-image\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadQueueControl.tsx",
+    "line": 16,
+    "source": "import * as Haptics from \"expo-haptics\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadQueueControl.tsx",
+    "line": 18,
+    "source": "import { Pressable, ScrollView, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadQueueControl.tsx",
+    "line": 19,
+    "source": "import { GestureHandlerRootView } from \"react-native-gesture-handler\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadQueueControl.tsx",
+    "line": 22,
+    "source": "} from \"react-native-gesture-handler/ReanimatedSwipeable\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadQueueControl.tsx",
+    "line": 24,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadScreenHost.tsx",
+    "line": 9,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsRows.shared.tsx",
+    "line": 2,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 37,
+    "source": "import * as Haptics from \"expo-haptics\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 48,
+    "source": "import { Pressable, ScrollView, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 56,
+    "source": "} from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 57,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSideChatsRow.tsx",
+    "line": 2,
+    "source": "import { Platform, Pressable, ScrollView, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadWorkflowGroup.tsx",
+    "line": 15,
+    "source": "import { ScrollView, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/UsageLimitRecoveryCard.tsx",
+    "line": 12,
+    "source": "import * as Clipboard from \"expo-clipboard\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/UsageLimitRecoveryCard.tsx",
+    "line": 14,
+    "source": "import { Linking, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ZoomableImagePressable.tsx",
+    "line": 2,
+    "source": "import { Platform, Pressable, StyleSheet } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ZoomableImagePressable.tsx",
+    "line": 3,
+    "source": "import { Gesture, GestureDetector } from \"react-native-gesture-handler\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ZoomableImagePressable.tsx",
+    "line": 4,
+    "source": "import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/floating-working-control.tsx",
+    "line": 5,
+    "source": "import { GlassContainer, GlassView } from \"expo-glass-effect\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/floating-working-control.tsx",
+    "line": 13,
+    "source": "} from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/floating-working-control.tsx",
+    "line": 24,
+    "source": "} from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/git/GitCommitSheet.tsx",
+    "line": 6,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/git/GitConfirmSheet.tsx",
+    "line": 8,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/git/GitOverviewSheet.tsx",
+    "line": 21,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/git/gitSheetComponents.tsx",
+    "line": 4,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/guestMessageStyle.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-command-output.tsx",
+    "line": 5,
+    "source": "import { ScrollView, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-context-divider.tsx",
+    "line": 2,
+    "source": "import { View, type ColorValue } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-handoff-row.tsx",
+    "line": 25,
+    "source": "import { Pressable, View, type ColorValue } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-inspector-navigation.ts",
+    "line": 3,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-inspector-preview.tsx",
+    "line": 4,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-list-v2-items.tsx",
+    "line": 39,
+    "source": "import { Platform, Pressable, Text as RNText, useWindowDimensions, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-list-v2-items.tsx",
+    "line": 40,
+    "source": "import type { SwipeableMethods } from \"react-native-gesture-handler/ReanimatedSwipeable\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-list-v2-row-appearance.android.ts",
+    "line": 1,
+    "source": "import type { ViewStyle } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-list-v2-row-appearance.ts",
+    "line": 1,
+    "source": "import type { ViewStyle } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-subagent-group.tsx",
+    "line": 16,
+    "source": "import { Pressable, View, type ColorValue } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-work-log.tsx",
+    "line": 17,
+    "source": "import * as Haptics from \"expo-haptics\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-work-log.tsx",
+    "line": 18,
+    "source": "import { Image } from \"expo-image\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-work-log.tsx",
+    "line": 43,
+    "source": "} from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-work-log.tsx",
+    "line": 44,
+    "source": "import Svg, { Defs, LinearGradient, Rect, Stop } from \"react-native-svg\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-work-log.tsx",
+    "line": 107,
+    "source": "} from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-work-log.tsx",
+    "line": 1322,
+    "source": "readonly iconSubtleColor: import(\"react-native\").ColorValue;"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-workflow-opening.tsx",
+    "line": 14,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/threadListAnimations.ts",
+    "line": 1,
+    "source": "import { LinearTransition, ReduceMotion } from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/threadStreamHaptics.ts",
+    "line": 6,
+    "source": "import * as Haptics from \"expo-haptics\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/turnThreadIntoProject.ts",
+    "line": 8,
+    "source": "import * as Haptics from \"expo-haptics\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/use-thread-settings-sheet-presentation.ts",
+    "line": 2,
+    "source": "import { KeyboardController } from \"react-native-keyboard-controller\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/useLinkedPullRequestActions.ts",
+    "line": 23,
+    "source": "import * as Clipboard from \"expo-clipboard\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/useMessageTimeFormatter.ts",
+    "line": 1,
+    "source": "import { requireNativeModule } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/useMessageTimeFormatter.ts",
+    "line": 3,
+    "source": "import { AppState, Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/useMessageTimeFormatter.ts",
+    "line": 8,
+    "source": "return requireNativeModule<{ is24HourFormat(): boolean }>(\"T3NativeControls\").is24HourFormat();"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/useThreadStatusAnnouncements.ts",
+    "line": 7,
+    "source": "import { AccessibilityInfo } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/work-log-layout.tsx",
+    "line": 4,
+    "source": "import { Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/worktree-setup-card.tsx",
+    "line": 11,
+    "source": "import { Platform, Pressable, ScrollView, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/worktree-setup-card.tsx",
+    "line": 12,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/triage/usePrepareTriage.ts",
+    "line": 2,
+    "source": "import Constants from \"expo-constants\";"
+  },
+  {
+    "file": "apps/mobile/src/features/triage/useStartTriage.ts",
+    "line": 8,
+    "source": "import * as Clipboard from \"expo-clipboard\";"
+  },
+  {
+    "file": "apps/mobile/src/features/updates/app-updates.ts",
+    "line": 1,
+    "source": "import * as Updates from \"expo-updates\";"
+  },
+  {
+    "file": "apps/mobile/src/features/updates/app-updates.ts",
+    "line": 3,
+    "source": "import { AppState } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/usage/ChatGptUsageSummary.tsx",
+    "line": 4,
+    "source": "import { Linking, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/usage/UsageDailyChart.tsx",
+    "line": 1,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/usage/UsageLimitsPooled.tsx",
+    "line": 20,
+    "source": "import { Linking, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/usage/UsageLimitsPooled.tsx",
+    "line": 22,
+    "source": "import { Defs, Path, Pattern, Rect, Svg } from \"react-native-svg\";"
+  },
+  {
+    "file": "apps/mobile/src/features/usage/UsageLimitsPooled.tsx",
+    "line": 23,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/usage/UsageLimitsSection.tsx",
+    "line": 24,
+    "source": "import { Linking, Pressable, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/usage/UsageRouteScreen.tsx",
+    "line": 31,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/usage/UsageRouteScreen.tsx",
+    "line": 33,
+    "source": "import Animated, { FadeIn, ReduceMotion } from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/usage/UsageRouteScreen.tsx",
+    "line": 34,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/voice-input/ComposerDictationControl.tsx",
+    "line": 3,
+    "source": "import { Linking, Pressable, Text as SystemText, View, type LayoutChangeEvent } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/voice-input/ComposerDictationControl.tsx",
+    "line": 13,
+    "source": "} from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/voice-input/GlobalVoiceInputControl.tsx",
+    "line": 3,
+    "source": "import { Linking, Platform, Pressable, useWindowDimensions, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/voice-input/GlobalVoiceInputControl.tsx",
+    "line": 13,
+    "source": "} from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/voice-input/GlobalVoiceInputControl.tsx",
+    "line": 14,
+    "source": "import { useSafeAreaInsets } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/features/voice-input/GlobalVoiceInputControl.tsx",
+    "line": 15,
+    "source": "import { FullWindowOverlay } from \"react-native-screens\";"
+  },
+  {
+    "file": "apps/mobile/src/features/voice-input/VoiceInputProvider.tsx",
+    "line": 2,
+    "source": "import { AudioModule, RecordingPresets, type RecordingStatus } from \"expo-audio\";"
+  },
+  {
+    "file": "apps/mobile/src/features/voice-input/VoiceInputProvider.tsx",
+    "line": 3,
+    "source": "import { File } from \"expo-file-system\";"
+  },
+  {
+    "file": "apps/mobile/src/features/voice-input/VoiceInputProvider.tsx",
+    "line": 4,
+    "source": "import { activateKeepAwakeAsync, deactivateKeepAwake } from \"expo-keep-awake\";"
+  },
+  {
+    "file": "apps/mobile/src/features/voice-input/VoiceInputProvider.tsx",
+    "line": 6,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/features/voice-input/VoiceInputProvider.tsx",
+    "line": 8,
+    "source": "import { makeMutable } from \"react-native-reanimated\";"
+  },
+  {
+    "file": "apps/mobile/src/features/voice-input/usePlaybackAudioPlayer.ts",
+    "line": 1,
+    "source": "import { useReleasingSharedObjectWithLifecycle } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/features/voice-input/usePlaybackAudioPlayer.ts",
+    "line": 2,
+    "source": "import { createAudioPlayer } from \"expo-audio\";"
+  },
+  {
+    "file": "apps/mobile/src/features/voice-input/voiceDestination.ts",
+    "line": 25,
+    "source": "import { requireOptionalNativeModule } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/features/voice-input/voiceDestination.ts",
+    "line": 26,
+    "source": "import { fetch as expoFetch } from \"expo/fetch\";"
+  },
+  {
+    "file": "apps/mobile/src/features/voice-input/voiceGrantStorage.ts",
+    "line": 3,
+    "source": "import { File, Paths } from \"expo-file-system\";"
+  },
+  {
+    "file": "apps/mobile/src/features/voice-input/voiceGrantStorage.ts",
+    "line": 4,
+    "source": "import * as SecureStore from \"expo-secure-store\";"
+  },
+  {
+    "file": "apps/mobile/src/features/voice-input/voiceRecordingPermission.ts",
+    "line": 1,
+    "source": "import { requestRecordingPermissionsAsync } from \"expo-audio\";"
+  },
+  {
+    "file": "apps/mobile/src/features/voice-input/voiceRecordingPermission.ts",
+    "line": 2,
+    "source": "import { AppState, Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/i18n/I18nProvider.tsx",
+    "line": 7,
+    "source": "import { Platform, TurboModuleRegistry, View, type TurboModule } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/appState.ts",
+    "line": 2,
+    "source": "import { AccessibilityInfo, AppState } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/assetImageSource.ts",
+    "line": 7,
+    "source": "import type { ImageSource } from \"expo-image\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/atomic-file.ts",
+    "line": 1,
+    "source": "import type { File } from \"expo-file-system\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/atomic-file.ts",
+    "line": 7,
+    "source": "const { File: FileConstructor } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/attachmentDocument.ts",
+    "line": 9,
+    "source": "import { fetch } from \"expo/fetch\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/attachmentDocument.ts",
+    "line": 10,
+    "source": "import { File } from \"expo-file-system\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/attachmentDownload.ts",
+    "line": 2,
+    "source": "import type { Directory } from \"expo-file-system\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/attachmentDownload.ts",
+    "line": 3,
+    "source": "import type { SharingOptions } from \"expo-sharing\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/attachmentDownload.ts",
+    "line": 66,
+    "source": "const Sharing = await import(\"expo-sharing\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/attachmentDownload.ts",
+    "line": 76,
+    "source": "const { Directory, File, Paths } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/attachmentDownload.ts",
+    "line": 175,
+    "source": "const { File } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/attachmentDownload.ts",
+    "line": 176,
+    "source": "const { requireNativeModule } = await import(\"expo\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/attachmentDownload.ts",
+    "line": 188,
+    "source": "await requireNativeModule<{ openFile(uri: string, mimeType: string): Promise<void> }>("
+  },
+  {
+    "file": "apps/mobile/src/lib/attachmentDownload.ts",
+    "line": 210,
+    "source": "const { File } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/attachmentDownload.ts",
+    "line": 256,
+    "source": "const { File } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/attachmentUpload.ts",
+    "line": 189,
+    "source": "const { File, Paths } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/attachmentUpload.ts",
+    "line": 207,
+    "source": "const { File, Paths, UploadType } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/audioSession.ts",
+    "line": 1,
+    "source": "import { AudioModule, setAudioModeAsync, setIsAudioActiveAsync } from \"expo-audio\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/authClientMetadata.ts",
+    "line": 2,
+    "source": "import * as Device from \"expo-device\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/authClientMetadata.ts",
+    "line": 3,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/backHandler.ts",
+    "line": 3,
+    "source": "import { BackHandler } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/composerContextClipboard.ts",
+    "line": 1,
+    "source": "import { requireNativeModule } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/composerContextClipboard.ts",
+    "line": 53,
+    "source": "requireNativeModule<{"
+  },
+  {
+    "file": "apps/mobile/src/lib/composerContextClipboard.ts",
+    "line": 247,
+    "source": "const { File } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/composerImageFit.ts",
+    "line": 33,
+    "source": "const { ImageManipulator, SaveFormat } = await import(\"expo-image-manipulator\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/composerImageFit.ts",
+    "line": 58,
+    "source": "const { File } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/composerImagePreview.ts",
+    "line": 14,
+    "source": "const { Directory, File, Paths } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/composerImages.ts",
+    "line": 14,
+    "source": "import type { DocumentPickerResult } from \"expo-document-picker\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/composerImages.ts",
+    "line": 62,
+    "source": "const { Directory, File, Paths } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/composerImages.ts",
+    "line": 127,
+    "source": "const { Directory, File, FileMode, Paths } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/composerImages.ts",
+    "line": 207,
+    "source": "const { File, Paths } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/composerImages.ts",
+    "line": 231,
+    "source": "const { File } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/composerImages.ts",
+    "line": 270,
+    "source": "const { getDocumentAsync } = await import(\"expo-document-picker\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/composerImages.ts",
+    "line": 316,
+    "source": "const { File } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/composerImages.ts",
+    "line": 358,
+    "source": "return await import(\"expo-image-picker\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/composerImages.ts",
+    "line": 444,
+    "source": "const { File } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/composerImages.ts",
+    "line": 470,
+    "source": "const { File } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/composerImages.ts",
+    "line": 488,
+    "source": "const { File } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/composerImages.ts",
+    "line": 578,
+    "source": "const { File } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/contextChipIcons.generated.ts",
+    "line": 1,
+    "source": "import type { ImageSourcePropType } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/copyTextWithHaptic.ts",
+    "line": 2,
+    "source": "import * as Clipboard from \"expo-clipboard\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/copyTextWithHaptic.ts",
+    "line": 3,
+    "source": "import * as Haptics from \"expo-haptics\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/copyThreadReference.ts",
+    "line": 2,
+    "source": "import * as Haptics from \"expo-haptics\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/highlights.ts",
+    "line": 6,
+    "source": "import type { T3Highlights } from \"@t3tools/mobile-highlights-native\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/highlights.ts",
+    "line": 7,
+    "source": "import { NitroModules } from \"react-native-nitro-modules\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/localAttachmentPreview.ts",
+    "line": 22,
+    "source": "const { File, Paths } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/markdownFileIcons.generated.ts",
+    "line": 1,
+    "source": "import type { ImageSourcePropType } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/markdownFileIcons.ts",
+    "line": 1,
+    "source": "import { Image, type ImageSourcePropType } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/markdownLinkIcons.generated.ts",
+    "line": 1,
+    "source": "import type { ImageSourcePropType } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/markdownLinkIcons.ts",
+    "line": 5,
+    "source": "import type { ImageSourcePropType } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/openExternalUrl.ts",
+    "line": 2,
+    "source": "import { Linking } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/pdfPreview.ts",
+    "line": 38,
+    "source": "const { File, FileMode } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/previewPresentation.ts",
+    "line": 3,
+    "source": "import { Keyboard } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/projectFaviconDatabaseCache.ts",
+    "line": 34,
+    "source": "import(\"expo-image\"),"
+  },
+  {
+    "file": "apps/mobile/src/lib/projectFaviconDatabaseCache.ts",
+    "line": 35,
+    "source": "import(\"expo-file-system\"),"
+  },
+  {
+    "file": "apps/mobile/src/lib/protectedData.ts",
+    "line": 1,
+    "source": "import { requireOptionalNativeModule } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/protectedData.ts",
+    "line": 2,
+    "source": "import { AppState, Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/saveImageToLibrary.ts",
+    "line": 1,
+    "source": "import { requireNativeModule } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/saveImageToLibrary.ts",
+    "line": 2,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/saveImageToLibrary.ts",
+    "line": 20,
+    "source": "return requireNativeModule<{"
+  },
+  {
+    "file": "apps/mobile/src/lib/shareFileFromSource.ios.ts",
+    "line": 1,
+    "source": "import { requireNativeModule } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/shareFileFromSource.ios.ts",
+    "line": 2,
+    "source": "import type { SharingOptions } from \"expo-sharing\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/shareFileFromSource.ios.ts",
+    "line": 4,
+    "source": "const NativeControls = requireNativeModule<{"
+  },
+  {
+    "file": "apps/mobile/src/lib/shareFileFromSource.ts",
+    "line": 1,
+    "source": "import { shareAsync, type SharingOptions } from \"expo-sharing\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/useHoverGesture.ts",
+    "line": 2,
+    "source": "import { Gesture, PointerType } from \"react-native-gesture-handler\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/useMediaVideoPlayback.ts",
+    "line": 2,
+    "source": "import { useEvent } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/useMediaVideoPlayback.ts",
+    "line": 3,
+    "source": "import type { VideoPlayer } from \"expo-video\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/useMediaVideoPlayback.ts",
+    "line": 5,
+    "source": "import { AppState } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/useNativePaste.ts",
+    "line": 1,
+    "source": "import type { PasteEventPayload } from \"expo-paste-input\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/useUiRuntimeMemoryWarningGc.ts",
+    "line": 1,
+    "source": "import { AppState } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/useUiRuntimeMemoryWarningGc.ts",
+    "line": 2,
+    "source": "import { scheduleOnUI } from \"react-native-worklets\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/uuid.ts",
+    "line": 1,
+    "source": "import * as Crypto from \"expo-crypto\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/videoAudioSession.ts",
+    "line": 1,
+    "source": "import { requireOptionalNativeModule } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/videoAudioSession.ts",
+    "line": 3,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/videoThumbnails.ts",
+    "line": 1,
+    "source": "import type { VideoThumbnail } from \"expo-video\";"
+  },
+  {
+    "file": "apps/mobile/src/lib/videoThumbnails.ts",
+    "line": 14,
+    "source": "const { createVideoPlayer } = await import(\"expo-video\");"
+  },
+  {
+    "file": "apps/mobile/src/lib/webViewDecelerationRate.ts",
+    "line": 1,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/AndroidHingeObserver.android.tsx",
+    "line": 1,
+    "source": "import { requireNativeView } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/native/AndroidHingeObserver.android.tsx",
+    "line": 2,
+    "source": "import type { NativeSyntheticEvent, ViewProps } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/AndroidHingeObserver.android.tsx",
+    "line": 11,
+    "source": "const Observer = requireNativeView<ObserverProps>(\"T3FoldPosture\");"
+  },
+  {
+    "file": "apps/mobile/src/native/CodeBlockFrame.tsx",
+    "line": 2,
+    "source": "import { Pressable, StyleSheet, Text, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/EnrichedMarkdownText.tsx",
+    "line": 15,
+    "source": "import { Platform, Share, StyleSheet, useWindowDimensions, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/EnrichedMarkdownText.tsx",
+    "line": 22,
+    "source": "} from \"react-native-enriched-markdown\";"
+  },
+  {
+    "file": "apps/mobile/src/native/HighlightedCodeBlock.tsx",
+    "line": 2,
+    "source": "import { Pressable, ScrollView, Text } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/HighlightedCodeBlock.tsx",
+    "line": 3,
+    "source": "import type { MarkdownStyle } from \"react-native-enriched-markdown\";"
+  },
+  {
+    "file": "apps/mobile/src/native/MermaidCodeBlock.tsx",
+    "line": 2,
+    "source": "import { File, Paths } from \"expo-file-system\";"
+  },
+  {
+    "file": "apps/mobile/src/native/MermaidCodeBlock.tsx",
+    "line": 3,
+    "source": "import * as Haptics from \"expo-haptics\";"
+  },
+  {
+    "file": "apps/mobile/src/native/MermaidCodeBlock.tsx",
+    "line": 6,
+    "source": "import { PixelRatio, Platform, Pressable, StyleSheet, Text, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/MermaidCodeBlock.tsx",
+    "line": 7,
+    "source": "import { parse, Svg, SvgXml } from \"react-native-svg\";"
+  },
+  {
+    "file": "apps/mobile/src/native/NativeColumnContent.ios.tsx",
+    "line": 3,
+    "source": "import { View, type ColorValue } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/NativeColumnContent.ios.tsx",
+    "line": 4,
+    "source": "import { SafeAreaProvider, SafeAreaView } from \"react-native-safe-area-context\";"
+  },
+  {
+    "file": "apps/mobile/src/native/NativeHeaderToolbar.tsx",
+    "line": 17,
+    "source": "import type { ColorValue } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/NativeHeaderToolbar.tsx",
+    "line": 18,
+    "source": "import type { HeaderBarButtonSearchBarPlacementItem } from \"react-native-screens\";"
+  },
+  {
+    "file": "apps/mobile/src/native/NativeLayoutObserver.ios.tsx",
+    "line": 1,
+    "source": "import { requireNativeView, requireOptionalNativeModule } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/native/NativeLayoutObserver.ios.tsx",
+    "line": 2,
+    "source": "import type { NativeSyntheticEvent, ViewProps } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/NativeLayoutObserver.ios.tsx",
+    "line": 15,
+    "source": "return requireNativeView<ObserverProps>(\"T3NativeControls\", \"LayoutMetrics\");"
+  },
+  {
+    "file": "apps/mobile/src/native/NativeScrollViewMarker.tsx",
+    "line": 1,
+    "source": "import { requireNativeView, requireOptionalNativeModule } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/native/NativeScrollViewMarker.tsx",
+    "line": 3,
+    "source": "import { Platform, ScrollView, type ViewProps } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/NativeScrollViewMarker.tsx",
+    "line": 5,
+    "source": "import { ScrollViewMarker } from \"react-native-screens\";"
+  },
+  {
+    "file": "apps/mobile/src/native/NativeScrollViewMarker.tsx",
+    "line": 20,
+    "source": "return requireNativeView<ViewProps>(\"T3NativeControls\", \"ScrollEdgeBleed\");"
+  },
+  {
+    "file": "apps/mobile/src/native/NativeWorkspaceColumns.ios.tsx",
+    "line": 1,
+    "source": "import { requireOptionalNativeModule } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/native/NativeWorkspaceColumns.ios.tsx",
+    "line": 2,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/NativeWorkspaceColumns.tsx",
+    "line": 1,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/ProjectChipIconImages.tsx",
+    "line": 6,
+    "source": "import { Platform, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/ProjectChipIconImages.tsx",
+    "line": 7,
+    "source": "import Svg, { Rect, Text } from \"react-native-svg\";"
+  },
+  {
+    "file": "apps/mobile/src/native/SelectableMarkdownText.tsx",
+    "line": 1,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/SelectableMarkdownText.types.ts",
+    "line": 69,
+    "source": "readonly icon?: import(\"react-native\").ImageSourcePropType;"
+  },
+  {
+    "file": "apps/mobile/src/native/StackHeader.tsx",
+    "line": 15,
+    "source": "import type { ColorValue } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/T3ComposerEditor.ios.tsx",
+    "line": 6,
+    "source": "import { requireNativeView } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/native/T3ComposerEditor.ios.tsx",
+    "line": 16,
+    "source": "import type { NativeSyntheticEvent, StyleProp, ViewProps, ViewStyle } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/T3ComposerEditor.ios.tsx",
+    "line": 17,
+    "source": "import { StyleSheet } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/T3ComposerEditor.ios.tsx",
+    "line": 125,
+    "source": "const NativeView = requireNativeView<NativeComposerEditorProps>(NATIVE_MODULE_NAME);"
+  },
+  {
+    "file": "apps/mobile/src/native/T3ComposerEditor.native.tsx",
+    "line": 7,
+    "source": "import { requireNativeView } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/native/T3ComposerEditor.native.tsx",
+    "line": 8,
+    "source": "import { TextInputWrapper } from \"expo-paste-input\";"
+  },
+  {
+    "file": "apps/mobile/src/native/T3ComposerEditor.native.tsx",
+    "line": 18,
+    "source": "import type { NativeSyntheticEvent, ViewProps } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/T3ComposerEditor.native.tsx",
+    "line": 19,
+    "source": "import { Platform, StyleSheet } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/T3ComposerEditor.native.tsx",
+    "line": 117,
+    "source": "const NativeView = requireNativeView<NativeComposerEditorProps>(NATIVE_MODULE_NAME);"
+  },
+  {
+    "file": "apps/mobile/src/native/T3ComposerEditor.tsx",
+    "line": 1,
+    "source": "import { TextInputWrapper } from \"expo-paste-input\";"
+  },
+  {
+    "file": "apps/mobile/src/native/T3ComposerEditor.tsx",
+    "line": 3,
+    "source": "import { TextInput, type TextInputInstance } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/T3ComposerEditor.types.ts",
+    "line": 4,
+    "source": "import type { StyleProp, TextStyle, ViewStyle } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/T3KeyboardCommands.native.tsx",
+    "line": 1,
+    "source": "import { requireNativeView } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/native/T3KeyboardCommands.native.tsx",
+    "line": 3,
+    "source": "import type { NativeSyntheticEvent, ViewProps } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/T3KeyboardCommands.native.tsx",
+    "line": 14,
+    "source": "const NativeKeyboardCommands = requireNativeView<NativeKeyboardCommandsProps>(\"T3KeyboardCommands\");"
+  },
+  {
+    "file": "apps/mobile/src/native/T3KeyboardCommands.tsx",
+    "line": 2,
+    "source": "import { View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/ThemedScreenStack.tsx",
+    "line": 1,
+    "source": "import { Screen, ScreenStackHeaderConfig } from \"react-native-screens\";"
+  },
+  {
+    "file": "apps/mobile/src/native/V5StackHeader.ios.tsx",
+    "line": 7,
+    "source": "import { StyleSheet } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/V5StackHeader.ios.tsx",
+    "line": 8,
+    "source": "import { KeyboardController, useKeyboardState } from \"react-native-keyboard-controller\";"
+  },
+  {
+    "file": "apps/mobile/src/native/V5StackHeader.ios.tsx",
+    "line": 24,
+    "source": "} from \"react-native-screens\";"
+  },
+  {
+    "file": "apps/mobile/src/native/createV5StackNavigator.ios.tsx",
+    "line": 25,
+    "source": "import { StyleSheet, View } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/createV5StackNavigator.ios.tsx",
+    "line": 26,
+    "source": "import { Stack } from \"react-native-screens\";"
+  },
+  {
+    "file": "apps/mobile/src/native/glass-header-options.ts",
+    "line": 2,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/native-glass.ts",
+    "line": 1,
+    "source": "import { isGlassEffectAPIAvailable } from \"expo-glass-effect\";"
+  },
+  {
+    "file": "apps/mobile/src/native/native-glass.ts",
+    "line": 2,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/native-layout-metrics.tsx",
+    "line": 2,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/nativeWebSocket.ios.ts",
+    "line": 4,
+    "source": "import { requireOptionalNativeModule } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/native/sheet-surface.ts",
+    "line": 1,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/useEnrichedLinkVariants.ts",
+    "line": 3,
+    "source": "import { Image } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/useEnrichedLinkVariants.ts",
+    "line": 4,
+    "source": "import type { LinkPillContent, MarkdownStyle } from \"react-native-enriched-markdown\";"
+  },
+  {
+    "file": "apps/mobile/src/native/useRetryingImageSource.ts",
+    "line": 2,
+    "source": "import type { MarkdownImageOccurrence, MarkdownImageSource } from \"react-native-enriched-markdown\";"
+  },
+  {
+    "file": "apps/mobile/src/native/voiceRecorder.android.ts",
+    "line": 1,
+    "source": "import { AudioModule } from \"expo-audio\";"
+  },
+  {
+    "file": "apps/mobile/src/native/voiceRecorder.ts",
+    "line": 1,
+    "source": "import { AudioModule } from \"expo-audio\";"
+  },
+  {
+    "file": "apps/mobile/src/native/voiceTranscription.android.ts",
+    "line": 1,
+    "source": "import { requireOptionalNativeModule } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/native/voiceTranscription.android.ts",
+    "line": 2,
+    "source": "import type { RecorderState, RecordingStatus } from \"expo-audio\";"
+  },
+  {
+    "file": "apps/mobile/src/native/voiceTranscription.android.ts",
+    "line": 3,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/native/voiceTranscription.ios.ts",
+    "line": 3,
+    "source": "import { File } from \"expo-file-system\";"
+  },
+  {
+    "file": "apps/mobile/src/native/voiceTranscription.ios.ts",
+    "line": 4,
+    "source": "import { Settings } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-database.ts",
+    "line": 8,
+    "source": "import type { SQLiteDatabase } from \"expo-sqlite\";"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-database.ts",
+    "line": 125,
+    "source": "const SQLite = await import(\"expo-sqlite\");"
+  },
+  {
+    "file": "apps/mobile/src/persistence/mobile-secure-storage.ts",
+    "line": 5,
+    "source": "import * as SecureStore from \"expo-secure-store\";"
+  },
+  {
+    "file": "apps/mobile/src/state/mediaActions.ts",
+    "line": 17,
+    "source": "import * as Haptics from \"expo-haptics\";"
+  },
+  {
+    "file": "apps/mobile/src/state/thread-outbox-storage.ts",
+    "line": 60,
+    "source": "const { Directory, Paths } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/state/thread-outbox-storage.ts",
+    "line": 67,
+    "source": "const { File } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/state/thread-outbox-storage.ts",
+    "line": 76,
+    "source": "const { File } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/state/use-composer-drafts.ts",
+    "line": 800,
+    "source": "const { Directory, File, Paths } = await import(\"expo-file-system\");"
+  },
+  {
+    "file": "apps/mobile/src/state/use-vcs-action-state.ts",
+    "line": 5,
+    "source": "import * as Haptics from \"expo-haptics\";"
+  },
+  {
+    "file": "apps/mobile/src/widgets/AgentActivity.tsx",
+    "line": 21,
+    "source": "} from \"expo-widgets\";"
+  },
+  {
+    "file": "apps/mobile/src/widgets/AgentActivityWidget.tsx",
+    "line": 12,
+    "source": "import { createWidget, type WidgetEnvironment } from \"expo-widgets\";"
+  },
+  {
+    "file": "apps/mobile/src/widgets/SubscriptionUsage.android.tsx",
+    "line": 15,
+    "source": "import { createWidget, type WidgetEnvironment } from \"expo-widgets\";"
+  },
+  {
+    "file": "apps/mobile/src/widgets/SubscriptionUsage.tsx",
+    "line": 17,
+    "source": "import { createWidget, type WidgetEnvironment } from \"expo-widgets\";"
+  },
+  {
+    "file": "apps/mobile/src/widgets/SubscriptionUsageCoordinator.tsx",
+    "line": 3,
+    "source": "import * as Linking from \"expo-linking\";"
+  },
+  {
+    "file": "apps/mobile/src/widgets/SubscriptionUsageCoordinator.tsx",
+    "line": 5,
+    "source": "import { Platform } from \"react-native\";"
+  },
+  {
+    "file": "apps/mobile/src/widgets/publishAgentActivityWidget.ios.ts",
+    "line": 1,
+    "source": "import { requireOptionalNativeModule } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/widgets/publishSubscriptionUsage.android.ts",
+    "line": 1,
+    "source": "import { requireOptionalNativeModule } from \"expo\";"
+  },
+  {
+    "file": "apps/mobile/src/widgets/publishSubscriptionUsage.android.ts",
+    "line": 2,
+    "source": "import * as Linking from \"expo-linking\";"
+  },
+  {
+    "file": "apps/mobile/src/widgets/publishSubscriptionUsage.android.ts",
+    "line": 12,
+    "source": "import(\"expo-widgets\"),"
+  },
+  {
+    "file": "apps/mobile/src/widgets/publishSubscriptionUsage.ios.ts",
+    "line": 1,
+    "source": "import { requireOptionalNativeModule } from \"expo\";"
+  }
+]

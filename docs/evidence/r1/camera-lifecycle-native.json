@@ -1,0 +1,30 @@
+{
+  "device": "23E0224122000135",
+  "checkedAt": "2026-11-16T20:45:36.492591+08:00",
+  "pidUnchanged": true,
+  "foregroundBefore": {
+    "sessions": 1,
+    "clients": [
+      {
+        "pid": 11124,
+        "state": "Started"
+      }
+    ]
+  },
+  "background": {
+    "sessions": 0,
+    "clients": []
+  },
+  "foregroundAfter": {
+    "sessions": 1,
+    "clients": [
+      {
+        "pid": 11124,
+        "state": "Started"
+      }
+    ]
+  },
+  "directoryBytesUnchanged": true,
+  "cameraPixelsCaptured": false,
+  "physicalRecognitionVerified": false
+}

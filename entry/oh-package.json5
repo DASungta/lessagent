@@ -1,0 +1,8 @@
+{
+  "name": "entry",
+  "version": "0.1.0",
+  "description": "Native T3 client",
+  "dependencies": {
+    "libt3device.so": "file:./src/main/cpp/types/libt3device"
+  }
+}

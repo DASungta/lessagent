@@ -1,0 +1,296 @@
+> hvigor [32mUP-TO-DATE :entry:default@PreBuild...  [39m
+> hvigor [32mFinished :entry:default@CreateModuleInfo... after 1 ms [39m
+> hvigor [32mUP-TO-DATE :entry:default@GenerateMetadata...  [39m
+> hvigor [32mFinished :entry:default@ConfigureCmake... after 20 ms [39m
+> hvigor [32mUP-TO-DATE :entry:default@MergeProfile...  [39m
+> hvigor [32mUP-TO-DATE :entry:default@CreateBuildProfile...  [39m
+> hvigor [32mFinished :entry:default@PreCheckSyscap... after 1 ms [39m
+> hvigor [32mFinished :entry:default@GeneratePkgContextInfo... after 8 ms [39m
+> hvigor [32mUP-TO-DATE :entry:default@GeneratePkgSdkInfo...  [39m
+> hvigor [32mFinished :entry:default@ProcessIntegratedHsp... after 1 ms [39m
+> hvigor [32mFinished :entry:default@BuildNativeWithCmake... after 8 ms [39m
+> hvigor [32mUP-TO-DATE :entry:default@MakePackInfo...  [39m
+> hvigor [32mFinished :entry:default@SyscapTransform... after 10 ms [39m
+> hvigor [32mUP-TO-DATE :entry:default@ProcessProfile...  [39m
+> hvigor [32mUP-TO-DATE :entry:default@ProcessRouterMap...  [39m
+> hvigor [32mUP-TO-DATE :entry:default@ProcessShareConfig...  [39m
+> hvigor [32mFinished :entry:default@ProcessStartupConfig... after 2 ms [39m
+> hvigor [32mUP-TO-DATE :entry:default@ProcessResource...  [39m
+> hvigor [32mUP-TO-DATE :entry:default@GenerateLoaderJson...  [39m
+> hvigor [32mUP-TO-DATE :entry:default@CompileResource...  [39m
+> hvigor [32mFinished :entry:default@BuildJS... after 2 ms [39m
+> hvigor [32mFinished :entry:default@BuildNativeWithNinja... after 886 ms [39m
+> hvigor [32mUP-TO-DATE :entry:default@ProcessLibs...  [39m
+> hvigor [32mUP-TO-DATE :entry:default@DoNativeStrip...  [39m
+> hvigor [32mUP-TO-DATE :entry:default@CacheNativeLibs...  [39m
+> hvigor [33mWARN: [33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/LocalNotifications.ets:23:10
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/LocalNotifications.ets:28:23
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/LocalNotifications.ets:29:20
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/LocalNotifications.ets:57:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/LocalNotifications.ets:58:16
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/LocalNotifications.ets:60:23
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/LocalNotifications.ets:61:9
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/LocalNotifications.ets:63:21
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/LocalNotifications.ets:63:58
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/LocalNotifications.ets:70:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Appearance.ets:8:23
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Appearance.ets:9:23
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Appearance.ets:11:3
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Appearance.ets:18:23
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Appearance.ets:19:9
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Appearance.ets:25:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Appearance.ets:26:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/T3Client.ets:1044:30
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/T3Client.ets:1501:30
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/storage/SessionStore.ets:11:28
+ 'isScreenLocked' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/storage/EnvironmentStore.ets:21:18
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/storage/EnvironmentStore.ets:23:7
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/storage/EnvironmentStore.ets:24:7
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/storage/EnvironmentStore.ets:25:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/storage/EnvironmentStore.ets:26:53
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/storage/EnvironmentStore.ets:28:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/storage/CloudStores.ets:31:28
+ 'isScreenLocked' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Dpop.ets:57:16
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Dpop.ets:58:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Dpop.ets:59:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Dpop.ets:67:20
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Dpop.ets:68:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Dpop.ets:69:37
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Dpop.ets:76:22
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Dpop.ets:77:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Dpop.ets:79:16
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Dpop.ets:83:23
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Dpop.ets:84:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Dpop.ets:85:39
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Dpop.ets:91:33
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Dpop.ets:92:34
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Dpop.ets:153:22
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Dpop.ets:154:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/Dpop.ets:156:12
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/CloudAuth.ets:30:28
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/CloudAuth.ets:30:28
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/CloudManager.ets:48:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/WorkspacePrefs.ets:68:18
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/WorkspacePrefs.ets:70:7
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/WorkspacePrefs.ets:71:7
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/WorkspacePrefs.ets:72:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/WorkspacePrefs.ets:73:9
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/WorkspacePrefs.ets:74:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/storage/DraftStore.ets:26:16
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/storage/DraftStore.ets:28:7
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/storage/DraftStore.ets:29:7
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/storage/DraftStore.ets:30:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/storage/DraftStore.ets:31:9
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/storage/DraftStore.ets:32:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/components/DevicePickerPanel.ets:95:38
+ 'show' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/components/PreviewPanel.ets:99:17
+ 'show' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/components/TerminalPanel.ets:111:16
+ 'vp2px' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/components/TerminalPanel.ets:119:47
+ 'vp2px' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/components/TerminalPanel.ets:153:17
+ 'show' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/components/QueuePanel.ets:61:48
+ 'show' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/AttachmentPicker.ets:51:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/AttachmentPicker.ets:53:27
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/AttachmentPicker.ets:59:29
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/AttachmentPicker.ets:66:23
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/components/ConnectDevicesSection.ets:40:29
+ 'show' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/components/ConnectionsPanel.ets:138:52
+ 'show' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/components/ConnectionsPanel.ets:163:44
+ 'show' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/PairingScanner.ets:16:35
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/services/PairingScanner.ets:19:37
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/components/GitPanel.ets:66:21
+ 'show' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/components/GitPanel.ets:258:29
+ 'show' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/components/PullRequestsPanel.ets:463:33
+ 'show' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/components/CloudAccountPanel.ets:96:33
+ 'show' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/components/CloudAccountPanel.ets:119:29
+ 'show' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/components/ProviderSettingsPanel.ets:96:17
+ 'show' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/pages/Index.ets:485:17
+ 'show' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/pages/Index.ets:894:17
+ 'show' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/pages/Index.ets:959:17
+ 'show' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/pages/Index.ets:972:17
+ 'show' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/pages/Index.ets:1295:32
+ To use this API, you need to apply for the permissions: ohos.permission.READ_PASTEBOARD
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/pages/Index.ets:2626:25
+ 'show' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /Users/zhangyc/WorkStation/Projects/Other/t3code-harmony/entry/src/main/ets/pages/Index.ets:2664:25
+ 'show' has been deprecated.
+[39m[39m
+[39m
+> hvigor [32mFinished :entry:default@CompileArkTS... after 7 s 935 ms [39m
+> hvigor [32mUP-TO-DATE :entry:default@GeneratePkgModuleJson...  [39m
+> hvigor [32mFinished :entry:default@ProcessCompiledResources... after 1 ms [39m
+> hvigor [32mFinished :entry:default@PackageHap... after 526 ms [39m
+> hvigor [32mFinished :entry:default@PackingCheck... after 3 ms [39m
+> hvigor [32mFinished :entry:default@SignHap... after 1 s 697 ms [39m
+> hvigor [32mFinished :entry:default@CollectDebugSymbol... after 1 ms [39m
+> hvigor [32mFinished :entry:assembleHap... after 1 ms [39m
+> hvigor [32mBUILD SUCCESSFUL in 13 s 965 ms [39m

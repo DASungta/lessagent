@@ -1,0 +1,15 @@
+checked_at=2026-11-17T09:14:00+0800
+en0:
+en0: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+	options=46b<RXCSUM,TXCSUM,VLAN_HWTAGGING,TSO4,TSO6,CHANNEL_IO>
+	ether fc:9d:05:60:32:de
+	inet 192.168.10.75 netmask 0xffffff00 broadcast 192.168.10.255
+	media: autoselect (1000baseT <full-duplex>)
+	status: active
+global_or_ula_ipv6:
+tailscale_cli=
+zsh:1: no matches found: /Applications/Tailscale*.app
+tailscale_apps=0
+ipv6_probe:
+curl: (7) Failed to connect to 2606:4700:4700::1111 port 80 after 0 ms: Couldn't connect to server
+000

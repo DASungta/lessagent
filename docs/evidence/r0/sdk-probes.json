@@ -1,0 +1,116 @@
+{
+  "kind": "S-local-sdk-only",
+  "runtimeValidated": false,
+  "checks": [
+    {
+      "file": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/api/@ohos.security.cryptoFramework.d.ts",
+      "sha256": "7f909721d6477879383a6622887d1f256b86b8aa5836d1361c2aa053eb4484db",
+      "hits": [
+        {
+          "line": 1492,
+          "source": "generateKeyPair(callback: AsyncCallback<KeyPair>): void;"
+        },
+        {
+          "line": 1529,
+          "source": "generateKeyPair(): Promise<KeyPair>;"
+        },
+        {
+          "line": 1586,
+          "source": "convertKey(pubKey: DataBlob, priKey: DataBlob, callback: AsyncCallback<KeyPair>): void;"
+        },
+        {
+          "line": 1629,
+          "source": "convertKey(pubKey: DataBlob | null, priKey: DataBlob | null, callback: AsyncCallback<KeyPair>): void;"
+        },
+        {
+          "line": 1672,
+          "source": "convertKey(pubKey: DataBlob, priKey: DataBlob): Promise<KeyPair>;"
+        },
+        {
+          "line": 1715,
+          "source": "convertKey(pubKey: DataBlob | null, priKey: DataBlob | null): Promise<KeyPair>;"
+        },
+        {
+          "line": 1955,
+          "source": "convertKey(key: DataBlob, callback: AsyncCallback<SymKey>): void;"
+        },
+        {
+          "line": 1992,
+          "source": "convertKey(key: DataBlob): Promise<SymKey>;"
+        },
+        {
+          "line": 5513,
+          "source": "function createSign(algName: string): Sign;"
+        },
+        {
+          "line": 8477,
+          "source": "generateKeyPair(callback: AsyncCallback<KeyPair>): void;"
+        },
+        {
+          "line": 8514,
+          "source": "generateKeyPair(): Promise<KeyPair>;"
+        },
+        {
+          "line": 9437,
+          "source": "static genEccSignatureSpec(data: Uint8Array): EccSignatureSpec;"
+        }
+      ]
+    },
+    {
+      "file": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/api/@ohos.notificationManager.d.ts",
+      "sha256": "859ee0d83a269173ffd8bf1f0b2b433649c43a7ac46a8d05c3ec16e29b02475d",
+      "hits": [
+        {
+          "line": 127,
+          "source": "function publish(request: NotificationRequest, callback: AsyncCallback<void>): void;"
+        },
+        {
+          "line": 194,
+          "source": "function publish(request: NotificationRequest): Promise<void>;"
+        },
+        {
+          "line": 480,
+          "source": "function isNotificationEnabled(callback: AsyncCallback<boolean>): void;"
+        },
+        {
+          "line": 506,
+          "source": "function isNotificationEnabled(): Promise<boolean>;"
+        },
+        {
+          "line": 692,
+          "source": "function requestEnableNotification(callback: AsyncCallback<void>): void;"
+        },
+        {
+          "line": 746,
+          "source": "function requestEnableNotification(context: UIAbilityContext, callback: AsyncCallback<void>): void;"
+        },
+        {
+          "line": 784,
+          "source": "function requestEnableNotification(): Promise<void>;"
+        },
+        {
+          "line": 835,
+          "source": "function requestEnableNotification(context: UIAbilityContext): Promise<void>;"
+        }
+      ]
+    },
+    {
+      "file": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/native/sysroot/usr/include/multimedia/player_framework/native_avcodec_videodecoder.h",
+      "sha256": "b53659cfd1132b73d4c1d29174203a6a7ae1b9d2a851d901d90ffe0f35df1204",
+      "hits": [
+        {
+          "line": 65,
+          "source": "OH_AVCodec *OH_VideoDecoder_CreateByMime(const char *mime) __attribute__((__availability__(ohos, introduced=9.0.0)));"
+        },
+        {
+          "line": 147,
+          "source": "OH_AVErrCode OH_VideoDecoder_SetSurface(OH_AVCodec *codec, OHNativeWindow *window)"
+        },
+        {
+          "line": 169,
+          "source": "OH_AVErrCode OH_VideoDecoder_Configure(OH_AVCodec *codec, OH_AVFormat *format)"
+        }
+      ]
+    }
+  ]
+}

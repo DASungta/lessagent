@@ -1,0 +1,10 @@
+{
+  "tests": 384,
+  "failed": 0,
+  "skipped": 0,
+  "build": "successful",
+  "installed": true,
+  "started": true,
+  "hapSha256": "0b87ca84788c725ed47a2b2e8dbdb268983df04c79d3ebf4c69c8ac21e1ad8fa",
+  "scrollbackDeviceAcceptance": "pending"
+}

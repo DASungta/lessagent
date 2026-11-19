@@ -1,0 +1,292 @@
+TAP version 13
+# Subtest: picker handles short reads and always closes the selected document
+ok 1 - picker handles short reads and always closes the selected document
+  ---
+  duration_ms: 55.481695
+  type: 'test'
+  ...
+# Subtest: failed document upload is manually retryable only in its original server and thread
+ok 2 - failed document upload is manually retryable only in its original server and thread
+  ---
+  duration_ms: 8.016594
+  type: 'test'
+  ...
+# Subtest: shell updates deduplicate and remove archived threads and projects
+ok 3 - shell updates deduplicate and remove archived threads and projects
+  ---
+  duration_ms: 1.16586
+  type: 'test'
+  ...
+# Subtest: provider models preserve exact instance and model identifiers
+ok 4 - provider models preserve exact instance and model identifiers
+  ---
+  duration_ms: 0.478304
+  type: 'test'
+  ...
+# Subtest: snapshot and events expose only pending actionable requests and separate secrets
+ok 5 - snapshot and events expose only pending actionable requests and separate secrets
+  ---
+  duration_ms: 0.411927
+  type: 'test'
+  ...
+# Subtest: Markdown code blocks preserve literal content including incomplete streaming blocks
+ok 6 - Markdown code blocks preserve literal content including incomplete streaming blocks
+  ---
+  duration_ms: 0.229843
+  type: 'test'
+  ...
+# Subtest: input cards preserve custom option values, required flags and multiple selections
+ok 7 - input cards preserve custom option values, required flags and multiple selections
+  ---
+  duration_ms: 0.142269
+  type: 'test'
+  ...
+# Subtest: repository identity enrichment snapshots cannot erase project or thread pickers
+ok 8 - repository identity enrichment snapshots cannot erase project or thread pickers
+  ---
+  duration_ms: 0.128719
+  type: 'test'
+  ...
+# Subtest: input option selection reflects single and multiple answers
+ok 9 - input option selection reflects single and multiple answers
+  ---
+  duration_ms: 0.063227
+  type: 'test'
+  ...
+# Subtest: input question identifiers cannot mutate answer prototypes
+ok 10 - input question identifiers cannot mutate answer prototypes
+  ---
+  duration_ms: 0.117631
+  type: 'test'
+  ...
+# Subtest: an empty user input request remains an input card instead of an approval
+ok 11 - an empty user input request remains an input card instead of an approval
+  ---
+  duration_ms: 0.204983
+  type: 'test'
+  ...
+# Subtest: upload target rejects external, expired, traversal and oversized capabilities
+ok 12 - upload target rejects external, expired, traversal and oversized capabilities
+  ---
+  duration_ms: 0.527085
+  type: 'test'
+  ...
+# Subtest: 2000 messages notify only the changed streaming row and appended row
+ok 13 - 2000 messages notify only the changed streaming row and appended row
+  ---
+  duration_ms: 2.744479
+  type: 'test'
+  ...
+# Subtest: native adapter runs auth, ticket, identity check, create, subscribe, send and reconnect
+ok 14 - native adapter runs auth, ticket, identity check, create, subscribe, send and reconnect
+  ---
+  duration_ms: 89.443572
+  type: 'test'
+  ...
+# Subtest: only a ticket 404 falls back to the bare endpoint
+ok 15 - only a ticket 404 falls back to the bare endpoint
+  ---
+  duration_ms: 41.422574
+  type: 'test'
+  ...
+# Subtest: bad credentials and incompatible versions stop before opening a socket
+ok 16 - bad credentials and incompatible versions stop before opening a socket
+  ---
+  duration_ms: 63.700757
+  type: 'test'
+  ...
+# Subtest: socket failures cannot echo tickets into UI diagnostics
+ok 17 - socket failures cannot echo tickets into UI diagnostics
+  ---
+  duration_ms: 31.96561
+  type: 'test'
+  ...
+# Subtest: identity mismatch blocks a connection
+ok 18 - identity mismatch blocks a connection
+  ---
+  duration_ms: 26.481076
+  type: 'test'
+  ...
+# Subtest: background/disconnect during metadata lookup prevents a stale credential exchange
+ok 19 - background/disconnect during metadata lookup prevents a stale credential exchange
+  ---
+  duration_ms: 24.115977
+  type: 'test'
+  ...
+# Subtest: secure session reuse does not exchange one-time pairing again; expiry and server mismatch fail closed
+ok 20 - secure session reuse does not exchange one-time pairing again; expiry and server mismatch fail closed
+  ---
+  duration_ms: 32.429296
+  type: 'test'
+  ...
+# Subtest: responses, secrets and stop use distinct contracts and reject stale requests
+ok 21 - responses, secrets and stop use distinct contracts and reject stale requests
+  ---
+  duration_ms: 26.854415
+  type: 'test'
+  ...
+# Subtest: unknown message submission requires a fresh snapshot before manual retry
+ok 22 - unknown message submission requires a fresh snapshot before manual retry
+  ---
+  duration_ms: 81.026989
+  type: 'test'
+  ...
+# Subtest: snapshot confirms a lost acknowledgement by message id without resending
+ok 23 - snapshot confirms a lost acknowledgement by message id without resending
+  ---
+  duration_ms: 20.790061
+  type: 'test'
+  ...
+# Subtest: process exit restores selected thread and unknown message without replay or persisted body
+ok 24 - process exit restores selected thread and unknown message without replay or persisted body
+  ---
+  duration_ms: 114.914045
+  type: 'test'
+  ...
+# Subtest: journal failure and duplicate clicks cannot send modifying frames
+ok 25 - journal failure and duplicate clicks cannot send modifying frames
+  ---
+  duration_ms: 19.793825
+  type: 'test'
+  ...
+# Subtest: background returns to the same thread using reads only; explicit disconnect stays disconnected
+ok 26 - background returns to the same thread using reads only; explicit disconnect stays disconnected
+  ---
+  duration_ms: 19.360664
+  type: 'test'
+  ...
+# Subtest: recovery record cannot cross server identities
+ok 27 - recovery record cannot cross server identities
+  ---
+  duration_ms: 18.89693
+  type: 'test'
+  ...
+# Subtest: double click while journal write waits sends only one command
+ok 28 - double click while journal write waits sends only one command
+  ---
+  duration_ms: 20.525916
+  type: 'test'
+  ...
+# Subtest: attachment sends exact bytes without bearer forwarding or redirects, and dispatches only on user send
+ok 29 - attachment sends exact bytes without bearer forwarding or redirects, and dispatches only on user send
+  ---
+  duration_ms: 20.009714
+  type: 'test'
+  ...
+# Subtest: invalid signed targets and failed uploads cannot attach or dispatch
+ok 30 - invalid signed targets and failed uploads cannot attach or dispatch
+  ---
+  duration_ms: 35.375165
+  type: 'test'
+  ...
+# Subtest: only TLS or loopback URLs accepted; credentials encoded as OAuth form data
+ok 31 - only TLS or loopback URLs accepted; credentials encoded as OAuth form data
+  ---
+  duration_ms: 1.100789
+  type: 'test'
+  ...
+# Subtest: descriptor rejects missing/older/newer protocol before sending a credential
+ok 32 - descriptor rejects missing/older/newer protocol before sending a credential
+  ---
+  duration_ms: 0.17251
+  type: 'test'
+  ...
+# Subtest: RPC correlates out-of-order replies and sanitizes server failures
+ok 33 - RPC correlates out-of-order replies and sanitizes server failures
+  ---
+  duration_ms: 0.896992
+  type: 'test'
+  ...
+# Subtest: streams ACK after applying batches; handles frame parts and Chinese
+ok 34 - streams ACK after applying batches; handles frame parts and Chinese
+  ---
+  duration_ms: 0.296299
+  type: 'test'
+  ...
+# Subtest: duplicate/stale events ignored, global sequence gaps permitted, snapshot resets state
+ok 35 - duplicate/stale events ignored, global sequence gaps permitted, snapshot resets state
+  ---
+  duration_ms: 0.188039
+  type: 'test'
+  ...
+# Subtest: malformed frames fail closed, without acknowledging rejected chunks
+ok 36 - malformed frames fail closed, without acknowledging rejected chunks
+  ---
+  duration_ms: 0.93935
+  type: 'test'
+  ...
+# Subtest: timeout interrupts and closes; mutation is never retried
+ok 37 - timeout interrupts and closes; mutation is never retried
+  ---
+  duration_ms: 11.965833
+  type: 'test'
+  ...
+# Subtest: disconnect rejects all pending work; heartbeats follow Effect RPC envelopes
+ok 38 - disconnect rejects all pending work; heartbeats follow Effect RPC envelopes
+  ---
+  duration_ms: 0.332724
+  type: 'test'
+  ...
+# Subtest: command subset preserves IDs and uses approval-required mode
+ok 39 - command subset preserves IDs and uses approval-required mode
+  ---
+  duration_ms: 0.252818
+  type: 'test'
+  ...
+# Subtest: assistant turn items render live text and merge with the final conversation message
+ok 40 - assistant turn items render live text and merge with the final conversation message
+  ---
+  duration_ms: 0.271557
+  type: 'test'
+  ...
+# Subtest: history keeps attachment names without retaining local paths or signed URLs
+ok 41 - history keeps attachment names without retaining local paths or signed URLs
+  ---
+  duration_ms: 0.250875
+  type: 'test'
+  ...
+# Subtest: Asset storage roundtrip, replacement, delete and locked-device fail closed
+ok 42 - Asset storage roundtrip, replacement, delete and locked-device fail closed
+  ---
+  duration_ms: 54.489219
+  type: 'test'
+  ...
+# Subtest: recovery alias stays separate from credentials and contains metadata only
+ok 43 - recovery alias stays separate from credentials and contains metadata only
+  ---
+  duration_ms: 11.636117
+  type: 'test'
+  ...
+# Subtest: send acknowledgement clears only the submitted draft, preserving text typed while waiting
+ok 44 - send acknowledgement clears only the submitted draft, preserving text typed while waiting
+  ---
+  duration_ms: 0.660112
+  type: 'test'
+  ...
+# Subtest: failed send retains the draft and exposes the error
+ok 45 - failed send retains the draft and exposes the error
+  ---
+  duration_ms: 0.147777
+  type: 'test'
+  ...
+# Subtest: light and dark text pairs meet normal text contrast
+ok 46 - light and dark text pairs meet normal text contrast
+  ---
+  duration_ms: 4.102656
+  type: 'test'
+  ...
+# Subtest: native back dismisses the sheet first, then returns to the list
+ok 47 - native back dismisses the sheet first, then returns to the list
+  ---
+  duration_ms: 2.145114
+  type: 'test'
+  ...
+1..47
+# tests 47
+# suites 0
+# pass 47
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1612.940686

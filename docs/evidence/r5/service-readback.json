@@ -1,0 +1,135 @@
+{
+  "generatedAt": "2026-11-18T01:49:24.346Z",
+  "environment": {
+    "id": "b18f0e2c",
+    "label": "奋斗的iMac Pro",
+    "version": "0.1.9"
+  },
+  "project": {
+    "id": "6cd1e334-4760-4661-b3e4-7d5074234ee4",
+    "workspaceRoot": "/tmp/t3-r4-accept-gHC0QI/data/projects/r5-accept-1794966498383"
+  },
+  "files": {
+    "rootEntries": [
+      {
+        "path": "assets",
+        "kind": "directory"
+      },
+      {
+        "path": "assets/icon.svg",
+        "kind": "file"
+      },
+      {
+        "path": "image.png",
+        "kind": "file"
+      },
+      {
+        "path": "image2.png",
+        "kind": "file"
+      },
+      {
+        "path": "README.md",
+        "kind": "file"
+      },
+      {
+        "path": "src",
+        "kind": "directory"
+      },
+      {
+        "path": "src/app.ts",
+        "kind": "file"
+      },
+      {
+        "path": "src/new.ts",
+        "kind": "file"
+      }
+    ],
+    "readRelativePath": "README.md",
+    "readBytes": 189,
+    "readTruncated": false,
+    "readHasTable": true,
+    "searchEntryCount": 6,
+    "searchMatches": [
+      {
+        "path": "README.md",
+        "line": 5
+      },
+      {
+        "path": "README.md",
+        "line": 8
+      }
+    ]
+  },
+  "review": [
+    {
+      "kind": "working-tree",
+      "title": "Uncommitted",
+      "truncated": true,
+      "files": [
+        {
+          "path": "big.txt",
+          "previousPath": null,
+          "additions": 0,
+          "deletions": 2
+        },
+        {
+          "path": "image2.png",
+          "previousPath": null,
+          "additions": 0,
+          "deletions": 0
+        },
+        {
+          "path": "src/app.ts",
+          "previousPath": null,
+          "additions": 1,
+          "deletions": 0
+        },
+        {
+          "path": "src/new.ts",
+          "previousPath": "src/old.ts",
+          "additions": 0,
+          "deletions": 0
+        }
+      ],
+      "diffHasLongLine": false,
+      "diffHasRename": false,
+      "diffBytes": 120000
+    }
+  ],
+  "vcs": {
+    "first": {
+      "isRepo": true,
+      "refName": "main",
+      "files": 5,
+      "insertions": 1,
+      "deletions": 2
+    },
+    "afterAction": {
+      "refName": "main",
+      "hasChanges": false,
+      "ahead": 0
+    }
+  },
+  "refs": {
+    "before": [
+      "main"
+    ],
+    "switched": {
+      "refName": "r5-branch"
+    },
+    "switchedBack": {
+      "refName": "main"
+    }
+  },
+  "gitAction": null,
+  "pull": {
+    "status": "pulled",
+    "refName": "main",
+    "upstreamRef": "origin/main"
+  },
+  "pullRequests": {
+    "entries": 0,
+    "errors": [],
+    "providers": []
+  }
+}

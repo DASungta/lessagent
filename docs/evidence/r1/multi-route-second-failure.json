@@ -1,0 +1,9 @@
+{
+  "checkedAt": "2026-11-16T22:23:41.698203+08:00",
+  "stageBeforeDiagnosticDetail": "controlled-unknown-cleanup",
+  "routeFailoverPassed": true,
+  "unknownRecoveryPreservedThroughFailover": true,
+  "remainingDirectoryHadOneRoute": true,
+  "productDirectoryTouched": false,
+  "next": "instrument save/remove boundary and capture sanitized assertion message"
+}

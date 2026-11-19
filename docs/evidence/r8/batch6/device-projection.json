@@ -1,0 +1,30 @@
+{
+  "pose": null,
+  "size": {
+    "width": 576,
+    "height": 1280
+  },
+  "streamMode": "grpc-screenshot",
+  "inputSource": "scrcpy",
+  "keys": [
+    "generation",
+    "serial",
+    "device",
+    "streamMode",
+    "grpcImageMode",
+    "encoder",
+    "encoderName",
+    "inputSource",
+    "codec",
+    "size",
+    "pose",
+    "status",
+    "lastFrameAt",
+    "lastError",
+    "clients",
+    "stream",
+    "screenRecording",
+    "viewerTransports"
+  ],
+  "sessionRevoked": true
+}

@@ -1,0 +1,12 @@
+{
+  "device": "23E0224122000135",
+  "model": "ALN-AL80",
+  "directoryGeneration": 82,
+  "aRouting": "read-write",
+  "bRouting": "read-write",
+  "cRouting": "off",
+  "bothReadWritePersisted": true,
+  "upstreamSemantics": "read requires both enabled endpoints not off; write requires both read-write",
+  "actualPullRequestFeatureExecutionDeferredToR5": true,
+  "nativeSettingsUiVerified": true
+}

@@ -1,0 +1,374 @@
+{
+  "generatedAt": "2026-11-17T14:20:41+0800",
+  "device": {
+    "model": "ALN-AL80",
+    "product": "HUAWEI Mate 60 Pro",
+    "serial": "23E0224122000135",
+    "os": "HarmonyOS"
+  },
+  "package": "com.dasungta.t3code.harmony",
+  "hap": {
+    "path": "docs/evidence/r3/r3-candidate-signed.hap",
+    "sha256": "bf9937b56c35c44ed38c0d6112634bc395e59549548a86969d4ef17ea28c6137"
+  },
+  "service": {
+    "base": "http://127.0.0.1:47891",
+    "baseDir": "/tmp/t3-r3-accept-WuIFKn/service",
+    "environmentId": "df071d1f-faad-4ee3-b082-693b78d7cafa",
+    "isolated": true
+  },
+  "screenshots": [
+    {
+      "path": "docs/evidence/r3/device/r3-add-project-source.png",
+      "sha256": "d8d6cf967d8a361bdd04798a272c56585d6d6ca62c5da0cbfb7931da6351407c"
+    },
+    {
+      "path": "docs/evidence/r3/device/r3-archive.png",
+      "sha256": "2d7b9929f62d08ddb1b25ccfdbe6845bc0e66cc5f723edd29b992a18387f1369"
+    },
+    {
+      "path": "docs/evidence/r3/device/r3-clone-cancelled.png",
+      "sha256": "4360d49406786d2de302b3063506fdfc5084052efd5f9a60d94462a66d0c38fa"
+    },
+    {
+      "path": "docs/evidence/r3/device/r3-clone-success-project.png",
+      "sha256": "1dffbbf5d3bbef9f1a1dd32aea6bd03268c098e717ed885d8fd8ebe6fe57002b"
+    },
+    {
+      "path": "docs/evidence/r3/device/r3-home-shelves.png",
+      "sha256": "00196418fd18f17cd7d884084a22211085a23e7be55b4e9f7ef519d90c5c3ebc"
+    },
+    {
+      "path": "docs/evidence/r3/device/r3-new-project.png",
+      "sha256": "09d7e11d11293a2eb8e816beb0a3433674cb3014acc05ed34bf154afc3c16da2"
+    },
+    {
+      "path": "docs/evidence/r3/device/r3-new-task-project-selection.png",
+      "sha256": "7e76df5026318e5e9474fffed527d32d76fc95feee82ca6c5b1e9fbb6396ebd9"
+    },
+    {
+      "path": "docs/evidence/r3/device/r3-project-overview.png",
+      "sha256": "64ceab716051a38b11fec0f7b9e6f2c116566b11567326826f4cec0c28b2c53c"
+    },
+    {
+      "path": "docs/evidence/r3/device/r3-project-picker.png",
+      "sha256": "004436c2ab4a92f3a29f87c79a6f4b3acad17defb6ab3bc82268dfd92b5dc48c"
+    },
+    {
+      "path": "docs/evidence/r3/device/r3-search-gamma.png",
+      "sha256": "123145021541c9eef1e77b5989df44a24457b42047a99799ee69bc7f81a6dea7"
+    },
+    {
+      "path": "docs/evidence/r3/device/r3-settings.png",
+      "sha256": "88422c2c6350b9cfd4ca5fe45a07e02d695dd34779ad049a3b685db88e964bbd"
+    }
+  ],
+  "checks": [
+    {
+      "id": "P04-new-project",
+      "status": "passed",
+      "ui": {
+        "created": true,
+        "openedNewTask": true,
+        "selectedProject": "R3 UI Fixed 1447"
+      },
+      "server": {
+        "projectId": "ff30006b-c519-4b88-bb73-01cb8538506c",
+        "title": "R3 UI Fixed 1447",
+        "workspaceRoot": "/tmp/t3-r3-accept-WuIFKn/service/projects/r3-ui-fixed-1447",
+        "createdAt": "2026-11-17T05:47:24.917Z",
+        "updatedAt": "2026-11-17T05:47:24.917Z",
+        "pinnedAt": null,
+        "archivedAt": null,
+        "deletedAt": null
+      },
+      "filesystem": {
+        "workspaceExists": true
+      }
+    },
+    {
+      "id": "P04-local-folder",
+      "status": "passed",
+      "ui": {
+        "added": true,
+        "openedNewTask": true,
+        "selectedProjectObservedBeforeFix": "Project A"
+      },
+      "server": {
+        "projectId": "84b9fd83-e3de-46bd-9d95-dc35e5d20a9a",
+        "title": "project-c",
+        "workspaceRoot": "/tmp/t3-r3-accept-WuIFKn/project-c",
+        "createdAt": "2026-11-17T05:53:08.907Z",
+        "updatedAt": "2026-11-17T06:11:46.033Z",
+        "pinnedAt": null,
+        "archivedAt": null,
+        "deletedAt": null
+      },
+      "note": "本地目录记录与磁盘目录回读通过；当时发现残留会话覆盖新任务项目，修复后已用项目选择器和克隆项目在新 HAP 上复核正确项目。"
+    },
+    {
+      "id": "P04-clone-success",
+      "status": "passed",
+      "ui": {
+        "completed": true,
+        "finalSelectedProject": "clone-final2-target-1794896299"
+      },
+      "server": {
+        "projectId": "410ed0cc-7f4f-4c1a-aeb1-3d17dd4ead0a",
+        "title": "clone-final2-target-1794896299",
+        "workspaceRoot": "/tmp/t3-r3-accept-WuIFKn/clone-final2-target-1794896299",
+        "createdAt": "2026-11-17T06:18:45.006Z",
+        "updatedAt": "2026-11-17T06:18:47.197Z",
+        "pinnedAt": null,
+        "archivedAt": null,
+        "deletedAt": null
+      },
+      "git": {
+        "head": "3fb8c4bfab5bf418860d819118670cfe9d524de6",
+        "marker": "clone-ok"
+      }
+    },
+    {
+      "id": "P04-clone-failure-retry",
+      "status": "passed",
+      "server": {
+        "projectId": "fbeb6726-a5ff-4c75-bb45-4e5f7aef40f4",
+        "title": "clone-fail2-target-1794895427",
+        "workspaceRoot": "/tmp/t3-r3-accept-WuIFKn/clone-fail2-target-1794895427",
+        "createdAt": "2026-11-17T06:04:12.062Z",
+        "updatedAt": "2026-11-17T06:04:12.062Z",
+        "pinnedAt": null,
+        "archivedAt": null,
+        "deletedAt": null
+      },
+      "ui": {
+        "failureBanner": true,
+        "retryControl": true
+      },
+      "rpcTrace": [
+        "projectClone.start Success",
+        "projectClone.retry Success"
+      ],
+      "note": "服务端 trace 以方法名和结果复核；未输出凭据。"
+    },
+    {
+      "id": "P04-clone-cancel",
+      "status": "passed",
+      "server": {
+        "projectId": "aed325d5-de5e-4b11-841c-810c5e364ac5",
+        "title": "clone-cancel-target-1794895509",
+        "workspaceRoot": "/tmp/t3-r3-accept-WuIFKn/clone-cancel-target-1794895509",
+        "createdAt": "2026-11-17T06:06:11.197Z",
+        "updatedAt": "2026-11-17T06:06:11.197Z",
+        "pinnedAt": null,
+        "archivedAt": null,
+        "deletedAt": null
+      },
+      "ui": {
+        "runningProgress": "running · connecting",
+        "cancelControl": true,
+        "afterCancel": "已请求取消"
+      },
+      "rpcTrace": [
+        "projectClone.start Success",
+        "projectClone.cancel Success"
+      ]
+    },
+    {
+      "id": "P05-project-rename",
+      "status": "passed",
+      "server": {
+        "projectId": "2f92d108-d88c-49f7-b32b-77f485a6a747",
+        "title": "Project B Renamed 1455",
+        "workspaceRoot": "/tmp/t3-r3-accept-WuIFKn/project-b",
+        "createdAt": "2026-11-17T04:22:57.392Z",
+        "updatedAt": "2026-11-17T05:55:48.249Z",
+        "pinnedAt": "2026-11-17T04:30:52.573Z",
+        "archivedAt": null,
+        "deletedAt": null
+      },
+      "previousTitle": "Project B"
+    },
+    {
+      "id": "P05-project-archive-restore",
+      "status": "passed",
+      "server": {
+        "projectId": "84b9fd83-e3de-46bd-9d95-dc35e5d20a9a",
+        "title": "project-c",
+        "workspaceRoot": "/tmp/t3-r3-accept-WuIFKn/project-c",
+        "createdAt": "2026-11-17T05:53:08.907Z",
+        "updatedAt": "2026-11-17T06:11:46.033Z",
+        "pinnedAt": null,
+        "archivedAt": null,
+        "deletedAt": null
+      },
+      "observedArchivedAt": "2026-11-17T06:11:05.061Z",
+      "finalArchivedAt": null
+    },
+    {
+      "id": "P05-project-pin-unpin",
+      "status": "passed",
+      "server": {
+        "projectId": "84b9fd83-e3de-46bd-9d95-dc35e5d20a9a",
+        "title": "project-c",
+        "workspaceRoot": "/tmp/t3-r3-accept-WuIFKn/project-c",
+        "createdAt": "2026-11-17T05:53:08.907Z",
+        "updatedAt": "2026-11-17T06:11:46.033Z",
+        "pinnedAt": null,
+        "archivedAt": null,
+        "deletedAt": null
+      },
+      "observedPinnedAt": "2026-11-17T06:11:38.144Z",
+      "finalPinnedAt": null
+    },
+    {
+      "id": "P05-project-delete-confirm",
+      "status": "passed",
+      "server": {
+        "projectId": "a791ba08-5792-4de6-9623-71c2b4329a1f",
+        "title": "RPC Test Project",
+        "workspaceRoot": "/tmp/t3-r3-accept-WuIFKn/service/projects/rpc-test-project",
+        "createdAt": "2026-11-17T04:36:19.969Z",
+        "updatedAt": "2026-11-17T06:00:42.969Z",
+        "pinnedAt": null,
+        "archivedAt": null,
+        "deletedAt": "2026-11-17T06:00:42.969Z"
+      },
+      "ui": {
+        "cancelKeptRecord": true,
+        "confirmDeleted": true
+      }
+    },
+    {
+      "id": "P02-settle-undo",
+      "status": "passed",
+      "thread": {
+        "threadId": "e3888a04-971f-48f1-8d99-535cc604b5a2",
+        "title": "R3 Gamma Snoozed",
+        "archivedAt": null,
+        "deletedAt": null,
+        "settledOverride": "active",
+        "settledAt": null,
+        "unsettledAt": "2026-11-17T05:49:49.630Z",
+        "snoozedUntil": "2026-11-17T07:12:10.534Z",
+        "snoozedAt": "2026-11-17T06:12:19.174Z",
+        "pinnedAt": null,
+        "pinOrderKey": null,
+        "activeOrderKey": "n",
+        "autoSettleDisabledAt": null
+      },
+      "observedSettledAt": "2026-11-17T05:48:49.199Z",
+      "observedUndoUnsettledAt": "2026-11-17T05:49:49.630Z"
+    },
+    {
+      "id": "P02-archive-restore",
+      "status": "passed",
+      "thread": {
+        "threadId": "42b99b11-51f3-47d8-85b5-067dc1f664a6",
+        "title": "R3 Delta Settled",
+        "archivedAt": null,
+        "deletedAt": null,
+        "settledOverride": "settled",
+        "settledAt": "2026-11-17T04:26:26.922Z",
+        "unsettledAt": null,
+        "snoozedUntil": null,
+        "snoozedAt": null,
+        "pinnedAt": null,
+        "pinOrderKey": null,
+        "activeOrderKey": null,
+        "autoSettleDisabledAt": null
+      },
+      "observedArchivedAt": "2026-11-17T05:56:53.000Z",
+      "finalArchivedAt": null
+    },
+    {
+      "id": "P03-active-reorder-up",
+      "status": "passed",
+      "thread": {
+        "threadId": "e3888a04-971f-48f1-8d99-535cc604b5a2",
+        "title": "R3 Gamma Snoozed",
+        "archivedAt": null,
+        "deletedAt": null,
+        "settledOverride": "active",
+        "settledAt": null,
+        "unsettledAt": "2026-11-17T05:49:49.630Z",
+        "snoozedUntil": "2026-11-17T07:12:10.534Z",
+        "snoozedAt": "2026-11-17T06:12:19.174Z",
+        "pinnedAt": null,
+        "pinOrderKey": null,
+        "activeOrderKey": "n",
+        "autoSettleDisabledAt": null
+      },
+      "uiBefore": "Alpha,Gamma",
+      "uiAfter": "Gamma,Alpha",
+      "activeOrderKey": "n"
+    },
+    {
+      "id": "P03-snooze-preset",
+      "status": "passed",
+      "thread": {
+        "threadId": "e3888a04-971f-48f1-8d99-535cc604b5a2",
+        "title": "R3 Gamma Snoozed",
+        "archivedAt": null,
+        "deletedAt": null,
+        "settledOverride": "active",
+        "settledAt": null,
+        "unsettledAt": "2026-11-17T05:49:49.630Z",
+        "snoozedUntil": "2026-11-17T07:12:10.534Z",
+        "snoozedAt": "2026-11-17T06:12:19.174Z",
+        "pinnedAt": null,
+        "pinOrderKey": null,
+        "activeOrderKey": "n",
+        "autoSettleDisabledAt": null
+      },
+      "preset": "1 小时后"
+    },
+    {
+      "id": "P03-auto-settle",
+      "status": "passed",
+      "thread": {
+        "threadId": "e3888a04-971f-48f1-8d99-535cc604b5a2",
+        "title": "R3 Gamma Snoozed",
+        "archivedAt": null,
+        "deletedAt": null,
+        "settledOverride": "active",
+        "settledAt": null,
+        "unsettledAt": "2026-11-17T05:49:49.630Z",
+        "snoozedUntil": "2026-11-17T07:12:10.534Z",
+        "snoozedAt": "2026-11-17T06:12:19.174Z",
+        "pinnedAt": null,
+        "pinOrderKey": null,
+        "activeOrderKey": "n",
+        "autoSettleDisabledAt": null
+      },
+      "observedDisabledAt": "2026-11-17T06:09:42.450Z",
+      "finalAutoSettleDisabledAt": null,
+      "immediateMenuRefresh": "verified on final HAP: menu changed from 跟随设置 to 从不 without app restart; server auto_settle_disabled_at=null"
+    },
+    {
+      "id": "P01-search-filter-grouping",
+      "status": "passed",
+      "search": "Gamma 命中并展示暂缓 1 小时",
+      "filterLabelObserved": "Project A",
+      "groupingPreferenceObserved": "repository_path",
+      "note": "已切换并回读 repository_path，验收后恢复 repository；过滤标签显示当前项目。",
+      "groupingPreferenceFinal": "repository"
+    },
+    {
+      "id": "P06-project-selection-interface",
+      "status": "passed",
+      "note": "选择 clone-final2 项目后，新任务面板显示对应项目而非残留 Project A；完整 draft 仍属 R4。"
+    }
+  ],
+  "notAccepted": [
+    "原版 R3 真实视觉逐页对照（缺原版移动运行覆盖）",
+    "运行中归档限制、完整草稿/草稿恢复与首次发送状态机（R4）",
+    "拖拽排序手势（当前仅菜单上移/下移）",
+    "provider 登录、发布私有远程仓库、title regeneration 的实际 provider 调用",
+    "服务端严格只读/无权限组合的完整逐项真机回读"
+  ],
+  "cleanup": {
+    "isolatedServiceOnly": true,
+    "doesNotTouch3773Or47831": true
+  }
+}

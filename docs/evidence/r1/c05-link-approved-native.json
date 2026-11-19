@@ -1,0 +1,45 @@
+{
+  "device": "23E0224122000135",
+  "model": "ALN-AL80",
+  "threadId": "r1-c05-replay-source-9",
+  "turnItemId": "turn-item:link-request:r1-c05-replay-source-9:7af55e62-1493-45cf-a286-0775c680ad8f:r1-link-fixture-once",
+  "linkStatus": "linked",
+  "linkedEnvironmentId": "13c32a79-8e73-4c09-9e59-738dff57907b",
+  "linkedLabel": "奋斗的iMac Pro",
+  "linkedAccess": "read-only",
+  "failure": null,
+  "targetPairingGrantId": "89b01e7f-c872-4c34-a2b8-2fdb045e21b0",
+  "targetPairingGrantScopes": [
+    "orchestration:read"
+  ],
+  "targetPairingGrantConsumedAt": "2026-11-16T15:19:22.559Z",
+  "targetPairingGrantRevokedAt": null,
+  "targetAuthorizedClientSessionId": "1e9f99f5-0e15-47b9-adf9-2e860cf99f9d",
+  "targetAuthorizedClientScopes": [
+    "orchestration:read"
+  ],
+  "targetSessionIssuedAt": "2026-11-16T15:19:23.171Z",
+  "targetSessionExpiresAt": "2026-12-16T15:19:23.171Z",
+  "targetSessionLaterRevokedAt": "2026-11-16T15:22:51.289Z",
+  "sourcePeerExpiresAt": "2026-12-16T15:19:23.854Z",
+  "sourcePeerWasReachableBeforeTargetRevoke": true,
+  "sourceServiceReadback": {
+    "environmentId": "13c32a79-8e73-4c09-9e59-738dff57907b",
+    "label": "奋斗的iMac Pro",
+    "access": "read-only",
+    "urls": [
+      "https://cc3b1f00e906c5.app.lhr.life"
+    ],
+    "status": "reachable"
+  },
+  "noAutomaticBusinessMessage": true,
+  "targetMessageRunProviderSessionCounts": {
+    "orchestration_v2_projection_messages": 0,
+    "orchestration_v2_projection_runs": 0,
+    "orchestration_v2_projection_provider_sessions": 0
+  },
+  "nativeApprovalClickedExactlyOnce": true,
+  "nativeVerified": true,
+  "note": "Successful real peer link over public HTTPS. Target session was revoked later as separate ownership test; this record preserves the approval outcome.",
+  "capturedAt": "2026-11-16T23:23:18.416237+08:00"
+}

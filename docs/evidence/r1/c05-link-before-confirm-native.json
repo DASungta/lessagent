@@ -1,0 +1,16 @@
+{
+  "device": "23E0224122000135",
+  "model": "ALN-AL80",
+  "threadId": "r1-c05-replay-source-6",
+  "turnItemId": "turn-item:link-request:r1-c05-replay-source-6:794888ae-25ae-4552-be86-7c3128284efa:r1-link-fixture-once",
+  "linkStatus": "pending",
+  "selectedTarget": "奋斗的iMac Pro",
+  "requestedAccess": "read-only",
+  "targetPairingCodeCreatedBeforeConfirmation": false,
+  "targetActiveT3CodeLinkGrants": 0,
+  "sourcePeerLinkRows": 0,
+  "routeDirectoryUnchanged": true,
+  "routeForTargetPresent": true,
+  "nativeVerified": true,
+  "capturedAt": "2026-11-16T23:02:35.271710+08:00"
+}

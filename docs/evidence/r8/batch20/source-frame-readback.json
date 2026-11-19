@@ -1,0 +1,52 @@
+{
+  "measurements": [
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "frames": [
+        {
+          "width": 720,
+          "height": 960,
+          "bytes": 15824
+        }
+      ]
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "frames": [
+        {
+          "width": 720,
+          "height": 450,
+          "bytes": 8615
+        },
+        {
+          "width": 720,
+          "height": 450,
+          "bytes": 8615
+        },
+        {
+          "width": 2560,
+          "height": 1600,
+          "bytes": 54439
+        },
+        {
+          "width": 2560,
+          "height": 1600,
+          "bytes": 54439
+        },
+        {
+          "width": 720,
+          "height": 450,
+          "bytes": 8615
+        }
+      ]
+    }
+  ],
+  "tabClosed": true,
+  "sessionRevoked": true
+}

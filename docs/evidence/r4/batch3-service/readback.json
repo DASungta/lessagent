@@ -1,0 +1,51 @@
+{
+  "serviceVersion": "0.1.9",
+  "queue": {
+    "threadId": "7b047235-5c7a-49ab-bbcb-872719de179d",
+    "editedText": "QUEUE-EDITED",
+    "reorder": {"before": [2, 1], "after": [1, 2]},
+    "promote": {"queuedStatusAfter": "cancelled", "messageRetained": true},
+    "cancel": {"queuedRunRemoved": true},
+    "start": {"status": "starting"},
+    "heldResume": {"heldBefore": true, "heldAfter": false},
+    "steer": {"messagePersisted": true}
+  },
+  "forceStop": {
+    "threadId": "7b047235-5c7a-49ab-bbcb-872719de179d",
+    "outcome": "released",
+    "sharedWithThreadIds": [],
+    "runStatus": "interrupted"
+  },
+  "resume": {
+    "threadId": "b2656cc7-48eb-4abd-8f1c-90e8c6fcc0b2",
+    "sourceRun": "run:thread:b2656cc7-48eb-4abd-8f1c-90e8c6fcc0b2:ordinal:1",
+    "continuedRun": "run:thread:b2656cc7-48eb-4abd-8f1c-90e8c6fcc0b2:ordinal:2",
+    "status": "starting"
+  },
+  "secret": {
+    "direct": {"threadId": "b2b92215-90e6-416a-97f2-1d4869b6634e", "status": "saved", "assistant": "SECRET-DIRECT-OK", "valueLeaked": false},
+    "file": {"threadId": "2c2f3330-f138-48a8-9943-afae615ff520", "status": "saved", "assistant": "SECRET-FILE-OK", "valueLeaked": false},
+    "decline": {"threadId": "5b567cf6-f74a-4a0f-b4b2-33d665d9e8ad", "status": "declined", "assistant": "SECRET-DECLINED-ACK", "valueLeaked": false},
+    "reference": "not attempted: isolated service has no configured secret provider"
+  },
+  "attachments": {
+    "threadId": "7b047235-5c7a-49ab-bbcb-872719de179d",
+    "messageId": "2eb04ac0-ac9e-4f7a-9ebd-5bb5bb7aa410",
+    "items": [
+      {"type": "image", "name": "r4-pixel.png", "mimeType": "image/png", "sizeBytes": 70, "downloadStatus": 200, "exact": true},
+      {"type": "file", "name": "r4-12mib.bin", "mimeType": "application/octet-stream", "sizeBytes": 12582912, "downloadStatus": 200, "exact": true}
+    ]
+  },
+  "guestShare": {
+    "isolatedFlagEnabled": true,
+    "isolatedFlagReverted": true,
+    "createError": "connect_unavailable",
+    "reason": "no T3 Connect tunnel in isolated service"
+  },
+  "historyPaging": {
+    "serviceCapability": "not advertised",
+    "verified": false
+  },
+  "cleanup": "isolated service and temporary lab remain under /tmp for follow-up; no real service or work repository was touched"
+}
+

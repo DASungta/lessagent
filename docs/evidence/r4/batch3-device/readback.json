@@ -1,0 +1,35 @@
+{
+  "queue": {
+    "threadId": "423dd30d-356f-46a9-9692-5e31e0a5a474",
+    "editedText": "HARMONY-QUEUE-1-EDITED",
+    "queuedAfterRemove": 0,
+    "activeStartHidden": true
+  },
+  "secret": {
+    "threadId": "423dd30d-356f-46a9-9692-5e31e0a5a474",
+    "label": "HARMONY_SECRET",
+    "statusAfterUiSubmit": "saved",
+    "valueInProjection": false,
+    "screenshotWhileFocused": "black by secure capture"
+  },
+  "attachment": {
+    "name": "r4-pixel.png",
+    "mimeType": "image/png",
+    "sizeBytes": 70,
+    "previewOpened": true,
+    "shareSheetOpened": true,
+    "savePickerCompleted": true,
+    "saveStatus": "已保存到所选位置",
+    "shareSizeLabel": "70 B"
+  },
+  "model": {
+    "providerGroup": "Codex",
+    "selectedModel": "gpt-6.1-sol",
+    "saveCloseOverlapFixed": true
+  },
+  "messages": {
+    "copyVisibleWithoutTimestamp": true,
+    "emptyContinuationHidden": true
+  },
+  "cleanup": "isolated test queue removed; no real service or work repository touched"
+}

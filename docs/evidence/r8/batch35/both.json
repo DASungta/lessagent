@@ -1,0 +1,31 @@
+{
+  "fixtureTasks": [
+    {
+      "title": "B35-bound-check",
+      "enabled": 0,
+      "run_count": 0,
+      "thread_mode": "continue",
+      "is_bound": 1,
+      "same_project": 1,
+      "bound_title": "Unclear Subject",
+      "model": "gpt-6.2-sol",
+      "workspace": "root",
+      "runtime_mode": "approval-required",
+      "interaction_mode": "default"
+    },
+    {
+      "title": "B35-first-run",
+      "enabled": 0,
+      "run_count": 0,
+      "thread_mode": "fresh_session",
+      "is_bound": 0,
+      "same_project": null,
+      "bound_title": null,
+      "model": "gpt-6.2-sol",
+      "workspace": "root",
+      "runtime_mode": "approval-required",
+      "interaction_mode": "default"
+    }
+  ],
+  "allTasks": 2
+}

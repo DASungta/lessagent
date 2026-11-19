@@ -1,0 +1,13 @@
+{
+  "device": "23E0224122000135",
+  "checkedAt": "2026-11-16T20:37:37.605145+08:00",
+  "allowRadioChecked": true,
+  "systemConfirmationClicked": true,
+  "permissionPageClosed": true,
+  "xcomponentSurfacePresent": true,
+  "cameraPixelsCaptured": false,
+  "applicationReinstalled": false,
+  "bPairingGrantConsumed": false,
+  "bPairingGrantRevoked": false,
+  "physicalQrRecognitionVerified": false
+}

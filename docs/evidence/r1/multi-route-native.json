@@ -1,0 +1,19 @@
+{
+  "device": "23E0224122000135",
+  "checkedAt": "2026-11-16T22:28:18.026786+08:00",
+  "diagnostic": {
+    "passed": 6,
+    "failed": 0,
+    "primaryBase": "http://127.0.0.1:47831",
+    "alternateBase": "http://192.168.10.75:47831",
+    "foreignCodeExchanged": false,
+    "unknownRecoveryPreserved": true,
+    "recoveryAnchoredToOriginalBase": true,
+    "activeRouteRemovalReconnected": true,
+    "productDirectoryTouched": false,
+    "messagesSent": 0
+  },
+  "diagnosticHapSha256": "6d3f1ae54ace39e1b42f5be58e5244a57a8e48071119500285a41aa9376fb185",
+  "source": "actual A service through device loopback and LAN; B used only identity mismatch",
+  "agentMessagesSent": 0
+}

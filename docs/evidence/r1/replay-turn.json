@@ -1,0 +1,16 @@
+{
+  "environmentId": "cf3c1ea6-d785-4ed9-83f8-6d2c0ca903e1",
+  "projectId": "r1-c05-replay-project",
+  "threadId": "r1-c05-replay-source-5",
+  "messageId": "r1-c05-replay-prompt-5",
+  "provider": "r1ReplayLink",
+  "scenario": "question",
+  "paidModelsUsed": false,
+  "runs": [
+    {
+      "id": "run:thread:r1-c05-replay-source-5:ordinal:1",
+      "status": "starting"
+    }
+  ],
+  "pendingRequests": []
+}

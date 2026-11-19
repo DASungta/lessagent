@@ -1,0 +1,4732 @@
+[
+  {
+    "file": "apps/mobile/src/App.tsx",
+    "line": 204,
+    "source": "pendingThreadIdsAtom: threadEnvironment.pendingThreadIdsAtom,"
+  },
+  {
+    "file": "apps/mobile/src/connection/background-activity-scopes.ts",
+    "line": 40,
+    "source": "if (observation.method === WS_METHODS.subscribeResourceTelemetry) {"
+  },
+  {
+    "file": "apps/mobile/src/connection/background-activity-scopes.ts",
+    "line": 43,
+    "source": "if (observation.method !== WS_METHODS.subscribeVcsStatus) {"
+  },
+  {
+    "file": "apps/mobile/src/connection/background-activity.ts",
+    "line": 68,
+    "source": "request(WS_METHODS.serverReportClientActivity, {"
+  },
+  {
+    "file": "apps/mobile/src/features/archive/useArchivedThreadSnapshots.ts",
+    "line": 24,
+    "source": "hiddenThreadTagsAtom: serverEnvironment.hiddenThreadTagsAtom,"
+  },
+  {
+    "file": "apps/mobile/src/features/browser/BrowserTabMenu.tsx",
+    "line": 52,
+    "source": "const adjust = useAtomCommand(previewEnvironment.adjust, \"browser tab change\");"
+  },
+  {
+    "file": "apps/mobile/src/features/browser/BrowserTabMenu.tsx",
+    "line": 53,
+    "source": "const resize = useAtomCommand(previewEnvironment.resize, \"browser viewport change\");"
+  },
+  {
+    "file": "apps/mobile/src/features/browser/BrowserTabMenu.tsx",
+    "line": 54,
+    "source": "const close = useAtomCommand(previewEnvironment.close, \"browser tab close\");"
+  },
+  {
+    "file": "apps/mobile/src/features/browser/BrowserTabMenu.tsx",
+    "line": 55,
+    "source": "const canClose = useAtomValue(previewEnvironment.close.permissionAtom(environmentId));"
+  },
+  {
+    "file": "apps/mobile/src/features/browser/PreviewStreamWebView.tsx",
+    "line": 84,
+    "source": "const response = await fetch(chooser.uploadUrl, {"
+  },
+  {
+    "file": "apps/mobile/src/features/connection/CloudEnvironmentRows.tsx",
+    "line": 185,
+    "source": "serverEnvironment.configValueAtom(props.environment.environmentId),"
+  },
+  {
+    "file": "apps/mobile/src/features/connection/ConnectionEnvironmentRow.tsx",
+    "line": 55,
+    "source": "serverEnvironment.configValueAtom(props.environment.environmentId),"
+  },
+  {
+    "file": "apps/mobile/src/features/devices/DevicePreviewRouteScreen.tsx",
+    "line": 104,
+    "source": "const retryHost = useAtomCommand(deviceEnvironment.list);"
+  },
+  {
+    "file": "apps/mobile/src/features/devices/DevicePreviewRouteScreen.tsx",
+    "line": 105,
+    "source": "const shutdown = useAtomCommand(deviceEnvironment.shutdown, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/devices/DevicePreviewRouteScreen.tsx",
+    "line": 107,
+    "source": "const state = useEnvironmentQuery(deviceEnvironment.state({ environmentId, input: {} }));"
+  },
+  {
+    "file": "apps/mobile/src/features/files/ThreadFilesRouteScreen.tsx",
+    "line": 640,
+    "source": "? projectEnvironment.fileMetadata({ environmentId, input: { path: targetPath } })"
+  },
+  {
+    "file": "apps/mobile/src/features/files/ThreadFilesRouteScreen.tsx",
+    "line": 748,
+    "source": "? projectEnvironment.readFile({"
+  },
+  {
+    "file": "apps/mobile/src/features/files/ZipArchiveView.tsx",
+    "line": 202,
+    "source": "const response = await fetch(url, { signal: abort.signal });"
+  },
+  {
+    "file": "apps/mobile/src/features/files/preload-workspace-file.ts",
+    "line": 50,
+    "source": "projectEnvironment.readFile({"
+  },
+  {
+    "file": "apps/mobile/src/features/files/useFileTreeEntries.ts",
+    "line": 116,
+    "source": "? projectEnvironment.listEntries({ environmentId, input: { cwd, directoryPath: \"\" } })"
+  },
+  {
+    "file": "apps/mobile/src/features/files/useFileTreeEntries.ts",
+    "line": 122,
+    "source": "? projectEnvironment.searchEntries({"
+  },
+  {
+    "file": "apps/mobile/src/features/files/useFileTreeEntries.ts",
+    "line": 220,
+    "source": "const atom = projectEnvironment.listEntries({ environmentId, input: { cwd, directoryPath } });"
+  },
+  {
+    "file": "apps/mobile/src/features/files/useFileTreeEntries.ts",
+    "line": 480,
+    "source": "projectEnvironment.listEntries({ environmentId, input: { cwd, directoryPath: \"\" } }),"
+  },
+  {
+    "file": "apps/mobile/src/features/files/useFileTreeEntries.ts",
+    "line": 483,
+    "source": "projectEnvironment.searchEntries({"
+  },
+  {
+    "file": "apps/mobile/src/features/home/useThreadListActions.ts",
+    "line": 108,
+    "source": "const archiveMutation = useAtomCommand(threadEnvironment.archive, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/home/useThreadListActions.ts",
+    "line": 109,
+    "source": "const unarchiveMutation = useAtomCommand(threadEnvironment.unarchive, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/home/useThreadListActions.ts",
+    "line": 110,
+    "source": "const deleteMutation = useAtomCommand(threadEnvironment.delete, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/home/useThreadListActions.ts",
+    "line": 111,
+    "source": "const settleMutation = useAtomCommand(threadEnvironment.settle, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/home/useThreadListActions.ts",
+    "line": 112,
+    "source": "const unsettleMutation = useAtomCommand(threadEnvironment.unsettle, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/home/useThreadListActions.ts",
+    "line": 240,
+    "source": "const snoozeMutation = useAtomCommand(threadEnvironment.snooze, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/home/useThreadListActions.ts",
+    "line": 241,
+    "source": "const unsnoozeMutation = useAtomCommand(threadEnvironment.unsnooze, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/home/useThreadListActions.ts",
+    "line": 242,
+    "source": "const pinMutation = useAtomCommand(threadEnvironment.pin, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/home/useThreadListActions.ts",
+    "line": 243,
+    "source": "const unpinMutation = useAtomCommand(threadEnvironment.unpin, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/home/useThreadListActions.ts",
+    "line": 244,
+    "source": "const setAutoSettleMutation = useAtomCommand(threadEnvironment.setAutoSettle, {"
+  },
+  {
+    "file": "apps/mobile/src/features/home/useThreadListActions.ts",
+    "line": 247,
+    "source": "const updateThreadMetadata = useAtomCommand(threadEnvironment.updateMetadata, {"
+  },
+  {
+    "file": "apps/mobile/src/features/home/useThreadListActions.ts",
+    "line": 250,
+    "source": "const regenerateTitle = useAtomCommand(threadEnvironment.regenerateTitle, {"
+  },
+  {
+    "file": "apps/mobile/src/features/home/useThreadListActions.ts",
+    "line": 611,
+    "source": "const reorderPinnedMutation = useAtomCommand(threadEnvironment.reorderPin, {"
+  },
+  {
+    "file": "apps/mobile/src/features/home/useThreadListActions.ts",
+    "line": 614,
+    "source": "const reorderActiveMutation = useAtomCommand(threadEnvironment.reorderActive, {"
+  },
+  {
+    "file": "apps/mobile/src/features/keyboard/CommandPalette.tsx",
+    "line": 235,
+    "source": "const visitThread = useAtomCommand(threadEnvironment.visit, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/keyboard/CommandPalette.tsx",
+    "line": 286,
+    "source": "useAtomValue(serverEnvironment.prepareTriage.permissionAtom(triageEnvironmentId)) &&"
+  },
+  {
+    "file": "apps/mobile/src/features/layout/workspace/workspace-selection-store.ts",
+    "line": 112,
+    "source": "if (!appAtomRegistry.get(threadEnvironment.snapshotAtom(environmentId))) return true;"
+  },
+  {
+    "file": "apps/mobile/src/features/projects/AddProjectScreen.tsx",
+    "line": 754,
+    "source": "const updateProject = useAtomCommand(projectEnvironment.update, {"
+  },
+  {
+    "file": "apps/mobile/src/features/projects/AddProjectScreen.tsx",
+    "line": 814,
+    "source": "const createProject = useAtomCommand(projectEnvironment.create, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/projects/AddProjectScreen.tsx",
+    "line": 1104,
+    "source": "const createNew = useAtomCommand(projectEnvironment.createNew, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/prompt-links/newTaskPromptLink.ts",
+    "line": 305,
+    "source": "projectEnvironment.openScratch,"
+  },
+  {
+    "file": "apps/mobile/src/features/pull-requests/guide/useReviewGuide.ts",
+    "line": 15,
+    "source": "serverEnvironment.settingsValueAtom(pullRequestTarget(params).environmentId),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ClaudeAccounts.tsx",
+    "line": 31,
+    "source": "const mutate = useAtomCommand(serverEnvironment.mutateProviderInstance, {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/OutdatedServerUpdateSection.tsx",
+    "line": 33,
+    "source": "const state = useAtomValue(serverEnvironment.updateStateAtom(environmentId));"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+    "line": 62,
+    "source": "const config = useAtomValue(serverEnvironment.configValueAtom(environmentId));"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+    "line": 65,
+    "source": "const updateState = useAtomValue(serverEnvironment.updateStateAtom(environmentId));"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+    "line": 69,
+    "source": "const updateServer = useAtomCommand(serverEnvironment.updateServer);"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+    "line": 70,
+    "source": "const updateProvider = useAtomCommand(serverEnvironment.updateProvider);"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+    "line": 71,
+    "source": "const refreshProviders = useAtomCommand(serverEnvironment.refreshProviders);"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 60,
+    "source": "serverEnvironment.configValueAtom(environmentId),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 154,
+    "source": "const deleteProject = useAtomCommand(projectEnvironment.delete, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 155,
+    "source": "const updateProject = useAtomCommand(projectEnvironment.update, {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 159,
+    "source": "const organizeProject = useAtomCommand(projectEnvironment.update, {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 145,
+    "source": "const auth = useEnvironmentQuery(serverEnvironment.providerAuthState(target));"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 147,
+    "source": "const start = useAtomCommand(serverEnvironment.startProviderAuth, options);"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 148,
+    "source": "const respond = useAtomCommand(serverEnvironment.respondProviderAuth, options);"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 149,
+    "source": "const complete = useAtomCommand(serverEnvironment.completeProviderAuth, options);"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 150,
+    "source": "const cancel = useAtomCommand(serverEnvironment.cancelProviderAuth, options);"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 151,
+    "source": "const logout = useAtomCommand(serverEnvironment.logoutProviderAuth, options);"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 152,
+    "source": "const removeMethod = useAtomCommand(serverEnvironment.removeProviderAuthMethod, options);"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 154,
+    "source": "serverEnvironment.removeProviderAuthMethod.permissionAtom(environmentId),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 686,
+    "source": "serverEnvironment.scheduledTasksLive({ environmentId, input: {} }),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 708,
+    "source": "serverEnvironment.upsertScheduledTask.permissionAtom(environmentId),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 710,
+    "source": "const upsert = useAtomCommand(serverEnvironment.upsertScheduledTask, {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1397,
+    "source": "const rotate = useAtomCommand(serverEnvironment.rotateScheduledTaskWebhookToken, {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1486,
+    "source": "serverEnvironment.scheduledTasksLive({ environmentId, input: {} }),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1492,
+    "source": "serverEnvironment.upsertScheduledTask.permissionAtom(environmentId),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1494,
+    "source": "const setEnabled = useAtomCommand(serverEnvironment.setScheduledTaskEnabled, {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1498,
+    "source": "const runNow = useAtomCommand(serverEnvironment.runScheduledTaskNow, {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1502,
+    "source": "const remove = useAtomCommand(serverEnvironment.deleteScheduledTask, {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 264,
+    "source": "const updateSettings = useAtomCommand(serverEnvironment.updateSettings, {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/DatabaseStorageNotice.tsx",
+    "line": 18,
+    "source": "serverEnvironment.databaseCompactionRecommendations("
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SourceControlSignInSection.tsx",
+    "line": 116,
+    "source": "const updateSettings = useAtomCommand(serverEnvironment.updateSettings, {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/environment-maintenance.ts",
+    "line": 57,
+    "source": "const response = await fetch(url, { signal, headers: { Accept: accept } });"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/useSettingsWriter.ts",
+    "line": 13,
+    "source": "const updateSettings = useAtomCommand(serverEnvironment.updateSettings, {"
+  },
+  {
+    "file": "apps/mobile/src/features/sharing/IncomingShareProvider.tsx",
+    "line": 316,
+    "source": "serverEnvironment.configValueAtom(EnvironmentId.make(environmentId)),"
+  },
+  {
+    "file": "apps/mobile/src/features/terminal/ThreadTerminalRouteScreen.tsx",
+    "line": 342,
+    "source": "const result = appAtomRegistry.get(terminalEnvironment.metadata({ environmentId, input: null }));"
+  },
+  {
+    "file": "apps/mobile/src/features/terminal/ThreadTerminalRouteScreen.tsx",
+    "line": 383,
+    "source": "const writeTerminal = useAtomCommand(terminalEnvironment.write, \"terminal write\");"
+  },
+  {
+    "file": "apps/mobile/src/features/terminal/ThreadTerminalRouteScreen.tsx",
+    "line": 384,
+    "source": "const clearTerminal = useAtomCommand(terminalEnvironment.clear, \"terminal clear\");"
+  },
+  {
+    "file": "apps/mobile/src/features/terminal/ThreadTerminalRouteScreen.tsx",
+    "line": 442,
+    "source": "terminalEnvironment.createSession({"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ChildThreadApprovals.tsx",
+    "line": 19,
+    "source": "const respond = useAtomCommand(threadEnvironment.respondToApproval, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/NewTaskDraftScreen.tsx",
+    "line": 230,
+    "source": "const deleteProject = useAtomCommand(projectEnvironment.delete, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/NewTaskRouteScreen.tsx",
+    "line": 204,
+    "source": "const openScratch = useAtomCommand(projectEnvironment.openScratch, {"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ProposedPlanCard.tsx",
+    "line": 24,
+    "source": "const canWrite = useAtomValue(projectEnvironment.writeFile.permissionAtom(props.environmentId));"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ProposedPlanCard.tsx",
+    "line": 25,
+    "source": "const writeFile = useAtomCommand(projectEnvironment.writeFile, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/SecretRequestCard.tsx",
+    "line": 78,
+    "source": "const answer = useAtomCommand(serverEnvironment.answerSecretRequest, {"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/SecretRequestCard.tsx",
+    "line": 84,
+    "source": "const config = useAtomValue(serverEnvironment.configValueAtom(props.environmentId));"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/SubagentStopButton.tsx",
+    "line": 26,
+    "source": "const interruptTurn = useAtomCommand(threadEnvironment.interruptTurn);"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadDetailScreen.tsx",
+    "line": 374,
+    "source": "visit: threadEnvironment.visit,"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadDetailScreen.tsx",
+    "line": 427,
+    "source": "deviceEnvironment.state({ environmentId: props.environmentId, input: {} }),"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadDetailScreen.tsx",
+    "line": 577,
+    "source": "const interruptThreadTurn = useAtomCommand(threadEnvironment.interruptTurn, {"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadDetailScreen.tsx",
+    "line": 580,
+    "source": "const unsnoozeThread = useAtomCommand(threadEnvironment.unsnooze, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadDetailScreen.tsx",
+    "line": 581,
+    "source": "const unsettleThread = useAtomCommand(threadEnvironment.unsettle, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadDetailScreen.tsx",
+    "line": 582,
+    "source": "const updateMetadata = useAtomCommand(threadEnvironment.updateMetadata, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadDetailScreen.tsx",
+    "line": 583,
+    "source": "const visitThread = useAtomCommand(threadEnvironment.visit, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadFeed.tsx",
+    "line": 422,
+    "source": "const forkFromRun = useAtomCommand(threadEnvironment.forkFromRun, \"fork from response\");"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadFeed.tsx",
+    "line": 1548,
+    "source": "? serverEnvironment.scheduledTasksLive({ environmentId: props.environmentId, input: {} })"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadFeed.tsx",
+    "line": 1662,
+    "source": "const loadWork = useAtomCommand(threadEnvironment.loadEarlierHistory, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadFeed.tsx",
+    "line": 3004,
+    "source": "projectEnvironment.searchEntries({"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadFeed.tsx",
+    "line": 3021,
+    "source": "projectEnvironment.fileMetadata({"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadFeed.tsx",
+    "line": 3141,
+    "source": "projectEnvironment.fileMetadata({"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadGuestShareBar.tsx",
+    "line": 66,
+    "source": "const closeGuestShare = useAtomCommand(threadEnvironment.closeGuestShare, \"stop guest sharing\");"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadGuestShareBar.tsx",
+    "line": 134,
+    "source": "threadEnvironment.resolveGuestMessage,"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadMarkdownImage.tsx",
+    "line": 54,
+    "source": "const response = await fetch(uri, { signal });"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadQueueControl.tsx",
+    "line": 86,
+    "source": "? serverEnvironment.scheduledTasksLive({ environmentId: props.environmentId, input: {} })"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadQueueControl.tsx",
+    "line": 138,
+    "source": "const promote = useAtomCommand(threadEnvironment.promoteQueuedRun, \"promote queued message\");"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadQueueControl.tsx",
+    "line": 139,
+    "source": "const cancel = useAtomCommand(threadEnvironment.cancelQueuedRun, \"remove queued message\");"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadQueueControl.tsx",
+    "line": 140,
+    "source": "const resume = useAtomCommand(threadEnvironment.resumeThreadQueue, \"resume queue\");"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadQueueControl.tsx",
+    "line": 141,
+    "source": "const resumeHeldQueue = useAtomCommand(threadEnvironment.resumeThreadQueue, {"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadQueueControl.tsx",
+    "line": 180,
+    "source": "snapshot: threadEnvironment.snapshotAtom(target.environmentId),"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadRouteScreen.tsx",
+    "line": 407,
+    "source": "const interruptThreadTurn = useAtomCommand(threadEnvironment.interruptTurn, \"thread interrupt\");"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadRouteScreen.tsx",
+    "line": 408,
+    "source": "const resumeThreadQueue = useAtomCommand(threadEnvironment.resumeThreadQueue, {"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadRouteScreen.tsx",
+    "line": 412,
+    "source": "const continueThreadRun = useAtomCommand(threadEnvironment.startTurn, {"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadRouteScreen.tsx",
+    "line": 416,
+    "source": "const setThreadRuntimeMode = useAtomCommand(threadEnvironment.setRuntimeMode, {"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadRouteScreen.tsx",
+    "line": 420,
+    "source": "const setThreadInteractionMode = useAtomCommand(threadEnvironment.setInteractionMode, {"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadRouteScreen.tsx",
+    "line": 424,
+    "source": "const loadEarlierHistory = useAtomCommand(threadEnvironment.loadEarlierHistory, {"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadRouteScreen.tsx",
+    "line": 457,
+    "source": "const mergeBack = useAtomCommand(threadEnvironment.mergeBack, \"merge thread back\");"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadRouteScreen.tsx",
+    "line": 889,
+    "source": "const startLocalThread = useAtomCommand(threadEnvironment.startTurn, \"work locally\");"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 367,
+    "source": "const saveSettings = useAtomCommand(serverEnvironment.updateSettings, \"model favorites update\");"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+    "line": 947,
+    "source": "const refreshProvidersCommand = useAtomCommand(serverEnvironment.refreshProviders, {"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/UsageLimitRecoveryCard.tsx",
+    "line": 28,
+    "source": "const updateMetadata = useAtomCommand(threadEnvironment.updateMetadata);"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/new-task-flow-provider.tsx",
+    "line": 601,
+    "source": "const openScratch = useAtomCommand(projectEnvironment.openScratch, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-handoff-row.tsx",
+    "line": 60,
+    "source": "const providers = useAtomValue(serverEnvironment.providersValueAtom(props.environmentId)) ?? [];"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-handoff-row.tsx",
+    "line": 115,
+    "source": "const config = useAtomValue(serverEnvironment.configValueAtom(props.environmentId));"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-list-v2-items.tsx",
+    "line": 801,
+    "source": "const visitThread = useAtomCommand(threadEnvironment.visit, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-list-v2-items.tsx",
+    "line": 802,
+    "source": "const markThreadUnread = useAtomCommand(threadEnvironment.markUnread, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-subagent-group.tsx",
+    "line": 109,
+    "source": "const config = useAtomValue(serverEnvironment.configValueAtom(props.environmentId));"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/thread-work-log.tsx",
+    "line": 783,
+    "source": "const retry = useAtomCommand(threadEnvironment.retryWorkspacePreparation, \"retry setup\");"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/turnThreadIntoProject.ts",
+    "line": 39,
+    "source": "projectEnvironment.createFromThread,"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/use-new-task-project-defaults.ts",
+    "line": 40,
+    "source": "? projectEnvironment.readFile({"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/useLinkedPullRequestActions.ts",
+    "line": 50,
+    "source": "const link = useAtomCommand(threadEnvironment.linkPullRequest, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/useLinkedPullRequestActions.ts",
+    "line": 51,
+    "source": "const unlink = useAtomCommand(threadEnvironment.unlinkPullRequest, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/useLinkedPullRequestActions.ts",
+    "line": 52,
+    "source": "const watch = useAtomCommand(threadEnvironment.watchPullRequest, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/useStartSideChat.ts",
+    "line": 30,
+    "source": "const forkSideChat = useAtomCommand(threadEnvironment.forkSideChat, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/useStartSideChat.ts",
+    "line": 31,
+    "source": "const deleteThread = useAtomCommand(threadEnvironment.delete, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/useStartSideChat.ts",
+    "line": 32,
+    "source": "const setRuntimeMode = useAtomCommand(threadEnvironment.setRuntimeMode, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/threads/useStartSideChat.ts",
+    "line": 33,
+    "source": "const startTurn = useAtomCommand(threadEnvironment.startTurn, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/triage/usePrepareTriage.ts",
+    "line": 13,
+    "source": "const prepare = useAtomCommand(serverEnvironment.prepareTriage, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/triage/useStartTriage.ts",
+    "line": 31,
+    "source": "const openScratch = useAtomCommand(projectEnvironment.openScratch, { reportFailure: false });"
+  },
+  {
+    "file": "apps/mobile/src/features/usage/UsageLimitsSection.tsx",
+    "line": 240,
+    "source": "const consume = useAtomCommand(serverEnvironment.consumeResetCredit, {"
+  },
+  {
+    "file": "apps/mobile/src/features/usage/usageLimitsRefresh.ts",
+    "line": 28,
+    "source": "serverEnvironment.refreshProviders,"
+  },
+  {
+    "file": "apps/mobile/src/lib/attachmentDocument.ts",
+    "line": 51,
+    "source": "const response = await fetch(target, {"
+  },
+  {
+    "file": "apps/mobile/src/state/entities.ts",
+    "line": 127,
+    "source": "get(serverEnvironment.configValueAtom(ref.environmentId))?.scratchWorkspaceRoot,"
+  },
+  {
+    "file": "apps/mobile/src/state/entities.ts",
+    "line": 287,
+    "source": ": serverEnvironment.configValueAtom(environmentId),"
+  },
+  {
+    "file": "apps/mobile/src/state/model-mentions.ts",
+    "line": 19,
+    "source": "get(serverEnvironment.providersValueAtom(environmentId as EnvironmentId)) ?? [],"
+  },
+  {
+    "file": "apps/mobile/src/state/presentation.ts",
+    "line": 17,
+    "source": "serverConfigValueAtom: serverEnvironment.configValueAtom,"
+  },
+  {
+    "file": "apps/mobile/src/state/preview.ts",
+    "line": 71,
+    "source": "const listAtom = previewEnvironment.list({"
+  },
+  {
+    "file": "apps/mobile/src/state/preview.ts",
+    "line": 75,
+    "source": "const eventsAtom = previewEnvironment.events({ environmentId: ref.environmentId, input: {} });"
+  },
+  {
+    "file": "apps/mobile/src/state/projectClones.ts",
+    "line": 19,
+    "source": "const config = get(serverEnvironment.configValueAtom(environmentId));"
+  },
+  {
+    "file": "apps/mobile/src/state/projects.ts",
+    "line": 12,
+    "source": "serverConfigValueAtom: serverEnvironment.configValueAtom,"
+  },
+  {
+    "file": "apps/mobile/src/state/provider-workspace-snapshot-refresh.ts",
+    "line": 7,
+    "source": "providers: serverEnvironment.providersValueAtom,"
+  },
+  {
+    "file": "apps/mobile/src/state/provider-workspace-snapshot-refresh.ts",
+    "line": 8,
+    "source": "refreshProviders: serverEnvironment.refreshProviders,"
+  },
+  {
+    "file": "apps/mobile/src/state/queries.ts",
+    "line": 440,
+    "source": "canReadFiles && searchTarget !== null ? projectEnvironment.searchEntries(searchTarget) : null,"
+  },
+  {
+    "file": "apps/mobile/src/state/server.ts",
+    "line": 25,
+    "source": "serverConfigValueAtom: serverEnvironment.configValueAtom,"
+  },
+  {
+    "file": "apps/mobile/src/state/thread-model-selection.ts",
+    "line": 39,
+    "source": "threadEnvironment.setModelSelection,"
+  },
+  {
+    "file": "apps/mobile/src/state/threadOutboxDelivery.ts",
+    "line": 797,
+    "source": "serverEnvironment.configValueAtom(queuedMessage.environmentId),"
+  },
+  {
+    "file": "apps/mobile/src/state/threadOutboxDelivery.ts",
+    "line": 820,
+    "source": "const runtimeResult = await runDeliveryCommand(threadEnvironment.setRuntimeMode, {"
+  },
+  {
+    "file": "apps/mobile/src/state/threadOutboxDelivery.ts",
+    "line": 837,
+    "source": "const interactionResult = await runDeliveryCommand(threadEnvironment.setInteractionMode, {"
+  },
+  {
+    "file": "apps/mobile/src/state/threadOutboxDelivery.ts",
+    "line": 883,
+    "source": "serverEnvironment.configValueAtom(queuedMessage.environmentId),"
+  },
+  {
+    "file": "apps/mobile/src/state/threadOutboxDelivery.ts",
+    "line": 902,
+    "source": "const compactionResult = await runDeliveryCommand(threadEnvironment.startTurn, {"
+  },
+  {
+    "file": "apps/mobile/src/state/threadOutboxDelivery.ts",
+    "line": 932,
+    "source": "const deliveryResult = await runDeliveryCommand(threadEnvironment.startTurn, {"
+  },
+  {
+    "file": "apps/mobile/src/state/threadOutboxDelivery.ts",
+    "line": 998,
+    "source": "serverEnvironment.configValueAtom(queuedMessage.environmentId),"
+  },
+  {
+    "file": "apps/mobile/src/state/threadOutboxDelivery.ts",
+    "line": 1055,
+    "source": "serverEnvironment.configValueAtom(queuedMessage.environmentId),"
+  },
+  {
+    "file": "apps/mobile/src/state/threadOutboxDelivery.ts",
+    "line": 1077,
+    "source": "const checkout = await runDeliveryCommand(gitEnvironment.preparePullRequestThread, {"
+  },
+  {
+    "file": "apps/mobile/src/state/threadOutboxDelivery.ts",
+    "line": 1107,
+    "source": "const deliveryResult = await runDeliveryCommand(threadEnvironment.startTurn, {"
+  },
+  {
+    "file": "apps/mobile/src/state/threads.ts",
+    "line": 47,
+    "source": "snapshotAtom: threadEnvironment.snapshotAtom,"
+  },
+  {
+    "file": "apps/mobile/src/state/threads.ts",
+    "line": 48,
+    "source": "hiddenThreadTagsAtom: serverEnvironment.hiddenThreadTagsAtom,"
+  },
+  {
+    "file": "apps/mobile/src/state/threads.ts",
+    "line": 52,
+    "source": "snapshotAtom: threadEnvironment.snapshotAtom,"
+  },
+  {
+    "file": "apps/mobile/src/state/threads.ts",
+    "line": 54,
+    "source": "rowActionsAtom: threadEnvironment.rowActionsAtom,"
+  },
+  {
+    "file": "apps/mobile/src/state/threads.ts",
+    "line": 65,
+    "source": "hiddenThreadTagsAtom: serverEnvironment.hiddenThreadTagsAtom,"
+  },
+  {
+    "file": "apps/mobile/src/state/usage.ts",
+    "line": 54,
+    "source": "serverEnvironment.usageSummary({"
+  },
+  {
+    "file": "apps/mobile/src/state/usage.ts",
+    "line": 58,
+    "source": "get(serverEnvironment.usageModelFilterAtom(environmentId)),"
+  },
+  {
+    "file": "apps/mobile/src/state/use-remote-environment-registry.ts",
+    "line": 85,
+    "source": "serverConfigAtom: serverEnvironment.configValueAtom,"
+  },
+  {
+    "file": "apps/mobile/src/state/use-selected-thread-git-actions.ts",
+    "line": 56,
+    "source": "const updateThreadMetadata = useAtomCommand(threadEnvironment.updateMetadata, {"
+  },
+  {
+    "file": "apps/mobile/src/state/use-selected-thread-requests.ts",
+    "line": 168,
+    "source": "threadEnvironment.respondToApproval,"
+  },
+  {
+    "file": "apps/mobile/src/state/use-selected-thread-requests.ts",
+    "line": 172,
+    "source": "threadEnvironment.respondToUserInput,"
+  },
+  {
+    "file": "apps/mobile/src/state/use-selected-thread-requests.ts",
+    "line": 176,
+    "source": "threadEnvironment.dismissUserInput,"
+  },
+  {
+    "file": "apps/mobile/src/state/use-terminal-session.ts",
+    "line": 38,
+    "source": "? terminalEnvironment.attach({"
+  },
+  {
+    "file": "apps/mobile/src/state/use-terminal-session.ts",
+    "line": 43,
+    "source": "? terminalEnvironment.observe({"
+  },
+  {
+    "file": "apps/mobile/src/state/use-terminal-session.ts",
+    "line": 53,
+    "source": ": terminalEnvironment.metadata({"
+  },
+  {
+    "file": "apps/mobile/src/state/use-terminal-session.ts",
+    "line": 89,
+    "source": ": terminalEnvironment.metadata({"
+  },
+  {
+    "file": "apps/mobile/src/state/use-thread-composer-state.ts",
+    "line": 222,
+    "source": "const uploadThreadFeedback = useAtomCommand(threadEnvironment.uploadFeedback, {"
+  },
+  {
+    "file": "apps/mobile/src/state/use-thread-composer-state.ts",
+    "line": 225,
+    "source": "const editQueuedRun = useAtomCommand(threadEnvironment.editQueuedRun, {"
+  },
+  {
+    "file": "apps/mobile/src/state/use-thread-pr.ts",
+    "line": 83,
+    "source": "serverEnvironment.configValueAtom(thread.environmentId),"
+  },
+  {
+    "file": "apps/mobile/src/widgets/useSubscriptionUsage.ts",
+    "line": 44,
+    "source": "serverEnvironment.refreshProviders,"
+  },
+  {
+    "file": "apps/mobile/src/widgets/useSubscriptionUsage.ts",
+    "line": 46,
+    "source": "{ label: serverEnvironment.refreshProviders.label, reportFailure: false },"
+  },
+  {
+    "file": "packages/client-runtime/src/connection/outdatedHostUpdate.ts",
+    "line": 145,
+    "source": "const streamExit = yield* client[WS_METHODS.serverUpdateServerWithProgress]("
+  },
+  {
+    "file": "packages/client-runtime/src/connection/outdatedHostUpdate.ts",
+    "line": 171,
+    "source": ": yield* client[WS_METHODS.serverUpdateServer](input).pipe("
+  },
+  {
+    "file": "packages/client-runtime/src/connection/outdatedHostUpdate.ts",
+    "line": 191,
+    "source": "yield* client[WS_METHODS.serverCommitDesktopUpdate]({"
+  },
+  {
+    "file": "packages/client-runtime/src/device/modelScene.ts",
+    "line": 104,
+    "source": "const response = await fetch(source.url, { signal });"
+  },
+  {
+    "file": "packages/client-runtime/src/device/screenshot.ts",
+    "line": 22,
+    "source": "const response = await fetch(url, {"
+  },
+  {
+    "file": "packages/client-runtime/src/device/stream.ts",
+    "line": 727,
+    "source": "const response = await fetch(httpUrl(videoPath), {"
+  },
+  {
+    "file": "packages/client-runtime/src/device/stream.ts",
+    "line": 851,
+    "source": "const response = await fetch(httpUrl(`/helper/${device}/stream.mjpeg`), {"
+  },
+  {
+    "file": "packages/client-runtime/src/device/stream.ts",
+    "line": 875,
+    "source": "const response = await fetch(httpUrl(`/api?device=${device}`), {"
+  },
+  {
+    "file": "packages/client-runtime/src/device/stream.ts",
+    "line": 902,
+    "source": "void fetch(webRtcUrl(\"close\"), {"
+  },
+  {
+    "file": "packages/client-runtime/src/device/stream.ts",
+    "line": 1024,
+    "source": "const response = await fetch(webRtcUrl(\"offer\"), {"
+  },
+  {
+    "file": "packages/client-runtime/src/device/stream.ts",
+    "line": 1115,
+    "source": "const ws = new WebSocket(wsUrl(`/helper/ws?device=${device}`));"
+  },
+  {
+    "file": "packages/client-runtime/src/device/stream.ts",
+    "line": 1200,
+    "source": "const ws = new WebSocket("
+  },
+  {
+    "file": "packages/client-runtime/src/operations/commands.ts",
+    "line": 294,
+    "source": "request(ORCHESTRATION_V2_WS_METHODS.dispatchCommand, command);"
+  },
+  {
+    "file": "packages/client-runtime/src/operations/commands.ts",
+    "line": 353,
+    "source": "request(ORCHESTRATION_V2_WS_METHODS.getThreadProjection, { threadId });"
+  },
+  {
+    "file": "packages/client-runtime/src/operations/commands.ts",
+    "line": 367,
+    "source": "const result = yield* request(WS_METHODS.assetsPersistChatAttachments, {"
+  },
+  {
+    "file": "packages/client-runtime/src/operations/commands.ts",
+    "line": 411,
+    "source": "return yield* request(WS_METHODS.projectsMutate, mutation);"
+  },
+  {
+    "file": "packages/client-runtime/src/operations/commands.ts",
+    "line": 787,
+    "source": "return yield* request(ORCHESTRATION_V2_WS_METHODS.launchThread, {"
+  },
+  {
+    "file": "packages/client-runtime/src/preview/serverBrowserStream.ts",
+    "line": 130,
+    "source": "const response = await fetch(chooser.uploadUrl, {"
+  },
+  {
+    "file": "packages/client-runtime/src/preview/serverBrowserStream.ts",
+    "line": 237,
+    "source": "const ws = new WebSocket(url);"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 52,
+    "source": "| typeof WS_METHODS.providerAuthSubscribe"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 53,
+    "source": "| typeof WS_METHODS.providerInstallSubscribe"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 54,
+    "source": "| typeof ORCHESTRATION_V2_WS_METHODS.subscribeShell"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 55,
+    "source": "| typeof ORCHESTRATION_V2_WS_METHODS.subscribeThread"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 56,
+    "source": "| typeof ORCHESTRATION_V2_WS_METHODS.subscribeCommandOutput"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 57,
+    "source": "| typeof ORCHESTRATION_V2_WS_METHODS.subscribePromptSuggestion"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 58,
+    "source": "| typeof ORCHESTRATION_V2_WS_METHODS.searchThreadStream"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 59,
+    "source": "| typeof WS_METHODS.subscribeAuthAccess"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 60,
+    "source": "| typeof WS_METHODS.subscribeServerConfig"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 61,
+    "source": "| typeof WS_METHODS.subscribeServerLifecycle"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 62,
+    "source": "| typeof WS_METHODS.scheduledTasksSubscribe"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 63,
+    "source": "| typeof WS_METHODS.serverGetStorageCleanupReport"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 64,
+    "source": "| typeof WS_METHODS.serverGetDatabaseStorage"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 65,
+    "source": "| typeof WS_METHODS.subscribeTerminalMetadata"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 66,
+    "source": "| typeof WS_METHODS.subscribePreviewEvents"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 67,
+    "source": "| typeof WS_METHODS.subscribeDiscoveredLocalServers"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 68,
+    "source": "| typeof WS_METHODS.subscribeDeviceState"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 69,
+    "source": "| typeof WS_METHODS.subscribeResourceTelemetry"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 70,
+    "source": "| typeof WS_METHODS.pullRequestsSubscribeRefreshes"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 71,
+    "source": "| typeof WS_METHODS.pullRequestsSubscribeLinkedThreadRefreshes"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 72,
+    "source": "| typeof WS_METHODS.subscribeVcsStatus"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 73,
+    "source": "| typeof WS_METHODS.subscribeVcsBranch"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 74,
+    "source": "| typeof WS_METHODS.subscribeWorktreeSetup"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 75,
+    "source": "| typeof WS_METHODS.subscribeProjectClones"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 76,
+    "source": "| typeof WS_METHODS.terminalAttach"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 77,
+    "source": "| typeof WS_METHODS.terminalObserve;"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 80,
+    "source": "| typeof WS_METHODS.chatGptHandoffSubscribe"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 81,
+    "source": "| typeof WS_METHODS.cloudInstallRelayClient"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 82,
+    "source": "| typeof WS_METHODS.serverUpdateServerWithProgress"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 83,
+    "source": "| typeof WS_METHODS.gitRunStackedAction;"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 312,
+    "source": "tag === WS_METHODS.subscribeServerConfig"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 387,
+    "source": "tag !== ORCHESTRATION_V2_WS_METHODS.searchThreadStream;"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 504,
+    "source": "input: EnvironmentRpcInput<typeof WS_METHODS.subscribeVcsBranch>,"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 507,
+    "source": "WS_METHODS.subscribeVcsBranch,"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 524,
+    "source": ": session.client[WS_METHODS.subscribeVcsStatus]({"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 537,
+    "source": "input: EnvironmentRpcInput<typeof WS_METHODS.vcsRefreshBranch>,"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/client.ts",
+    "line": 551,
+    "source": "return yield* requestInSession(session, WS_METHODS.vcsRefreshBranch, input);"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/session.ts",
+    "line": 86,
+    "source": "ReturnType<WsRpcProtocolClient[typeof WS_METHODS.serverGetConfig]>"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/session.ts",
+    "line": 88,
+    "source": "type ProbeError = Effect.Error<ReturnType<WsRpcProtocolClient[typeof WS_METHODS.serverProbe]>>;"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/session.ts",
+    "line": 97,
+    "source": "WsRpcProtocolClient[typeof WS_METHODS.subscribeServerConfig]"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/session.ts",
+    "line": 301,
+    "source": "const serverConfigSource = protocolClient[WS_METHODS.subscribeServerConfig]("
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/session.ts",
+    "line": 445,
+    "source": ": protocolClient[WS_METHODS.subscribeServerConfig](onDemandSnapshots(input)),"
+  },
+  {
+    "file": "packages/client-runtime/src/rpc/session.ts",
+    "line": 451,
+    "source": "protocolClient[WS_METHODS.serverProbe]({}).pipe(Effect.mapError(mapRpcError)),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/assets.ts",
+    "line": 258,
+    "source": "return request(WS_METHODS.assetsCreateUrl, input).pipe(limit.withPermit);"
+  },
+  {
+    "file": "packages/client-runtime/src/state/attachments.ts",
+    "line": 26,
+    "source": "tag: WS_METHODS.attachmentsCreateUploadUrl,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/attachments.ts",
+    "line": 30,
+    "source": "tag: WS_METHODS.attachmentsDelete,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/auth.ts",
+    "line": 163,
+    "source": "subscribe(WS_METHODS.subscribeAuthAccess, {}).pipe("
+  },
+  {
+    "file": "packages/client-runtime/src/state/device.ts",
+    "line": 41,
+    "source": "tag: WS_METHODS.subscribeDeviceState,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/device.ts",
+    "line": 45,
+    "source": "tag: WS_METHODS.deviceConfigure,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/device.ts",
+    "line": 51,
+    "source": "tag: WS_METHODS.deviceTestHost,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/device.ts",
+    "line": 55,
+    "source": "tag: WS_METHODS.deviceEasAccount,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/device.ts",
+    "line": 59,
+    "source": "tag: WS_METHODS.deviceList,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/device.ts",
+    "line": 65,
+    "source": "tag: WS_METHODS.deviceOpen,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/device.ts",
+    "line": 71,
+    "source": "tag: WS_METHODS.deviceClose,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/device.ts",
+    "line": 77,
+    "source": "tag: WS_METHODS.deviceShutdown,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/device.ts",
+    "line": 83,
+    "source": "tag: WS_METHODS.deviceDetail,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/device.ts",
+    "line": 89,
+    "source": "tag: WS_METHODS.deviceAction,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/fileMetadata.ts",
+    "line": 53,
+    "source": "EnvironmentRpcFailure<typeof WS_METHODS.filesystemGetMetadata> | EnvironmentRpcUnavailableError"
+  },
+  {
+    "file": "packages/client-runtime/src/state/fileMetadata.ts",
+    "line": 145,
+    "source": "const result = yield* request(WS_METHODS.filesystemGetMetadata, { paths }).pipe("
+  },
+  {
+    "file": "packages/client-runtime/src/state/filesystem.ts",
+    "line": 191,
+    "source": "tag: WS_METHODS.filesystemGetMetadata,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/filesystem.ts",
+    "line": 195,
+    "source": "tag: WS_METHODS.filesystemBrowse,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/git.ts",
+    "line": 16,
+    "source": "tag: WS_METHODS.gitResolvePullRequest,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/git.ts",
+    "line": 20,
+    "source": "tag: WS_METHODS.gitPreparePullRequestThread,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/mcpApps.ts",
+    "line": 13,
+    "source": "tag: WS_METHODS.mcpAppsCallTool,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/mcpApps.ts",
+    "line": 17,
+    "source": "tag: WS_METHODS.mcpAppsToolInfo,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/mcpApps.ts",
+    "line": 22,
+    "source": "tag: WS_METHODS.mcpAppsToolInfo,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/mcpApps.ts",
+    "line": 26,
+    "source": "tag: WS_METHODS.mcpAppsReadResource,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/mcpApps.ts",
+    "line": 30,
+    "source": "tag: WS_METHODS.mcpAppsUpdateModelContext,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/olderSettledThreads.ts",
+    "line": 245,
+    "source": "return yield* request(ORCHESTRATION_V2_WS_METHODS.getOlderSettledThreads, {"
+  },
+  {
+    "file": "packages/client-runtime/src/state/olderSettledThreads.ts",
+    "line": 263,
+    "source": "return yield* request(ORCHESTRATION_V2_WS_METHODS.getOlderSettledThreads, {"
+  },
+  {
+    "file": "packages/client-runtime/src/state/olderSettledThreads.ts",
+    "line": 405,
+    "source": "return yield* request(ORCHESTRATION_V2_WS_METHODS.searchThreads, input.search);"
+  },
+  {
+    "file": "packages/client-runtime/src/state/orchestration.ts",
+    "line": 59,
+    "source": "tag: ORCHESTRATION_V2_WS_METHODS.getTurnItem,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/orchestration.ts",
+    "line": 66,
+    "source": "tag: ORCHESTRATION_V2_WS_METHODS.getTurnItem,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/orchestration.ts",
+    "line": 87,
+    "source": "tag: ORCHESTRATION_V2_WS_METHODS.getThreadTitles,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/orchestration.ts",
+    "line": 112,
+    "source": "return yield* request(ORCHESTRATION_V2_WS_METHODS.getThreadLinkMetadata, input);"
+  },
+  {
+    "file": "packages/client-runtime/src/state/orchestration.ts",
+    "line": 114,
+    "source": "const titles = yield* request(ORCHESTRATION_V2_WS_METHODS.getThreadTitles, input);"
+  },
+  {
+    "file": "packages/client-runtime/src/state/orchestration.ts",
+    "line": 147,
+    "source": "dispatchCommand: createEnvironmentRpcCommand(runtime, {"
+  },
+  {
+    "file": "packages/client-runtime/src/state/orchestration.ts",
+    "line": 149,
+    "source": "tag: ORCHESTRATION_V2_WS_METHODS.dispatchCommand,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/orchestration.ts",
+    "line": 153,
+    "source": "tag: ORCHESTRATION_V2_WS_METHODS.subscribeShell,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/orchestration.ts",
+    "line": 157,
+    "source": "tag: ORCHESTRATION_V2_WS_METHODS.subscribeThread,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/orchestration.ts",
+    "line": 165,
+    "source": "tag: ORCHESTRATION_V2_WS_METHODS.subscribeCommandOutput,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/orchestration.ts",
+    "line": 179,
+    "source": "tag: ORCHESTRATION_V2_WS_METHODS.subscribePromptSuggestion,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/orchestration.ts",
+    "line": 185,
+    "source": "tag: ORCHESTRATION_V2_WS_METHODS.getTurnDiff,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/orchestration.ts",
+    "line": 190,
+    "source": "tag: ORCHESTRATION_V2_WS_METHODS.getWorkflowScript,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/orchestration.ts",
+    "line": 197,
+    "source": "tag: ORCHESTRATION_V2_WS_METHODS.getNativeChildWork,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/orchestration.ts",
+    "line": 203,
+    "source": "tag: ORCHESTRATION_V2_WS_METHODS.stopWorkflow,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/orchestration.ts",
+    "line": 207,
+    "source": "tag: ORCHESTRATION_V2_WS_METHODS.forceStopThread,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/orchestration.ts",
+    "line": 218,
+    "source": "tag: ORCHESTRATION_V2_WS_METHODS.getFullThreadDiff,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/orchestration.ts",
+    "line": 223,
+    "source": "tag: ORCHESTRATION_V2_WS_METHODS.searchThread,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/orchestration.ts",
+    "line": 229,
+    "source": "tag: ORCHESTRATION_V2_WS_METHODS.searchThreadStream,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/orchestration.ts",
+    "line": 235,
+    "source": "tag: ORCHESTRATION_V2_WS_METHODS.searchThreads,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/orchestration.ts",
+    "line": 241,
+    "source": "tag: ORCHESTRATION_V2_WS_METHODS.getArchivedShellSnapshot,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/orchestration.ts",
+    "line": 252,
+    "source": "tag: ORCHESTRATION_V2_WS_METHODS.getThreadFamily,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/orchestration.ts",
+    "line": 259,
+    "source": "tag: ORCHESTRATION_V2_WS_METHODS.getWorktreeThreadIds,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/peerLinks.ts",
+    "line": 15,
+    "source": "tag: WS_METHODS.peerLinksList,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/peerLinks.ts",
+    "line": 23,
+    "source": "tag: WS_METHODS.peerLinksLink,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/peerLinks.ts",
+    "line": 29,
+    "source": "tag: WS_METHODS.peerLinksUnlink,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/peerLinks.ts",
+    "line": 36,
+    "source": "tag: WS_METHODS.peerLinksAnswerRequest,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/preview.ts",
+    "line": 26,
+    "source": "tag: WS_METHODS.previewList,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/preview.ts",
+    "line": 31,
+    "source": "tag: WS_METHODS.subscribePreviewEvents,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/preview.ts",
+    "line": 37,
+    "source": "tag: WS_METHODS.subscribeDiscoveredLocalServers,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/preview.ts",
+    "line": 44,
+    "source": "tag: WS_METHODS.previewOpen,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/preview.ts",
+    "line": 50,
+    "source": "tag: WS_METHODS.previewResize,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/preview.ts",
+    "line": 56,
+    "source": "tag: WS_METHODS.previewAdjust,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/preview.ts",
+    "line": 62,
+    "source": "tag: WS_METHODS.previewClose,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/preview.ts",
+    "line": 68,
+    "source": "tag: WS_METHODS.previewClearProfile,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/preview.ts",
+    "line": 72,
+    "source": "tag: WS_METHODS.previewReportProfiles,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/preview.ts",
+    "line": 77,
+    "source": "tag: WS_METHODS.previewStopLocalServer,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/preview.ts",
+    "line": 81,
+    "source": "tag: WS_METHODS.previewReportStatus,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/projectCommands.ts",
+    "line": 62,
+    "source": "input: EnvironmentRpcInput<typeof WS_METHODS.projectsWriteFile>,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/projectCommands.ts",
+    "line": 63,
+    "source": "result: EnvironmentRpcSuccess<typeof WS_METHODS.projectsWriteFile>,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/projectCommands.ts",
+    "line": 97,
+    "source": "tag: WS_METHODS.projectsReadFile,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/projectCommands.ts",
+    "line": 111,
+    "source": "request(WS_METHODS.projectsReadFile, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/projectCommands.ts",
+    "line": 141,
+    "source": "tag: WS_METHODS.projectsSearchEntries,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/projectCommands.ts",
+    "line": 145,
+    "source": "request(WS_METHODS.projectsSearchEntries, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/projectCommands.ts",
+    "line": 151,
+    "source": "tag: WS_METHODS.projectsListEntries,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/projectCommands.ts",
+    "line": 156,
+    "source": "request(WS_METHODS.projectsListEntries, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/projectCommands.ts",
+    "line": 162,
+    "source": "tag: WS_METHODS.projectsListIgnoredFiles,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/projectCommands.ts",
+    "line": 191,
+    "source": "input: EnvironmentRpcInput<typeof WS_METHODS.projectsEnsureScratch>,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/projectCommands.ts",
+    "line": 195,
+    "source": "request(WS_METHODS.projectsEnsureScratch, input).pipe("
+  },
+  {
+    "file": "packages/client-runtime/src/state/projectCommands.ts",
+    "line": 216,
+    "source": "tag: WS_METHODS.projectsCreateNew,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/projectCommands.ts",
+    "line": 222,
+    "source": "tag: WS_METHODS.projectsCreateFromThread,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/projectCommands.ts",
+    "line": 228,
+    "source": "tag: WS_METHODS.projectsWriteFile,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/projectCommands.ts",
+    "line": 236,
+    "source": "requestGuarded(WS_METHODS.projectsWriteFile, input).pipe("
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 35,
+    "source": "WS_METHODS.pullRequestsSummary,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 36,
+    "source": "WS_METHODS.pullRequestsStack,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 37,
+    "source": "WS_METHODS.pullRequestsDetail,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 38,
+    "source": "WS_METHODS.pullRequestsPreview,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 39,
+    "source": "WS_METHODS.pullRequestsChecks,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 40,
+    "source": "WS_METHODS.pullRequestsActivity,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 41,
+    "source": "WS_METHODS.pullRequestsThreadComments,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 42,
+    "source": "WS_METHODS.pullRequestsDiffFileContents,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 43,
+    "source": "WS_METHODS.pullRequestsFilesViewed,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 44,
+    "source": "WS_METHODS.pullRequestsChangeBreakdown,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 45,
+    "source": "WS_METHODS.pullRequestsReviewerCandidates,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 46,
+    "source": "WS_METHODS.pullRequestsLabelCandidates,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 51,
+    "source": "WS_METHODS.pullRequestsSetFilesViewed,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 52,
+    "source": "WS_METHODS.pullRequestsRunAction,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 53,
+    "source": "WS_METHODS.pullRequestsUpdate,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 54,
+    "source": "WS_METHODS.pullRequestsComment,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 55,
+    "source": "WS_METHODS.pullRequestsUpdateComment,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 56,
+    "source": "WS_METHODS.pullRequestsSubmitReview,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 57,
+    "source": "WS_METHODS.pullRequestsReplyToThread,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 58,
+    "source": "WS_METHODS.pullRequestsSetReaction,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 59,
+    "source": "WS_METHODS.pullRequestsSetThreadResolution,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 60,
+    "source": "WS_METHODS.pullRequestsRequestReviewers,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 61,
+    "source": "WS_METHODS.pullRequestsSetLabels,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 214,
+    "source": "registry.run(target, request(WS_METHODS.pullRequestsInvalidate, input)).pipe("
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 231,
+    "source": "request(WS_METHODS.pullRequestsReportState, {"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 243,
+    "source": "if (tag === WS_METHODS.pullRequestsInvalidate && isInvalidation(input)) {"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 305,
+    "source": "...(tag === WS_METHODS.pullRequestsSetFilesViewed ? { filesViewedOnly: true } : {}),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 307,
+    "source": "...(tag === WS_METHODS.pullRequestsSetFilesViewed ? [] : [{}]),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 314,
+    "source": "tag === WS_METHODS.pullRequestsSetFilesViewed"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 331,
+    "source": "if (tag === WS_METHODS.pullRequestsChecks) {"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 345,
+    "source": "const identityProbe = request(WS_METHODS.pullRequestsRouting, ref).pipe("
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 419,
+    "source": "const alternateProbe = request(WS_METHODS.pullRequestsRoutingIdentity, {"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 463,
+    "source": "...(tag === WS_METHODS.pullRequestsDetail"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequestRouting.ts",
+    "line": 508,
+    "source": "(tag === WS_METHODS.pullRequestsSummary || tag === WS_METHODS.pullRequestsDetail)"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 693,
+    "source": "tag: WS_METHODS.pullRequestsSubscribeRefreshes,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 724,
+    "source": "tag: WS_METHODS.pullRequestsSummary,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 725,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsSummary, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 781,
+    "source": "tag: WS_METHODS.pullRequestsStack,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 782,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsStack, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 815,
+    "source": "tag: WS_METHODS.pullRequestsSubscribeLinkedThreadRefreshes,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 841,
+    "source": "tag: WS_METHODS.pullRequestsActivity,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 842,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsActivity, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 862,
+    "source": "tag: WS_METHODS.pullRequestsDetail,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 863,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsDetail, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 956,
+    "source": "tag: WS_METHODS.pullRequestsPreview,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 957,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsPreview, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 999,
+    "source": "tag: WS_METHODS.pullRequestsLabelCandidates,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1000,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsLabelCandidates, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1039,
+    "source": "tag: WS_METHODS.pullRequestsReviewGuide,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1040,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsReviewGuide, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1049,
+    "source": "tag: WS_METHODS.pullRequestsReviewerCandidates,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1050,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsReviewerCandidates, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1057,
+    "source": "tag: WS_METHODS.pullRequestsReviewerCandidates,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1058,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsReviewerCandidates, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1083,
+    "source": "const detail = yield* routedRequest(WS_METHODS.pullRequestsDetail, reference);"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1096,
+    "source": "const stack = yield* routedRequest(WS_METHODS.pullRequestsStack, reference);"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1114,
+    "source": "return yield* routedRequest(WS_METHODS.pullRequestsRunAction, {"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1150,
+    "source": "tag: WS_METHODS.pullRequestsChecks,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1151,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsChecks, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1196,
+    "source": "tag: WS_METHODS.pullRequestsLinkedThreads,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1204,
+    "source": "tag: WS_METHODS.pullRequestsLinkedThreads,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1212,
+    "source": "tag: WS_METHODS.pullRequestsList,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1246,
+    "source": "tag: WS_METHODS.pullRequestsListStats,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1253,
+    "source": "tag: WS_METHODS.pullRequestsFilterOptions,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1264,
+    "source": "tag: WS_METHODS.pullRequestsThreadComments,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1265,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsThreadComments, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1281,
+    "source": "tag: WS_METHODS.pullRequestsDiffFileContents,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1282,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsDiffFileContents, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1304,
+    "source": "tag: WS_METHODS.pullRequestsFilesViewed,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1305,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsFilesViewed, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1311,
+    "source": "tag: WS_METHODS.pullRequestsChangeBreakdown,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1312,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsChangeBreakdown, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1322,
+    "source": "tag: WS_METHODS.pullRequestsSetFilesViewed,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1323,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsSetFilesViewed, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1333,
+    "source": "tag: WS_METHODS.pullRequestsRunAction,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1363,
+    "source": "tag: WS_METHODS.pullRequestsUpdate,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1364,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsUpdate, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1374,
+    "source": "tag: WS_METHODS.pullRequestsComment,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1375,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsComment, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1381,
+    "source": "tag: WS_METHODS.pullRequestsUpdateComment,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1382,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsUpdateComment, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1397,
+    "source": "tag: WS_METHODS.pullRequestsSubmitReview,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1398,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsSubmitReview, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1404,
+    "source": "tag: WS_METHODS.pullRequestsReplyToThread,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1405,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsReplyToThread, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1414,
+    "source": "tag: WS_METHODS.pullRequestsRequestReviewers,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1415,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsRequestReviewers, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1499,
+    "source": "tag: WS_METHODS.pullRequestsGenerateReviewGuide,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1500,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsGenerateReviewGuide, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1510,
+    "source": "tag: WS_METHODS.pullRequestsSetLabels,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1511,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsSetLabels, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1521,
+    "source": "tag: WS_METHODS.pullRequestsSetThreadResolution,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1522,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsSetThreadResolution, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1528,
+    "source": "tag: WS_METHODS.pullRequestsSetReaction,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1529,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsSetReaction, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1539,
+    "source": "tag: WS_METHODS.pullRequestsInvalidate,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/pullRequests.ts",
+    "line": 1540,
+    "source": "execute: (input) => routedRequest(WS_METHODS.pullRequestsInvalidate, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/review.ts",
+    "line": 36,
+    "source": "tag: WS_METHODS.reviewGetDiffPreview,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/review.ts",
+    "line": 51,
+    "source": "const tracked = yield* request(WS_METHODS.reviewGetDiffPreview, {"
+  },
+  {
+    "file": "packages/client-runtime/src/state/review.ts",
+    "line": 59,
+    "source": "return yield* request(WS_METHODS.reviewGetDiffPreview, input);"
+  },
+  {
+    "file": "packages/client-runtime/src/state/review.ts",
+    "line": 79,
+    "source": "tag: WS_METHODS.reviewGetBranchCommits,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/review.ts",
+    "line": 96,
+    "source": "request(WS_METHODS.reviewGetDiffPreview, input.request).pipe("
+  },
+  {
+    "file": "packages/client-runtime/src/state/review.ts",
+    "line": 116,
+    "source": "tag: WS_METHODS.reviewGetDiffFileContents,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 89,
+    "source": "readonly input: EnvironmentRpcInput<typeof WS_METHODS.serverUpdateServer>;"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 549,
+    "source": "const configUpdates = subscribe(WS_METHODS.subscribeServerConfig, {"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 688,
+    "source": "WS_METHODS.subscribeServerLifecycle,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 897,
+    "source": "readonly input: EnvironmentRpcInput<typeof WS_METHODS.subscribeServerConfig>;"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1016,
+    "source": "subscribeDynamicWithSession(WS_METHODS.subscribeServerLifecycle, () =>"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1049,
+    "source": "WS_METHODS.serverUpdateServerWithProgress,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1098,
+    "source": "requestInSession(session, WS_METHODS.serverUpdateServer, target.input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1127,
+    "source": "request(WS_METHODS.serverCommitDesktopUpdate, {"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1174,
+    "source": ".followStream(target.environmentId, subscribe(WS_METHODS.subscribeServerLifecycle, {}))"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1207,
+    "source": "request(WS_METHODS.serverCommitDesktopUpdate, {"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1330,
+    "source": "tag: WS_METHODS.serverGetDatabaseStorage,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1358,
+    "source": "readonly input: EnvironmentRpcInput<typeof WS_METHODS.subscribeServerLifecycle>;"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1362,
+    "source": "tag: WS_METHODS.serverUpdateSettings,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1371,
+    "source": "tag: WS_METHODS.serverRunStorageCleanup,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1376,
+    "source": "tag: WS_METHODS.serverPrepareTriage,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1383,
+    "source": "tag: WS_METHODS.serverReclaimDatabaseSpace,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1388,
+    "source": "tag: WS_METHODS.serverGetStorageCleanupReport,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1398,
+    "source": "tag: WS_METHODS.providerAuthSubscribe,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1403,
+    "source": "tag: WS_METHODS.providerAuthStart,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1411,
+    "source": "tag: WS_METHODS.providerAuthRespond,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1415,
+    "source": "tag: WS_METHODS.providerAuthComplete,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1419,
+    "source": "tag: WS_METHODS.chatGptReconnectProfile,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1423,
+    "source": "tag: WS_METHODS.chatGptImportProfile,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1429,
+    "source": "subscribe: (input: EnvironmentRpcInput<typeof WS_METHODS.chatGptHandoffSubscribe>) =>"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1430,
+    "source": "runStream(WS_METHODS.chatGptHandoffSubscribe, input),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1435,
+    "source": "tag: WS_METHODS.providerAuthCancel,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1439,
+    "source": "tag: WS_METHODS.providerAuthRemoveMethod,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1443,
+    "source": "tag: WS_METHODS.providerAuthLogout,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1447,
+    "source": "tag: WS_METHODS.providerInstallSubscribe,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1452,
+    "source": "tag: WS_METHODS.providerInstallStart,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1460,
+    "source": "tag: WS_METHODS.providerInstallCancel,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1464,
+    "source": "tag: WS_METHODS.providerInstallRemove,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1468,
+    "source": "tag: WS_METHODS.serverGetTraceDiagnostics,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1472,
+    "source": "tag: WS_METHODS.serverGetNpmRelease,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1478,
+    "source": "tag: WS_METHODS.serverGetProcessDiagnostics,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1484,
+    "source": "execute: (input: EnvironmentRpcInput<typeof WS_METHODS.serverGetHostResources>) =>"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1485,
+    "source": "request(WS_METHODS.serverGetHostResources, input).pipe(Effect.timeout(\"5 seconds\")),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1489,
+    "source": "tag: WS_METHODS.serverGetProcessResourceHistory,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1496,
+    "source": "tag: WS_METHODS.scheduledTasksListWebhookDeliveries,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1500,
+    "source": "tag: WS_METHODS.scheduledTasksGetWebhookDelivery,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1504,
+    "source": "tag: WS_METHODS.scheduledTasksSubscribe,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1512,
+    "source": "tag: WS_METHODS.serverGetUsageSummary,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1518,
+    "source": "const read = request(WS_METHODS.serverGetUsageSummary, input).pipe("
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1522,
+    "source": "request(WS_METHODS.serverGetUsageSummary, { ...input, awaitRefresh: true }),"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1534,
+    "source": "return request(WS_METHODS.serverGetUsageSummary, { ...input, provisional: true }).pipe("
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1546,
+    "source": "tag: WS_METHODS.subscribeResourceTelemetry,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1551,
+    "source": "tag: WS_METHODS.serverGetResourceTelemetryHistory,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1558,
+    "source": "tag: WS_METHODS.serverSearchAcpRegistry,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1567,
+    "source": "tag: WS_METHODS.subscribeServerLifecycle,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1579,
+    "source": "tag: WS_METHODS.providerConsumeResetCredit,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1588,
+    "source": "tag: WS_METHODS.serverRefreshProviders,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1602,
+    "source": "return requestGuarded(WS_METHODS.serverRefreshProviders, {"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1656,
+    "source": "tag: WS_METHODS.serverUpdateProvider,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1661,
+    "source": "tag: WS_METHODS.serverUpdateServer,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1665,
+    "source": "tag: WS_METHODS.serverUpsertKeybinding,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1671,
+    "source": "tag: WS_METHODS.serverRemoveKeybinding,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1679,
+    "source": "tag: WS_METHODS.serverPrepareAcpRegistryAgent,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1687,
+    "source": "tag: WS_METHODS.serverUninstallAcpRegistryManagedBinary,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1695,
+    "source": "tag: WS_METHODS.serverAcceptAcpRegistryUrlAuth,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1704,
+    "source": "tag: WS_METHODS.serverListAcpRegistrySessions,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1713,
+    "source": "tag: WS_METHODS.serverImportAcpRegistrySession,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1722,
+    "source": "tag: WS_METHODS.serverDeleteAcpRegistrySession,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1731,
+    "source": "tag: WS_METHODS.serverListAcpRegistryProviders,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1740,
+    "source": "tag: WS_METHODS.serverSetAcpRegistryProvider,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1749,
+    "source": "tag: WS_METHODS.serverDisableAcpRegistryProvider,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1758,
+    "source": "tag: WS_METHODS.serverLogoutAcpRegistry,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1766,
+    "source": "tag: WS_METHODS.serverSignalProcess,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1770,
+    "source": "tag: WS_METHODS.scheduledTasksUpsert,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1776,
+    "source": "tag: WS_METHODS.scheduledTasksSetEnabled,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1782,
+    "source": "tag: WS_METHODS.scheduledTasksDelete,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1791,
+    "source": "tag: WS_METHODS.scheduledTasksRunNow,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1795,
+    "source": "tag: WS_METHODS.scheduledTasksRotateWebhookToken,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1801,
+    "source": "tag: WS_METHODS.guestShareCreate,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1807,
+    "source": "tag: WS_METHODS.secretsAnswerRequest,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1816,
+    "source": "tag: WS_METHODS.serverRefreshUsageRates,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1824,
+    "source": "tag: WS_METHODS.serverCheckOtlpEndpoint,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1828,
+    "source": "tag: WS_METHODS.serverCheckSecretSource,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1832,
+    "source": "tag: WS_METHODS.serverListTextGeneratorModels,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/server.ts",
+    "line": 1836,
+    "source": "tag: WS_METHODS.serverRetryResourceTelemetry,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/shell.ts",
+    "line": 629,
+    "source": "ORCHESTRATION_V2_WS_METHODS.subscribeShell,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/shellCommands.ts",
+    "line": 13,
+    "source": "tag: WS_METHODS.shellOpenInEditor,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/sourceControl.ts",
+    "line": 22,
+    "source": "tag: WS_METHODS.serverDiscoverSourceControl,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/sourceControl.ts",
+    "line": 26,
+    "source": "tag: WS_METHODS.sourceControlAppAccess,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/sourceControl.ts",
+    "line": 31,
+    "source": "tag: WS_METHODS.sourceControlAppAccess,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/sourceControl.ts",
+    "line": 35,
+    "source": "tag: WS_METHODS.sourceControlStarred,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/sourceControl.ts",
+    "line": 39,
+    "source": "tag: WS_METHODS.sourceControlStar,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/sourceControl.ts",
+    "line": 43,
+    "source": "tag: WS_METHODS.sourceControlLookupRepository,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/sourceControl.ts",
+    "line": 49,
+    "source": "tag: WS_METHODS.projectCloneStart,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/sourceControl.ts",
+    "line": 60,
+    "source": "tag: WS_METHODS.projectCloneCancel,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/sourceControl.ts",
+    "line": 69,
+    "source": "tag: WS_METHODS.projectCloneRetry,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/sourceControl.ts",
+    "line": 79,
+    "source": "tag: WS_METHODS.sourceControlSignInStart,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/sourceControl.ts",
+    "line": 83,
+    "source": "tag: WS_METHODS.sourceControlSignInWait,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/sourceControl.ts",
+    "line": 87,
+    "source": "tag: WS_METHODS.sourceControlSignInCancel,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/sourceControl.ts",
+    "line": 91,
+    "source": "tag: WS_METHODS.subscribeProjectClones,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/sourceControl.ts",
+    "line": 95,
+    "source": "tag: WS_METHODS.sourceControlPublishRepository,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/terminal.ts",
+    "line": 59,
+    "source": "subscribe: (input: EnvironmentRpcInput<typeof WS_METHODS.terminalObserve>) =>"
+  },
+  {
+    "file": "packages/client-runtime/src/state/terminal.ts",
+    "line": 61,
+    "source": "subscribe(WS_METHODS.terminalObserve, input).pipe("
+  },
+  {
+    "file": "packages/client-runtime/src/state/terminal.ts",
+    "line": 70,
+    "source": "subscribe: (input: EnvironmentRpcInput<typeof WS_METHODS.terminalAttach>) => {"
+  },
+  {
+    "file": "packages/client-runtime/src/state/terminal.ts",
+    "line": 73,
+    "source": "return subscribeDynamic(WS_METHODS.terminalAttach, () =>"
+  },
+  {
+    "file": "packages/client-runtime/src/state/terminal.ts",
+    "line": 92,
+    "source": "subscribe(WS_METHODS.subscribeTerminalMetadata, {}).pipe("
+  },
+  {
+    "file": "packages/client-runtime/src/state/terminal.ts",
+    "line": 100,
+    "source": "tag: WS_METHODS.terminalOpen,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/terminal.ts",
+    "line": 106,
+    "source": "tag: WS_METHODS.terminalWrite,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/terminal.ts",
+    "line": 110,
+    "source": "tag: WS_METHODS.terminalResize,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/terminal.ts",
+    "line": 116,
+    "source": "tag: WS_METHODS.terminalClear,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/terminal.ts",
+    "line": 122,
+    "source": "tag: WS_METHODS.terminalClose,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/threadCommands.ts",
+    "line": 420,
+    "source": "tag: WS_METHODS.providerUploadFeedback,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/threadFamilies.ts",
+    "line": 110,
+    "source": "return yield* request(ORCHESTRATION_V2_WS_METHODS.getThreadFamily, {"
+  },
+  {
+    "file": "packages/client-runtime/src/state/threads.ts",
+    "line": 876,
+    "source": "request(ORCHESTRATION_V2_WS_METHODS.getTurnItem, { threadId, itemId: item.id }).pipe("
+  },
+  {
+    "file": "packages/client-runtime/src/state/threads.ts",
+    "line": 1005,
+    "source": "ORCHESTRATION_V2_WS_METHODS.subscribeThread,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/vcs.ts",
+    "line": 163,
+    "source": "WS_METHODS.vcsListRefs,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/vcs.ts",
+    "line": 301,
+    "source": "tag: WS_METHODS.vcsListRefs,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/vcs.ts",
+    "line": 306,
+    "source": "subscribe: (input: EnvironmentRpcInput<typeof WS_METHODS.subscribeVcsBranch>) =>"
+  },
+  {
+    "file": "packages/client-runtime/src/state/vcs.ts",
+    "line": 311,
+    "source": "tag: WS_METHODS.vcsRefreshBranch,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/vcs.ts",
+    "line": 319,
+    "source": "subscribe: (input: EnvironmentRpcInput<typeof WS_METHODS.subscribeVcsStatus>) =>"
+  },
+  {
+    "file": "packages/client-runtime/src/state/vcs.ts",
+    "line": 320,
+    "source": "subscribe(WS_METHODS.subscribeVcsStatus, input).pipe("
+  },
+  {
+    "file": "packages/client-runtime/src/state/vcs.ts",
+    "line": 332,
+    "source": "tag: WS_METHODS.vcsPull,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/vcs.ts",
+    "line": 339,
+    "source": "tag: WS_METHODS.vcsRefreshStatus,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/vcs.ts",
+    "line": 348,
+    "source": "tag: WS_METHODS.vcsRefreshStatus,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/vcs.ts",
+    "line": 353,
+    "source": "tag: WS_METHODS.vcsCreateWorktree,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/vcs.ts",
+    "line": 360,
+    "source": "tag: WS_METHODS.subscribeWorktreeSetup,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/vcs.ts",
+    "line": 365,
+    "source": "tag: WS_METHODS.worktreeSetupCancel,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/vcs.ts",
+    "line": 369,
+    "source": "tag: WS_METHODS.vcsRemoveWorktree,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/vcs.ts",
+    "line": 376,
+    "source": "tag: WS_METHODS.vcsCreateRef,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/vcs.ts",
+    "line": 383,
+    "source": "tag: WS_METHODS.vcsSwitchRef,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/vcs.ts",
+    "line": 390,
+    "source": "tag: WS_METHODS.vcsInit,"
+  },
+  {
+    "file": "packages/client-runtime/src/state/vcsAction.ts",
+    "line": 487,
+    "source": "runStreamGuarded(WS_METHODS.gitRunStackedAction, rpcInput),"
+  },
+  {
+    "file": "packages/client-runtime/src/voice-input/stream.ts",
+    "line": 24,
+    "source": "const socket = (input.createSocket ?? ((url) => new WebSocket(url)))(input.url);"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 20,
+    "source": "[WS_METHODS.providerAuthRemoveMethod]: AuthProvidersManageScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 21,
+    "source": "[WS_METHODS.previewClose]: AuthPreviewOperateScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 23,
+    "source": "[WS_METHODS.previewStopLocalServer]: AuthTerminalOperateScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 24,
+    "source": "[WS_METHODS.serverRunStorageCleanup]: AuthSettingsWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 26,
+    "source": "[WS_METHODS.serverReclaimDatabaseSpace]: AuthEnvironmentMaintainScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 27,
+    "source": "[WS_METHODS.serverCheckOtlpEndpoint]: AuthSettingsWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 28,
+    "source": "[WS_METHODS.serverCheckSecretSource]: AuthSettingsWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 30,
+    "source": "[WS_METHODS.serverListTextGeneratorModels]: AuthSettingsWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 31,
+    "source": "[WS_METHODS.serverRefreshProviders]: AuthOrchestrationReadScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 32,
+    "source": "[WS_METHODS.pullRequestsRunAction]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 33,
+    "source": "[WS_METHODS.pullRequestsUpdate]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 34,
+    "source": "[WS_METHODS.pullRequestsComment]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 35,
+    "source": "[WS_METHODS.pullRequestsUpdateComment]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 36,
+    "source": "[WS_METHODS.pullRequestsSubmitReview]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 37,
+    "source": "[WS_METHODS.pullRequestsReplyToThread]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 38,
+    "source": "[WS_METHODS.pullRequestsSetThreadResolution]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 39,
+    "source": "[WS_METHODS.pullRequestsSetReaction]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 40,
+    "source": "[WS_METHODS.pullRequestsSetFilesViewed]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 41,
+    "source": "[WS_METHODS.pullRequestsRequestReviewers]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 42,
+    "source": "[WS_METHODS.pullRequestsSetLabels]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 44,
+    "source": "[WS_METHODS.pullRequestsGenerateReviewGuide]: AuthOrchestrationOperateScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 45,
+    "source": "[WS_METHODS.projectsCreateFromThread]: AuthOrchestrationOperateScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 46,
+    "source": "[WS_METHODS.sourceControlCloneRepository]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 47,
+    "source": "[WS_METHODS.sourceControlPublishRepository]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 48,
+    "source": "[WS_METHODS.sourceControlStar]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 50,
+    "source": "[WS_METHODS.sourceControlSignInStart]: AuthSettingsWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 51,
+    "source": "[WS_METHODS.sourceControlSignInWait]: AuthSettingsWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 52,
+    "source": "[WS_METHODS.sourceControlSignInCancel]: AuthSettingsWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 53,
+    "source": "[WS_METHODS.projectCloneStart]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 54,
+    "source": "[WS_METHODS.projectCloneCancel]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 55,
+    "source": "[WS_METHODS.projectCloneRetry]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 56,
+    "source": "[WS_METHODS.vcsPull]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 57,
+    "source": "[WS_METHODS.gitRunStackedAction]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 58,
+    "source": "[WS_METHODS.gitPreparePullRequestThread]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 59,
+    "source": "[WS_METHODS.vcsCreateWorktree]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 60,
+    "source": "[WS_METHODS.vcsRemoveWorktree]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 61,
+    "source": "[WS_METHODS.vcsCreateRef]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 62,
+    "source": "[WS_METHODS.vcsSwitchRef]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 63,
+    "source": "[WS_METHODS.vcsInit]: AuthSourceControlWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 66,
+    "source": "[WS_METHODS.serverPrepareTriage]: AuthOrchestrationOperateScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 67,
+    "source": "[WS_METHODS.scheduledTasksUpsert]: AuthOrchestrationOperateScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 68,
+    "source": "[WS_METHODS.scheduledTasksSetEnabled]: AuthOrchestrationOperateScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 69,
+    "source": "[WS_METHODS.scheduledTasksDelete]: AuthOrchestrationOperateScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 70,
+    "source": "[WS_METHODS.scheduledTasksRunNow]: AuthOrchestrationOperateScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 71,
+    "source": "[WS_METHODS.scheduledTasksRotateWebhookToken]: AuthOrchestrationOperateScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 72,
+    "source": "[ORCHESTRATION_V2_WS_METHODS.stopWorkflow]: AuthOrchestrationOperateScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 74,
+    "source": "[ORCHESTRATION_V2_WS_METHODS.forceStopThread]: AuthOrchestrationOperateScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 76,
+    "source": "[WS_METHODS.guestShareCreate]: AuthAccessWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 77,
+    "source": "[WS_METHODS.peerLinksLink]: AuthAccessWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 78,
+    "source": "[WS_METHODS.peerLinksUnlink]: AuthAccessWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 80,
+    "source": "[WS_METHODS.peerLinksAnswerRequest]: AuthAccessWriteScope,"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 91,
+    "source": "if (method === WS_METHODS.gitPreparePullRequestThread && input !== undefined) {"
+  },
+  {
+    "file": "packages/contracts/src/clientRpcPermissions.ts",
+    "line": 96,
+    "source": "if (method === WS_METHODS.gitRunStackedAction && input !== undefined) {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 585,
+    "source": "HttpApiEndpoint.get(\"descriptor\", \"/.well-known/t3/environment\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 592,
+    "source": "HttpApiEndpoint.get(\"session\", \"/api/auth/session\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 599,
+    "source": "HttpApiEndpoint.post(\"browserSession\", \"/api/auth/browser-session\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 606,
+    "source": "HttpApiEndpoint.post(\"token\", \"/oauth/token\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 614,
+    "source": "HttpApiEndpoint.post(\"webSocketTicket\", \"/api/auth/websocket-ticket\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 621,
+    "source": "HttpApiEndpoint.post(\"webSocketTicketFor\", \"/api/auth/websocket-ticket/:use\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 629,
+    "source": "HttpApiEndpoint.post(\"pairingCredential\", \"/api/auth/pairing-token\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 637,
+    "source": "HttpApiEndpoint.post(\"revokePairingLink\", \"/api/auth/pairing-links/revoke\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 645,
+    "source": "HttpApiEndpoint.post(\"revokeClient\", \"/api/auth/clients/revoke\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 653,
+    "source": "HttpApiEndpoint.post(\"approveConnectDevice\", \"/api/auth/connect-devices/approve\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 661,
+    "source": "HttpApiEndpoint.post(\"revokeConnectDevice\", \"/api/auth/connect-devices/revoke\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 669,
+    "source": "HttpApiEndpoint.post(\"revokeOtherClients\", \"/api/auth/clients/revoke-others\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 678,
+    "source": "HttpApiEndpoint.get(\"protectedResource\", \"/.well-known/oauth-protected-resource\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 683,
+    "source": "HttpApiEndpoint.get(\"mcpProtectedResource\", \"/.well-known/oauth-protected-resource/mcp\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 688,
+    "source": "HttpApiEndpoint.get(\"authorizationServer\", \"/.well-known/oauth-authorization-server\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 693,
+    "source": "HttpApiEndpoint.post(\"register\", \"/oauth/mcp/register\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 699,
+    "source": ".add(HttpApiEndpoint.get(\"authorize\", \"/oauth/mcp/authorize\"))"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 701,
+    "source": "HttpApiEndpoint.post(\"approval\", \"/oauth/mcp/approval\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 710,
+    "source": "HttpApiEndpoint.post(\"decision\", \"/oauth/mcp/decision\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 719,
+    "source": "HttpApiEndpoint.post(\"token\", \"/oauth/mcp/token\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 764,
+    "source": "HttpApiEndpoint.get(\"shellSnapshot\", \"/api/orchestration/shell\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 772,
+    "source": "HttpApiEndpoint.get(\"threadSnapshot\", \"/api/orchestration/threads/:threadId\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 780,
+    "source": "HttpApiEndpoint.get(\"threadTranscript\", \"/api/orchestration/threads/:threadId/transcript\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 788,
+    "source": "HttpApiEndpoint.get(\"threadBoundedSnapshot\", \"/api/orchestration/threads/:threadId/bounded\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 797,
+    "source": "HttpApiEndpoint.get(\"threadHistoryPage\", \"/api/orchestration/threads/:threadId/history\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 808,
+    "source": "HttpApiEndpoint.get(\"snapshot\", \"/api/projects\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 815,
+    "source": "HttpApiEndpoint.post(\"mutate\", \"/api/projects/mutate\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 824,
+    "source": "HttpApiEndpoint.post(\"diff\", \"/api/pull-requests/diff\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 845,
+    "source": "HttpApiEndpoint.get(\"cloudKeys\", \"/api/voice/cloud/keys\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 852,
+    "source": "HttpApiEndpoint.post(\"setCloudKey\", \"/api/voice/cloud/:provider/key\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 866,
+    "source": "HttpApiEndpoint.get(\"cloudModels\", \"/api/voice/cloud/openrouter/models\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 873,
+    "source": "HttpApiEndpoint.post(\"transcribeCloud\", \"/api/voice/cloud/:provider/transcribe\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 889,
+    "source": "HttpApiEndpoint.get(\"status\", \"/api/voice/status\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 896,
+    "source": "HttpApiEndpoint.post(\"prepareModel\", \"/api/voice/models/prepare\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 903,
+    "source": "HttpApiEndpoint.get(\"models\", \"/api/voice/models\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 911,
+    "source": "HttpApiEndpoint.post(\"downloadModel\", \"/api/voice/models/download\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 919,
+    "source": "HttpApiEndpoint.post(\"selectModel\", \"/api/voice/models/select\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 927,
+    "source": "HttpApiEndpoint.post(\"cancelModelDownload\", \"/api/voice/models/cancel\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 935,
+    "source": "HttpApiEndpoint.post(\"removeModel\", \"/api/voice/models/remove\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 943,
+    "source": "HttpApiEndpoint.post(\"linkModels\", \"/api/voice/models/link\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 951,
+    "source": "HttpApiEndpoint.post(\"updateAcceleration\", \"/api/voice/acceleration\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 959,
+    "source": "HttpApiEndpoint.post(\"updateModelUnloadTimeout\", \"/api/voice/model-unload-timeout\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 967,
+    "source": "HttpApiEndpoint.post(\"transcribe\", \"/api/voice/transcribe\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 977,
+    "source": "HttpApiEndpoint.post(\"postProcess\", \"/api/voice/post-process\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 987,
+    "source": "HttpApiEndpoint.post(\"linkProof\", \"/api/connect/link-proof\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 995,
+    "source": "HttpApiEndpoint.post(\"relayConfig\", \"/api/connect/relay-config\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 1003,
+    "source": "HttpApiEndpoint.get(\"linkState\", \"/api/connect/link-state\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 1010,
+    "source": "HttpApiEndpoint.post(\"checkReachability\", \"/api/connect/reachability\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 1017,
+    "source": "HttpApiEndpoint.post(\"unlink\", \"/api/connect/unlink\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 1024,
+    "source": "HttpApiEndpoint.post(\"preferences\", \"/api/connect/preferences\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 1032,
+    "source": "HttpApiEndpoint.post(\"health\", \"/api/t3-connect/health\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 1039,
+    "source": "HttpApiEndpoint.post(\"t3MintCredential\", \"/api/t3-connect/mint-credential\", {"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 1061,
+    "source": ".add(HttpApiEndpoint.post(\"webhookPost\", WEBHOOK_PATH, webhookEndpoint))"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 1062,
+    "source": ".add(HttpApiEndpoint.put(\"webhookPut\", WEBHOOK_PATH, webhookEndpoint))"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 1063,
+    "source": ".add(HttpApiEndpoint.patch(\"webhookPatch\", WEBHOOK_PATH, webhookEndpoint))"
+  },
+  {
+    "file": "packages/contracts/src/environmentHttp.ts",
+    "line": 1064,
+    "source": ".add(HttpApiEndpoint.get(\"webhookGet\", WEBHOOK_PATH, webhookEndpoint)) {}"
+  },
+  {
+    "file": "packages/contracts/src/orchestrationV2.ts",
+    "line": 3582,
+    "source": "// Excluded from dispatchCommand so only the server can send these."
+  },
+  {
+    "file": "packages/contracts/src/orchestrationV2.ts",
+    "line": 3820,
+    "source": "dispatchCommand: \"orchestration.dispatchCommand\","
+  },
+  {
+    "file": "packages/contracts/src/orchestrationV2.ts",
+    "line": 4490,
+    "source": "dispatchCommand: {"
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1008,
+    "source": "HttpApiEndpoint.get(\"health\", \"/health\", {"
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1017,
+    "source": "HttpApiEndpoint.get(\"authorizationServer\", \"/.well-known/oauth-authorization-server\", {"
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1020,
+    "source": "HttpApiEndpoint.get(\"protectedResource\", \"/.well-known/oauth-protected-resource\", {"
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1026,
+    "source": "export const RelayRegisterDeviceEndpoint = HttpApiEndpoint.post("
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1037,
+    "source": "export const RelayRegisterLiveActivityEndpoint = HttpApiEndpoint.post("
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1053,
+    "source": "export const RelayAgentActivitySnapshotEndpoint = HttpApiEndpoint.get("
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1063,
+    "source": "export const RelayUnregisterDeviceEndpoint = HttpApiEndpoint.delete("
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1086,
+    "source": "HttpApiEndpoint.get(\"listEnvironments\", \"/v1/environments\", {"
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1091,
+    "source": "HttpApiEndpoint.get(\"listDevices\", \"/v1/client/devices\", {"
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1096,
+    "source": "HttpApiEndpoint.get(\"listDevicesV2\", \"/v2/client/devices\", {"
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1101,
+    "source": "HttpApiEndpoint.post(\"linkEnvironment\", \"/v1/client/environment-links\", {"
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1107,
+    "source": "HttpApiEndpoint.post("
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1117,
+    "source": "HttpApiEndpoint.delete(\"unlinkEnvironment\", \"/v1/client/environment-links/:environmentId\", {"
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1123,
+    "source": "HttpApiEndpoint.delete("
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1138,
+    "source": "HttpApiEndpoint.get(\"getT3ChatLink\", \"/v1/client/t3chat-link\", {"
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1143,
+    "source": "HttpApiEndpoint.post(\"createT3ChatLinkRequest\", \"/v1/client/t3chat-link-requests\", {"
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1148,
+    "source": "HttpApiEndpoint.delete(\"unlinkT3Chat\", \"/v1/client/t3chat-link\", {"
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1157,
+    "source": "export const RelayExchangeDpopAccessTokenEndpoint = HttpApiEndpoint.post("
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1177,
+    "source": "export const RelayConnectEnvironmentEndpoint = HttpApiEndpoint.post("
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1191,
+    "source": "export const RelayGetEnvironmentStatusEndpoint = HttpApiEndpoint.post("
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1222,
+    "source": "HttpApiEndpoint.post("
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1234,
+    "source": "HttpApiEndpoint.post(\"recoverManagedEndpoint\", \"/v1/environments/:environmentId/tunnel\", {"
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1242,
+    "source": "HttpApiEndpoint.post("
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1255,
+    "source": "HttpApiEndpoint.post("
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1265,
+    "source": "HttpApiEndpoint.post(\"wakeHeldHooks\", \"/v1/environments/:environmentId/hooks/wake\", {"
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1288,
+    "source": "HttpApiEndpoint.post(\"forwardPost\", RELAY_HOOK_PATH, relayHookEndpoint),"
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1289,
+    "source": "HttpApiEndpoint.put(\"forwardPut\", RELAY_HOOK_PATH, relayHookEndpoint),"
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1290,
+    "source": "HttpApiEndpoint.patch(\"forwardPatch\", RELAY_HOOK_PATH, relayHookEndpoint),"
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1291,
+    "source": "HttpApiEndpoint.get(\"forwardGet\", RELAY_HOOK_PATH, relayHookEndpoint),"
+  },
+  {
+    "file": "packages/contracts/src/relay.ts",
+    "line": 1305,
+    "source": "HttpApiEndpoint.post(\"ingest\", \"/v1/mobile/observe/:projectId/v1/:signal\", {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 634,
+    "source": "const WsServerUpsertKeybindingRpc = Rpc.make(WS_METHODS.serverUpsertKeybinding, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 640,
+    "source": "const WsServerRemoveKeybindingRpc = Rpc.make(WS_METHODS.serverRemoveKeybinding, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 646,
+    "source": "const WsServerProbeRpc = Rpc.make(WS_METHODS.serverProbe, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 652,
+    "source": "const WsServerGetConfigRpc = Rpc.make(WS_METHODS.serverGetConfig, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 658,
+    "source": "export const WsServerRefreshProvidersRpc = Rpc.make(WS_METHODS.serverRefreshProviders, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 697,
+    "source": "const WsServerUpdateProviderRpc = Rpc.make(WS_METHODS.serverUpdateProvider, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 705,
+    "source": "const WsProviderConsumeResetCreditRpc = Rpc.make(WS_METHODS.providerConsumeResetCredit, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 711,
+    "source": "const WsProviderAuthStartRpc = Rpc.make(WS_METHODS.providerAuthStart, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 717,
+    "source": "const WsProviderAuthRespondRpc = Rpc.make(WS_METHODS.providerAuthRespond, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 723,
+    "source": "const WsProviderAuthCompleteRpc = Rpc.make(WS_METHODS.providerAuthComplete, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 729,
+    "source": "const WsChatGptReconnectProfileRpc = Rpc.make(WS_METHODS.chatGptReconnectProfile, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 734,
+    "source": "const WsChatGptImportProfileRpc = Rpc.make(WS_METHODS.chatGptImportProfile, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 739,
+    "source": "const WsChatGptHandoffSubscribeRpc = Rpc.make(WS_METHODS.chatGptHandoffSubscribe, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 746,
+    "source": "const WsProviderAuthCancelRpc = Rpc.make(WS_METHODS.providerAuthCancel, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 752,
+    "source": "const WsProviderAuthRemoveMethodRpc = Rpc.make(WS_METHODS.providerAuthRemoveMethod, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 758,
+    "source": "const WsProviderAuthLogoutRpc = Rpc.make(WS_METHODS.providerAuthLogout, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 764,
+    "source": "const WsProviderAuthSubscribeRpc = Rpc.make(WS_METHODS.providerAuthSubscribe, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 771,
+    "source": "const WsProviderInstallStartRpc = Rpc.make(WS_METHODS.providerInstallStart, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 777,
+    "source": "const WsProviderInstallCancelRpc = Rpc.make(WS_METHODS.providerInstallCancel, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 783,
+    "source": "const WsProviderInstallSubscribeRpc = Rpc.make(WS_METHODS.providerInstallSubscribe, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 790,
+    "source": "const WsProviderInstallRemoveRpc = Rpc.make(WS_METHODS.providerInstallRemove, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 796,
+    "source": "const WsServerGetNpmReleaseRpc = Rpc.make(WS_METHODS.serverGetNpmRelease, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 802,
+    "source": "const WsServerUpdateServerRpc = Rpc.make(WS_METHODS.serverUpdateServer, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 808,
+    "source": "const WsServerUpdateServerWithProgressRpc = Rpc.make(WS_METHODS.serverUpdateServerWithProgress, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 815,
+    "source": "const WsServerCommitDesktopUpdateRpc = Rpc.make(WS_METHODS.serverCommitDesktopUpdate, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 821,
+    "source": "const WsServerRunStorageCleanupRpc = Rpc.make(WS_METHODS.serverRunStorageCleanup, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 826,
+    "source": "const WsServerGetStorageCleanupReportRpc = Rpc.make(WS_METHODS.serverGetStorageCleanupReport, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 833,
+    "source": "const WsServerGetDatabaseStorageRpc = Rpc.make(WS_METHODS.serverGetDatabaseStorage, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 840,
+    "source": "const WsServerReclaimDatabaseSpaceRpc = Rpc.make(WS_METHODS.serverReclaimDatabaseSpace, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 845,
+    "source": "const WsPeerLinksListRpc = Rpc.make(WS_METHODS.peerLinksList, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 851,
+    "source": "const WsPeerLinksLinkRpc = Rpc.make(WS_METHODS.peerLinksLink, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 857,
+    "source": "const WsPeerLinksUnlinkRpc = Rpc.make(WS_METHODS.peerLinksUnlink, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 863,
+    "source": "const WsPeerLinksAnswerRequestRpc = Rpc.make(WS_METHODS.peerLinksAnswerRequest, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 869,
+    "source": "const WsServerGetSettingsRpc = Rpc.make(WS_METHODS.serverGetSettings, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 875,
+    "source": "const WsServerUpdateSettingsRpc = Rpc.make(WS_METHODS.serverUpdateSettings, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 884,
+    "source": "const WsServerDiscoverSourceControlRpc = Rpc.make(WS_METHODS.serverDiscoverSourceControl, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 890,
+    "source": "const WsServerCheckSecretSourceRpc = Rpc.make(WS_METHODS.serverCheckSecretSource, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 896,
+    "source": "const WsServerSearchAcpRegistryRpc = Rpc.make(WS_METHODS.serverSearchAcpRegistry, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 902,
+    "source": "const WsServerPrepareAcpRegistryAgentRpc = Rpc.make(WS_METHODS.serverPrepareAcpRegistryAgent, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 908,
+    "source": "const WsServerUninstallAcpRegistryManagedBinaryRpc = Rpc.make("
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 909,
+    "source": "WS_METHODS.serverUninstallAcpRegistryManagedBinary,"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 917,
+    "source": "const WsServerAcceptAcpRegistryUrlAuthRpc = Rpc.make(WS_METHODS.serverAcceptAcpRegistryUrlAuth, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 923,
+    "source": "const WsServerListAcpRegistrySessionsRpc = Rpc.make(WS_METHODS.serverListAcpRegistrySessions, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 929,
+    "source": "const WsServerImportAcpRegistrySessionRpc = Rpc.make(WS_METHODS.serverImportAcpRegistrySession, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 935,
+    "source": "const WsServerDeleteAcpRegistrySessionRpc = Rpc.make(WS_METHODS.serverDeleteAcpRegistrySession, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 941,
+    "source": "const WsServerListAcpRegistryProvidersRpc = Rpc.make(WS_METHODS.serverListAcpRegistryProviders, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 947,
+    "source": "const WsServerSetAcpRegistryProviderRpc = Rpc.make(WS_METHODS.serverSetAcpRegistryProvider, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 953,
+    "source": "const WsServerDisableAcpRegistryProviderRpc = Rpc.make("
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 954,
+    "source": "WS_METHODS.serverDisableAcpRegistryProvider,"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 962,
+    "source": "const WsServerLogoutAcpRegistryRpc = Rpc.make(WS_METHODS.serverLogoutAcpRegistry, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 968,
+    "source": "const WsServerGetTraceDiagnosticsRpc = Rpc.make(WS_METHODS.serverGetTraceDiagnostics, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 974,
+    "source": "const WsServerGetProcessDiagnosticsRpc = Rpc.make(WS_METHODS.serverGetProcessDiagnostics, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 980,
+    "source": "const WsServerGetHostResourcesRpc = Rpc.make(WS_METHODS.serverGetHostResources, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 986,
+    "source": "const WsServerGetProcessResourceHistoryRpc = Rpc.make(WS_METHODS.serverGetProcessResourceHistory, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 992,
+    "source": "const WsServerGetResourceTelemetryHistoryRpc = Rpc.make("
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 993,
+    "source": "WS_METHODS.serverGetResourceTelemetryHistory,"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1001,
+    "source": "const WsServerRetryResourceTelemetryRpc = Rpc.make(WS_METHODS.serverRetryResourceTelemetry, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1007,
+    "source": "const WsServerCheckOtlpEndpointRpc = Rpc.make(WS_METHODS.serverCheckOtlpEndpoint, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1013,
+    "source": "const WsServerListTextGeneratorModelsRpc = Rpc.make(WS_METHODS.serverListTextGeneratorModels, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1019,
+    "source": "const WsServerPrepareTriageRpc = Rpc.make(WS_METHODS.serverPrepareTriage, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1025,
+    "source": "const WsServerGetUsageSummaryRpc = Rpc.make(WS_METHODS.serverGetUsageSummary, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1031,
+    "source": "const WsServerRefreshUsageRatesRpc = Rpc.make(WS_METHODS.serverRefreshUsageRates, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1037,
+    "source": "const WsServerSignalProcessRpc = Rpc.make(WS_METHODS.serverSignalProcess, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1043,
+    "source": "const WsCloudGetRelayClientStatusRpc = Rpc.make(WS_METHODS.cloudGetRelayClientStatus, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1049,
+    "source": "const WsCloudInstallRelayClientRpc = Rpc.make(WS_METHODS.cloudInstallRelayClient, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1056,
+    "source": "const WsServerReportClientActivityRpc = Rpc.make(WS_METHODS.serverReportClientActivity, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1067,
+    "source": "const WsPullRequestsListRpc = Rpc.make(WS_METHODS.pullRequestsList, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1074,
+    "source": "const WsPullRequestsListStatsRpc = Rpc.make(WS_METHODS.pullRequestsListStats, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1080,
+    "source": "const WsPullRequestsFilterOptionsRpc = Rpc.make(WS_METHODS.pullRequestsFilterOptions, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1086,
+    "source": "const WsPullRequestsRoutingRpc = Rpc.make(WS_METHODS.pullRequestsRouting, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1092,
+    "source": "const WsPullRequestsRoutingIdentityRpc = Rpc.make(WS_METHODS.pullRequestsRoutingIdentity, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1098,
+    "source": "const WsPullRequestsSummaryRpc = Rpc.make(WS_METHODS.pullRequestsSummary, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1104,
+    "source": "const WsPullRequestsStackRpc = Rpc.make(WS_METHODS.pullRequestsStack, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1110,
+    "source": "const WsPullRequestsLinkedThreadsRpc = Rpc.make(WS_METHODS.pullRequestsLinkedThreads, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1116,
+    "source": "const WsPullRequestsDetailRpc = Rpc.make(WS_METHODS.pullRequestsDetail, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1122,
+    "source": "const WsPullRequestsPreviewRpc = Rpc.make(WS_METHODS.pullRequestsPreview, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1128,
+    "source": "const WsPullRequestsChecksRpc = Rpc.make(WS_METHODS.pullRequestsChecks, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1134,
+    "source": "const WsPullRequestsActivityRpc = Rpc.make(WS_METHODS.pullRequestsActivity, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1140,
+    "source": "const WsPullRequestsReviewGuideRpc = Rpc.make(WS_METHODS.pullRequestsReviewGuide, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1146,
+    "source": "const WsPullRequestsGenerateReviewGuideRpc = Rpc.make(WS_METHODS.pullRequestsGenerateReviewGuide, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1152,
+    "source": "const WsPullRequestsThreadCommentsRpc = Rpc.make(WS_METHODS.pullRequestsThreadComments, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1158,
+    "source": "const WsPullRequestsDiffFileContentsRpc = Rpc.make(WS_METHODS.pullRequestsDiffFileContents, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1164,
+    "source": "const WsPullRequestsFilesViewedRpc = Rpc.make(WS_METHODS.pullRequestsFilesViewed, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1170,
+    "source": "const WsPullRequestsChangeBreakdownRpc = Rpc.make(WS_METHODS.pullRequestsChangeBreakdown, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1176,
+    "source": "const WsPullRequestsSetFilesViewedRpc = Rpc.make(WS_METHODS.pullRequestsSetFilesViewed, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1182,
+    "source": "const WsPullRequestsRunActionRpc = Rpc.make(WS_METHODS.pullRequestsRunAction, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1189,
+    "source": "const WsPullRequestsUpdateRpc = Rpc.make(WS_METHODS.pullRequestsUpdate, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1195,
+    "source": "const WsPullRequestsCommentRpc = Rpc.make(WS_METHODS.pullRequestsComment, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1201,
+    "source": "const WsPullRequestsUpdateCommentRpc = Rpc.make(WS_METHODS.pullRequestsUpdateComment, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1207,
+    "source": "const WsPullRequestsSubmitReviewRpc = Rpc.make(WS_METHODS.pullRequestsSubmitReview, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1213,
+    "source": "const WsPullRequestsReplyToThreadRpc = Rpc.make(WS_METHODS.pullRequestsReplyToThread, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1219,
+    "source": "const WsPullRequestsSetThreadResolutionRpc = Rpc.make(WS_METHODS.pullRequestsSetThreadResolution, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1225,
+    "source": "const WsPullRequestsSetReactionRpc = Rpc.make(WS_METHODS.pullRequestsSetReaction, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1231,
+    "source": "const WsPullRequestsInvalidateRpc = Rpc.make(WS_METHODS.pullRequestsInvalidate, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1237,
+    "source": "const WsPullRequestsReportStateRpc = Rpc.make(WS_METHODS.pullRequestsReportState, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1243,
+    "source": "const WsPullRequestsSubscribeRefreshesRpc = Rpc.make(WS_METHODS.pullRequestsSubscribeRefreshes, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1251,
+    "source": "const WsPullRequestsSubscribeLinkedThreadRefreshesRpc = Rpc.make("
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1252,
+    "source": "WS_METHODS.pullRequestsSubscribeLinkedThreadRefreshes,"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1262,
+    "source": "const WsPullRequestsReviewerCandidatesRpc = Rpc.make(WS_METHODS.pullRequestsReviewerCandidates, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1268,
+    "source": "const WsPullRequestsRequestReviewersRpc = Rpc.make(WS_METHODS.pullRequestsRequestReviewers, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1274,
+    "source": "const WsPullRequestsLabelCandidatesRpc = Rpc.make(WS_METHODS.pullRequestsLabelCandidates, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1280,
+    "source": "const WsPullRequestsSetLabelsRpc = Rpc.make(WS_METHODS.pullRequestsSetLabels, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1286,
+    "source": "const WsSourceControlLookupRepositoryRpc = Rpc.make(WS_METHODS.sourceControlLookupRepository, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1292,
+    "source": "const WsSourceControlCloneRepositoryRpc = Rpc.make(WS_METHODS.sourceControlCloneRepository, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1299,
+    "source": "const WsSourceControlSignInStartRpc = Rpc.make(WS_METHODS.sourceControlSignInStart, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1306,
+    "source": "const WsSourceControlSignInWaitRpc = Rpc.make(WS_METHODS.sourceControlSignInWait, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1313,
+    "source": "const WsSourceControlSignInCancelRpc = Rpc.make(WS_METHODS.sourceControlSignInCancel, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1319,
+    "source": "const WsSourceControlAppAccessRpc = Rpc.make(WS_METHODS.sourceControlAppAccess, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1326,
+    "source": "const WsSourceControlStarredRpc = Rpc.make(WS_METHODS.sourceControlStarred, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1333,
+    "source": "const WsSourceControlStarRpc = Rpc.make(WS_METHODS.sourceControlStar, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1340,
+    "source": "const WsProjectCloneStartRpc = Rpc.make(WS_METHODS.projectCloneStart, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1350,
+    "source": "const WsProjectCloneCancelRpc = Rpc.make(WS_METHODS.projectCloneCancel, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1356,
+    "source": "const WsProjectCloneRetryRpc = Rpc.make(WS_METHODS.projectCloneRetry, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1362,
+    "source": "const WsSubscribeProjectClonesRpc = Rpc.make(WS_METHODS.subscribeProjectClones, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1369,
+    "source": "const WsSourceControlPublishRepositoryRpc = Rpc.make(WS_METHODS.sourceControlPublishRepository, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1375,
+    "source": "const WsProjectsSearchEntriesRpc = Rpc.make(WS_METHODS.projectsSearchEntries, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1381,
+    "source": "const WsProjectsSearchContentsRpc = Rpc.make(WS_METHODS.projectsSearchContents, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1387,
+    "source": "const WsProjectsListEntriesRpc = Rpc.make(WS_METHODS.projectsListEntries, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1393,
+    "source": "const WsProjectsListIgnoredFilesRpc = Rpc.make(WS_METHODS.projectsListIgnoredFiles, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1399,
+    "source": "const WsProjectsReadFileRpc = Rpc.make(WS_METHODS.projectsReadFile, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1405,
+    "source": "const WsProjectsWriteFileRpc = Rpc.make(WS_METHODS.projectsWriteFile, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1411,
+    "source": "const WsProjectsMutateRpc = Rpc.make(WS_METHODS.projectsMutate, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1417,
+    "source": "const WsProjectsEnsureScratchRpc = Rpc.make(WS_METHODS.projectsEnsureScratch, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1423,
+    "source": "const WsProjectsCreateNewRpc = Rpc.make(WS_METHODS.projectsCreateNew, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1429,
+    "source": "const WsProjectsCreateFromThreadRpc = Rpc.make(WS_METHODS.projectsCreateFromThread, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1435,
+    "source": "const WsShellOpenInEditorRpc = Rpc.make(WS_METHODS.shellOpenInEditor, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1440,
+    "source": "const WsFilesystemGetMetadataRpc = Rpc.make(WS_METHODS.filesystemGetMetadata, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1446,
+    "source": "const WsFilesystemBrowseRpc = Rpc.make(WS_METHODS.filesystemBrowse, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1452,
+    "source": "const WsAgentSessionsScanRpc = Rpc.make(WS_METHODS.agentSessionsScan, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1458,
+    "source": "const WsAgentSessionsImportRpc = Rpc.make(WS_METHODS.agentSessionsImport, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1469,
+    "source": "const WsAssetsCreateUrlRpc = Rpc.make(WS_METHODS.assetsCreateUrl, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1475,
+    "source": "const WsAssetsPersistChatAttachmentsRpc = Rpc.make(WS_METHODS.assetsPersistChatAttachments, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1481,
+    "source": "const WsAttachmentsCreateUploadUrlRpc = Rpc.make(WS_METHODS.attachmentsCreateUploadUrl, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1487,
+    "source": "const WsAttachmentsDeleteRpc = Rpc.make(WS_METHODS.attachmentsDelete, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1492,
+    "source": "const WsMcpAppsCallToolRpc = Rpc.make(WS_METHODS.mcpAppsCallTool, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1498,
+    "source": "const WsMcpAppsToolInfoRpc = Rpc.make(WS_METHODS.mcpAppsToolInfo, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1504,
+    "source": "const WsMcpAppsUpdateModelContextRpc = Rpc.make(WS_METHODS.mcpAppsUpdateModelContext, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1509,
+    "source": "const WsMcpAppsReadResourceRpc = Rpc.make(WS_METHODS.mcpAppsReadResource, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1515,
+    "source": "const WsProviderUploadFeedbackRpc = Rpc.make(WS_METHODS.providerUploadFeedback, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1521,
+    "source": "const WsSubscribeVcsBranchRpc = Rpc.make(WS_METHODS.subscribeVcsBranch, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1528,
+    "source": "const WsVcsRefreshBranchRpc = Rpc.make(WS_METHODS.vcsRefreshBranch, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1534,
+    "source": "const WsSubscribeVcsStatusRpc = Rpc.make(WS_METHODS.subscribeVcsStatus, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1541,
+    "source": "const WsVcsPullRpc = Rpc.make(WS_METHODS.vcsPull, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1547,
+    "source": "const WsVcsRefreshStatusRpc = Rpc.make(WS_METHODS.vcsRefreshStatus, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1556,
+    "source": "const WsSubscribeWorktreeSetupRpc = Rpc.make(WS_METHODS.subscribeWorktreeSetup, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1563,
+    "source": "const WsWorktreeSetupCancelRpc = Rpc.make(WS_METHODS.worktreeSetupCancel, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1569,
+    "source": "const WsGitRunStackedActionRpc = Rpc.make(WS_METHODS.gitRunStackedAction, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1576,
+    "source": "const WsGitResolvePullRequestRpc = Rpc.make(WS_METHODS.gitResolvePullRequest, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1582,
+    "source": "const WsGitPreparePullRequestThreadRpc = Rpc.make(WS_METHODS.gitPreparePullRequestThread, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1588,
+    "source": "const WsVcsListRefsRpc = Rpc.make(WS_METHODS.vcsListRefs, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1594,
+    "source": "const WsVcsCreateWorktreeRpc = Rpc.make(WS_METHODS.vcsCreateWorktree, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1601,
+    "source": "const WsVcsRemoveWorktreeRpc = Rpc.make(WS_METHODS.vcsRemoveWorktree, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1606,
+    "source": "const WsVcsCreateRefRpc = Rpc.make(WS_METHODS.vcsCreateRef, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1612,
+    "source": "const WsVcsSwitchRefRpc = Rpc.make(WS_METHODS.vcsSwitchRef, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1618,
+    "source": "const WsVcsInitRpc = Rpc.make(WS_METHODS.vcsInit, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1623,
+    "source": "const WsReviewGetBranchCommitsRpc = Rpc.make(WS_METHODS.reviewGetBranchCommits, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1629,
+    "source": "const WsReviewGetDiffPreviewRpc = Rpc.make(WS_METHODS.reviewGetDiffPreview, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1635,
+    "source": "const WsReviewGetDiffFileContentsRpc = Rpc.make(WS_METHODS.reviewGetDiffFileContents, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1641,
+    "source": "const WsTerminalOpenRpc = Rpc.make(WS_METHODS.terminalOpen, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1647,
+    "source": "const WsTerminalAttachRpc = Rpc.make(WS_METHODS.terminalAttach, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1654,
+    "source": "const WsTerminalObserveRpc = Rpc.make(WS_METHODS.terminalObserve, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1661,
+    "source": "const WsTerminalWriteRpc = Rpc.make(WS_METHODS.terminalWrite, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1666,
+    "source": "const WsTerminalResizeRpc = Rpc.make(WS_METHODS.terminalResize, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1671,
+    "source": "const WsTerminalClearRpc = Rpc.make(WS_METHODS.terminalClear, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1676,
+    "source": "const WsTerminalCloseRpc = Rpc.make(WS_METHODS.terminalClose, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1681,
+    "source": "const WsPreviewOpenRpc = Rpc.make(WS_METHODS.previewOpen, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1687,
+    "source": "const WsPreviewResizeRpc = Rpc.make(WS_METHODS.previewResize, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1693,
+    "source": "const WsPreviewAdjustRpc = Rpc.make(WS_METHODS.previewAdjust, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1699,
+    "source": "const WsPreviewCloseRpc = Rpc.make(WS_METHODS.previewClose, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1704,
+    "source": "const WsPreviewListRpc = Rpc.make(WS_METHODS.previewList, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1710,
+    "source": "const WsPreviewClearProfileRpc = Rpc.make(WS_METHODS.previewClearProfile, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1715,
+    "source": "const WsPreviewReportProfilesRpc = Rpc.make(WS_METHODS.previewReportProfiles, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1720,
+    "source": "const WsPreviewReportStatusRpc = Rpc.make(WS_METHODS.previewReportStatus, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1725,
+    "source": "const WsSubscribePreviewEventsRpc = Rpc.make(WS_METHODS.subscribePreviewEvents, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1732,
+    "source": "const WsPreviewStopLocalServerRpc = Rpc.make(WS_METHODS.previewStopLocalServer, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1737,
+    "source": "const WsSubscribeDiscoveredLocalServersRpc = Rpc.make(WS_METHODS.subscribeDiscoveredLocalServers, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1746,
+    "source": "const WsDeviceTestHostRpc = Rpc.make(WS_METHODS.deviceTestHost, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1752,
+    "source": "const WsDeviceEasAccountRpc = Rpc.make(WS_METHODS.deviceEasAccount, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1758,
+    "source": "const WsDeviceSimlockIdentityRpc = Rpc.make(WS_METHODS.deviceSimlockIdentity, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1764,
+    "source": "const WsDeviceListRpc = Rpc.make(WS_METHODS.deviceList, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1770,
+    "source": "const WsDeviceConfigureRpc = Rpc.make(WS_METHODS.deviceConfigure, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1776,
+    "source": "const WsDeviceOpenRpc = Rpc.make(WS_METHODS.deviceOpen, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1782,
+    "source": "const WsDeviceCloseRpc = Rpc.make(WS_METHODS.deviceClose, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1787,
+    "source": "const WsDeviceShutdownRpc = Rpc.make(WS_METHODS.deviceShutdown, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1792,
+    "source": "const WsDeviceDetailRpc = Rpc.make(WS_METHODS.deviceDetail, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1798,
+    "source": "const WsDeviceActionRpc = Rpc.make(WS_METHODS.deviceAction, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1804,
+    "source": "const WsSubscribeDeviceStateRpc = Rpc.make(WS_METHODS.subscribeDeviceState, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1811,
+    "source": "const WsOrchestrationV2DispatchCommandRpc = Rpc.make(ORCHESTRATION_V2_WS_METHODS.dispatchCommand, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1812,
+    "source": "payload: OrchestrationV2RpcSchemas.dispatchCommand.input,"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1813,
+    "source": "success: OrchestrationV2RpcSchemas.dispatchCommand.output,"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1817,
+    "source": "const WsOrchestrationV2GetTurnDiffRpc = Rpc.make(ORCHESTRATION_V2_WS_METHODS.getTurnDiff, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1823,
+    "source": "const WsOrchestrationV2GetFullThreadDiffRpc = Rpc.make("
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1824,
+    "source": "ORCHESTRATION_V2_WS_METHODS.getFullThreadDiff,"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1832,
+    "source": "const WsOrchestrationV2SearchThreadRpc = Rpc.make(ORCHESTRATION_V2_WS_METHODS.searchThread, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1838,
+    "source": "const WsOrchestrationV2SearchThreadStreamRpc = Rpc.make("
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1839,
+    "source": "ORCHESTRATION_V2_WS_METHODS.searchThreadStream,"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1848,
+    "source": "const WsOrchestrationV2SearchThreadsRpc = Rpc.make(ORCHESTRATION_V2_WS_METHODS.searchThreads, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1854,
+    "source": "const WsOrchestrationV2GetArchivedShellSnapshotRpc = Rpc.make("
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1855,
+    "source": "ORCHESTRATION_V2_WS_METHODS.getArchivedShellSnapshot,"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1863,
+    "source": "const WsOrchestrationV2GetThreadFamilyRpc = Rpc.make(ORCHESTRATION_V2_WS_METHODS.getThreadFamily, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1869,
+    "source": "const WsOrchestrationV2GetThreadTitlesRpc = Rpc.make(ORCHESTRATION_V2_WS_METHODS.getThreadTitles, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1875,
+    "source": "const WsOrchestrationV2GetThreadLinkMetadataRpc = Rpc.make("
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1876,
+    "source": "ORCHESTRATION_V2_WS_METHODS.getThreadLinkMetadata,"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1884,
+    "source": "const WsOrchestrationV2GetWorktreeThreadIdsRpc = Rpc.make("
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1885,
+    "source": "ORCHESTRATION_V2_WS_METHODS.getWorktreeThreadIds,"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1893,
+    "source": "const WsOrchestrationV2GetOlderSettledThreadsRpc = Rpc.make("
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1894,
+    "source": "ORCHESTRATION_V2_WS_METHODS.getOlderSettledThreads,"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1902,
+    "source": "const WsOrchestrationV2GetThreadProjectionRpc = Rpc.make("
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1903,
+    "source": "ORCHESTRATION_V2_WS_METHODS.getThreadProjection,"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1911,
+    "source": "const WsOrchestrationV2StopWorkflowRpc = Rpc.make(ORCHESTRATION_V2_WS_METHODS.stopWorkflow, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1917,
+    "source": "const WsOrchestrationV2ForceStopThreadRpc = Rpc.make(ORCHESTRATION_V2_WS_METHODS.forceStopThread, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1923,
+    "source": "const WsOrchestrationV2GetWorkflowScriptRpc = Rpc.make("
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1924,
+    "source": "ORCHESTRATION_V2_WS_METHODS.getWorkflowScript,"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1932,
+    "source": "const WsOrchestrationV2GetNativeChildWorkRpc = Rpc.make("
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1933,
+    "source": "ORCHESTRATION_V2_WS_METHODS.getNativeChildWork,"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1941,
+    "source": "const WsOrchestrationV2GetTurnItemRpc = Rpc.make(ORCHESTRATION_V2_WS_METHODS.getTurnItem, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1947,
+    "source": "const WsOrchestrationV2LaunchThreadRpc = Rpc.make(ORCHESTRATION_V2_WS_METHODS.launchThread, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1953,
+    "source": "const WsOrchestrationV2SubscribeShellRpc = Rpc.make(ORCHESTRATION_V2_WS_METHODS.subscribeShell, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1960,
+    "source": "const WsOrchestrationV2SubscribeThreadRpc = Rpc.make(ORCHESTRATION_V2_WS_METHODS.subscribeThread, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1967,
+    "source": "const WsOrchestrationV2SubscribeCommandOutputRpc = Rpc.make("
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1968,
+    "source": "ORCHESTRATION_V2_WS_METHODS.subscribeCommandOutput,"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1977,
+    "source": "const WsOrchestrationV2SubscribePromptSuggestionRpc = Rpc.make("
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1978,
+    "source": "ORCHESTRATION_V2_WS_METHODS.subscribePromptSuggestion,"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1987,
+    "source": "const WsSubscribeTerminalMetadataRpc = Rpc.make(WS_METHODS.subscribeTerminalMetadata, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 1994,
+    "source": "export const WsSubscribeServerConfigRpc = Rpc.make(WS_METHODS.subscribeServerConfig, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 2018,
+    "source": "const WsSubscribeServerLifecycleRpc = Rpc.make(WS_METHODS.subscribeServerLifecycle, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 2025,
+    "source": "const WsScheduledTasksSubscribeRpc = Rpc.make(WS_METHODS.scheduledTasksSubscribe, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 2032,
+    "source": "const WsScheduledTasksUpsertRpc = Rpc.make(WS_METHODS.scheduledTasksUpsert, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 2038,
+    "source": "const WsScheduledTasksSetEnabledRpc = Rpc.make(WS_METHODS.scheduledTasksSetEnabled, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 2044,
+    "source": "const WsScheduledTasksDeleteRpc = Rpc.make(WS_METHODS.scheduledTasksDelete, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 2050,
+    "source": "const WsScheduledTasksRunNowRpc = Rpc.make(WS_METHODS.scheduledTasksRunNow, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 2056,
+    "source": "const WsScheduledTasksRotateWebhookTokenRpc = Rpc.make("
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 2057,
+    "source": "WS_METHODS.scheduledTasksRotateWebhookToken,"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 2065,
+    "source": "const WsGuestShareCreateRpc = Rpc.make(WS_METHODS.guestShareCreate, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 2071,
+    "source": "const WsSecretsAnswerRequestRpc = Rpc.make(WS_METHODS.secretsAnswerRequest, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 2076,
+    "source": "const WsScheduledTasksListWebhookDeliveriesRpc = Rpc.make("
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 2077,
+    "source": "WS_METHODS.scheduledTasksListWebhookDeliveries,"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 2085,
+    "source": "const WsScheduledTasksGetWebhookDeliveryRpc = Rpc.make("
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 2086,
+    "source": "WS_METHODS.scheduledTasksGetWebhookDelivery,"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 2094,
+    "source": "const WsSubscribeAuthAccessRpc = Rpc.make(WS_METHODS.subscribeAuthAccess, {"
+  },
+  {
+    "file": "packages/contracts/src/rpc.ts",
+    "line": 2101,
+    "source": "const WsSubscribeResourceTelemetryRpc = Rpc.make(WS_METHODS.subscribeResourceTelemetry, {"
+  }
+]

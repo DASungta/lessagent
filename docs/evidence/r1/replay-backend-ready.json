@@ -1,0 +1,178 @@
+{
+  "environmentId": "cf3c1ea6-d785-4ed9-83f8-6d2c0ca903e1",
+  "base": "http://127.0.0.1:47847",
+  "home": "/var/folders/l4/5zxkftbn7mv57l3pgw780r_r0000gn/T/t3-harmony-r1-real-7qdep8hl/replay-source",
+  "projectId": "r1-replay-project",
+  "providers": [
+    {
+      "instanceId": "codex",
+      "enabled": true,
+      "installed": true,
+      "models": []
+    },
+    {
+      "instanceId": "claudeAgent",
+      "enabled": true,
+      "installed": false,
+      "models": [
+        {
+          "slug": "claude-opus-5-5",
+          "name": "Claude Opus 5.5"
+        },
+        {
+          "slug": "claude-sonnet-5-5",
+          "name": "Claude Sonnet 5.5"
+        },
+        {
+          "slug": "claude-fable-5-2",
+          "name": "Claude Fable 5.2"
+        },
+        {
+          "slug": "claude-fable-5-1",
+          "name": "Claude Fable 5.1"
+        },
+        {
+          "slug": "claude-fable-5",
+          "name": "Claude Fable 5"
+        },
+        {
+          "slug": "claude-opus-5",
+          "name": "Claude Opus 5"
+        },
+        {
+          "slug": "claude-opus-4-8",
+          "name": "Claude Opus 4.8"
+        },
+        {
+          "slug": "claude-opus-4-7",
+          "name": "Claude Opus 4.7"
+        },
+        {
+          "slug": "claude-opus-4-6",
+          "name": "Claude Opus 4.6"
+        },
+        {
+          "slug": "claude-opus-4-5",
+          "name": "Claude Opus 4.5"
+        },
+        {
+          "slug": "claude-sonnet-5",
+          "name": "Claude Sonnet 5"
+        },
+        {
+          "slug": "claude-sonnet-4-6",
+          "name": "Claude Sonnet 4.6"
+        },
+        {
+          "slug": "claude-haiku-5-5",
+          "name": "Claude Haiku 5.5"
+        },
+        {
+          "slug": "claude-haiku-4-5",
+          "name": "Claude Haiku 4.5"
+        }
+      ]
+    },
+    {
+      "instanceId": "cursor",
+      "enabled": false,
+      "installed": false,
+      "models": []
+    },
+    {
+      "instanceId": "grok",
+      "enabled": false,
+      "installed": false,
+      "models": [
+        {
+          "slug": "grok-build",
+          "name": "Grok Build"
+        }
+      ]
+    },
+    {
+      "instanceId": "opencode",
+      "enabled": false,
+      "installed": false,
+      "models": []
+    },
+    {
+      "instanceId": "antigravity",
+      "enabled": false,
+      "installed": false,
+      "models": []
+    },
+    {
+      "instanceId": "fx",
+      "enabled": false,
+      "installed": false,
+      "models": [
+        {
+          "slug": "default",
+          "name": "Default"
+        }
+      ]
+    },
+    {
+      "instanceId": "kiro",
+      "enabled": false,
+      "installed": false,
+      "models": [
+        {
+          "slug": "default",
+          "name": "Kiro default"
+        }
+      ]
+    },
+    {
+      "instanceId": "devReplay",
+      "enabled": true,
+      "installed": true,
+      "models": [
+        {
+          "slug": "showcase",
+          "name": "Showcase"
+        },
+        {
+          "slug": "todo-list",
+          "name": "Plan and reads"
+        },
+        {
+          "slug": "approval",
+          "name": "Write approval"
+        },
+        {
+          "slug": "question",
+          "name": "Question"
+        },
+        {
+          "slug": "multi-turn",
+          "name": "Multi turn"
+        },
+        {
+          "slug": "command-output",
+          "name": "Command output"
+        }
+      ]
+    },
+    {
+      "instanceId": "muse",
+      "enabled": false,
+      "installed": false,
+      "models": []
+    },
+    {
+      "instanceId": "pi",
+      "enabled": false,
+      "installed": false,
+      "models": [
+        {
+          "slug": "default",
+          "name": "Pi default"
+        }
+      ]
+    }
+  ],
+  "realProviderUsed": false,
+  "agentTurnStarted": false
+}

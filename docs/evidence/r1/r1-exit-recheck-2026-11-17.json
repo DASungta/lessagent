@@ -1,0 +1,42 @@
+{
+  "checkedAt": "2026-11-17T09:15:00+08:00",
+  "t3DeviceAccessAvailable": true,
+  "device": {
+    "id": "emulator-5554",
+    "name": "Pixel_6_API_30",
+    "platform": "android",
+    "version": "Android 11.0",
+    "package": "com.t3tools.t3code.dev"
+  },
+  "originalBaseline": {
+    "commit": "ad1b1365999c92c3fc7a054e7f3af84623f74fee",
+    "mobileVersion": "2.3.0",
+    "sourceMatchesArchive": true,
+    "appConfigSha256": "8fabb5e0b11f1bf2dddf2f1e73a6d5aa7f6912557237f7c96763570d03745688"
+  },
+  "b01": {
+    "evidenceDirectory": "docs/evidence/r1/b01-original",
+    "screenshots": 22,
+    "visualAndInteraction": "closed within emulator capability: empty, add, disabled submit, connecting, failure, camera permission/denial/settings recovery, real pairing success to opener, connected environment, dark appearance, manage/edit, retrying after isolated server stop",
+    "notExecutedOnOriginal": [
+      "successful QR recognition",
+      "invalid QR recognition"
+    ],
+    "notExecutedReason": "headless AVD hw.camera.back=emulated supplies no scannable camera feed"
+  },
+  "tailnetIPv6": {
+    "hostGlobalOrUlaIPv6": false,
+    "tailscaleAvailable": false,
+    "deviceIPv6Established": false,
+    "evidence": "docs/evidence/r1/network-readiness-recheck-2026-11-17.json"
+  },
+  "remainingExternalBlockers": [
+    "original QR recognition needs a camera-capable Android device",
+    "Tailnet and IPv6 real-network combinations need an actual Tailnet/IPv6 topology"
+  ],
+  "unchanged": {
+    "existing3773Restarted": false,
+    "r2ToR4Expanded": false,
+    "gitInitialized": false
+  }
+}

@@ -1,0 +1,201 @@
+{
+  "generatedAt": "2026-11-17T15:03:56+0800",
+  "note": "R3 changed/new files in the no-Git workspace; hashes exclude pre-existing unrelated files and secrets.",
+  "files": [
+    {
+      "path": "entry/src/main/ets/protocol/Projects.ts",
+      "bytes": 46120,
+      "sha256": "4270ea9ec2cdb3d115e4eb0456cd1b5ad5d2fa27bfbd2723fff4e92b1c53bb09"
+    },
+    {
+      "path": "entry/src/main/ets/protocol/Core.ts",
+      "bytes": 15588,
+      "sha256": "d36d2405484761b422e131b4179752f9f6ffa09f6d87c0a050ef051078325a6d"
+    },
+    {
+      "path": "entry/src/main/ets/services/Workspace.ets",
+      "bytes": 19502,
+      "sha256": "b7f6622c999f3cbf1b70a6b62d27cf4335920713e426bd90efc98e2a7120eda1"
+    },
+    {
+      "path": "entry/src/main/ets/services/WorkspacePrefs.ets",
+      "bytes": 4104,
+      "sha256": "0babc814069c32e1d540bee280c8393b3ab53f988062d990b73804a51d042a5c"
+    },
+    {
+      "path": "entry/src/main/ets/services/T3Client.ets",
+      "bytes": 41842,
+      "sha256": "67d1832a73c3df341f9a7594d8872652191499eb80933366b4788029f40e749a"
+    },
+    {
+      "path": "entry/src/main/ets/entryability/EntryAbility.ets",
+      "bytes": 2720,
+      "sha256": "5352761091f829b686ec49044de8dd502e1b0c7c486f9d06d834548d921ca708"
+    },
+    {
+      "path": "entry/src/main/ets/pages/Index.ets",
+      "bytes": 83169,
+      "sha256": "dcde28c0df89fd1b9c34db0a9803c1ded2651772f3cb4b26faa0208e33678336"
+    },
+    {
+      "path": "entry/src/main/ets/components/ThreadList.ets",
+      "bytes": 17000,
+      "sha256": "9ab717079fa838d94c8d95031e607e69830372a337b56397da11860ca8232f0a"
+    },
+    {
+      "path": "entry/src/main/ets/components/ProjectPicker.ets",
+      "bytes": 6722,
+      "sha256": "c2f0e2146fdb4df3fb1c91db13f383f44ec5cf547884df7c0d0d0a744015feef"
+    },
+    {
+      "path": "entry/src/main/ets/components/AddProjectPanel.ets",
+      "bytes": 27052,
+      "sha256": "2af4c757725ca9387010cf0f9d2ea44f8fce31dc6145aa104f990f4e71818722"
+    },
+    {
+      "path": "entry/src/main/ets/components/ProjectOverviewPanel.ets",
+      "bytes": 8095,
+      "sha256": "e85c1e02592475b8072ab1f4eb1ecde6adbb92ff61d8924feeec4682fd0034e7"
+    },
+    {
+      "path": "entry/src/main/ets/components/ArchivePanel.ets",
+      "bytes": 6107,
+      "sha256": "1b155bd8f8c498d16d13ee451d4dfec1867fc6257f8843faf1075ed1d5bdf281"
+    },
+    {
+      "path": "entry/src/main/ets/components/SettingsPanel.ets",
+      "bytes": 3844,
+      "sha256": "3c7d2c33c49cbd0134c4f9211e087837436f1ca795f2387bf03ef1a5d6b4c4b6"
+    },
+    {
+      "path": "entry/src/main/ets/components/SnoozePanel.ets",
+      "bytes": 5490,
+      "sha256": "e5c2adffdf1485a171f000e905e39785ebab42bc81dde64c2a68cd832f780597"
+    },
+    {
+      "path": "entry/src/main/ets/components/ThreadRenamePanel.ets",
+      "bytes": 1764,
+      "sha256": "17cc951b27fcc2750054711635481663d115f69fb26aedd7f757352ad7cc957e"
+    },
+    {
+      "path": "tests/load-core.mjs",
+      "bytes": 1130,
+      "sha256": "f6aeea512671bfb9d3c31c519e974829f467591e2d56e3a8d2a90537642e8eb1"
+    },
+    {
+      "path": "tests/load-projects.mjs",
+      "bytes": 851,
+      "sha256": "b858e3b0b97db17e34b92bfc5a5dd92a5087ac3d1ca0c14cd475679cf82b7d9f"
+    },
+    {
+      "path": "tests/load-workspace.mjs",
+      "bytes": 933,
+      "sha256": "ce4742109ce9604cde45a43c8b6493e8f83452c7aff1d37690ecf7618a331a31"
+    },
+    {
+      "path": "tests/projects.test.mjs",
+      "bytes": 12866,
+      "sha256": "460e180238eb7622d86eec1a2b21fd0e58c64adc01d36a523bfcaeb7c23f94a9"
+    },
+    {
+      "path": "tests/workspace-actions.test.mjs",
+      "bytes": 7819,
+      "sha256": "4b17e271a5559208aa15fc2b590872d3f31db8ae67edc6dcf8e3ca2b9032f769"
+    },
+    {
+      "path": "tests/workspace-prefs.test.mjs",
+      "bytes": 1951,
+      "sha256": "47888f0b4542de45268315fa59b3aeec2e2b2f86651f9c15179504f01399e53e"
+    },
+    {
+      "path": "tests/native-client.test.mjs",
+      "bytes": 32061,
+      "sha256": "a41237b966b438ab08e0f1fd8cc23193ad95506f518f5b767a600a6d3faefa9c"
+    },
+    {
+      "path": "tests/ui-state.test.mjs",
+      "bytes": 9127,
+      "sha256": "42d2df94d07832146542cbca62e50942bb7a91ae6d594c697f0391f87b90403a"
+    },
+    {
+      "path": "tests/keep-awake.test.mjs",
+      "bytes": 2546,
+      "sha256": "d6831a06f7cc4cfea1206d1c6553c73415ce135d2541695f804075ae55ccfb82"
+    },
+    {
+      "path": "README.md",
+      "bytes": 4196,
+      "sha256": "90c5390ab800d62e947b91913ca6c11a1d7ba257c23ae9ad492312d74f0238d6"
+    },
+    {
+      "path": "docs/full-mobile-migration-plan.md",
+      "bytes": 14845,
+      "sha256": "c007167287459d84651e3df045dac20a4c05bdbfe16f8c612ae51322b9b91caf"
+    },
+    {
+      "path": "docs/r0-mobile-capability-matrix.md",
+      "bytes": 26554,
+      "sha256": "654693c43811c7bf815a6a60ca3739608b754d743ae5d5b3bcfee357f2b5ea77"
+    },
+    {
+      "path": "docs/r0-route-ledger.md",
+      "bytes": 22755,
+      "sha256": "0bb4316a16612c3b5d539f6dd4bed56c3452ad587ad8428ca57629169c2792d4"
+    },
+    {
+      "path": "docs/r0-interaction-baseline.md",
+      "bytes": 8068,
+      "sha256": "b61e97f2fb2c5128862b9e86b4ff13eadc832e35893689c627099f3252b1fb4b"
+    },
+    {
+      "path": "docs/r3-progress.md",
+      "bytes": 12768,
+      "sha256": "dbac3f982bd3f3b549e633aafe0677899ceee49968e35c40672f89b43032dce3"
+    },
+    {
+      "path": "docs/evidence/r3/README.md",
+      "bytes": 3746,
+      "sha256": "043cec43cc7ec48f583ed1ec0d296ee61a11fddb1a8b7788433083512b810537"
+    },
+    {
+      "path": "docs/evidence/r3/r3-local-tests.log",
+      "bytes": 39679,
+      "sha256": "8fa7a3e3ead33e4233ca131c46d8c33edba20cbb3b48ad21284d3aaf3e7c2102"
+    },
+    {
+      "path": "docs/evidence/r3/r3-build.log",
+      "bytes": 12878,
+      "sha256": "440dceaf6a6c635475553252cee1206f1baa523cd0e559de690494af8ae537a2"
+    },
+    {
+      "path": "docs/evidence/r3/r3-candidate-signed.hap",
+      "bytes": 2282820,
+      "sha256": "bf9937b56c35c44ed38c0d6112634bc395e59549548a86969d4ef17ea28c6137"
+    },
+    {
+      "path": "docs/evidence/r3/r3-final-tests.log",
+      "bytes": 40106,
+      "sha256": "56a9f0dbf9b22edb005703f7783ac3221a8edb3c208a2c28dd7ce4c74c8576a3"
+    },
+    {
+      "path": "docs/evidence/r3/r3-final-build.log",
+      "bytes": 12876,
+      "sha256": "951eda21a0ba43a8f1835dbe0f0d8442eb48d4d2081ad0995052bfd97ae6072f"
+    },
+    {
+      "path": "docs/evidence/r3/r3-hap.sha256",
+      "bytes": 107,
+      "sha256": "f80a29ab615ad53d6a9fce86968358a80a0f7e2b70004807487cdfb50b8d6501"
+    },
+    {
+      "path": "docs/evidence/r3/device/r3-device-verification.json",
+      "bytes": 12670,
+      "sha256": "ffd019fd0875c7f329969fef5265f600891d2e42592bfe3c71ba199f9271379d"
+    },
+    {
+      "path": "docs/evidence/r3/device/r3-cleanup.json",
+      "bytes": 1343,
+      "sha256": "168f614caf1cfdcca0bc754c3e1bed3f23e1255abfc48b9a75af3f38cdd86f0b"
+    }
+  ]
+}

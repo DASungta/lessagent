@@ -1,0 +1,40 @@
+{
+  "serviceVersion": "0.1.9",
+  "isolatedBaseDir": "/tmp/t3-r4-accept-gHC0QI",
+  "threads": {
+    "launchThreadId": "1d12d8df-5602-47f8-a29c-255768cffc5d",
+    "worktreeThreadId": "195880e0-c9e9-42cd-84c8-f4d881f18fdb",
+    "forkThreadId": "b7f9c78d-f808-45a5-b3cb-06b1f631c438",
+    "sideChatThreadId": "99c658c6-5880-4229-99f1-0726edaef029"
+  },
+  "worktree": {
+    "branch": "t3/a6d686db",
+    "path": "/tmp/t3-r4-accept-gHC0QI/data/worktrees/work/t3-a6d686db-6907eca913f59f71",
+    "phase": "done"
+  },
+  "queue": {
+    "observedCount": 1,
+    "projectedRunStatus": "completed after execution",
+    "queueSheetActions": ["edit", "promote", "start", "remove"]
+  },
+  "approval": {
+    "allow": "runtime request resolved",
+    "deny": "decision=decline"
+  },
+  "fork": {
+    "relationship": "fork",
+    "sideChat": true
+  },
+  "attachment": {
+    "name": "r4-test.txt",
+    "mimeType": "text/plain",
+    "sizeBytes": 19,
+    "uploadStatus": 204
+  },
+  "secretRequest": {
+    "label": "TEST_TOKEN",
+    "rendered": true,
+    "completedValue": false
+  },
+  "cleanup": "isolated service stopped; temporary lab retained only under /tmp"
+}

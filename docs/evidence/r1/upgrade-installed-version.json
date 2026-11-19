@@ -1,0 +1,48 @@
+{
+  "fields": [
+    {
+      "path": ".applicationInfo.appQuickFix.deployedAppqfInfo.versionCode",
+      "value": 0
+    },
+    {
+      "path": ".applicationInfo.appQuickFix.deployedAppqfInfo.versionName",
+      "value": ""
+    },
+    {
+      "path": ".applicationInfo.appQuickFix.deployingAppqfInfo.versionCode",
+      "value": 0
+    },
+    {
+      "path": ".applicationInfo.appQuickFix.deployingAppqfInfo.versionName",
+      "value": ""
+    },
+    {
+      "path": ".applicationInfo.appQuickFix.versionCode",
+      "value": 0
+    },
+    {
+      "path": ".applicationInfo.appQuickFix.versionName",
+      "value": ""
+    },
+    {
+      "path": ".applicationInfo.versionCode",
+      "value": 2
+    },
+    {
+      "path": ".applicationInfo.versionName",
+      "value": "0.1.1"
+    },
+    {
+      "path": ".hapModuleInfos[0].versionCode",
+      "value": 2
+    },
+    {
+      "path": ".versionCode",
+      "value": 2
+    },
+    {
+      "path": ".versionName",
+      "value": "0.1.1"
+    }
+  ]
+}

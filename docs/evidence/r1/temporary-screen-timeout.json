@@ -1,0 +1,13 @@
+{
+  "device": "23E0224122000135",
+  "model": "ALN-AL80",
+  "checkedAt": "2026-11-16T20:29:38+08:00",
+  "mechanism": "power-shell timeout -o 7200000",
+  "originalTimeoutMs": 600000,
+  "overrideTimeoutMs": 7200000,
+  "readback": "AWAKE; ScreenOffTime Timeout=600000ms OverrideTimeout=7200000ms",
+  "restoreCommand": "hdc -t 23E0224122000135 shell power-shell timeout -r",
+  "restoreBefore": "next intentional lock test and end of device validation",
+  "manualPowerKeyLockUnaffected": true,
+  "applicationReinstalled": false
+}

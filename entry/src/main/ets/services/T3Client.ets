@@ -1,0 +1,1738 @@
+import { DeviceStreamAccess, safeDeviceHubBase } from '../protocol/DevicePreview';
+import { ModelSelection, TaskSettings, launchTask, validateTaskSettings, queueCommand } from '../protocol/Composer';
+import { BranchView, branches, branchListInput, ComposerContextRecord, ComposerDraft, contextPayload,
+  DraftAttachment, DraftWorkspace, draftSettings, emptyWorkspace, forceStopCommand, forkThreadCommand,
+  guestShare, GuestShareView, launchWorkspace, promoteCommand, refreshStatusInput, switchBranchInput,
+  SubagentView, subagents, backgroundTasks, BackgroundTaskView, tokenUsage, TokenUsage, attachmentLimitError,
+  uploadAttachmentTarget, attachmentRecord, latestExecutedRun } from '../protocol/R4';
+import { http, webSocket } from '@kit.NetworkKit';
+import { util } from '@kit.ArkTS';
+import { BusinessError } from '@kit.BasicServicesKit';
+import { bootstrapForm, createThread, objects, record, RpcClient, RpcFailure, RpcSender, sendMessage,
+  serverBase, socketUrl, text, ThreadState, validateDescriptor } from '../protocol/Wire';
+
+import { ShellState, ModelChoice, models, SavedSession, SessionStorage, stopCommand, secretAnswer,
+  secretReferenceAnswer, dismissInputCommand, respondCommand, RecoveryState, RecoveryStorage,
+  recoveryState, Attachment, PeerLinkView, peerAccessGranted, peerLinkViews,
+  LinkAnswer, linkAnswerPayload, peerPairingScopes } from '../protocol/Core';
+import { contentMatches, ContentMatch, contentSearchInput, listEntriesInput, readFileInput,
+  WorkspaceEntry, workspaceAssetResource, workspaceEntries, workspaceFile, WorkspaceFile } from '../protocol/Files';
+import { actionInput, applyVcsStatus, commentInput, emptyVcs, gitActionInput, listRefs,
+  pullInput, pullRequestActivity, PullRequestActivityView, pullRequestDetail, PullRequestDetailView,
+  pullRequestChecks, PullRequestChecksView, pullRequestGuide, PullRequestGuideView,
+  pullRequestListInput, pullRequestRef, pullRequestRows, PullRequestPage, PullRequestRow, refs, RefView,
+  ReviewerSelection, LinkedPullRequestView, linkedPullRequests, linkedPullRequestCommand,
+  reviewPreview, reviewPreviewInput, ReviewPreview, reviewSubmitInput, switchRefInput, VcsView,
+  vcsWatchInput } from '../protocol/R5';
+import { applyAuthAccessEvent, AuthAccess } from '../protocol/Cloud';
+import { capability, objectBool, objectText, offeredProvidersFrom, ProjectView, sessionAllows,
+  snoozeSettingsFrom, SnoozePresetSetting } from '../protocol/Projects';
+
+class NativeSender implements RpcSender {
+  private socket: webSocket.WebSocket;
+  constructor(socket: webSocket.WebSocket) { this.socket = socket; }
+  async send(frame: string): Promise<void> {
+    try {
+      if (!await this.socket.send(frame)) throw new Error('发送失败');
+    } catch (_) {
+      throw new Error('发送失败');
+    }
+  }
+}
+
+class HttpFailure extends Error {
+  status: number;
+  constructor(status: number) {
+    super(status === 401 || status === 403 ? '鉴权失败或权限不足，请检查配对凭据' :
+      status === 426 ? '服务端协议不兼容' : 'HTTP 请求失败（' + status + '）');
+    this.status = status;
+  }
+}
+
+interface PeerPairingPayload { label: string; scopes: string[]; }
+interface EmptyPayload { }
+interface NamePayload { name: string; }
+interface ThreadIdPayload { threadId: string; }
+interface PathPayload { partialPath: string; }
+interface RepositoryPayload { provider: string; repository: string; }
+interface ProjectIdPayload { projectId: string; }
+interface ThreadSettingPayload {
+  type: string; commandId: string; threadId: string;
+  modelSelection?: ModelSelection; runtimeMode?: string; interactionMode?: string;
+}
+interface MessageDispatchMode { type: string; }
+interface FileSearchPayload { cwd: string; query: string; limit: number; imageOnly?: boolean; }
+interface SubagentStopCommand { type: string; commandId: string; threadId: string; runId: string; subagentId: string; }
+interface GuestCloseCommand { type: string; commandId: string; threadId: string; }
+interface GuestMessageCommand {
+  type: string; commandId: string; threadId: string; guestMessageId: string;
+  messageId?: string; text?: string; attachments?: Object[]; createdBy?: string;
+  creationSource?: string; dispatchMode?: MessageDispatchMode;
+}
+interface PreparedRetryCommand { type: string; commandId: string; threadId: string; runId: string; }
+interface TurnItemPayload { threadId: string; itemId: string; }
+interface ResumeMessageCommand {
+  type: string; commandId: string; createdBy: string; creationSource: string; threadId: string;
+  messageId: string; text: string; attachments: Object[]; manualContinuationOfRunId: string;
+  modelSelection?: ModelSelection; dispatchMode: MessageDispatchMode;
+}
+interface WriteFileInput { cwd: string; relativePath: string; contents: string; }
+interface LimitRecoveryUpdate {
+  runId: string; resetAt?: string; autoResume?: boolean; snooze?: boolean;
+}
+interface MetadataLimitCommand {
+  type: string; commandId: string; threadId: string; limitRecovery: LimitRecoveryUpdate;
+}
+interface ProviderRefreshPayload { fresh: boolean; refreshModels: boolean; instanceId?: string; }
+interface ProviderInstancePayload { instanceId: string; }
+interface ProviderAuthCancelPayload { instanceId: string; flowId: string; }
+interface CommandOutputPayload { threadId: string; itemId: string; }
+interface AttachmentResource { _tag: string; attachmentId: string; fileName?: string; mimeType?: string; disposition?: string; }
+interface AssetUrlInput { resource: AttachmentResource; }
+
+export interface CloudEndpoint { httpBaseUrl: string; wsBaseUrl: string; providerKind: string; }
+
+export interface CloudTransport {
+  environmentId: string;
+  label: string;
+  endpoint(): Promise<CloudEndpoint>;
+  requestJson(path: string, method: http.RequestMethod, body?: string, json?: boolean): Promise<Object>;
+  socketUrl(): Promise<string>;
+  renew(): Promise<number>;
+  reset(): Promise<void>;
+}
+
+export class T3Client {
+  status: string = '未连接';
+  expectedEnvironmentId: string = '';
+  recoveryBase: string = '';
+  reconnectSavedRoutes: (() => Promise<void>) | undefined = undefined;
+  private connectionsPending: number = 0;
+  get connectionPending(): boolean { return this.connectionsPending > 0; }
+  get connectedBase(): string { return this.activeBase(); }
+  validateIdentity: (environmentId: string) => void = () => {};
+  server: string = '';
+  environmentLabel: string = '';
+  private peerAccessState: Object | undefined = undefined;
+  private offersPeerLinks: boolean = false;
+  private peerAccessGeneration: number = 0;
+  private sessionAccessRevision: number = 0;
+  cloud: CloudTransport | undefined = undefined;
+  private cloudBase: string = '';
+  private cloudEnvironmentId: string = '';
+  private cloudRenewal: number = 0;
+  requireDeviceApproval: boolean = false;
+  authAccess: AuthAccess = { pairingLinks: [], devices: [] };
+  authAccessLoaded: boolean = false;
+  private accessChunk: ((value: Object) => void) | undefined = undefined;
+  private accessListener: (() => void) | undefined = undefined;
+  directAddresses: string[] = [];
+  ready: boolean = false;
+  thread: ThreadState | undefined = undefined;
+  onUpdate: () => void = () => {};
+  private socket: webSocket.WebSocket | undefined = undefined;
+  private rpc: RpcClient | undefined = undefined;
+  private timer: number = 0;
+  private lastInbound: number = 0;
+  private generation: number = 0;
+  private threadChunk: ((value: Object) => void) | undefined = undefined;
+  private shellChunk: ((value: Object) => void) | undefined = undefined;
+  private worktreeChunk: ((value: Object) => void) | undefined = undefined;
+  worktreeSetup: Record<string, Object> | undefined = undefined;
+  store: SessionStorage | undefined = undefined;
+  shell: ShellState = new ShellState();
+  models: ModelChoice[] = [];
+  capabilities: Record<string, Object> = {};
+  config: Record<string, Object> = {};
+  private launching: boolean = false;
+  serverSettings: Record<string, Object> = {};
+  platform: string = '';
+  newProjectsRoot: string = '';
+  scratchWorkspaceRoot: string = '';
+  addProjectBaseDirectory: string = '';
+  ghqCloneLayout: boolean = false;
+  snoozePresets: SnoozePresetSetting[] = snoozeSettingsFrom(undefined);
+  offeredSourceControlProviders: Record<string, boolean> = {};
+  sessionAccess: Object | undefined = undefined;
+  private saved: SavedSession | undefined = undefined;
+  recoveryStore: RecoveryStorage | undefined = undefined;
+  recovery: RecoveryState | undefined = undefined;
+  private mutating: boolean = false;
+  get mutationPending(): boolean { return this.launching || this.mutating || !!this.recovery?.pendingId; }
+  get submitting(): boolean { return this.mutating || this.launching; }
+  private reconciled: boolean = false;
+  private resumeWanted: boolean = false;
+  private retryTimer: number = 0;
+  private retryDelay: number = 1000;
+  private notifyTimer: number = 0;
+
+  private notify(): void {
+    if (this.notifyTimer) return;
+    this.notifyTimer = setTimeout(() => { this.notifyTimer = 0; this.onUpdate(); }, 50);
+  }
+
+  generationValue(): number { return this.generation; }
+  canScope(scope: string): boolean | undefined { return sessionAllows(this.sessionAccess, scope); }
+  supports(name: string): boolean { return capability({ capabilities: this.capabilities }, name); }
+  canCreateProject(): boolean {
+    return this.ready && this.canScope('orchestration:operate') !== false;
+  }
+  canReadFiles(): boolean {
+    return this.ready && this.canScope('filesystem:read') !== false;
+  }
+  canWriteSourceControl(): boolean {
+    return this.ready && this.canScope('source-control:write') !== false;
+  }
+  async refreshSessionAccess(): Promise<void> {
+    if (!this.ready || !this.activeBase()) return;
+    const rpc = this.rpc;
+    const generation = this.generation;
+    const revision = ++this.sessionAccessRevision;
+    let access: Object | undefined = undefined;
+    try {
+      access = record(await this.httpJson(this.activeBase(), '/api/auth/session', http.RequestMethod.GET,
+        '', this.saved?.token || '', false, !!this.cloud));
+    } catch (_) {}
+    if (rpc !== this.rpc || generation !== this.generation || revision !== this.sessionAccessRevision) return;
+    this.sessionAccess = access;
+    this.onUpdate();
+  }
+  async rpcRequest(method: string, payload: Object, timeoutMs: number = 15000,
+    fatalTimeout: boolean = true): Promise<Object> {
+    const rpc = this.requireRpc();
+    const generation = this.generation;
+    const value = await rpc.request(method, payload, undefined, timeoutMs, fatalTimeout);
+    if (rpc !== this.rpc || generation !== this.generation) throw new Error('连接已变更，请刷新后核对结果');
+    return value;
+  }
+  watchRpcStream(method: string, payload: Object, onItem: (value: Object) => void): (value: Object) => void {
+    const rpc = this.requireRpc();
+    const generation = this.generation;
+    const wrapped = (value: Object): void => {
+      if (rpc === this.rpc && generation === this.generation) onItem(value);
+    };
+    void rpc.request(method, payload, wrapped, 600000).then(() => {}).catch(() => {});
+    return wrapped;
+  }
+  async previewStreamUrl(threadId: string, tabId: string): Promise<string> {
+    this.requireRpc();
+    if (!threadId.trim() || !tabId.trim() || threadId.length > 256 || tabId.length > 256) throw new Error('预览标识无效');
+    const generation = this.generation;
+    const base = this.activeBase();
+    const result = record(await this.httpJson(base, '/api/auth/websocket-ticket/media',
+      http.RequestMethod.POST, '', this.saved?.token || '', false, !!this.cloud));
+    if (generation !== this.generation || base !== this.activeBase()) throw new Error('环境连接已变化，请重新打开预览');
+    const ticket = text(result.ticket);
+    return base.replace(/^http/, 'ws') + '/api/preview-stream/ws?threadId=' + encodeURIComponent(threadId) +
+      '&tabId=' + encodeURIComponent(tabId) + '&maxWidth=720&maxHeight=1280&wsTicket=' + encodeURIComponent(ticket);
+  }
+  async deviceStreamAccess(hubPath: string, hostId: string, deviceId: string): Promise<DeviceStreamAccess> {
+    this.requireRpc();
+    const path = safeDeviceHubBase(hubPath);
+    if (!hostId || !deviceId || hostId.length > 256 || deviceId.length > 256) throw new Error('设备标识无效');
+    const generation = this.generation;
+    const base = this.activeBase();
+    const jpegTicket = record(await this.httpJson(base, '/api/auth/websocket-ticket/media',
+      http.RequestMethod.POST, '', this.saved?.token || '', false, !!this.cloud));
+    if (generation !== this.generation) throw new Error('设备环境已变化');
+    const inputTicket = record(await this.httpJson(base, '/api/auth/websocket-ticket/media',
+      http.RequestMethod.POST, '', this.saved?.token || '', false, !!this.cloud));
+    if (generation !== this.generation || base !== this.activeBase()) throw new Error('设备环境已变化');
+    const host = encodeURIComponent(hostId);
+    const device = encodeURIComponent(deviceId);
+    return { mjpegUrl: base + path + '/vendor/serve-sim/helper/' + device + '/stream.mjpeg?hostId=' + host +
+      '&wsTicket=' + encodeURIComponent(text(jpegTicket.ticket)),
+      inputUrl: base.replace(/^http/, 'ws') + path + '/vendor/serve-sim/helper/ws?device=' + device + '&hostId=' + host +
+        '&wsTicket=' + encodeURIComponent(text(inputTicket.ticket)) };
+  }
+  async androidDeviceStreamUrl(hubPath: string, hostId: string, deviceId: string): Promise<string> {
+    this.requireRpc();
+    const path = safeDeviceHubBase(hubPath);
+    if (!hostId || !deviceId || hostId.length > 256 || deviceId.length > 256) throw new Error('设备标识无效');
+    const generation = this.generation;
+    const base = this.activeBase();
+    const result = record(await this.httpJson(base, '/api/auth/websocket-ticket/media',
+      http.RequestMethod.POST, '', this.saved?.token || '', false, !!this.cloud));
+    if (generation !== this.generation || base !== this.activeBase()) throw new Error('设备环境已变化');
+    return base.replace(/^http/, 'ws') + path + '/vendor/serve-emu/ws?device=' + encodeURIComponent(deviceId) +
+      '&hostId=' + encodeURIComponent(hostId) + '&frame-meta=1&wsTicket=' + encodeURIComponent(text(result.ticket));
+  }
+  attachTerminal(payload: Object, onItem: (value: Object) => void,
+    failed: (message: string) => void, observe: boolean = false): () => void {
+    if (this.canScope('terminal:read') === false || (!observe && this.canScope('terminal:operate') === false)) {
+      throw new Error('此连接无权执行此终端操作');
+    }
+    return this.terminalStream(observe ? 'terminal.observe' : 'terminal.attach', payload, onItem, failed);
+  }
+  watchTerminals(onItem: (value: Object) => void, failed: (message: string) => void): () => void {
+    if (this.canScope('terminal:read') === false) throw new Error('此连接无权查看终端');
+    return this.terminalStream('subscribeTerminalMetadata', {} as Record<string, Object>, onItem, failed);
+  }
+  private terminalStream(method: string, payload: Object, onItem: (value: Object) => void,
+    failed: (message: string) => void): () => void {
+    const rpc = this.requireRpc();
+    const generation = this.generation;
+    let cancelled = false;
+    const current = (): boolean => !cancelled && rpc === this.rpc && generation === this.generation;
+    const receive = (value: Object): void => { if (current()) onItem(value); };
+    void rpc.request(method, payload, receive, 600000, false).then(() => {
+      if (current()) failed('终端订阅已结束，请重新连接');
+    }).catch(() => { if (current()) failed('终端订阅失败，请检查连接与权限后重试'); });
+    return (): void => { cancelled = true; rpc.cancelStream(receive); };
+  }
+  stopRpcStream(onItem: (value: Object) => void): void {
+    this.rpc?.cancelStream(onItem);
+  }
+  async dispatchCommand(command: Object): Promise<Object> {
+    return this.rpcRequest('orchestration.dispatchCommand', command);
+  }
+  async projectMutate(mutation: Object): Promise<Object> {
+    return this.rpcRequest('projects.mutate', mutation);
+  }
+  async ensureScratch(): Promise<Object> {
+    const payload: EmptyPayload = {};
+    return this.rpcRequest('projects.ensureScratch', payload);
+  }
+  async createNewProject(name: string): Promise<Object> {
+    const payload: NamePayload = { name };
+    return this.rpcRequest('projects.createNew', payload);
+  }
+  async createProjectFromThread(threadId: string): Promise<Object> {
+    const payload: ThreadIdPayload = { threadId };
+    return this.rpcRequest('projects.createFromThread', payload);
+  }
+  async browseFilesystem(partialPath: string): Promise<Object> {
+    const payload: PathPayload = { partialPath };
+    return this.rpcRequest('filesystem.browse', payload, 10000, false);
+  }
+  async discoverSourceControl(): Promise<Object> {
+    const payload: EmptyPayload = {};
+    return this.rpcRequest('server.discoverSourceControl', payload, 8000, false);
+  }
+  async lookupRepository(provider: string, repository: string): Promise<Object> {
+    const payload: RepositoryPayload = { provider, repository };
+    return this.rpcRequest('sourceControl.lookupRepository', payload, 15000, false);
+  }
+  async publishRepository(payload: Object): Promise<Object> {
+    return this.rpcRequest('sourceControl.publishRepository', payload);
+  }
+  async startProjectClone(payload: Object): Promise<Object> {
+    return this.rpcRequest('projectClone.start', payload);
+  }
+  async cancelProjectClone(projectId: string): Promise<Object> {
+    const payload: ProjectIdPayload = { projectId };
+    return this.rpcRequest('projectClone.cancel', payload);
+  }
+  async retryProjectClone(projectId: string): Promise<Object> {
+    const payload: ProjectIdPayload = { projectId };
+    return this.rpcRequest('projectClone.retry', payload);
+  }
+  async archivedShellSnapshot(): Promise<Object> {
+    const payload: EmptyPayload = {};
+    return this.rpcRequest('orchestration.getArchivedShellSnapshot', payload, 15000, false);
+  }
+  async searchThreads(payload: Object): Promise<Object> {
+    return this.rpcRequest('orchestration.searchThreads', payload, 8000, false);
+  }
+
+  suspend(): void {
+    const wanted = this.resumeWanted;
+    this.disconnect('后台已暂停连接，任务在服务端继续');
+    this.resumeWanted = wanted;
+  }
+
+  async resume(): Promise<void> {
+    if (!this.resumeWanted || this.ready) return;
+    if (this.reconnectSavedRoutes) { await this.reconnectSavedRoutes(); return; }
+    const saved = this.store ? await this.store.load() : this.saved;
+    if (saved && saved.expiresAt > Date.now()) await this.connect(saved.base);
+  }
+
+  private retry(): void {
+    if (!this.resumeWanted || (!this.reconnectSavedRoutes && (!this.saved || this.saved.expiresAt <= Date.now()))) return;
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = 0;
+      void this.resume().catch(() => { this.status = '请解锁后安全重连'; this.onUpdate(); });
+    }, this.retryDelay);
+    this.retryDelay = Math.min(this.retryDelay * 2, 30000);
+  }
+
+  private async saveRecovery(): Promise<void> {
+    if (this.recovery && this.recoveryStore) await this.recoveryStore.save(this.recovery);
+  }
+
+  async acknowledgeUnknown(): Promise<void> {
+    if (this.mutating || !this.reconciled || !this.recovery) throw new Error('请先同步原会话并核对结果');
+    const pending = this.recovery;
+    this.recovery = { base: pending.base, environmentId: pending.environmentId, threadId: pending.threadId, pendingId: '', pendingKind: '' };
+    try { await this.saveRecovery(); } catch (error) { this.recovery = pending; throw error as Error; }
+    this.status = '已确认核对，允许手动提交新请求'; this.onUpdate();
+  }
+
+  private async mutate(method: string, payload: Object, id: string, kind: string, launchOwned: boolean = false): Promise<void> {
+    const rpc = this.requireRpc();
+    if (this.launching && !launchOwned) throw new Error('新任务正在提交，请稍候');
+    if (this.mutating || this.recovery?.pendingId) throw new Error('上次提交结果未知，请同步原会话并核对结果');
+    if (!this.recovery) throw new Error('请先选择会话');
+    const previous = this.recovery;
+    this.mutating = true;
+    this.reconciled = false;
+    this.recovery.pendingId = id; this.recovery.pendingKind = kind;
+    let sent = false;
+    try {
+      try {
+        await this.saveRecovery(); // Commit the marker before any modifying request leaves the device.
+      } catch (error) {
+        if (method === 'orchestration.launchThread') {
+          this.recovery = undefined;
+          this.thread = undefined;
+          if (this.recoveryStore) {
+            try { await this.recoveryStore.clear(); } catch (_) {}
+          }
+        } else this.recovery = previous;
+        throw new Error('无法保存提交保护记录，未发送任何请求：' + (error as Error).message);
+      }
+      sent = true;
+      if (rpc !== this.rpc) throw new Error('连接已变更，请同步原会话核对');
+      const response = await rpc.request(method, payload);
+      if (rpc !== this.rpc) throw new Error('连接已变更，请核对原会话');
+      if (method === 'orchestration.launchThread' && record(response).threadId !== this.recovery?.threadId) throw new Error('新任务响应身份不一致，请核对原会话');
+      const pending = this.recovery;
+      this.recovery = { base: pending.base, environmentId: pending.environmentId, threadId: pending.threadId, pendingId: '', pendingKind: '' };
+      try { await this.saveRecovery(); } catch (error) { this.recovery = pending; throw error as Error; }
+    } catch (error) {
+      // An explicit launch rejection proves the server accepted no first run; keep transport failures unknown.
+      if (sent && method === 'orchestration.launchThread' && error instanceof RpcFailure && error.known && this.recovery) {
+        const rejected = this.recovery;
+        this.recovery = { base: rejected.base, environmentId: rejected.environmentId, threadId: rejected.threadId, pendingId: '', pendingKind: '' };
+        try { await this.saveRecovery(); } catch (_) { this.recovery = rejected; }
+        this.reconciled = true;
+      }
+      throw error as Error;
+    } finally { this.mutating = false; this.onUpdate(); }
+  }
+  attachment: Attachment | undefined = undefined;
+  attachments: Attachment[] = [];
+  attachmentWriteError: string = '';
+  private uploadRequest: http.HttpRequest | undefined = undefined;
+  private attachmentDraftScope: string = '';
+  private attachmentScopeRevision: number = 0;
+  get draftScope(): string { return this.attachmentDraftScope; }
+  set draftScope(value: string) {
+    if (value === this.attachmentDraftScope) return;
+    this.attachmentDraftScope = value;
+    this.attachmentScopeRevision++;
+  }
+  captureAttachmentTarget(requireLiveConnection: boolean = true): () => boolean {
+    const generation = this.generation;
+    const revision = this.attachmentScopeRevision;
+    const environment = this.activeEnvironmentId();
+    const base = this.activeBase();
+    const thread = this.thread;
+    const recoveryThread = this.recovery?.threadId;
+    const draft = this.draftScope;
+    return (): boolean => this.attachmentScopeRevision === revision &&
+      (!requireLiveConnection || (this.generation === generation && this.activeEnvironmentId() === environment &&
+        this.activeBase() === base && (!!draft || (this.thread === thread && this.recovery?.threadId === recoveryThread))));
+  }
+  get uploadEnvironmentId(): string { return this.activeEnvironmentId(); }
+  private attachmentThread: string = '';
+  recoveredMessageId: string = '';
+
+  private async httpJson(base: string, path: string, method: http.RequestMethod,
+    body: string = '', token: string = '', json: boolean = false,
+    cloudAuth: boolean = false, timeoutMs: number = 10000): Promise<Object> {
+    if (cloudAuth && this.cloud) return this.cloud.requestJson(path, method, body, json);
+    const request = http.createHttp();
+    try {
+      const headers: Record<string, string> = { 'Accept': 'application/json' };
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+      if (body) headers['Content-Type'] = json ? 'application/json' : 'application/x-www-form-urlencoded';
+      const options: http.HttpRequestOptions = {
+        method, header: headers, connectTimeout: 10000, readTimeout: timeoutMs,
+        usingCache: false, maxRedirects: 0, expectDataType: http.HttpDataType.STRING
+      };
+      // NetworkKit rejects an explicitly empty POST extraData with parameter error 401.
+      if (body) options.extraData = body;
+      const response = await request.request(base + path, options);
+      if (response.responseCode < 200 || response.responseCode >= 300) throw new HttpFailure(response.responseCode);
+      return JSON.parse(response.result as string) as Object;
+    } catch (error) {
+      if (error instanceof HttpFailure) throw error as Error;
+      const code = (error as BusinessError).code;
+      const detail = typeof code === 'number' ? '，系统错误码 ' + code : '，响应格式无效';
+      throw new Error('HTTP ' + path + ' 失败' + detail);
+    } finally {
+      request.destroy();
+    }
+  }
+
+  private captureDirectAddresses(config: Record<string, Object>): void {
+    const addresses: string[] = [];
+    if (Array.isArray(config.directEndpoints)) {
+      for (const value of config.directEndpoints as Object[]) {
+        try { const base = serverBase(text(record(value).httpBaseUrl)); if (!addresses.includes(base)) addresses.push(base); }
+        catch (_) {}
+      }
+    }
+    this.directAddresses = addresses;
+  }
+  private activeBase(): string { return this.saved?.base || this.cloudBase; }
+  private activeEnvironmentId(): string { return this.saved?.environmentId || this.cloudEnvironmentId; }
+  canListPeerLinks(): boolean { return this.ready && this.offersPeerLinks && peerAccessGranted(this.peerAccessState, false); }
+  async refreshPeerAccess(): Promise<void> {
+    const rpc = this.requireRpc(); const saved = this.saved;
+    const generation = ++this.peerAccessGeneration;
+    if (!this.activeEnvironmentId()) throw new Error('环境凭据未加载');
+    this.peerAccessState = undefined;
+    const config = record(await rpc.request('server.getConfig', {}));
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    if (generation !== this.peerAccessGeneration) throw new Error('权限查询已更新');
+    const environmentId = this.activeEnvironmentId();
+    if (text(record(config.environment).environmentId) !== environmentId) throw new Error('环境身份不一致');
+    this.captureDirectAddresses(config);
+    const capabilities = record(config.environment).capabilities; const settings = config.settings;
+    this.offersPeerLinks = !!capabilities && record(capabilities).peerLinks === true &&
+      !!settings && record(settings).linkedEnvironmentsEnabled === true;
+    const state = record(await this.httpJson(this.activeBase(), '/api/auth/session', http.RequestMethod.GET,
+      '', saved?.token || '', false, !!this.cloud));
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    if (generation !== this.peerAccessGeneration) throw new Error('权限查询已更新');
+    if (typeof state.authenticated !== 'boolean') throw new Error('环境权限响应无效');
+    this.peerAccessState = state;
+  }
+  canManagePeerAccess(): boolean { return this.ready && peerAccessGranted(this.peerAccessState, true); }
+  async mintPeerPairingCode(access: string): Promise<string> {
+    const rpc = this.requireRpc(); await this.refreshPeerAccess();
+    if (rpc !== this.rpc || !this.canManagePeerAccess() || !this.activeEnvironmentId()) throw new Error('此连接不能创建配对码，请粘贴该环境提供的配对码');
+    const payload: PeerPairingPayload = { label: 'T3 Code link', scopes: peerPairingScopes(access) };
+    const result = record(await this.httpJson(this.activeBase(), '/api/auth/pairing-token', http.RequestMethod.POST,
+      JSON.stringify(payload), this.saved?.token || '', true, !!this.cloud));
+    if (rpc !== this.rpc) throw new Error('连接已变更，请重新获取配对码');
+    const code = text(result.credential);
+    if (!code.trim() || code.length > 4096) throw new Error('配对码响应无效');
+    return code;
+  }
+  async linkProof(payload: Object): Promise<string> {
+    const rpc = this.requireRpc();
+    const result = text(await this.httpJson(this.activeBase(), '/api/connect/link-proof',
+      http.RequestMethod.POST, JSON.stringify(payload), this.saved?.token || '', true, !!this.cloud));
+    if (rpc !== this.rpc || !result || result.length > 8192) throw new Error('环境链接证明无效');
+    return result;
+  }
+  async configureRelay(payload: Object): Promise<void> {
+    const rpc = this.requireRpc();
+    await this.httpJson(this.activeBase(), '/api/connect/relay-config', http.RequestMethod.POST,
+      JSON.stringify(payload), this.saved?.token || '', true, !!this.cloud);
+    if (rpc !== this.rpc) throw new Error('连接已变更，请重新确认链接');
+  }
+  async unlinkRelay(): Promise<void> {
+    const rpc = this.requireRpc();
+    await this.httpJson(this.activeBase(), '/api/connect/unlink', http.RequestMethod.POST,
+      '', this.saved?.token || '', false, !!this.cloud);
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+  }
+  async answerLinkRequest(id: string, answer: LinkAnswer): Promise<void> {
+    const rpc = this.requireRpc(); await this.refreshPeerAccess();
+    if (rpc !== this.rpc || !this.canManagePeerAccess()) throw new Error('只有管理此环境访问权限的连接才能答复');
+    const item = this.thread?.items.find((row: Record<string, Object>) => row.id === id && row.type === 'link_request');
+    if (!this.thread || !item || item.linkStatus !== 'pending' || item.threadId !== this.thread.threadId) throw new Error('链接请求已结束或不属于当前会话');
+    await this.mutate('peerLinks.answerRequest', linkAnswerPayload(this.thread.threadId, id, answer),
+      util.generateRandomUUID(), 'response');
+  }
+  async linkedEnvironments(): Promise<PeerLinkView[]> {
+    const rpc = this.requireRpc();
+    if (!this.canListPeerLinks()) throw new Error('无权查看已链接环境或环境未开启链接');
+    const value = await rpc.request('peerLinks.list', {});
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    return peerLinkViews(value);
+  }
+  stopAuthAccess(): void {
+    const rpc = this.rpc;
+    const chunk = this.accessChunk;
+    this.accessChunk = undefined;
+    if (rpc && chunk) rpc.cancelStream(chunk);
+  }
+  watchAuthAccess(onUpdate: () => void): void {
+    const rpc = this.requireRpc();
+    if (!this.requireDeviceApproval) throw new Error('此环境未启用 T3 Connect 设备批准');
+    if (!this.canManagePeerAccess()) throw new Error('无权管理此环境的 T3 Connect 设备');
+    this.accessListener = onUpdate;
+    this.stopAuthAccess();
+    this.authAccessLoaded = false;
+    const chunk = (value: Object): void => {
+      if (rpc !== this.rpc) return;
+      this.authAccess = applyAuthAccessEvent(this.authAccess, value);
+      this.authAccessLoaded = true;
+      onUpdate();
+    };
+    this.accessChunk = chunk;
+    void rpc.request('subscribeAuthAccess', {}, chunk).then(() => {
+      if (this.rpc === rpc && this.accessChunk === chunk) this.authAccessLoaded = false;
+    }).catch(() => {
+      if (this.rpc === rpc && this.accessChunk === chunk) {
+        this.accessChunk = undefined;
+        this.authAccessLoaded = false;
+      }
+    });
+  }
+  async approveDevice(pairingLinkId: string): Promise<void> {
+    const rpc = this.requireRpc();
+    if (!this.frameDeviceIdentity(pairingLinkId)) throw new Error('设备批准请求已失效');
+    const result = record(await this.httpJson(this.activeBase(), '/api/auth/connect-devices/approve',
+      http.RequestMethod.POST, JSON.stringify({ pairingLinkId }), this.saved?.token || '', true, !!this.cloud));
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    if (result.approved !== true) throw new Error('批准请求已过期或已被其他设备处理');
+    this.authAccess.pairingLinks = this.authAccess.pairingLinks.filter((link) => link.id !== pairingLinkId);
+    this.refreshAuthAccess();
+  }
+  async denyDevice(pairingLinkId: string): Promise<void> {
+    const rpc = this.requireRpc();
+    if (!this.frameDeviceIdentity(pairingLinkId)) throw new Error('设备批准请求已失效');
+    const result = record(await this.httpJson(this.activeBase(), '/api/auth/pairing-links/revoke',
+      http.RequestMethod.POST, JSON.stringify({ id: pairingLinkId }), this.saved?.token || '', true, !!this.cloud));
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    if (result.revoked !== true) throw new Error('拒绝请求已过期或已被处理');
+    this.authAccess.pairingLinks = this.authAccess.pairingLinks.filter((link) => link.id !== pairingLinkId);
+    this.refreshAuthAccess();
+  }
+  async revokeDevice(proofKeyThumbprint: string): Promise<void> {
+    const rpc = this.requireRpc();
+    if (!proofKeyThumbprint || proofKeyThumbprint.length > 256) throw new Error('设备密钥标识无效');
+    const result = record(await this.httpJson(this.activeBase(), '/api/auth/connect-devices/revoke',
+      http.RequestMethod.POST, JSON.stringify({ proofKeyThumbprint }), this.saved?.token || '', true, !!this.cloud));
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    if (result.revoked !== true) throw new Error('设备已撤销或不存在');
+    this.authAccess.devices = this.authAccess.devices.filter((device) => device.proofKeyThumbprint !== proofKeyThumbprint);
+    this.refreshAuthAccess();
+  }
+  private refreshAuthAccess(): void {
+    const listener = this.accessListener;
+    if (!listener || !this.ready || !this.requireDeviceApproval) return;
+    try { this.watchAuthAccess(listener); } catch (_) {}
+  }
+  private frameDeviceIdentity(pairingLinkId: string): boolean {
+    return !!pairingLinkId && pairingLinkId.length <= 256 &&
+      this.authAccess.pairingLinks.some((link) => link.id === pairingLinkId && link.expiresAt > Date.now());
+  }
+
+  async verifyIdentity(address: string): Promise<void> {
+    const descriptor = validateDescriptor(await this.httpJson(serverBase(address), '/.well-known/t3/environment', http.RequestMethod.GET));
+    if (!this.expectedEnvironmentId || descriptor.environmentId !== this.expectedEnvironmentId) throw new Error('服务器身份不一致，未更新地址');
+  }
+
+  async connect(address: string, credential: string = ''): Promise<void> {
+    if (this.cloud) return this.connectCloud();
+    if (this.mutating || this.launching) throw new Error('请求正在提交，请稍候再重连');
+    this.disconnect();
+    this.resumeWanted = true;
+    const generation = this.generation;
+    const base = serverBase(address);
+    this.server = '';
+    this.status = '正在鉴权';
+    this.onUpdate();
+    this.connectionsPending++;
+    try {
+      const descriptor = validateDescriptor(await this.httpJson(base, '/.well-known/t3/environment', http.RequestMethod.GET));
+      if (generation !== this.generation) return;
+      const environmentId = text(descriptor.environmentId);
+      if (this.expectedEnvironmentId && environmentId !== this.expectedEnvironmentId) {
+        throw new Error('服务器身份已变化，未发送配对凭据');
+      }
+      this.validateIdentity(environmentId);
+      this.environmentLabel = text(descriptor.label);
+      this.server = text(descriptor.label) + ' · ' + text(descriptor.serverVersion);
+      let saved = this.store ? await this.store.load(base) : this.saved;
+      if (generation !== this.generation) return;
+      if (credential.trim()) {
+        const auth = record(await this.httpJson(base, '/oauth/token', http.RequestMethod.POST, bootstrapForm(credential)));
+        if (generation !== this.generation) return;
+        if (auth.token_type !== 'Bearer') throw new Error('该服务要求 DPoP，当前仅支持直连 Bearer 鉴权');
+        if (typeof auth.expires_in !== 'number' || auth.expires_in <= 0) throw new Error('无效凭据有效期');
+        saved = { base, environmentId, token: text(auth.access_token), expiresAt: Date.now() + auth.expires_in * 1000 };
+      }
+      if (!saved || saved.base !== base || saved.environmentId !== environmentId || saved.expiresAt <= Date.now()) {
+        throw new Error('没有此服务器的有效会话，请输入新配对凭据');
+      }
+      const token = saved.token;
+      let ticket: Object;
+      try {
+        ticket = await this.httpJson(base, '/api/auth/websocket-ticket/rpc', http.RequestMethod.POST, '', token);
+      } catch (error) {
+        if (generation !== this.generation) return;
+        if (!(error instanceof HttpFailure) || error.status !== 404) throw error as Error;
+        ticket = await this.httpJson(base, '/api/auth/websocket-ticket', http.RequestMethod.POST, '', token);
+      }
+      if (generation !== this.generation) return;
+      await this.finishConnection(socketUrl(base, text(record(ticket).ticket)),
+        environmentId, base, saved, generation);
+    } catch (error) {
+      if (generation === this.generation) this.disconnect((error as Error).message,
+        (!!this.saved || !!this.cloud) &&
+        ((error as Error).message.startsWith('HTTP ') || (error as Error).message.startsWith('WebSocket') ||
+          (error as Error).message.startsWith('T3 Connect')));
+    } finally { this.connectionsPending--; }
+  }
+
+  private async connectCloud(): Promise<void> {
+    const transport = this.cloud;
+    if (!transport) throw new Error('T3 Connect 传输未就绪');
+    if (this.mutating || this.launching) throw new Error('请求正在提交，请稍候再重连');
+    this.disconnect();
+    this.resumeWanted = true;
+    const generation = this.generation;
+    this.server = '';
+    this.status = '正在通过 T3 Connect 授权';
+    this.onUpdate();
+    this.connectionsPending++;
+    try {
+      const endpoint = await transport.endpoint();
+      if (generation !== this.generation) return;
+      const base = serverBase(endpoint.httpBaseUrl);
+      const descriptor = validateDescriptor(await this.httpJson(base, '/.well-known/t3/environment', http.RequestMethod.GET));
+      if (generation !== this.generation) return;
+      const environmentId = text(descriptor.environmentId);
+      if (environmentId !== transport.environmentId ||
+        (this.expectedEnvironmentId && environmentId !== this.expectedEnvironmentId)) {
+        throw new Error('中继服务器身份不一致，已中止连接');
+      }
+      this.validateIdentity(environmentId);
+      this.environmentLabel = text(descriptor.label) || transport.label;
+      this.server = text(descriptor.label) + ' · ' + text(descriptor.serverVersion);
+      this.status = '正在连接中继环境';
+      this.onUpdate();
+      const target = await transport.socketUrl();
+      if (generation !== this.generation) return;
+      await this.finishConnection(target, environmentId, base, undefined, generation);
+    } catch (error) {
+      if (generation === this.generation) this.disconnect((error as Error).message, true);
+    } finally { this.connectionsPending--; }
+  }
+
+  private async finishConnection(target: string, environmentId: string, base: string,
+    saved: SavedSession | undefined, generation: number): Promise<void> {
+    const socket = webSocket.createWebSocket();
+    const rpc = new RpcClient(new NativeSender(socket));
+    this.socket = socket;
+    this.rpc = rpc;
+    this.lastInbound = Date.now();
+    rpc.onFailure = (message: string) => {
+      if (generation !== this.generation) return;
+      this.disconnect(message, true);
+    };
+    socket.on('message', (error, data: string | ArrayBuffer) => {
+      if (generation !== this.generation) return;
+      if ((error && error.code !== 0) || typeof data !== 'string') {
+        rpc.fail('收到无效 WebSocket 消息');
+        return;
+      }
+      this.lastInbound = Date.now();
+      rpc.receive(data);
+    });
+    socket.on('error', () => rpc.fail('WebSocket 连接失败或中断；提交中的请求结果未知，请重连并核对会话'));
+    socket.on('close', () => rpc.fail('连接已断开；提交中的任务结果未知，请重连并同步会话'));
+    this.status = '正在连接与校验服务器';
+    this.onUpdate();
+    try {
+      if (!await socket.connect(target)) throw new Error('连接失败');
+    } catch (_) {
+      throw new Error('WebSocket 连接失败，请检查网络和服务端版本');
+    }
+    if (generation !== this.generation) return;
+    this.timer = setInterval(() => {
+      if (Date.now() - this.lastInbound > 15000) rpc.fail('服务端响应超时；请重连并核对任务状态');
+      else rpc.ping();
+    }, 5000);
+    const config = record(await rpc.request('server.getConfig', {}));
+    if (text(record(config.environment).environmentId) !== environmentId) throw new Error('服务器身份不一致，已中止连接');
+    if (generation !== this.generation) return;
+    this.applyConfig(config);
+    if (saved) {
+      if (this.store) await this.store.save(saved);
+      if (generation !== this.generation) return;
+      this.saved = saved;
+    } else {
+      this.saved = undefined;
+    }
+    this.cloudBase = base;
+    this.cloudEnvironmentId = environmentId;
+    const recovery = this.recoveryStore ? await this.recoveryStore.load() : this.recovery;
+    if (generation !== this.generation) return;
+    this.recovery = recovery ? recoveryState(recovery, this.recoveryBase || base, environmentId) : undefined;
+    this.sessionAccess = undefined;
+    this.ready = true;
+    this.subscribeShell();
+    this.retryDelay = 1000;
+    this.status = '已连接';
+    void this.refreshSessionAccess();
+    this.onUpdate();
+    if (this.cloud) this.scheduleCloudRenewal(generation);
+    if (this.recovery) await this.watch(this.recovery.threadId);
+  }
+
+  applyVerifiedSettingsConfig(value: Object, environmentId: string, generation: number | undefined): void {
+    const config = record(value);
+    if (!this.ready || generation !== this.generation || !environmentId ||
+      environmentId !== this.activeEnvironmentId() || record(config.environment).environmentId !== environmentId) {
+      throw new Error('设置回读环境已变化');
+    }
+    this.applyConfig(config); this.onUpdate();
+  }
+
+  private applyConfig(config: Record<string, Object>): void {
+    this.config = config;
+    this.models = config.providers ? models(config) : [];
+    const environment = record(config.environment);
+    this.capabilities = environment.capabilities === undefined || environment.capabilities === null ?
+      {} : record(environment.capabilities);
+    const platform = environment.platform === undefined || environment.platform === null ? undefined : record(environment.platform);
+    this.platform = platform === undefined ? '' : objectText(platform, 'os');
+    this.serverSettings = config.settings === undefined || config.settings === null ? {} : record(config.settings);
+    this.newProjectsRoot = objectText(config, 'newProjectsRoot');
+    this.scratchWorkspaceRoot = objectText(config, 'scratchWorkspaceRoot');
+    this.addProjectBaseDirectory = objectText(this.serverSettings, 'addProjectBaseDirectory');
+    this.ghqCloneLayout = objectBool(this.serverSettings, 'ghqCloneLayout');
+    this.snoozePresets = snoozeSettingsFrom(this.serverSettings.snoozePresets);
+    this.offeredSourceControlProviders = offeredProvidersFrom(this.serverSettings.offeredSourceControlProviders);
+    this.captureDirectAddresses(config);
+    this.requireDeviceApproval = !!config.settings && record(config.settings).requireConnectDeviceApproval === true;
+  }
+
+  private scheduleCloudRenewal(generation: number): void {
+    if (!this.cloud) return;
+    clearTimeout(this.cloudRenewal); this.cloudRenewal = 0;
+    const transport = this.cloud;
+    const renew = (): void => {
+      if (generation !== this.generation || this.cloud !== transport) return;
+      void transport.renew().then((next: number) => {
+        if (generation !== this.generation || this.cloud !== transport) return;
+        this.cloudRenewal = setTimeout(renew, Math.max(5000, next - Date.now() - 30000));
+      }).catch(() => {
+        if (generation !== this.generation || this.cloud !== transport) return;
+        this.status = 'T3 Connect 凭证续期失败，正在重试';
+        this.onUpdate();
+        this.cloudRenewal = setTimeout(renew, 30000);
+      });
+    };
+    this.cloudRenewal = setTimeout(renew, 30000);
+  }
+
+  disconnect(message: string = '已断开；提交中的请求结果未知，请重连并同步会话', recover: boolean = false): void {
+    this.resumeWanted = recover;
+    clearTimeout(this.retryTimer); this.retryTimer = 0;
+    clearTimeout(this.notifyTimer); this.notifyTimer = 0;
+    clearTimeout(this.cloudRenewal); this.cloudRenewal = 0;
+    this.generation++;
+    this.ready = false; this.peerAccessState = undefined; this.offersPeerLinks = false;
+    this.requireDeviceApproval = false;
+    this.authAccessLoaded = false;
+    this.accessChunk = undefined;
+    this.accessListener = undefined;
+    this.authAccess = { pairingLinks: [], devices: [] };
+    this.threadChunk = undefined;
+    this.shellChunk = undefined;
+    this.worktreeChunk = undefined;
+    this.worktreeSetup = undefined;
+    this.shell = new ShellState();
+    this.models = [];
+    this.config = {};
+    this.capabilities = {};
+    this.serverSettings = {};
+    this.platform = '';
+    this.newProjectsRoot = '';
+    this.scratchWorkspaceRoot = '';
+    this.addProjectBaseDirectory = '';
+    this.ghqCloneLayout = false;
+    this.snoozePresets = snoozeSettingsFrom(undefined);
+    this.offeredSourceControlProviders = {};
+    this.sessionAccess = undefined;
+    this.thread = undefined;
+    this.cloudBase = '';
+    this.cloudEnvironmentId = '';
+    clearInterval(this.timer);
+    this.timer = 0;
+    const rpc = this.rpc;
+    const socket = this.socket;
+    this.rpc = undefined;
+    this.socket = undefined;
+    rpc?.fail(message);
+    if (socket) void socket.close().catch(() => {});
+    this.status = message;
+    this.onUpdate();
+    if (recover) this.retry();
+  }
+
+  async launch(projectId: string, prompt: string, settings: TaskSettings,
+    workspace: DraftWorkspace = emptyWorkspace(), context: ComposerContextRecord[] = []): Promise<string> {
+    this.requireRpc();
+    if (this.mutationPending) throw new Error('请先核对上次提交结果');
+    validateTaskSettings(this.config, projectId, settings);
+    const draft: ComposerDraft = { version: 1, draftId: 'launch', localId: '', environmentId: this.activeEnvironmentId(),
+      projectId, text: prompt, modelSelection: settings.modelSelection, runtimeMode: settings.runtimeMode,
+      interactionMode: settings.interactionMode, workspace, attachments: [], context, updatedAt: Date.now() };
+    const attachments: DraftAttachment[] = this.attachments.slice();
+    const limit = attachmentLimitError(attachments);
+    if (limit) throw new Error(limit);
+    const threadId = util.generateRandomUUID();
+    const messageId = util.generateRandomUUID();
+    const input = record(launchTask(util.generateRandomUUID(), threadId, messageId, projectId, prompt, settings,
+      attachments, context.length ? contextPayload(context) : undefined, launchWorkspace(draft)));
+    this.launching = true;
+    try {
+      await this.selectRecovery(threadId);
+      // Retain the allocated identity if the launch acknowledgement is lost.
+      this.thread = new ThreadState(threadId);
+      await this.mutate('orchestration.launchThread', input, messageId, 'message', true);
+      if (workspace.mode === 'worktree') this.watchWorktreeSetup();
+      this.draftScope = ''; this.attachment = undefined; this.attachments = [];
+      return threadId;
+    } catch (error) {
+      // A known rejection created no run. Drop the provisional marker so a reconnect does not
+      // open a nonexistent thread and the user can retry from the intact draft.
+      if (error instanceof RpcFailure && error.known && this.recovery && !this.recovery.pendingId) {
+        this.recovery = undefined;
+        this.thread = undefined;
+        if (this.recoveryStore) {
+          try { await this.recoveryStore.clear(); } catch (_) {}
+        }
+      }
+      throw error as Error;
+    } finally { this.launching = false; this.onUpdate(); }
+  }
+
+  async configureThread(settings: TaskSettings): Promise<void> {
+    if (!this.thread || this.thread.cursor < 0) throw new Error('请先同步会话');
+    const projectId = typeof this.thread.details.projectId === 'string' ? this.thread.details.projectId : '';
+    validateTaskSettings(this.config, projectId, settings);
+    const id = util.generateRandomUUID();
+    const command: ThreadSettingPayload = { type: 'thread.model-selection.set', commandId: id,
+      threadId: this.thread.threadId, modelSelection: settings.modelSelection };
+    const state = this.thread;
+    await this.mutate('orchestration.dispatchCommand', command, id, 'response');
+    if (this.thread === state) state.details.modelSelection = settings.modelSelection;
+  }
+
+  async changeThreadMode(mode: string, interaction: boolean): Promise<void> {
+    if (!this.thread || this.thread.cursor < 0) throw new Error('请先同步会话');
+    const id = util.generateRandomUUID();
+    const command: ThreadSettingPayload = interaction ? { type: 'thread.interaction-mode.set', commandId: id,
+      threadId: this.thread.threadId, interactionMode: mode } : { type: 'thread.runtime-mode.set', commandId: id,
+      threadId: this.thread.threadId, runtimeMode: mode };
+    const current = this.thread.details;
+    const settings: TaskSettings = { modelSelection: record(current.modelSelection) as Object as ModelSelection,
+      runtimeMode: interaction ? text(current.runtimeMode) : mode,
+      interactionMode: interaction ? mode : text(current.interactionMode) };
+    validateTaskSettings(this.config, typeof current.projectId === 'string' ? current.projectId : '', settings);
+    const state = this.thread;
+    await this.mutate('orchestration.dispatchCommand', command, id, 'response');
+    if (this.thread === state) { if (interaction) state.details.interactionMode = mode; else state.details.runtimeMode = mode; }
+  }
+
+  async queue(action: string, runId: string = '', beforeRunId: string | null = null, prompt: string = ''): Promise<void> {
+    if (!this.thread || this.thread.cursor < 0) throw new Error('请先同步会话');
+    if (action === 'start' && this.thread.runs.some((run: Record<string, Object>) =>
+      ['preparing', 'starting', 'running', 'waiting'].includes(String(run.status)))) {
+      throw new Error('运行中不能立即开始排队消息，请使用立即引导或等待结束');
+    }
+    if (action !== 'resume' && !this.thread.runs.some((run: Record<string, Object>) => run.id === runId && run.status === 'queued')) {
+      throw new Error('队列任务状态已变化，请同步后再操作');
+    }
+    const id = util.generateRandomUUID();
+    await this.mutate('orchestration.dispatchCommand', queueCommand(id, this.thread.threadId, action, runId, beforeRunId, prompt), id, 'response');
+  }
+
+  async newThread(projectId: string, instanceId: string, model: string): Promise<string> {
+    const rpc = this.requireRpc();
+    if (this.launching) throw new Error('新任务正在提交，请稍候');
+    if (this.mutating || this.recovery?.pendingId) throw new Error('请求正在提交，请稍候');
+    const previousChunk = this.threadChunk;
+    this.threadChunk = undefined;
+    if (previousChunk) rpc.cancelStream(previousChunk);
+    const threadId = util.generateRandomUUID();
+    const command = createThread(util.generateRandomUUID(), threadId, projectId, instanceId, model);
+    // Keep the allocated ID even if acknowledgement is lost, so the user can reconcile it.
+    this.thread = new ThreadState(threadId);
+    this.onUpdate();
+    await this.selectRecovery(threadId);
+    await this.mutate('orchestration.dispatchCommand', command, threadId, 'create');
+    return threadId;
+  }
+
+  async watch(threadId: string): Promise<void> {
+    if (!threadId.trim()) throw new Error('请输入会话 ID');
+    const rpc = this.requireRpc();
+    if (this.mutating || this.launching) throw new Error('请求正在提交，请稍候');
+    const previousChunk = this.threadChunk;
+    this.threadChunk = undefined;
+    if (previousChunk) rpc.cancelStream(previousChunk);
+    this.recoveredMessageId = '';
+    await this.selectRecovery(threadId.trim());
+    if (rpc !== this.rpc) return;
+    const state = new ThreadState(threadId.trim());
+    this.thread = state;
+    this.status = '正在同步会话';
+    this.onUpdate();
+    const chunk = (value: Object): void => {
+      state.apply(value);
+      this.status = state.notices || '会话已同步';
+      if (record(value).kind === 'snapshot' && this.recovery?.pendingId && !this.mutating &&
+        this.recovery.threadId === state.threadId) {
+        this.reconciled = true;
+        const found = this.recovery.pendingKind === 'message' && state.messages.some((m) => m.id === this.recovery?.pendingId);
+        if (found) this.recoveredMessageId = this.recovery.pendingId;
+        this.status = found ? '已核实上次指令已接收；请确认核对，不会重复发送' :
+          '上次提交结果未知；已同步完整快照，请核对后确认，禁止自动重发';
+      }
+      this.notify();
+    };
+    this.threadChunk = chunk;
+    void rpc.request('orchestration.subscribeThread', { threadId: state.threadId }, chunk).then(() => {
+      if (this.threadChunk === chunk) this.disconnect('会话订阅已结束，请重新连接');
+    }).catch((error: Error) => {
+      if (this.rpc === rpc && this.threadChunk === chunk) this.disconnect(error.message, true);
+    });
+  }
+
+  async send(prompt: string, delivery: string = 'start', context: ComposerContextRecord[] = []): Promise<void> {
+    const rpc = this.requireRpc();
+    if (!this.thread || this.thread.cursor < 0) throw new Error('请先同步会话');
+    const threadId = this.thread.threadId;
+    const messageId = util.generateRandomUUID();
+    const command = record(sendMessage(util.generateRandomUUID(), threadId, messageId, prompt));
+    if (!['auto', 'start', 'queue', 'steer'].includes(delivery)) throw new Error('无效发送方式');
+    if (delivery === 'queue') { const mode: MessageDispatchMode = { type: 'queue_after_active' }; command.dispatchMode = mode; }
+    if (delivery === 'steer' || delivery === 'auto') command.deliveryIntent = delivery;
+    if (this.attachments.length) {
+      if (this.attachmentThread !== threadId) throw new Error('附件属于其他会话，请重新选择');
+      command.attachments = this.attachments.slice();
+    }
+    if (context.length) command.context = contextPayload(context);
+
+    this.status = '正在提交';
+    this.onUpdate();
+    await this.mutate('orchestration.dispatchCommand', command, messageId, 'message');
+    this.attachment = undefined; this.attachments = [];
+    this.status = '指令已确认，请等待回复';
+    this.onUpdate();
+  }
+
+  async listBranches(cwd: string, query: string = ''): Promise<BranchView[]> {
+    const rpc = this.requireRpc();
+    const value = await rpc.request('vcs.listRefs', branchListInput(cwd, query), undefined, 15000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更，请重新加载分支');
+    return branches(value);
+  }
+  async refreshVcs(cwd: string): Promise<VcsView> {
+    const rpc = this.requireRpc();
+    const value = await rpc.request('vcs.refreshStatus', refreshStatusInput(cwd), undefined, 15000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    return applyVcsStatus(emptyVcs(), value);
+  }
+  async switchBranch(cwd: string, branch: string): Promise<void> {
+    const rpc = this.requireRpc();
+    await rpc.request('vcs.switchRef', switchBranchInput(cwd, branch), undefined, 30000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更，请重新加载分支');
+  }
+  async searchFiles(cwd: string, query: string, imageOnly: boolean = false): Promise<string[]> {
+    const rpc = this.requireRpc();
+    const payload: FileSearchPayload = { cwd, query: query.slice(0, 256), limit: 40 };
+    if (imageOnly) payload.imageOnly = true;
+    const value = record(await rpc.request('projects.searchEntries', payload, undefined, 10000, false));
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    return objects(value.entries).map((entry: Object) => text(record(entry).path));
+  }
+  threadCwd(): string {
+    if (this.thread && typeof this.thread.details.worktreePath === 'string') return this.thread.details.worktreePath;
+    const projectId = this.thread && typeof this.thread.details.projectId === 'string' ? this.thread.details.projectId : '';
+    const project = this.shell.projects.find((entry: ProjectView) => entry.id === projectId);
+    return project ? project.workspaceRoot : '';
+  }
+  async listWorkspaceEntries(cwd: string, directoryPath: string): Promise<WorkspaceEntry[]> {
+    const rpc = this.requireRpc();
+    const value = await rpc.request('projects.listEntries', listEntriesInput(cwd, directoryPath), undefined, 15000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更，请重新打开文件');
+    return workspaceEntries(value);
+  }
+  async searchWorkspaceContents(cwd: string, query: string, regex: boolean = false): Promise<ContentMatch[]> {
+    const rpc = this.requireRpc();
+    const value = await rpc.request('projects.searchContents', contentSearchInput(cwd, query, regex), undefined, 20000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更，请重新搜索');
+    return contentMatches(value);
+  }
+  async readWorkspaceFile(cwd: string, relativePath: string): Promise<WorkspaceFile> {
+    const rpc = this.requireRpc();
+    const value = await rpc.request('projects.readFile', readFileInput(cwd, relativePath), undefined, 20000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更，请重新打开文件');
+    return workspaceFile(value);
+  }
+  async workspaceFileUrl(cwd: string, path: string, inline: boolean = true): Promise<string> {
+    const rpc = this.requireRpc();
+    const resource = workspaceAssetResource(!this.draftScope && this.thread ? this.thread.threadId : '', cwd, path, !inline);
+    const payload: Record<string, Object> = {};
+    payload.resource = resource;
+    const value = record(await rpc.request('assets.createUrl', payload, undefined, 15000, false));
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    const relative = text(value.relativeUrl);
+    if (typeof value.expiresAt !== 'number' || value.expiresAt <= Date.now()) throw new Error('文件链接已过期');
+    return this.activeBase() + relative;
+  }
+  async downloadWorkspaceFile(cwd: string, path: string): Promise<ArrayBuffer> {
+    const url = await this.workspaceFileUrl(cwd, path, false);
+    const request = http.createHttp();
+    try {
+      const response = await request.request(url, { method: http.RequestMethod.GET, usingCache: false,
+        maxRedirects: 0, connectTimeout: 10000, readTimeout: 60000, expectDataType: http.HttpDataType.ARRAY_BUFFER });
+      if (response.responseCode !== 200) throw new Error('文件下载失败（' + response.responseCode + '）');
+      if (response.result instanceof ArrayBuffer) return response.result;
+      throw new Error('文件响应不是二进制数据');
+    } finally { request.destroy(); }
+  }
+  async reviewDiffPreview(cwd: string, baseRef: string = '', sourceKind: string = '',
+    trackedOnly: boolean = false, ignoreWhitespace: boolean = false): Promise<ReviewPreview> {
+    const rpc = this.requireRpc();
+    const value = await rpc.request('review.getDiffPreview',
+      reviewPreviewInput(cwd, baseRef, sourceKind, trackedOnly, ignoreWhitespace), undefined, 30000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更，请重新加载 Diff');
+    return reviewPreview(value);
+  }
+  watchVcsStatus(cwd: string, onUpdate: (value: VcsView) => void): ((value: Object) => void) {
+    let current = emptyVcs();
+    return this.watchRpcStream('subscribeVcsStatus', vcsWatchInput(cwd), (value: Object) => {
+      current = applyVcsStatus(current, value);
+      onUpdate(current);
+    });
+  }
+  async gitAction(cwd: string, action: string, commitMessage: string = '', featureBranch: boolean = false,
+    filePaths: string[] = [], onProgress: (label: string) => void = () => {}): Promise<Object> {
+    if (!this.ready) throw new Error('连接尚未就绪');
+    if (this.canScope('source-control:write') === false) throw new Error('此连接不能修改源码管理');
+    const threadId = this.thread ? this.thread.threadId : '';
+    const projectId = this.thread && typeof this.thread.details.projectId === 'string' ? this.thread.details.projectId : '';
+    const payload = gitActionInput(util.generateRandomUUID(), cwd, action, commitMessage, featureBranch, filePaths,
+      threadId, projectId);
+    const rpc = this.requireRpc();
+    const generation = this.generation;
+    let result: Object | undefined = undefined;
+    const chunk = (value: Object): void => {
+      const row = record(value);
+      const kind = typeof row.kind === 'string' ? row.kind : '';
+      if (kind === 'action_started' || kind === 'phase_started') {
+        onProgress(typeof row.label === 'string' ? row.label : kind);
+      } else if (kind === 'hook_output' && typeof row.text === 'string' && row.text.trim()) {
+        onProgress(row.text.trim().slice(0, 200));
+      } else if (kind === 'action_finished' && row.result !== undefined && row.result !== null) {
+        result = record(row.result);
+      } else if (kind === 'action_failed') {
+        onProgress('Git 操作失败');
+      }
+    };
+    const exit = await rpc.request('git.runStackedAction', payload, chunk, 120000, false);
+    if (rpc !== this.rpc || generation !== this.generation) throw new Error('连接已变更，请刷新后核对 Git 状态');
+    if (result === undefined && exit !== null && exit !== undefined) result = record(exit);
+    if (result === undefined) throw new Error('Git 操作已结束但未返回结果，请刷新状态核对');
+    return result;
+  }
+  async pullRepository(cwd: string): Promise<Object> {
+    if (this.canScope('source-control:write') === false) throw new Error('此连接不能拉取源码');
+    return this.rpcRequest('vcs.pull', pullInput(cwd), 120000, false);
+  }
+  async workspaceRefs(cwd: string, query: string = ''): Promise<RefView[]> {
+    const rpc = this.requireRpc();
+    const value = await rpc.request('vcs.listRefs', listRefs(cwd, query), undefined, 20000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更，请重新加载分支');
+    return refs(value);
+  }
+  async checkoutRef(cwd: string, refName: string): Promise<void> {
+    if (!this.canWriteSourceControl()) throw new Error('此连接不能切换 checkout 分支');
+    await this.rpcRequest('vcs.switchRef', switchRefInput(cwd, refName), 60000, false);
+  }
+  async listPullRequests(state: string, query: string, cursor: string = '',
+    projectId: string = ''): Promise<PullRequestPage> {
+    const rpc = this.requireRpc();
+    const value = record(await rpc.request('pullRequests.list',
+      pullRequestListInput(state, query, cursor, projectId), undefined, 30000, false));
+    if (rpc !== this.rpc) throw new Error('连接已变更，请重新加载拉取请求');
+    const parsed = pullRequestRows(value);
+    const next = value.nextCursors === undefined ? '' :
+      (typeof record(value.nextCursors).default === 'string' ? record(value.nextCursors).default as string : '');
+    return { rows: parsed.rows, errors: parsed.errors, truncated: parsed.truncated, nextCursor: next };
+  }
+  async pullRequestDetail(ref: Object): Promise<PullRequestDetailView> {
+    const rpc = this.requireRpc();
+    const value = await rpc.request('pullRequests.detail', ref, undefined, 30000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更，请重新打开拉取请求');
+    return pullRequestDetail(value);
+  }
+
+  async pullRequestChecks(ref: Object): Promise<PullRequestChecksView | undefined> {
+    const rpc = this.requireRpc();
+    const value = await rpc.request('pullRequests.checks', ref, undefined, 30000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更，请重新打开拉取请求');
+    return pullRequestChecks(value);
+  }
+
+  async pullRequestReviewGuide(ref: Object): Promise<PullRequestGuideView> {
+    const rpc = this.requireRpc();
+    const value = await rpc.request('pullRequests.reviewGuide', ref, undefined, 30000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更，请重新打开拉取请求');
+    return pullRequestGuide(value);
+  }
+
+  async generatePullRequestReviewGuide(ref: Object): Promise<PullRequestGuideView> {
+    const rpc = this.requireRpc();
+    const value = await rpc.request('pullRequests.generateReviewGuide', ref, undefined, 60000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更，请重新打开拉取请求');
+    return pullRequestGuide(value);
+  }
+  linkedPullRequests(): LinkedPullRequestView[] {
+    return this.thread ? linkedPullRequests(this.thread.details) : [];
+  }
+  async watchLinkedPullRequest(link: LinkedPullRequestView, watching: boolean): Promise<void> {
+    if (!this.thread) throw new Error('请先选择会话');
+    const id = util.generateRandomUUID();
+    const command = linkedPullRequestCommand('thread.pull-request.watch', id, this.thread.threadId, link, watching);
+    await this.mutate('orchestration.dispatchCommand', command, id, 'response');
+  }
+  async unlinkLinkedPullRequest(link: LinkedPullRequestView): Promise<void> {
+    if (!this.thread) throw new Error('请先选择会话');
+    const id = util.generateRandomUUID();
+    const command = linkedPullRequestCommand('thread.pull-request.unlink', id, this.thread.threadId, link);
+    await this.mutate('orchestration.dispatchCommand', command, id, 'response');
+  }
+  async pullRequestActivity(ref: Object): Promise<PullRequestActivityView> {
+    const rpc = this.requireRpc();
+    const value = await rpc.request('pullRequests.activity', ref, undefined, 30000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更，请重新打开拉取请求');
+    return pullRequestActivity(value);
+  }
+  async pullRequestDiff(ref: Object, cursor: string = '', path: string = ''): Promise<Object> {
+    const source = record(ref);
+    const payload: Record<string, Object> = {};
+    for (const key of Object.keys(source)) payload[key] = source[key];
+    if (cursor) payload.cursor = cursor;
+    if (path) payload.path = path;
+    return this.httpJson(this.activeBase(), '/api/pull-requests/diff', http.RequestMethod.POST,
+      JSON.stringify(payload), this.saved?.token || '', true, !!this.cloud, 60000);
+  }
+  async pullRequestComment(ref: Object, body: string): Promise<Object> {
+    return this.rpcRequest('pullRequests.comment', commentInput(ref, body), 60000, false);
+  }
+  async pullRequestReview(ref: Object, verdict: string, body: string, comments: Object[] = []): Promise<Object> {
+    return this.rpcRequest('pullRequests.submitReview', reviewSubmitInput(ref, verdict, body, comments), 60000, false);
+  }
+  async pullRequestAction(ref: Object, action: string, mergeMethod: string = '',
+    updateMethod: string = ''): Promise<Object> {
+    return this.rpcRequest('pullRequests.runAction', actionInput(ref, action, mergeMethod, updateMethod), 120000, false);
+  }
+  async pullRequestStack(ref: Object): Promise<Object> {
+    return this.rpcRequest('pullRequests.stack', ref, 30000, false);
+  }
+  async pullRequestLinkedThreads(ref: Object): Promise<Object> {
+    return this.rpcRequest('pullRequests.linkedThreads', ref, 30000, false);
+  }
+  async setPullRequestReaction(ref: Object, subjectId: string, reaction: string): Promise<Object> {
+    const source = record(ref);
+    const payload: Record<string, Object> = {};
+    for (const key of Object.keys(source)) payload[key] = source[key];
+    if (subjectId) payload.subjectId = subjectId;
+    payload.content = reaction;
+    payload.reacted = true;
+    return this.rpcRequest('pullRequests.setReaction', payload, 30000, false);
+  }
+  async pullRequestReply(ref: Object, threadId: string, body: string): Promise<Object> {
+    const source = record(ref);
+    const payload: Record<string, Object> = {};
+    for (const key of Object.keys(source)) payload[key] = source[key];
+    payload.threadId = threadId;
+    payload.body = body;
+    return this.rpcRequest('pullRequests.replyToThread', payload, 60000, false);
+  }
+  async pullRequestSetThreadResolution(ref: Object, threadId: string, resolved: boolean): Promise<Object> {
+    const source = record(ref);
+    const payload: Record<string, Object> = {};
+    for (const key of Object.keys(source)) payload[key] = source[key];
+    payload.threadId = threadId;
+    payload.resolved = resolved;
+    return this.rpcRequest('pullRequests.setThreadResolution', payload, 60000, false);
+  }
+  async pullRequestUpdate(ref: Object, title: string, body: string): Promise<Object> {
+    const source = record(ref);
+    const payload: Record<string, Object> = {};
+    for (const key of Object.keys(source)) payload[key] = source[key];
+    if (title.trim()) payload.title = title.trim();
+    if (body) payload.body = body;
+    return this.rpcRequest('pullRequests.update', payload, 60000, false);
+  }
+  async pullRequestRequestReviewers(ref: Object, reviewers: ReviewerSelection[],
+    requested: boolean): Promise<Object> {
+    const source = record(ref);
+    const payload: Record<string, Object> = {};
+    for (const key of Object.keys(source)) payload[key] = source[key];
+    payload.reviewers = reviewers;
+    payload.requested = requested;
+    return this.rpcRequest('pullRequests.requestReviewers', payload, 60000, false);
+  }
+  async pullRequestReviewerCandidates(ref: Object): Promise<Object> {
+    return this.rpcRequest('pullRequests.reviewerCandidates', ref, 30000, false);
+  }
+  async pullRequestSetLabels(ref: Object, labels: string[], applied: boolean): Promise<Object> {
+    const source = record(ref);
+    const payload: Record<string, Object> = {};
+    for (const key of Object.keys(source)) payload[key] = source[key];
+    payload.labels = labels;
+    payload.applied = applied;
+    return this.rpcRequest('pullRequests.setLabels', payload, 60000, false);
+  }
+  async pullRequestLabelCandidates(ref: Object): Promise<Object> {
+    return this.rpcRequest('pullRequests.labelCandidates', ref, 30000, false);
+  }
+  providerSkills(): string[] {
+    const result: string[] = [];
+    for (const value of objects(this.config.providers || [])) {
+      const provider = record(value);
+      if (provider.enabled === false || provider.installed === false) continue;
+      for (const skill of objects(provider.skills || [])) {
+        const row = record(skill);
+        if (row.enabled === false) continue;
+        const name = typeof row.name === 'string' ? row.name : '';
+        if (name && !result.includes(name)) result.push(name);
+      }
+    }
+    return result;
+  }
+  providerCommands(): string[] {
+    const result: string[] = [];
+    for (const value of objects(this.config.providers || [])) {
+      const provider = record(value);
+      if (provider.enabled === false || provider.installed === false) continue;
+      for (const command of objects(provider.slashCommands || [])) {
+        const name = typeof record(command).name === 'string' ? text(record(command).name) : '';
+        if (name && !result.includes(name)) result.push(name);
+      }
+    }
+    return result;
+  }
+  async refreshProviders(instanceId: string = ''): Promise<void> {
+    const rpc = this.requireRpc();
+    const payload: ProviderRefreshPayload = { fresh: true, refreshModels: true };
+    if (instanceId) payload.instanceId = instanceId;
+    await rpc.request('server.refreshProviders', payload, undefined, 30000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    const config = record(await rpc.request('server.getConfig', {}));
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    this.applyConfig(config); this.onUpdate();
+  }
+  async installProvider(instanceId: string): Promise<Record<string, Object>> {
+    if (!this.canScope('providers:manage') && this.canScope('providers:manage') === false) {
+      throw new Error('此连接不能管理 Provider');
+    }
+    const rpc = this.requireRpc();
+    const payload: ProviderInstancePayload = { instanceId };
+    const value = record(await rpc.request('provider.install.start', payload, undefined, 30000, false));
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    return value;
+  }
+  async startProviderAuth(instanceId: string): Promise<Record<string, Object>> {
+    const rpc = this.requireRpc();
+    const payload: ProviderInstancePayload = { instanceId };
+    const value = record(await rpc.request('provider.auth.start', payload, undefined, 30000, false));
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    return value;
+  }
+  async cancelProviderAuth(instanceId: string, flowId: string): Promise<void> {
+    const payload: ProviderAuthCancelPayload = { instanceId, flowId };
+    await this.rpcRequest('provider.auth.cancel', payload, 15000, false);
+  }
+  currentUsage(): TokenUsage | undefined {
+    if (!this.thread) return undefined;
+    const turns = this.thread.providerTurns.filter((row: Record<string, Object>) => row.turnTokenUsage !== undefined);
+    if (!turns.length) return undefined;
+    const latest = turns[turns.length - 1];
+    const usage = record(latest.turnTokenUsage);
+    const inputTokens = typeof usage.inputTokens === 'number' ? usage.inputTokens : 0;
+    const outputTokens = typeof usage.outputTokens === 'number' ? usage.outputTokens : 0;
+    if (usage.usageStatus !== 'complete' && inputTokens === 0 && outputTokens === 0) return undefined;
+    const usageView: TokenUsage = { usedTokens: inputTokens + outputTokens, maxTokens: 0, inputTokens, outputTokens,
+      cost: '', toolUses: 0, durationMs: 0 };
+    return usageView;
+  }
+  threadSubagents(): SubagentView[] {
+    if (!this.thread) return [];
+    const rows = subagents(this.thread.subagents);
+    for (const row of rows) {
+      const child = this.shell.threads.find((thread) => thread.id === row.childThreadId ||
+        (row.remoteThreadId !== '' && thread.id === row.remoteThreadId));
+      row.pendingKind = child ? child.pendingKind : '';
+    }
+    return rows;
+  }
+  threadBackgroundTasks(): BackgroundTaskView[] {
+    return this.thread ? backgroundTasks(this.thread.details) : [];
+  }
+  threadGuestShare(): GuestShareView | undefined {
+    return this.thread ? guestShare(this.thread.details.guestShare) : undefined;
+  }
+  async forceStop(runId: string): Promise<void> {
+    if (!this.thread) throw new Error('请先选择会话');
+    if (!this.supports('threadForceStop')) throw new Error('服务端不支持强制停止');
+    const id = util.generateRandomUUID();
+    await this.rpcRequest('orchestration.forceStopThread',
+      forceStopCommand(id, this.thread.threadId, runId));
+  }
+  async stopSubagent(subagentId: string): Promise<void> {
+    if (!this.thread) throw new Error('请先选择会话');
+    const subagent = this.thread.subagents.find((row: Record<string, Object>) => row.id === subagentId);
+    if (!subagent || !this.threadSubagents().find((row: SubagentView) => row.id === subagentId)?.canStop) {
+      throw new Error('子任务已结束或不可停止');
+    }
+    const runId = typeof subagent.runId === 'string' ? subagent.runId : '';
+    if (!runId) throw new Error('子任务缺少运行标识');
+    const id = util.generateRandomUUID();
+    const command: SubagentStopCommand = { type: 'subagent.stop', commandId: id,
+      threadId: this.thread.threadId, runId, subagentId };
+    await this.mutate('orchestration.dispatchCommand', command, id, 'response');
+  }
+  async promoteQueued(runId: string): Promise<void> {
+    if (!this.thread) throw new Error('请先选择会话');
+    const target = this.thread.runs.find((run: Record<string, Object>) =>
+      ['preparing', 'starting', 'running', 'waiting'].includes(String(run.status)));
+    if (!target) throw new Error('当前没有可引导的运行');
+    const id = util.generateRandomUUID();
+    await this.mutate('orchestration.dispatchCommand',
+      promoteCommand(id, this.thread.threadId, runId, text(target.id)), id, 'response');
+  }
+  async forkThread(runId: string, sideChat: boolean = false): Promise<string> {
+    if (!this.thread) throw new Error('请先选择会话');
+    const targetThreadId = util.generateRandomUUID();
+    const sourceThreadId = this.thread.threadId;
+    const id = util.generateRandomUUID();
+    await this.mutate('orchestration.dispatchCommand',
+      forkThreadCommand(id, sourceThreadId, targetThreadId, runId, '', sideChat), id, 'response');
+    return targetThreadId;
+  }
+  async createGuestShare(): Promise<string> {
+    if (!this.thread) throw new Error('请先选择会话');
+    const rpc = this.requireRpc();
+    const result = record(await rpc.request('guestShare.create', { threadId: this.thread.threadId }));
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    return text(result.url);
+  }
+  async closeGuestShare(): Promise<void> {
+    if (!this.thread) throw new Error('请先选择会话');
+    const id = util.generateRandomUUID();
+    const command: GuestCloseCommand = { type: 'thread.guest-share.close', commandId: id, threadId: this.thread.threadId };
+    await this.mutate('orchestration.dispatchCommand', command, id, 'response');
+  }
+  async resolveGuestMessage(guestMessageId: string, send: boolean): Promise<void> {
+    if (!this.thread) throw new Error('请先选择会话');
+    const id = util.generateRandomUUID();
+    const mode: MessageDispatchMode = { type: 'queue_after_active' };
+    const command: GuestMessageCommand = send ?
+      { type: 'message.dispatch', commandId: id, threadId: this.thread.threadId,
+        messageId: util.generateRandomUUID(), text: '', attachments: [], guestMessageId,
+        createdBy: 'user', creationSource: 'mobile', dispatchMode: mode } :
+      { type: 'thread.guest-message.dismiss', commandId: id, threadId: this.thread.threadId, guestMessageId };
+    await this.mutate('orchestration.dispatchCommand', command, id, 'response');
+  }
+  async retryPreparedRun(runId: string): Promise<void> {
+    if (!this.thread) throw new Error('请先选择会话');
+    const id = util.generateRandomUUID();
+    const command: PreparedRetryCommand = { type: 'prepared-run.retry', commandId: id,
+      threadId: this.thread.threadId, runId };
+    await this.mutate('orchestration.dispatchCommand', command, id, 'response');
+  }
+  async resumeLatestRun(): Promise<void> {
+    if (!this.thread) throw new Error('请先选择会话');
+    const runs = this.thread.runs;
+    const latest = latestExecutedRun(runs);
+    if (!latest) throw new Error('此会话没有可恢复的运行');
+    const status = text(latest.status);
+    const errorClass = typeof this.thread.details.lastErrorClass === 'string' ? this.thread.details.lastErrorClass : '';
+    if (status !== 'interrupted' && !(status === 'failed' && errorClass === 'usage_limit')) {
+      throw new Error('最近一次运行无需恢复');
+    }
+    const runId = text(latest.id);
+    const id = util.generateRandomUUID();
+    const mode: MessageDispatchMode = { type: 'start_immediately' };
+    const command: ResumeMessageCommand = { type: 'message.dispatch', commandId: id, createdBy: 'user',
+      creationSource: 'mobile', threadId: this.thread.threadId, messageId: util.generateRandomUUID(),
+      text: '', attachments: [], manualContinuationOfRunId: runId, dispatchMode: mode };
+    if (this.thread.details.modelSelection !== undefined && this.thread.details.modelSelection !== null) {
+      command.modelSelection = record(this.thread.details.modelSelection) as Object as ModelSelection;
+    }
+    await this.mutate('orchestration.dispatchCommand', command, id, 'message');
+    const held = runs.some((run: Record<string, Object>) => run.status === 'queued' && run.queueHeld === true);
+    if (held) {
+      const queueId = util.generateRandomUUID();
+      await this.mutate('orchestration.dispatchCommand',
+        queueCommand(queueId, this.thread.threadId, 'resume', ''), queueId, 'response');
+    }
+  }
+  async writeWorkspaceFile(cwd: string, relativePath: string, contents: string): Promise<string> {
+    if (!this.canWriteSourceControl()) throw new Error('此连接没有写入权限');
+    if (!cwd.trim() || !relativePath.trim() || relativePath.startsWith('/') || relativePath.length > 512) {
+      throw new Error('工作区路径无效');
+    }
+    const input: WriteFileInput = { cwd, relativePath, contents };
+    const value = record(await this.rpcRequest('projects.writeFile', input, 30000, false));
+    return text(value.relativePath);
+  }
+  async setLimitRecovery(autoResume: boolean | undefined, snooze: boolean | undefined): Promise<void> {
+    if (!this.thread) throw new Error('请先选择会话');
+    const details = this.thread.details;
+    const latestRunId = typeof details.latestRunId === 'string' ? details.latestRunId : '';
+    const resetAt = typeof details.usageLimitResetAt === 'string' ? details.usageLimitResetAt : '';
+    if (!latestRunId || !resetAt) throw new Error('此运行没有可安排的用量恢复时间');
+    const recovery: LimitRecoveryUpdate = { runId: latestRunId, resetAt };
+    if (autoResume !== undefined) recovery.autoResume = autoResume;
+    if (snooze !== undefined) recovery.snooze = snooze;
+    const id = util.generateRandomUUID();
+    const command: MetadataLimitCommand = { type: 'thread.metadata.update', commandId: id,
+      threadId: this.thread.threadId, limitRecovery: recovery };
+    await this.mutate('orchestration.dispatchCommand', command, id, 'response');
+  }
+  async turnItem(itemId: string): Promise<Record<string, Object> | undefined> {
+    if (!this.thread) throw new Error('请先选择会话');
+    if (!itemId || itemId.length > 256) throw new Error('会话条目标识无效');
+    const payload: TurnItemPayload = { threadId: this.thread.threadId, itemId };
+    const value = record(await this.rpcRequest('orchestration.getTurnItem', payload));
+    return value.item === undefined || value.item === null ? undefined : record(value.item);
+  }
+  commandOutput(itemId: string, onFrame: (value: Object) => void): (value: Object) => void {
+    if (!this.thread) throw new Error('请先选择会话');
+    const payload: CommandOutputPayload = { threadId: this.thread.threadId, itemId };
+    return this.watchRpcStream('orchestration.subscribeCommandOutput', payload, onFrame);
+  }
+  async loadOlderHistory(): Promise<boolean> {
+    if (!this.thread || !this.thread.historyCursor || !this.thread.hasMoreHistory) return false;
+    const state = this.thread;
+    const path = '/api/orchestration/threads/' + encodeURIComponent(state.threadId) +
+      '/history?cursor=' + encodeURIComponent(state.historyCursor) + '&compactIds=1';
+    const value = record(await this.httpJson(this.activeBase(), path, http.RequestMethod.GET,
+      '', this.saved?.token || '', false, !!this.cloud));
+    if (this.thread !== state) return false;
+    const items: Record<string, Object>[] = [];
+    for (const projected of objects(value.items)) {
+      const row = record(projected);
+      if (row.item !== undefined && row.item !== null) items.push(record(row.item));
+    }
+    state.prependHistory(items);
+    state.historyCursor = typeof value.nextCursor === 'string' ? value.nextCursor : '';
+    state.hasMoreHistory = value.hasMoreHistory === true;
+    this.onUpdate();
+    return true;
+  }
+  async attachmentUrl(id: string, name: string, mimeType: string, inline: boolean): Promise<string> {
+    const rpc = this.requireRpc();
+    const resource: AttachmentResource = { _tag: 'attachment', attachmentId: id, fileName: name,
+      mimeType, disposition: inline ? 'inline' : 'attachment' };
+    const input: AssetUrlInput = { resource };
+    const value = record(await rpc.request('assets.createUrl', input, undefined, 15000, false));
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    const relative = text(value.relativeUrl);
+    if (typeof value.expiresAt !== 'number' || value.expiresAt <= Date.now()) throw new Error('附件链接已过期');
+    return this.activeBase() + relative;
+  }
+  async downloadAttachment(id: string, name: string, mimeType: string): Promise<ArrayBuffer> {
+    const url = await this.attachmentUrl(id, name, mimeType, false);
+    const request = http.createHttp();
+    try {
+      const response = await request.request(url, { method: http.RequestMethod.GET, usingCache: false,
+        maxRedirects: 0, connectTimeout: 10000, readTimeout: 60000, expectDataType: http.HttpDataType.ARRAY_BUFFER });
+      if (response.responseCode !== 200) throw new Error('附件下载失败（' + response.responseCode + '）');
+      if (response.result instanceof ArrayBuffer) return response.result;
+      throw new Error('附件响应不是二进制数据');
+    } finally { request.destroy(); }
+  }
+  async cancelWorktreeSetup(): Promise<void> {
+    if (!this.thread) throw new Error('请先选择会话');
+    const payload: ThreadIdPayload = { threadId: this.thread.threadId };
+    await this.rpcRequest('worktreeSetup.cancel', payload, 10000, false);
+  }
+
+  watchWorktreeSetup(): void {
+    if (!this.thread) return;
+    const rpc = this.requireRpc();
+    const previous = this.worktreeChunk;
+    if (previous) rpc.cancelStream(previous);
+    this.worktreeSetup = undefined;
+    const threadId = this.thread.threadId;
+    const chunk = (value: Object): void => {
+      if (rpc !== this.rpc) return;
+      if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+        this.worktreeSetup = undefined; return;
+      }
+      this.worktreeSetup = record(value);
+      this.onUpdate();
+    };
+    this.worktreeChunk = chunk;
+    void rpc.request('subscribeWorktreeSetup', { threadId }, chunk, 600000).catch(() => {
+      if (rpc === this.rpc && this.worktreeChunk === chunk) this.worktreeSetup = undefined;
+    });
+  }
+
+  private subscribeShell(): void {
+    const rpc = this.requireRpc();
+    const previous = this.shellChunk;
+    if (previous) rpc.cancelStream(previous);
+    const chunk = (value: Object): void => {
+      if (rpc !== this.rpc) return;
+      this.shell.apply(value);
+      this.onUpdate();
+    };
+    this.shellChunk = chunk;
+    void rpc.request('orchestration.subscribeShell', {}, chunk).catch(() => {
+      if (this.rpc === rpc) this.disconnect('项目列表同步失败，请重新连接');
+    });
+  }
+  refreshShell(): void {
+    if (this.ready) this.subscribeShell();
+  }
+
+  async forget(): Promise<void> {
+    this.disconnect();
+    this.saved = undefined;
+    this.recovery = undefined;
+    this.attachment = undefined; this.attachments = []; this.attachmentThread = ''; this.draftScope = '';
+    if (this.recoveryStore) await this.recoveryStore.clear();
+    if (this.store) await this.store.clear();
+  }
+
+  async stop(): Promise<void> {
+    if (!this.thread) throw new Error('请先选择会话');
+    const id = util.generateRandomUUID();
+    await this.mutate('orchestration.dispatchCommand', stopCommand(id, this.thread.threadId), id, 'stop');
+  }
+
+  async respond(requestId: string, decision: string, answers: Record<string, Object>,
+    attachmentsByQuestionId: Record<string, Object[]> = {}): Promise<void> {
+    if (!this.thread) throw new Error('请先选择会话');
+    const request = this.thread.requests.find((row: Record<string, Object>) => row.id === requestId);
+    if (!request || request.status !== 'pending' || record(request.responseCapability).type === 'not_resumable') {
+      throw new Error('请求已失效，请同步状态');
+    }
+    const commandId = util.generateRandomUUID();
+    const command = record(respondCommand(commandId, this.thread.threadId, requestId, decision, answers));
+    if (Object.keys(attachmentsByQuestionId).length) command.attachmentsByQuestionId = attachmentsByQuestionId;
+    await this.mutate('orchestration.dispatchCommand', command, commandId, 'response');
+  }
+
+  async dismissInput(requestId: string): Promise<void> {
+    if (!this.thread) throw new Error('请先选择会话');
+    const request = this.thread.requests.find((row: Record<string, Object>) => row.id === requestId);
+    const item = this.thread.items.find((row: Record<string, Object>) =>
+      row.type === 'user_input_request' && row.requestId === requestId);
+    if (!request || request.status !== 'pending' || !item ||
+      !(item.responseMode === 'message' || record(request.responseCapability).type === 'message')) {
+      throw new Error('此问题不能关闭');
+    }
+    const id = util.generateRandomUUID();
+    await this.mutate('orchestration.dispatchCommand',
+      dismissInputCommand(id, this.thread.threadId, requestId), id, 'response');
+  }
+
+  async secret(itemId: string, value: string, decline: boolean): Promise<void> {
+    if (!this.thread) throw new Error('请先选择会话');
+    const item = this.thread.items.find((row: Record<string, Object>) => row.id === itemId);
+    if (!item || item.type !== 'secret_request' || item.secretStatus !== 'pending' ||
+      (item.visibility !== undefined && item.visibility !== 'local')) throw new Error('敏感输入请求已失效或需在原会话回答');
+    if (!decline && !value.trim()) throw new Error('请输入敏感值');
+    await this.mutate('secrets.answerRequest', secretAnswer(this.thread.threadId, itemId, decline ? value : value.trim(), decline),
+      util.generateRandomUUID(), 'secret');
+  }
+  async secretReference(itemId: string, provider: string, reference: string): Promise<void> {
+    if (!this.thread) throw new Error('请先选择会话');
+    const item = this.thread.items.find((row: Record<string, Object>) => row.id === itemId);
+    if (!item || item.type !== 'secret_request' || item.secretStatus !== 'pending' ||
+      (item.visibility !== undefined && item.visibility !== 'local')) throw new Error('敏感输入请求已失效或需在原会话回答');
+    if (this.config.secretRequestReferences !== true) throw new Error('服务端不支持秘密引用');
+    const providers = this.serverSettings.secretProviders;
+    if (!providers || typeof providers !== 'object' || Array.isArray(providers) ||
+      !Object.keys(providers as Record<string, Object>).includes(provider)) {
+      throw new Error('请选择服务端已配置的秘密来源');
+    }
+    await this.mutate('secrets.answerRequest',
+      secretReferenceAnswer(this.thread.threadId, itemId, provider, reference), util.generateRandomUUID(), 'secret');
+  }
+
+  async upload(name: string, bytes: ArrayBuffer, mimeType: string = 'application/octet-stream',
+    type: string = 'file', stillSelected: () => boolean = () => true): Promise<void> {
+    const rpc = this.requireRpc();
+    if ((!this.draftScope && !this.thread) || !this.activeEnvironmentId() || this.mutationPending) throw new Error('请先同步会话并核对未知提交');
+    const threadId = this.draftScope || this.thread!.threadId;
+    const captured = this.captureAttachmentTarget();
+    const current = (): boolean => captured() && stillSelected();
+    if (!current()) throw new Error('附件目标已变化，请重新选择');
+    const target = await this.uploadOne(name, bytes, mimeType, type, current);
+    if (!current()) throw new Error('附件目标已变化，请重新选择');
+    const next = (this.attachmentThread === threadId ? this.attachments : []).concat([target]);
+    const limit = attachmentLimitError(next);
+    if (limit) {
+      void rpc.request('attachments.delete', { attachmentId: target.id }).catch(() => {});
+      throw new Error(limit);
+    }
+    this.attachmentThread = threadId; this.attachments = next; this.attachment = target;
+  }
+
+  async uploadOne(name: string, bytes: ArrayBuffer, mimeType: string = 'application/octet-stream',
+    type: string = 'file', stillSelected: () => boolean = () => true): Promise<Attachment> {
+    const rpc = this.requireRpc();
+    if (!this.activeEnvironmentId() || this.mutationPending) throw new Error('请先连接并核对未知提交');
+    const base = this.activeBase();
+    // Validate local metadata before requesting an upload capability.
+    attachmentRecord({ type, id: 'validation', name, mimeType, sizeBytes: bytes.byteLength });
+    const result = await rpc.request('attachments.createUploadUrl', { type, name,
+      mimeType, sizeBytes: bytes.byteLength });
+    const target = uploadAttachmentTarget(result, type, name, mimeType, bytes.byteLength);
+    const request = http.createHttp();
+    try {
+      if (rpc !== this.rpc || !stillSelected()) throw new Error('附件目标已变化，请重新选择');
+      this.uploadRequest = request;
+      const response = await request.request(base + target.path, { method: http.RequestMethod.POST,
+        header: { 'Content-Type': 'application/octet-stream' }, extraData: bytes,
+        maxRedirects: 0, usingCache: false, connectTimeout: 10000, readTimeout: 60000 });
+      if (response.responseCode !== 204) throw new Error('upload rejected');
+      if (rpc !== this.rpc || this.uploadRequest !== request || !stillSelected()) throw new Error('attachment target changed');
+      return target.attachment;
+    } catch (error) {
+      throw new Error('附件上传未确认；可重新选择或手动重试，不会自动提交消息');
+    }
+    finally { if (this.uploadRequest === request) this.uploadRequest = undefined; request.destroy(); }
+  }
+
+  cancelUpload(): void {
+    const request = this.uploadRequest;
+    this.uploadRequest = undefined;
+    request?.destroy();
+  }
+
+  removeAttachment(id: string): void {
+    if (this.attachmentThread !== (this.draftScope || this.thread?.threadId)) return;
+    this.attachments = this.attachments.filter((item: Attachment) => item.id !== id);
+    this.attachment = this.attachments.length ? this.attachments[0] : undefined;
+  }
+  bindDraftAttachments(scope: string): void {
+    if (scope && this.attachments.length) this.attachmentThread = scope;
+  }
+
+  private async selectRecovery(threadId: string): Promise<void> {
+    if (!this.activeEnvironmentId()) throw new Error('请先连接服务器');
+    if (this.recovery?.pendingId && this.recovery.threadId !== threadId) throw new Error('请先核对原会话的未知提交');
+    if (this.recovery?.threadId === threadId) return;
+    if (!this.draftScope) this.attachmentScopeRevision++;
+    this.attachment = undefined; this.attachments = []; this.attachmentThread = '';
+    this.worktreeSetup = undefined;
+    this.recovery = { base: this.recoveryBase || this.activeBase(), environmentId: this.activeEnvironmentId(), threadId,
+      pendingId: '', pendingKind: '' };
+    await this.saveRecovery();
+  }
+
+  private requireRpc(): RpcClient {
+    if (!this.ready || !this.rpc) throw new Error('请先连接服务器');
+    return this.rpc;
+  }
+}
+
+const emptyClient = new T3Client();
+export let client: T3Client = emptyClient;
+export function bindClient(value: T3Client | undefined): void { client = value || emptyClient; }

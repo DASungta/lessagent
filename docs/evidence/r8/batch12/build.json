@@ -1,0 +1,8 @@
+{
+  "fullTests": 390,
+  "prefsTestsAfterBuildFix": 4,
+  "build": "successful",
+  "installed": true,
+  "hapSha256": "d7ac3048ba572b581c001f9407a3dca2ec1302ffb7e80db9388286c6c52d048f",
+  "settingsTestsAfterUiFix": 9
+}

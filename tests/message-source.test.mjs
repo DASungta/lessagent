@@ -1,0 +1,20 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {createRequire} from 'node:module';
+const ts=createRequire(import.meta.url)((process.env.DEVECO_HOME || '/Applications/DevEco-Studio.app/Contents')+'/sdk/default/openharmony/ets/build-tools/ets-loader/node_modules/typescript');
+const source=await readFile(new URL('../entry/src/main/ets/components/MessageSource.ets',import.meta.url),'utf8');
+const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2022}}).outputText;
+const {MessageSource}=await import('data:text/javascript;base64,'+Buffer.from(compiled).toString('base64'));
+test('2000 messages notify only the changed streaming row and appended row',()=>{
+ const data=new MessageSource();const calls=[];
+ const listener={onDataAdd:i=>calls.push(['add',i]),onDataChange:i=>calls.push(['change',i]),onDataReloaded:()=>calls.push(['reload'])};
+ data.registerDataChangeListener(listener);
+ const rows=Array.from({length:2000},(_,i)=>({id:String(i),role:'assistant',text:String(i),streaming:false}));
+ data.update(rows);assert.equal(data.totalCount(),2000);calls.length=0;
+ rows[1999]={...rows[1999],text:'final text',streaming:false};
+ data.update(rows);assert.deepEqual(calls,[['change',1999]]);assert.equal(data.getData(1999).text,'final text');
+ calls.length=0;data.update([...rows,{id:'2000',role:'user',text:'new',streaming:false}]);assert.deepEqual(calls,[['add',2000]]);
+ calls.length=0;data.update([]);assert.deepEqual(calls,[['reload']]);
+ data.unregisterDataChangeListener(listener);data.update(rows);assert.equal(calls.length,1);
+});

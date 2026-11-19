@@ -1,0 +1,27 @@
+{
+  "stage": "R4 batch 3",
+  "commitBaseline": "ad1b1365999c92c3fc7a054e7f3af84623f74fee",
+  "localTests": {
+    "total": 208,
+    "passed": 208,
+    "failed": 0
+  },
+  "signedBuildPassed": true,
+  "hapSha256": "86b950e13afb6ac3b7a48226f8d6d570abf93706b8c4e84148e323f4d003092c",
+  "deviceInstalled": true,
+  "installedHapSha256": "86b950e13afb6ac3b7a48226f8d6d570abf93706b8c4e84148e323f4d003092c",
+  "previousInstalledHapSha256": "bfb1d6cb688ae4e6a54eaacc07fab50d63a0c6f2585e5d536038645f28a727d3",
+  "latestCandidateInstalled": true,
+  "realServiceWrites": true,
+  "originalMobileVisualVerified": false,
+  "upstreamEffectConformanceExecuted": false,
+  "fullR4Complete": false,
+  "changedFiles": 49,
+  "deviceEvidence": "batch2-device/README.md",
+  "batch3Evidence": "batch3-service/README.md",
+  "latestCandidateInstallReason": "installed; core device UI verified after physical unlock",
+  "blockedAudit": {
+    "condition": "full R4 depends on missing provider, cloud, accessibility-consent and pixel-acceptance resources",
+    "requires": "structured user input provider, secret provider, T3 Connect tunnel, usage-limit failure, history pagination service, Care-mode/screen-reader consent, accepted pixel comparison"
+  }
+}

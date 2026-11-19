@@ -1,0 +1,11 @@
+{
+  "clerk": {
+    "publishableKey": "",
+    "jwtTemplate": "",
+    "oauthClientId": "",
+    "redirectUri": "t3code://auth/callback"
+  },
+  "relay": {
+    "url": ""
+  }
+}

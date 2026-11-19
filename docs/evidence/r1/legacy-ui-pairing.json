@@ -1,0 +1,23 @@
+{
+  "device": "23E0224122000135",
+  "versionCode": 1,
+  "base": "http://127.0.0.1:47831",
+  "environmentId": "633dac07-9196-4071-be08-9936a249debd",
+  "credentialCleared": true,
+  "visibleTexts": [
+    "T3 Code",
+    "⌄",
+    "所有项目",
+    "已连接",
+    "Harmony 新会话",
+    "R1 isolated A",
+    "18, :, 14",
+    "18",
+    ":",
+    "14",
+    "78"
+  ],
+  "agentTasksSubmitted": 0,
+  "initialUiPollExceeded": true,
+  "subsequentLiveReadbackConfirmed": true
+}

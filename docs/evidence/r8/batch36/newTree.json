@@ -1,0 +1,11 @@
+{
+  "total": 1,
+  "enabled": 0,
+  "runs": 0,
+  "workspace": {
+    "type": "worktree",
+    "baseRef": "b36-check-142dfdb1",
+    "startFromOrigin": false
+  },
+  "remainingFieldsDigest": "7c7c5e97eecfd3f6da9f74dfdb6dfbbd116ab1a6904e24f06fbf2041cf96b520"
+}

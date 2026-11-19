@@ -1,0 +1,11 @@
+{
+  "manualReclaimEligible": false,
+  "incrementalVacuumEnabled": true,
+  "freePages": 0,
+  "countsUnchanged": {
+    "orchestration_v2_projection_threads": 1,
+    "orchestration_v2_projection_messages": 6
+  },
+  "reclaimRequested": false,
+  "databaseModeChanged": false
+}

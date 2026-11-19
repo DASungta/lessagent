@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-19",
+  "port": 47895,
+  "version": "0.1.10",
+  "sameEnvironmentId": true,
+  "baseDir": "/tmp/t3-r5-accept-00fcea",
+  "phoneReconnected": true,
+  "threadVisible": true,
+  "terminalMetadataAfterRestart": "empty",
+  "previousShellSurvivalProven": false
+}

@@ -1,0 +1,4 @@
+worktree /private/tmp/t3-r5-accept-00fcea/data/projects/r5-round2
+HEAD 48bb2fc71e1c35d6a5f7b740302b533efed44edd
+branch refs/heads/main
+

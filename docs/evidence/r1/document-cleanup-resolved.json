@@ -1,0 +1,33 @@
+{
+  "device": "23E0224122000135",
+  "documents": [
+    {
+      "name": "r1-native-A-bd24f394-7e82-4376-8c04-4616aacc0682.txt",
+      "bytes": 39,
+      "sha256": "052f0a6c31c1e12cca51f0c55c4436e75d8bf447ce550352697b43763ef588a9"
+    },
+    {
+      "name": "r1-native-B-bd24f394-7e82-4376-8c04-4616aacc0682.txt",
+      "bytes": 39,
+      "sha256": "5a4b7abb10f7db9b2a28943450555d15c1baf11d49200bb470c364dabe8e6a82"
+    },
+    {
+      "name": "r1-native-A-60d91e31-4f2e-49e4-9584-1e8d8cdc16eb.txt",
+      "bytes": 39,
+      "sha256": "052f0a6c31c1e12cca51f0c55c4436e75d8bf447ce550352697b43763ef588a9"
+    },
+    {
+      "name": "r1-native-B-60d91e31-4f2e-49e4-9584-1e8d8cdc16eb.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "method": "system File Manager MainAbility native multi-select; four exact names selected, confirmed delete, and moved through deletion flow",
+  "mainDirectoryStillShowsDocuments": false,
+  "recentlyDeletedStillShowsDocuments": false,
+  "unrelatedFilesSelected": false,
+  "journalRetained": true,
+  "earlierUriReopenFailureRetained": true,
+  "cleanupVerified": true,
+  "capturedAt": "2026-11-16T23:42:22.686974+08:00"
+}

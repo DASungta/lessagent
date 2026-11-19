@@ -1,0 +1,16 @@
+{
+  "tests": 358,
+  "failures": 0,
+  "build": "successful",
+  "hapSha256": "31c9a360732a5057affb5a1122c104dbfae0b38bd47a28cc75cce2cb9ecf36df",
+  "installed": true,
+  "started": true,
+  "originalEffectiveRuntime": "full-access",
+  "temporaryRuntime": "auto-accept-edits",
+  "newDraftRuntime": "auto-accept-edits",
+  "restoredDraftRuntime": "auto-accept-edits",
+  "settingsRestoredExactly": true,
+  "testDraftDeleted": true,
+  "serverMarkerMessages": 0,
+  "workspaceFieldAvailable": false
+}

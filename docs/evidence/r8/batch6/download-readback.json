@@ -1,0 +1,9 @@
+{
+  "status": 200,
+  "bytes": 80,
+  "sha256": "ed1db4165828d8813374e517372c372cc0da23f91d587513c0326c0ab13e66a2",
+  "resourceTag": "media-file",
+  "attachmentDisposition": true,
+  "exactBytes": true,
+  "sessionRevoked": true
+}

@@ -1,0 +1,13 @@
+{
+  "device": "23E0224122000135",
+  "checkedAt": "2026-11-16T21:35:50.641009+08:00",
+  "userConfirmedPhysicalRecognition": true,
+  "scanCompleteVisible": true,
+  "expectedBAddressStaged": true,
+  "freshGrantUnconsumed": true,
+  "freshGrantUnrevoked": true,
+  "cameraSessionsAfterRecognition": 0,
+  "existingEnvironmentCount": 2,
+  "existingBPairingDoesNotAutomaticallyRefresh": true,
+  "cameraPixelsCaptured": false
+}

@@ -1,0 +1,1 @@
+{"readyAt":1794823005866,"lockedAt":1794823016200,"unlockedAt":1794823403562,"lastProbeAt":1794823403564,"queries":360,"deniedCode":24000005,"wrapperDenied":true,"recovered":true,"delayMs":180000,"events":["usual.event.SCREEN_LOCKED","usual.event.SCREEN_OFF","usual.event.SCREEN_UNLOCKED"],"secureMode":true,"lockedReadable":false,"screenApiLocked":false}

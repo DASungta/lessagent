@@ -1,0 +1,3697 @@
+[
+  {
+    "file": "apps/mobile/src/features/settings/ClaudeAccounts.tsx",
+    "line": 87,
+    "source": "{ id: \"edit\", title: \"Edit\", image: \"pencil\" },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ClaudeAccounts.tsx",
+    "line": 92,
+    "source": "title: \"Remove\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ClaudeAccounts.tsx",
+    "line": 131,
+    "source": "title={name}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ClaudeAccounts.tsx",
+    "line": 142,
+    "source": "disabled={pending}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ClaudeAccounts.tsx",
+    "line": 177,
+    "source": "label=\"Add Claude account\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ClaudeAccounts.tsx",
+    "line": 214,
+    "source": "function field(key: keyof ClaudeAccountDraft, label: string, placeholder: string) {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ClaudeAccounts.tsx",
+    "line": 224,
+    "source": "value={draft[key]}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ClaudeAccounts.tsx",
+    "line": 242,
+    "source": "<ControlPill variant=\"pill\" label=\"Cancel\" disabled={pending} onPress={onDone} />"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ClaudeAccounts.tsx",
+    "line": 245,
+    "source": "label={instanceId === null ? \"Add\" : \"Save\"}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ClaudeAccounts.tsx",
+    "line": 246,
+    "source": "disabled={pending}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 62,
+    "source": "label=\"Cloud provider\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 70,
+    "source": "selected={active !== null}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 71,
+    "source": "disabled={!usable}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 94,
+    "source": "value: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 97,
+    "source": "disabled: boolean;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 98,
+    "source": "onChange: (model: CloudSpeechModelId) => void;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 111,
+    "source": "title=\"Model\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 125,
+    "source": "value={query}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 132,
+    "source": "label={selected.name}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 136,
+    "source": "disabled={disabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 143,
+    "source": "label={model.name}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 145,
+    "source": "selected={model.id === value}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 147,
+    "source": "disabled={disabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 160,
+    "source": "label={`Show all ${matches.length} models`}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 232,
+    "source": "value: SettingsSecretValue | null,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 262,
+    "source": "label={"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 269,
+    "source": "disabled={!connection || keys._tag !== \"Failure\"}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 286,
+    "source": "label={label}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 295,
+    "source": "selected={isActive}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 297,
+    "source": "disabled={key === undefined || (!key && !canManage) || saving}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 321,
+    "source": "title: `Use ${label} for dictation?`,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 385,
+    "source": "value={model}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 387,
+    "source": "disabled={saving}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 388,
+    "source": "onChange={setModel}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 391,
+    "source": "<ListSection title=\"Model\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 393,
+    "source": "label={"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 398,
+    "source": "disabled={!AsyncResult.isFailure(models)}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 405,
+    "source": "<ListSection title=\"API key\" footer={keyFooter}>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 410,
+    "source": "label=\"Value\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 412,
+    "source": "selected={sourceId === null}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 413,
+    "source": "disabled={saving}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 422,
+    "source": "label={candidate.label}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 424,
+    "source": "selected={sourceId === candidate.id}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 425,
+    "source": "disabled={saving}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 450,
+    "source": "value={draft}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 461,
+    "source": "label=\"Ask an administrator to add an OpenRouter key\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 467,
+    "source": "label={"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 477,
+    "source": "disabled={routed ? !routedReady : !credential}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 485,
+    "source": "label=\"Remove key from environment\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 486,
+    "source": "disabled={saving}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 489,
+    "source": "title: `Remove the ${label} key from ${environment.label}?`,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 502,
+    "source": "<ListActionRow label=\"Back to providers\" disabled={saving} onPress={reset} />"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/CloudVoiceSection.tsx",
+    "line": 509,
+    "source": "title={editing ? CLOUD_SPEECH_LABELS[editing.provider] : \"Cloud providers\"}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/EnvironmentRoutesSection.tsx",
+    "line": 133,
+    "source": "title=\"Routes\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/EnvironmentRoutesSection.tsx",
+    "line": 137,
+    "source": "label={editing ? \"Done\" : \"Edit\"}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/EnvironmentRoutesSection.tsx",
+    "line": 146,
+    "source": "label=\"Your permissions\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/EnvironmentRoutesSection.tsx",
+    "line": 221,
+    "source": "<SettingsActionRow icon=\"plus\" label=\"Add route\" onPress={onAddRoute} />"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/EnvironmentRoutesSection.tsx",
+    "line": 308,
+    "source": "<StatusPill {...connectionTone(\"connected\")} label=\"In use\" size=\"compact\" />"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/EnvironmentRoutesSection.tsx",
+    "line": 320,
+    "source": "title={label}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/OutdatedServerUpdateSection.tsx",
+    "line": 29,
+    "source": "readonly label: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/OutdatedServerUpdateSection.tsx",
+    "line": 76,
+    "source": "<SettingsSection title=\"T3 Code\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/OutdatedServerUpdateSection.tsx",
+    "line": 102,
+    "source": "label=\"Check for updates\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/OutdatedServerUpdateSection.tsx",
+    "line": 103,
+    "source": "disabled={busy}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/OutdatedServerUpdateSection.tsx",
+    "line": 110,
+    "source": "label={state.status === \"failed\" ? \"Retry update\" : `Update to ${release.targetVersion}`}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/OutdatedServerUpdateSection.tsx",
+    "line": 111,
+    "source": "disabled={busy}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ScheduledTaskPickerScreens.tsx",
+    "line": 33,
+    "source": "<SettingsScreen title=\"Scheduled task\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ScheduledTaskPickerScreens.tsx",
+    "line": 148,
+    "source": "title=\"Base branch\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ScheduledTaskPickerScreens.tsx",
+    "line": 198,
+    "source": "value: query,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ScheduledTaskPickerScreens.tsx",
+    "line": 218,
+    "source": "...(needle ? [] : [{ key: \"new-thread\", title: NEW_THREAD_DESTINATION_LABEL, thread: null }]),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ScheduledTaskPickerScreens.tsx",
+    "line": 220,
+    "source": "? [{ key: threadId, title: currentLabel, thread: null }]"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ScheduledTaskPickerScreens.tsx",
+    "line": 235,
+    "source": "title: thread.title.trim() || \"Untitled thread\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ScheduledTaskPickerScreens.tsx",
+    "line": 242,
+    "source": "<SettingsScreen title=\"Destination\" search={search}>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ScheduledTaskPickerScreens.tsx",
+    "line": 268,
+    "source": "title={item.title}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ScheduledTaskPickerScreens.tsx",
+    "line": 269,
+    "source": "selected={item.key === selectedKey}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsAboutRouteScreen.tsx",
+    "line": 26,
+    "source": "<SettingsScreen title=\"About\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsAboutRouteScreen.tsx",
+    "line": 122,
+    "source": "<SettingsSection title=\"App\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsAboutRouteScreen.tsx",
+    "line": 123,
+    "source": "<SettingsRow icon=\"internaldrive\" label=\"Client Storage\" target=\"SettingsClientStorage\" />"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsAboutRouteScreen.tsx",
+    "line": 124,
+    "source": "<SettingsRow icon=\"stethoscope\" label=\"Diagnostics\" target=\"SettingsDiagnostics\" />"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsAboutRouteScreen.tsx",
+    "line": 127,
+    "source": "label=\"Open source licenses\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsAboutRouteScreen.tsx",
+    "line": 130,
+    "source": "<SettingsRow icon=\"doc.text\" label=\"Legal\" fullScreenTarget=\"SettingsLegal\" />"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsAboutRouteScreen.tsx",
+    "line": 135,
+    "source": "disabled={busy}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsAboutRouteScreen.tsx",
+    "line": 147,
+    "source": "function capitalize(value: string): string {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsAppearanceRouteScreen.tsx",
+    "line": 17,
+    "source": "<SettingsScreen title=\"Appearance\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsAuthRouteScreen.tsx",
+    "line": 17,
+    "source": "label: \"T3 Connect\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsClientStorageRouteScreen.tsx",
+    "line": 50,
+    "source": "title: `Clear cache for ${label}?`,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsClientStorageRouteScreen.tsx",
+    "line": 62,
+    "source": "title: \"Clear all client caches?\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsClientStorageRouteScreen.tsx",
+    "line": 72,
+    "source": "<SettingsScreen title=\"Client Storage\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsClientStorageRouteScreen.tsx",
+    "line": 80,
+    "source": "<SettingsSection title=\"Environment caches\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsClientStorageRouteScreen.tsx",
+    "line": 114,
+    "source": "disabled={isClearing}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsClientStorageRouteScreen.tsx",
+    "line": 137,
+    "source": "<SettingsSection title=\"Actions\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsClientStorageRouteScreen.tsx",
+    "line": 140,
+    "source": "label={summary ? `Clear ${formatBytes(summary.payloadBytes)}` : \"Clear caches\"}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsClientStorageRouteScreen.tsx",
+    "line": 142,
+    "source": "disabled={isClearing || !summary || summary.recordCount === 0}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsClientStorageRouteScreen.tsx",
+    "line": 166,
+    "source": "readonly disabled: boolean;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsClientStorageRouteScreen.tsx",
+    "line": 174,
+    "source": "label={props.environmentLabel}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsClientStorageRouteScreen.tsx",
+    "line": 177,
+    "source": "disabled={props.disabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+    "line": 103,
+    "source": "async function run(label: string, action: () => Promise<void>) {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+    "line": 175,
+    "source": "<SettingsScreen title={environment?.environmentLabel ?? \"Environment\"}>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+    "line": 188,
+    "source": "<SettingsSection title=\"Connection\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+    "line": 209,
+    "source": "label={environment.environmentLabel}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+    "line": 235,
+    "source": "<SettingsSection title=\"T3 Code\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+    "line": 277,
+    "source": "label={`Get help from ${managedPolicy.organization}`}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+    "line": 284,
+    "source": "label=\"Check for updates\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+    "line": 285,
+    "source": "disabled={disabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+    "line": 303,
+    "source": "label={`Update to ${checkedRelease.targetVersion}`}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+    "line": 304,
+    "source": "disabled={disabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+    "line": 310,
+    "source": "<SettingsSection title=\"Providers\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+    "line": 313,
+    "source": "label=\"Refresh providers\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+    "line": 314,
+    "source": "disabled={busy || !canRead}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+    "line": 386,
+    "source": "label={`Update ${provider.displayName ?? provider.driver}`}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+    "line": 387,
+    "source": "disabled={busy || !canManageProviders}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentsRouteScreen.tsx",
+    "line": 70,
+    "source": "updates: { readonly label: string; readonly displayUrl: string },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentsRouteScreen.tsx",
+    "line": 94,
+    "source": "title=\"Environments\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsEnvironmentsRouteScreen.tsx",
+    "line": 99,
+    "source": "disabled: isRefreshingCloud,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsFollowUpRouteScreen.tsx",
+    "line": 16,
+    "source": "readonly label: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsFollowUpRouteScreen.tsx",
+    "line": 21,
+    "source": "label: \"Queue\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsFollowUpRouteScreen.tsx",
+    "line": 26,
+    "source": "label: \"Steer\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsFollowUpRouteScreen.tsx",
+    "line": 48,
+    "source": "<SettingsSection title=\"While the agent is running\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsFollowUpRouteScreen.tsx",
+    "line": 52,
+    "source": "label={option.label}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsFollowUpRouteScreen.tsx",
+    "line": 54,
+    "source": "selected={selectedBehavior === option.behavior}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsFollowUpRouteScreen.tsx",
+    "line": 56,
+    "source": "disabled={!preferencesReady}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsFollowUpRouteScreen.tsx",
+    "line": 68,
+    "source": "return <SettingsScreen title=\"Chat\">{content}</SettingsScreen>;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsKeyboardRouteScreen.tsx",
+    "line": 21,
+    "source": "readonly label: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsKeyboardRouteScreen.tsx",
+    "line": 26,
+    "source": "label: \"Send message\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsKeyboardRouteScreen.tsx",
+    "line": 31,
+    "source": "label: \"Insert new line\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsKeyboardRouteScreen.tsx",
+    "line": 46,
+    "source": "<SettingsScreen title=\"Keyboard\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsKeyboardRouteScreen.tsx",
+    "line": 54,
+    "source": "<SettingsSection title=\"Return key\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsKeyboardRouteScreen.tsx",
+    "line": 58,
+    "source": "label={option.label}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsKeyboardRouteScreen.tsx",
+    "line": 60,
+    "source": "selected={selectedBehavior === option.behavior}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsKeyboardRouteScreen.tsx",
+    "line": 62,
+    "source": "disabled={!preferencesReady}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsLanguageRouteScreen.tsx",
+    "line": 30,
+    "source": "{ language: SYSTEM_LANGUAGE, label: gt(\"System default\") },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsLanguageRouteScreen.tsx",
+    "line": 31,
+    "source": "...SUPPORTED_LOCALES.map((locale) => ({ language: locale, label: nativeLanguageName(locale) })),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsLanguageRouteScreen.tsx",
+    "line": 35,
+    "source": "<SettingsScreen title={gt(\"Language\")}>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsLanguageRouteScreen.tsx",
+    "line": 47,
+    "source": "label={option.label}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsLanguageRouteScreen.tsx",
+    "line": 48,
+    "source": "selected={preferencesReady && language === option.language}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsLanguageRouteScreen.tsx",
+    "line": 50,
+    "source": "disabled={!preferencesReady}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNavigationRouteScreen.tsx",
+    "line": 40,
+    "source": "<SettingsScreen title=\"Navigation tabs\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNavigationRouteScreen.tsx",
+    "line": 51,
+    "source": "<SettingsSection title=\"Tab order\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNavigationRouteScreen.tsx",
+    "line": 72,
+    "source": "disabled={!ready}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNavigationRouteScreen.tsx",
+    "line": 87,
+    "source": "disabled={!ready || index === 0}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNavigationRouteScreen.tsx",
+    "line": 103,
+    "source": "disabled={!ready || index === order.length - 1}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNavigationRouteScreen.tsx",
+    "line": 120,
+    "source": "label=\"Reset tabs\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNavigationRouteScreen.tsx",
+    "line": 122,
+    "source": "disabled={!ready}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 72,
+    "source": "label: \"mobile:notification-permission\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 78,
+    "source": "reportAtomCommandResult(result, { label: \"notification permission refresh\" });"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 123,
+    "source": "<SettingsScreen title=\"Notifications\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 371,
+    "source": "label: \"live activity disable token lookup\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 392,
+    "source": "label: \"live activity disable\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 423,
+    "source": "<SettingsScreen title=\"Notifications\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 433,
+    "source": "<SettingsSection title=\"Agent activity\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 436,
+    "source": "label=\"Device Notifications\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 437,
+    "source": "disabled={"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 444,
+    "source": "value={"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 447,
+    "source": "onValueChange={handleDeviceNotificationsChange}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 450,
+    "source": "disabled={"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 458,
+    "source": "label={"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 466,
+    "source": "value={"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 471,
+    "source": "onValueChange={(enabled) => void handleLiveActivitiesChange(enabled)}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 476,
+    "source": "label=\"Turn off Live Activity preference\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx",
+    "line": 483,
+    "source": "label=\"Live Update Settings\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsOpenSourceLicensesRouteScreen.tsx",
+    "line": 41,
+    "source": "label={props.entry.name}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsOpenSourceLicensesRouteScreen.tsx",
+    "line": 54,
+    "source": "value: query,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsOpenSourceLicensesRouteScreen.tsx",
+    "line": 77,
+    "source": "<SettingsScreen title=\"Open source licenses\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsOpenSourceLicensesRouteScreen.tsx",
+    "line": 88,
+    "source": "<SettingsScreen title=\"Open source licenses\" search={search}>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsOpenSourceLicensesRouteScreen.tsx",
+    "line": 128,
+    "source": "<SettingsScreen title=\"License notice\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsOpenSourceLicensesRouteScreen.tsx",
+    "line": 139,
+    "source": "<SettingsScreen title=\"License notice\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectGroupingRouteScreen.tsx",
+    "line": 19,
+    "source": "readonly label: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectGroupingRouteScreen.tsx",
+    "line": 24,
+    "source": "label: \"Group by repository\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectGroupingRouteScreen.tsx",
+    "line": 29,
+    "source": "label: \"Group by repository path\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectGroupingRouteScreen.tsx",
+    "line": 34,
+    "source": "label: \"Keep separate\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectGroupingRouteScreen.tsx",
+    "line": 49,
+    "source": "<SettingsScreen title=\"General\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectGroupingRouteScreen.tsx",
+    "line": 57,
+    "source": "<SettingsSection title=\"Project grouping\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectGroupingRouteScreen.tsx",
+    "line": 61,
+    "source": "label={option.label}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectGroupingRouteScreen.tsx",
+    "line": 63,
+    "source": "selected={selectedMode === option.mode}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectGroupingRouteScreen.tsx",
+    "line": 65,
+    "source": "disabled={!preferencesReady}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 87,
+    "source": "<SettingsScreen title=\"Projects\" menus={[environmentMenu]}>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 156,
+    "source": "label: \"project name update\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 160,
+    "source": "label: \"project update\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 240,
+    "source": "title: plan.targetKind === \"checkout\" ? \"Remove checkout\" : \"Remove project\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 296,
+    "source": "input: { projectId: member.id, title: nextName },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 326,
+    "source": "<SettingsSection title=\"Project\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 333,
+    "source": "value={draftName ?? displayName}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 341,
+    "source": "label=\"Save\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 352,
+    "source": "<SettingsSection title=\"Organize\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 355,
+    "source": "label=\"Pin\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 361,
+    "source": "value={props.group.pinned}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 362,
+    "source": "disabled={isOrganizing || offline}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 363,
+    "source": "onValueChange={(pinned) => void organize({ pinned })}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 367,
+    "source": "label={props.group.archived ? \"Unarchive project\" : \"Archive project\"}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 373,
+    "source": "disabled={isOrganizing || offline}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 379,
+    "source": "<SettingsSection title=\"Checkouts\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 409,
+    "source": "disabled={isRemoving}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 417,
+    "source": "<SettingsSection title=\"Danger\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 420,
+    "source": "label={"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 435,
+    "source": "disabled={!canRemoveGroup || isRemoving}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 446,
+    "source": "readonly disabled: boolean;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 454,
+    "source": "disabled={props.disabled || !canRemove}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+    "line": 456,
+    "source": "className=\"self-start rounded-full border border-border bg-card px-3 py-1.5 disabled:opacity-40\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 45,
+    "source": "<SettingsScreen title=\"Providers\" menus={[environmentMenu]}>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 56,
+    "source": "<SettingsSection key={environment.environmentId} title={environment.label}>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 211,
+    "source": "function field(name: string, label: string, secret: boolean) {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 223,
+    "source": "value={values[name] ?? \"\"}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 265,
+    "source": "title: method.name,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 272,
+    "source": "title: \"Remove incomplete connection\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 273,
+    "source": "attributes: { disabled: disabled || active || !canRemoveMethod },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 276,
+    "source": "title: method.name,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 277,
+    "source": "attributes: { destructive: true, disabled: disabled || active || !canRemoveMethod },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 319,
+    "source": "title: \"Change account\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 321,
+    "source": "attributes: { disabled: signInDisabled },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 326,
+    "source": "attributes: { disabled: signInDisabled },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 337,
+    "source": "title: \"Sign out\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 339,
+    "source": "attributes: { destructive: true, disabled: disabled || state === null },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 351,
+    "source": "label=\"Docs\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 361,
+    "source": "label=\"Cancel\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 363,
+    "source": "disabled={disabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 373,
+    "source": "title={name}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 384,
+    "source": "title=\"Sign in with\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 388,
+    "source": "<ControlPill variant=\"primary\" label=\"Sign in\" accessibilityLabel={`Sign in to ${name}`} />"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 393,
+    "source": "label={usesCredentials ? \"Connect\" : \"Sign in\"}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 395,
+    "source": "disabled={signInDisabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 433,
+    "source": "label=\"Send response\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 434,
+    "source": "disabled={disabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 450,
+    "source": "label=\"Connect\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 451,
+    "source": "disabled={disabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 465,
+    "source": "label=\"Continue\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 466,
+    "source": "disabled={disabled || !values.callback?.trim()}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 491,
+    "source": "label=\"Open sign-in page\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsProviderAccountsRouteScreen.tsx",
+    "line": 492,
+    "source": "disabled={disabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 42,
+    "source": "return <SettingsListScreen sidebar={list.sidebar} selected={list.selected} />;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 49,
+    "source": "<SettingsSidebarContext value={list.sidebar ? { selected: list.selected } : null}>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 79,
+    "source": "readonly selected: string | null;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 90,
+    "source": "readonly selected: string | null;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 96,
+    "source": "<SettingsSidebarContext value={props.sidebar ? { selected: props.selected } : null}>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 99,
+    "source": "title={gt(\"Settings\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 105,
+    "source": "value: workspace.state.tabs.settings.query,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 145,
+    "source": "label: gt(\"T3 Account\"),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 146,
+    "source": "value: accountLabel,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 147,
+    "source": "disabled: !isLoaded,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 154,
+    "source": "label: gt(\"Notifications\"),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 172,
+    "source": "function environmentsRow(label: string, count: number): SettingsListRow {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 177,
+    "source": "value: `${count}`,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 199,
+    "source": "{ title: gt(\"Connections\"), rows: props.connections },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 224,
+    "source": "<SettingsSection key={section.title ?? `untitled-${index}`} title={section.title}>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 233,
+    "source": "title={gt(\"No results\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 265,
+    "source": "label: string,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 268,
+    "source": "const serverPage = (target: SettingsPageTarget, icon: SettingsListRow[\"icon\"], label: string) =>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 269,
+    "source": "page(target, icon, label, { disabled: noServerTargets });"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 277,
+    "source": "value: SUPPORTED_LOCALES.includes(language)"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 290,
+    "source": "title: gt(\"Agents\"),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 298,
+    "source": "title: gt(\"Code\"),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 304,
+    "source": "selectedProjectKey !== null ? { value: projectLabel } : undefined,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsRouteScreen.tsx",
+    "line": 335,
+    "source": "label: WORKSPACE_TAB_LABELS[tab],"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 109,
+    "source": "{ index: 1, label: \"Mon\" },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 110,
+    "source": "{ index: 2, label: \"Tue\" },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 111,
+    "source": "{ index: 3, label: \"Wed\" },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 112,
+    "source": "{ index: 4, label: \"Thu\" },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 113,
+    "source": "{ index: 5, label: \"Fri\" },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 114,
+    "source": "{ index: 6, label: \"Sat\" },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 115,
+    "source": "{ index: 0, label: \"Sun\" },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 136,
+    "source": "function formatTime(value: string): string {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 144,
+    "source": "function formatRunAtDate(value: Date): string {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 148,
+    "source": "function formatRunAtTime(value: Date): string {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 152,
+    "source": "function timePickerValue(value: string): Date {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 176,
+    "source": "readonly label: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 177,
+    "source": "readonly value: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 178,
+    "source": "readonly onChange: (value: string) => void;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 193,
+    "source": "value={props.value}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 207,
+    "source": "readonly label: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 208,
+    "source": "readonly value: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 273,
+    "source": "readonly disabled: boolean;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 274,
+    "source": "readonly onChange: ("
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 291,
+    "source": "disabled={props.disabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 302,
+    "source": "label=\"Path\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 303,
+    "source": "value={filter.path}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 305,
+    "source": "disabled={props.disabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 306,
+    "source": "onChange={(path) => update(filter.id, { path })}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 309,
+    "source": "label=\"Test\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 310,
+    "source": "value={WEBHOOK_FILTER_OPS.find((option) => option.op === filter.op)?.label ?? \"\"}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 313,
+    "source": "title: option.label,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 323,
+    "source": "label={filter.op === \"in\" ? \"Values, comma-separated\" : \"Value\"}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 324,
+    "source": "value={filter.value}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 326,
+    "source": "disabled={props.disabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 327,
+    "source": "onChange={(value) => update(filter.id, { value })}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 335,
+    "source": "disabled={props.disabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 362,
+    "source": "readonly label: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 363,
+    "source": "readonly value: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 372,
+    "source": "accessibilityState={{ disabled: props.disabled }}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 373,
+    "source": "disabled={props.disabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 377,
+    "source": "? \"min-h-14 flex-row items-center gap-3 border-t border-border-subtle px-4 py-3 active:opacity-70 disabled:opacity-50\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 378,
+    "source": ": \"min-h-14 flex-row items-center gap-3 px-4 py-3 active:opacity-70 disabled:opacity-50\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 434,
+    "source": "title=\"Scheduled tasks\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 439,
+    "source": "disabled: visibleEnvironments.length === 0,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 494,
+    "source": "return <SettingsScheduledTaskEditorScreen title=\"New scheduled task\" />;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 498,
+    "source": "return <SettingsScheduledTaskEditorScreen title=\"Edit scheduled task\" />;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 501,
+    "source": "function SettingsScheduledTaskEditorScreen({ title }: { readonly title: string }) {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 533,
+    "source": "label: editor?.draft.title.trim() || title,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 544,
+    "source": "disabled: saving,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 571,
+    "source": "title={title}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 599,
+    "source": "value={prompt}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 600,
+    "source": "onChange={setPrompt}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 603,
+    "source": "disabled={saving}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 635,
+    "source": "title: current.draft.title,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 711,
+    "source": "label: \"scheduled task upsert\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 726,
+    "source": "const failure = (title: string, result: AtomCommandResult<unknown, unknown>) => {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 805,
+    "source": "title: draft.title.trim(),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 860,
+    "source": "label=\"Runs on\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 861,
+    "source": "value={environmentLabel}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 874,
+    "source": "title: target.label,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 888,
+    "source": "<SettingsSection title=\"Task\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 890,
+    "source": "label=\"Name\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 891,
+    "source": "disabled={saving}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 892,
+    "source": "value={draft.title}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 894,
+    "source": "onChange={(title) => setDraft((current) => ({ ...current, title }))}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 899,
+    "source": "<SettingsSection title=\"Context\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 901,
+    "source": "label=\"Project\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 902,
+    "source": "value={"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 908,
+    "source": "title: project.title,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 935,
+    "source": "label=\"Model\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 937,
+    "source": "value={"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 948,
+    "source": "disabled={"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 955,
+    "source": "title=\"Destination\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 970,
+    "source": "label=\"Runs go to\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 971,
+    "source": "value={THREAD_MODE_LABELS[draft.threadMode]}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 975,
+    "source": "title: THREAD_MODE_LABELS[mode],"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 989,
+    "source": "label=\"Thread\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 991,
+    "source": "value={"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 997,
+    "source": "disabled={!draft.projectId || saving || dictationPending || environmentUnavailable}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1002,
+    "source": "<SettingsSection title=\"Workspace\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1004,
+    "source": "label=\"Run in\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1005,
+    "source": "value={"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1015,
+    "source": "title: \"New worktree\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1020,
+    "source": "title: \"Project checkout\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1025,
+    "source": "title: \"Specific checkout\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1036,
+    "source": "label=\"Base branch\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1037,
+    "source": "value={resolveNewTaskBranchLabel({"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1043,
+    "source": "disabled={!draft.projectId || saving || dictationPending || environmentUnavailable}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1049,
+    "source": "label=\"Checkout path\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1050,
+    "source": "disabled={saving}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1051,
+    "source": "value={draft.checkoutPath}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1053,
+    "source": "onChange={(checkoutPath) =>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1063,
+    "source": "<SettingsSection title=\"Schedule\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1067,
+    "source": "options={["
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1068,
+    "source": "{ value: \"fixed_time\", label: \"At a time\" },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1071,
+    "source": "? [{ value: \"once\" as const, label: \"Once\" }]"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1073,
+    "source": "{ value: \"interval\", label: \"Interval\" },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1075,
+    "source": "? [{ value: \"webhook\" as const, label: \"On webhook\" }]"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1078,
+    "source": "selected={draft.schedule.mode}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1129,
+    "source": "value={timePickerValue(draft.schedule.timeOfDay)}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1133,
+    "source": "onValueChange={(_, selected) => {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1143,
+    "source": "label=\"Repeat\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1144,
+    "source": "value={repeatLabel(draft.schedule.weekdays)}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1149,
+    "source": "title: \"Every day\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1154,
+    "source": "title: \"Weekdays\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1159,
+    "source": "title: day.label,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1219,
+    "source": "value={runAt}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1223,
+    "source": "onValueChange={(_, selected) => {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1247,
+    "source": "disabled={!canOperate || saving || environmentUnavailable}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1250,
+    "source": "label=\"Skip requests older than (minutes)\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1251,
+    "source": "value={draft.schedule.maxDeliveryAgeMinutes}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1254,
+    "source": "disabled={saving}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1256,
+    "source": "onChange={(maxDeliveryAgeMinutes) =>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1265,
+    "source": "disabled={saving}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1266,
+    "source": "onChange={(update) =>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1274,
+    "source": "label=\"Duplicate request key\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1275,
+    "source": "value={draft.schedule.replayKey}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1277,
+    "source": "disabled={saving}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1279,
+    "source": "onChange={(replayKey) =>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1290,
+    "source": "label=\"Coalesce key template\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1291,
+    "source": "value={draft.schedule.coalesceKey}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1293,
+    "source": "disabled={saving}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1295,
+    "source": "onChange={(coalesceKey) =>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1303,
+    "source": "label=\"Coalesce window (seconds, 10–3600)\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1304,
+    "source": "value={draft.schedule.coalesceWindowSeconds}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1307,
+    "source": "disabled={saving}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1309,
+    "source": "onChange={(coalesceWindowSeconds) =>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1324,
+    "source": "label=\"Minutes between runs\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1325,
+    "source": "value={draft.schedule.intervalMinutes}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1327,
+    "source": "disabled={saving}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1329,
+    "source": "onChange={(intervalMinutes) =>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1355,
+    "source": "value={draft.enabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1356,
+    "source": "onValueChange={(enabled) => setDraft((current) => ({ ...current, enabled }))}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1370,
+    "source": "disabled={"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1379,
+    "source": "label={saving ? \"Saving…\" : draft.task ? \"Save changes\" : \"Create task\"}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1394,
+    "source": "readonly disabled: boolean;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1398,
+    "source": "label: \"scheduled task rotate webhook token\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1421,
+    "source": "disabled={!resolved.copyable}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1436,
+    "source": "label={rotating ? \"Rotating…\" : \"Rotate URL\"}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1438,
+    "source": "disabled={disabled || rotating}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1495,
+    "source": "label: \"scheduled task enabled\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1499,
+    "source": "label: \"scheduled task run\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1503,
+    "source": "label: \"scheduled task delete\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1507,
+    "source": "const failure = (title: string, result: AtomCommandResult<unknown, unknown>) => {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1526,
+    "source": "title={environment.label}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1587,
+    "source": "{ id: \"edit\", title: \"Edit\" },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1589,
+    "source": "? [{ id: \"thread\", title: \"Open thread\" }]"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1593,
+    "source": "title: task.enabled ? \"Pause\" : \"Resume\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1594,
+    "source": "attributes: { disabled: !canOperate },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1598,
+    "source": ": [{ id: \"run\", title: \"Run now\", attributes: { disabled: !canOperate } }]),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1601,
+    "source": "title: \"Delete\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+    "line": 1602,
+    "source": "attributes: { destructive: true, disabled: !canOperate },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 80,
+    "source": "readonly label: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 85,
+    "source": "label: \"Inherit\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 88,
+    "source": "{ mode: \"recursive\", label: \"Recursive\", description: \"Initialize nested submodules too.\" },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 91,
+    "source": "label: \"Top level only\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 94,
+    "source": "{ mode: \"none\", label: \"Skip\", description: \"Leave submodules empty for a setup script.\" },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 99,
+    "source": "readonly label: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 104,
+    "source": "label: \"Inherit\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 109,
+    "source": "label: \"Current checkout\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 114,
+    "source": "label: \"New worktree\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 121,
+    "source": "readonly label: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 126,
+    "source": "label: \"After the turn\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 131,
+    "source": "label: \"Finished paragraphs\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 286,
+    "source": "<SettingsScreen title={PAGE_TITLES[props.page]} menus={[environmentMenu]}>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 310,
+    "source": "disabled={!canWriteSettings}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 317,
+    "source": "title=\"Default workspace\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 330,
+    "source": "label={choice.label}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 332,
+    "source": "selected={"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 337,
+    "source": "disabled={disabledFor(\"defaultThreadEnvMode\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 343,
+    "source": "title=\"Default permissions\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 354,
+    "source": "label={choice.label}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 356,
+    "source": "selected={uniform(\"defaultRuntimeMode\") === choice.mode}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 358,
+    "source": "disabled={"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 366,
+    "source": "title=\"Response streaming\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 377,
+    "source": "label={choice.label}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 379,
+    "source": "selected={uniform(\"responseStreamingMode\") === choice.mode}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 381,
+    "source": "disabled={disabledFor(\"responseStreamingMode\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 386,
+    "source": "<SettingsSection title=\"Preview browser\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 389,
+    "source": "label=\"Agent browser access\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 394,
+    "source": "value={uniform(\"enableAgentBrowserAccess\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 395,
+    "source": "disabled={disabledFor(\"enableAgentBrowserAccess\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 396,
+    "source": "onValueChange={(value) => write({ enableAgentBrowserAccess: value })}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 412,
+    "source": "<SettingsSection title=\"Project sources\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 423,
+    "source": "label={definition.pickerLabel}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 424,
+    "source": "value={"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 427,
+    "source": "disabled={disabledFor(\"offeredSourceControlProviders\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 428,
+    "source": "onValueChange={(value) =>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 436,
+    "source": "<SettingsSection title=\"Pull requests\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 439,
+    "source": "label=\"Remove agent credits when merging\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 444,
+    "source": "value={uniform(\"removeAgentCreditsOnMerge\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 445,
+    "source": "disabled={disabledFor(\"removeAgentCreditsOnMerge\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 446,
+    "source": "onValueChange={(value) => write({ removeAgentCreditsOnMerge: value })}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 449,
+    "source": "<SettingsSection title=\"Default branch\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 452,
+    "source": "label=\"Automatically pull\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 457,
+    "source": "value={uniform(\"defaultAutoPull\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 458,
+    "source": "disabled={disabledFor(\"defaultAutoPull\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 459,
+    "source": "onValueChange={(value) => write({ defaultAutoPull: value })}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 462,
+    "source": "<SettingsSection title=\"Clones\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 465,
+    "source": "label=\"Clone into host folders\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 467,
+    "source": "value={uniform(\"ghqCloneLayout\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 468,
+    "source": "disabled={disabledFor(\"ghqCloneLayout\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 469,
+    "source": "onValueChange={(value) => write({ ghqCloneLayout: value })}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 477,
+    "source": "<SettingsSection title=\"New worktrees\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 480,
+    "source": "label=\"Start from remote\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 485,
+    "source": "value={uniform(\"newWorktreesStartFromOrigin\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 486,
+    "source": "disabled={disabledFor(\"newWorktreesStartFromOrigin\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 487,
+    "source": "onValueChange={(value) => write({ newWorktreesStartFromOrigin: value })}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 491,
+    "source": "title=\"Worktree submodules\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 504,
+    "source": "label={choice.label}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 506,
+    "source": "selected={"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 511,
+    "source": "disabled={disabledFor(\"worktreeSubmodules\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 521,
+    "source": "disabled={{"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 526,
+    "source": "onChange={write}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 542,
+    "source": "<SettingsSection title=\"Manage environments\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 547,
+    "source": "label={target.label}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 548,
+    "source": "value=\"Server and provider updates\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 558,
+    "source": "<SettingsSection title=\"Updates\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 561,
+    "source": "label=\"Check provider updates\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 568,
+    "source": "value={uniform(\"enableProviderUpdateChecks\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 569,
+    "source": "disabled={disabledFor(\"enableProviderUpdateChecks\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 570,
+    "source": "onValueChange={(value) => write({ enableProviderUpdateChecks: value })}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 575,
+    "source": "label=\"Continue after restart\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 580,
+    "source": "value={uniform(\"continueThreadsAfterServerUpdate\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 581,
+    "source": "disabled={disabledFor(\"continueThreadsAfterServerUpdate\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 582,
+    "source": "onValueChange={(value) => write({ continueThreadsAfterServerUpdate: value })}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 588,
+    "source": "label=\"Keep awake while agents work\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 595,
+    "source": "value={uniform(\"keepAwakeWhileAgentsWork\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 596,
+    "source": "disabled={disabledFor(\"keepAwakeWhileAgentsWork\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+    "line": 597,
+    "source": "onValueChange={(value) => write({ keepAwakeWhileAgentsWork: value })}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceModelsRouteScreen.tsx",
+    "line": 51,
+    "source": "title=\"Transcription models\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceModelsRouteScreen.tsx",
+    "line": 96,
+    "source": "title={needle ? \"No models match\" : \"No transcription models\"}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 59,
+    "source": "label: \"mobile:microphone-permission\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 77,
+    "source": "readonly label: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 84,
+    "source": "label: \"Wired\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 90,
+    "source": "label: \"Bluetooth\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 99,
+    "source": "label: \"Built-in\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 105,
+    "source": "label: \"CarPlay\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 134,
+    "source": "selected: boolean;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 143,
+    "source": "label={environment.label}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 144,
+    "source": "selected={selected}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 145,
+    "source": "disabled={!usable}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 158,
+    "source": "title: `Send microphone audio to ${environment.label}?`,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 186,
+    "source": "<SettingsSection title={`Method on ${environment.label}`}>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 189,
+    "source": "label={environment.label}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 190,
+    "source": "selected={destination?.kind === \"environment\"}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 271,
+    "source": "<SettingsScreen title=\"Voice\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 279,
+    "source": "<SettingsSection title=\"Transcribe on\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 281,
+    "source": "label=\"This device\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 283,
+    "source": "selected={!grant && !sheetEnvironment}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 294,
+    "source": "selected={"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 304,
+    "source": "label=\"Previously selected environment\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 328,
+    "source": "<SettingsSection title=\"Microphone access\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 331,
+    "source": "label={permission === \"ask\" ? \"Allow microphone access\" : \"Open Settings\"}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 344,
+    "source": "<SettingsSection title=\"Preferred order\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 425,
+    "source": "accessibilityActions={onForget ? [{ name: \"forget\", label: \"Forget\" }] : undefined}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 433,
+    "source": "label={title}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 439,
+    "source": "title={title}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+    "line": 469,
+    "source": "label: \"Forget\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsWorkspaceLayout.android.tsx",
+    "line": 28,
+    "source": "<PaneContext value=\"sidebar\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsWorkspaceLayout.android.tsx",
+    "line": 29,
+    "source": "<NavigationRouteContext value={route}>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsWorkspaceLayout.android.tsx",
+    "line": 30,
+    "source": "<SettingsListScreen sidebar selected={root?.settingsPage ?? null} />"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsWorkspaceLayout.android.tsx",
+    "line": 49,
+    "source": "<NavigationRouteContext value={route}>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/SettingsWorkspaceLayout.android.tsx",
+    "line": 50,
+    "source": "<SettingsScreen title=\"Settings\" workspaceRoot>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 38,
+    "source": "<SettingsScreen title=\"Labs\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 47,
+    "source": "title=\"Linked environments\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 50,
+    "source": "setting=\"linkedEnvironmentsEnabled\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 54,
+    "source": "title=\"Fast worktree checkout\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 57,
+    "source": "setting=\"fastWorktreeCheckout\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 116,
+    "source": "label: target.environment.label,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 129,
+    "source": "<SettingsSection title=\"Usage limits\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 132,
+    "source": "label=\"Resume after usage limits\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 134,
+    "source": "value={uniformMobileSetting(displayTargets, \"autoResumeLimitedThreads\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 135,
+    "source": "disabled={disabledFor(\"autoResumeLimitedThreads\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 136,
+    "source": "onValueChange={(value) => writeToAll({ autoResumeLimitedThreads: value })}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 140,
+    "source": "label=\"Snooze until limits reset\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 142,
+    "source": "value={uniformMobileSetting(displayTargets, \"snoozeLimitedThreads\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 143,
+    "source": "disabled={disabledFor(\"snoozeLimitedThreads\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 144,
+    "source": "onValueChange={(value) => writeToAll({ snoozeLimitedThreads: value })}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 148,
+    "source": "<SettingsSection title=\"Auto-settle\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 151,
+    "source": "label=\"Auto-settle merged threads\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 152,
+    "source": "value={referenceSettings.sidebarAutoSettleOnMerge}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 153,
+    "source": "disabled={disabledFor(\"sidebarAutoSettleOnMerge\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 154,
+    "source": "onValueChange={(value) => writeToAll({ sidebarAutoSettleOnMerge: value })}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 158,
+    "source": "label=\"Auto-settle inactive threads\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 159,
+    "source": "value={afterDays !== null}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 160,
+    "source": "disabled={disabledFor(\"sidebarAutoSettleAfterDays\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 161,
+    "source": "onValueChange={(value) =>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 170,
+    "source": "value={afterDays}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 171,
+    "source": "disabled={disabledFor(\"sidebarAutoSettleAfterDays\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 172,
+    "source": "onValueChange={(value) => writeToAll({ sidebarAutoSettleAfterDays: value })}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 178,
+    "source": "<SettingsSection title=\"Across environments\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 185,
+    "source": "label=\"Apply auto-settle defaults\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 187,
+    "source": "disabled={disabledFor(\"sidebarAutoSettleOnMerge\", \"sidebarAutoSettleAfterDays\")}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 205,
+    "source": "<SettingsSection title=\"Sidebar\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 208,
+    "source": "label=\"Working section\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 209,
+    "source": "value={workingShelfEnabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 210,
+    "source": "onValueChange={(value) => savePreferences({ workingShelfEnabled: value })}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 229,
+    "source": "<SettingsSection title=\"New threads\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 232,
+    "source": "label=\"Use last project\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 234,
+    "source": "value={useLastProject}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 235,
+    "source": "onValueChange={(value) => savePreferences({ useLastProjectForNewThreads: value })}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 251,
+    "source": "readonly title: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 254,
+    "source": "readonly setting: MachineBetaSetting;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 265,
+    "source": "label: `${setting} beta update`,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 271,
+    "source": "<SettingsSection title={`Beta: ${title}`}>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 279,
+    "source": "label={environment.label}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 281,
+    "source": "value={environment.serverConfig?.settings[setting] === true}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 282,
+    "source": "disabled={managed || !writable.has(environment.environmentId)}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+    "line": 283,
+    "source": "onValueChange={(value) =>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/VoiceModelSection.tsx",
+    "line": 36,
+    "source": "export function useVoiceModels(environmentId: EnvironmentId, label: string) {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/VoiceModelSection.tsx",
+    "line": 58,
+    "source": "const run = async (title: string, work: () => Promise<unknown>, downloadId?: string) => {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/VoiceModelSection.tsx",
+    "line": 85,
+    "source": "title: `Download ${model.name}?`,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/VoiceModelSection.tsx",
+    "line": 229,
+    "source": "label={model.name}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/VoiceModelSection.tsx",
+    "line": 232,
+    "source": "selected={model.active}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/VoiceModelSection.tsx",
+    "line": 234,
+    "source": "disabled={!voice.canManage || voice.busy || voice.downloading}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/VoiceModelSection.tsx",
+    "line": 244,
+    "source": "label={model.name}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/VoiceModelSection.tsx",
+    "line": 250,
+    "source": "disabled={!voice.canManage || voice.busy}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/VoiceModelSection.tsx",
+    "line": 255,
+    "source": "value={model.state === \"verifying\" ? undefined : progress}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/VoiceModelSection.tsx",
+    "line": 256,
+    "source": "label={`${model.name} download progress`}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/VoiceModelSection.tsx",
+    "line": 264,
+    "source": "label={model.name}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/VoiceModelSection.tsx",
+    "line": 267,
+    "source": "disabled={!voice.canManage || voice.busy || voice.downloading}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/VoiceModelSection.tsx",
+    "line": 277,
+    "source": "readonly label: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/VoiceModelSection.tsx",
+    "line": 278,
+    "source": "readonly selected: boolean;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/VoiceModelSection.tsx",
+    "line": 289,
+    "source": "label=\"Local model\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/VoiceModelSection.tsx",
+    "line": 297,
+    "source": "selected={props.selected}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/VoiceModelSection.tsx",
+    "line": 309,
+    "source": "label={active?.model ?? \"Local model\"}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/VoiceModelSection.tsx",
+    "line": 321,
+    "source": "selected={props.selected}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 53,
+    "source": "readonly setAndroidNavigationStyle: (value: AndroidNavigationStyle) => void;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 65,
+    "source": "value: MobileThemeId,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 67,
+    "source": "readonly setThemeIdForBothAppearances: (value: MobileThemeId) => void;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 68,
+    "source": "readonly setThemeMode: (value: MobileThemeMode) => void;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 69,
+    "source": "readonly setBaseFontSize: (value: number) => void;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 70,
+    "source": "readonly setTerminalFontSize: (value: number | null) => void;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 71,
+    "source": "readonly setCodeFontSize: (value: number | null) => void;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 72,
+    "source": "readonly setCodeWordBreak: (value: boolean) => void;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 74,
+    "source": "readonly setMathRenderingEnabled: (value: boolean) => void;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 234,
+    "source": "const setThemeIdForAppearance = (appearance: MobileThemeAppearance, value: MobileThemeId) => {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 245,
+    "source": "const setThemeIdForBothAppearances = (value: MobileThemeId) => {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 249,
+    "source": "const setThemeMode = (value: MobileThemeMode) => {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 272,
+    "source": "const setAndroidNavigationStyle = (value: AndroidNavigationStyle) =>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 275,
+    "source": "const setBaseFontSize = (value: number) => {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 280,
+    "source": "const setTerminalFontSize = (value: number | null) => {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 284,
+    "source": "const setCodeFontSize = (value: number | null) => {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 288,
+    "source": "const setCodeWordBreak = (value: boolean) => {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 293,
+    "source": "const setMathRenderingEnabled = (value: boolean) =>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/AppearancePreferencesProvider.tsx",
+    "line": 347,
+    "source": "<AppearancePreferencesContext.Provider value={value}>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/AndroidNavigationAppearanceSection.tsx",
+    "line": 10,
+    "source": "<SettingsSection title=\"Navigation\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/AndroidNavigationAppearanceSection.tsx",
+    "line": 13,
+    "source": "label=\"One UI\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/AndroidNavigationAppearanceSection.tsx",
+    "line": 15,
+    "source": "disabled={!isReady}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/AndroidNavigationAppearanceSection.tsx",
+    "line": 16,
+    "source": "selected={androidNavigationStyle === \"one-ui\"}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/AndroidNavigationAppearanceSection.tsx",
+    "line": 20,
+    "source": "label=\"Material\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/AndroidNavigationAppearanceSection.tsx",
+    "line": 22,
+    "source": "disabled={!isReady}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/AndroidNavigationAppearanceSection.tsx",
+    "line": 23,
+    "source": "selected={androidNavigationStyle === \"material\"}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/CodeAppearanceSection.tsx",
+    "line": 24,
+    "source": "<SettingsSection title=\"Code & Diffs\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/CodeAppearanceSection.tsx",
+    "line": 31,
+    "source": "disabled={!isReady}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/CodeAppearanceSection.tsx",
+    "line": 33,
+    "source": "label=\"Custom font size\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/CodeAppearanceSection.tsx",
+    "line": 34,
+    "source": "onValueChange={handleToggleCustom}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/CodeAppearanceSection.tsx",
+    "line": 35,
+    "source": "value={custom}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/CodeAppearanceSection.tsx",
+    "line": 39,
+    "source": "disabled={!isReady}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/CodeAppearanceSection.tsx",
+    "line": 41,
+    "source": "label=\"Font size\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/CodeAppearanceSection.tsx",
+    "line": 44,
+    "source": "onChange={setCodeFontSize}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/CodeAppearanceSection.tsx",
+    "line": 46,
+    "source": "value={appearance.codeFontSize}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/CodeAppearanceSection.tsx",
+    "line": 51,
+    "source": "disabled={!isReady}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/CodeAppearanceSection.tsx",
+    "line": 53,
+    "source": "label=\"Word break\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/CodeAppearanceSection.tsx",
+    "line": 54,
+    "source": "onValueChange={setCodeWordBreak}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/CodeAppearanceSection.tsx",
+    "line": 55,
+    "source": "value={appearance.codeWordBreak}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/TerminalAppearanceSection.tsx",
+    "line": 24,
+    "source": "<SettingsSection title=\"Terminal\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/TerminalAppearanceSection.tsx",
+    "line": 28,
+    "source": "disabled={!isReady}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/TerminalAppearanceSection.tsx",
+    "line": 30,
+    "source": "label=\"Custom font size\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/TerminalAppearanceSection.tsx",
+    "line": 31,
+    "source": "onValueChange={handleToggleCustom}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/TerminalAppearanceSection.tsx",
+    "line": 32,
+    "source": "value={custom}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/TerminalAppearanceSection.tsx",
+    "line": 36,
+    "source": "disabled={!isReady}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/TerminalAppearanceSection.tsx",
+    "line": 38,
+    "source": "label=\"Font size\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/TerminalAppearanceSection.tsx",
+    "line": 41,
+    "source": "onChange={setTerminalFontSize}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/TerminalAppearanceSection.tsx",
+    "line": 43,
+    "source": "value={appearance.terminalFontSize}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/TextAppearanceSection.tsx",
+    "line": 20,
+    "source": "<SettingsSection title=\"Text\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/TextAppearanceSection.tsx",
+    "line": 24,
+    "source": "disabled={!isReady}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/TextAppearanceSection.tsx",
+    "line": 26,
+    "source": "label=\"Text size\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/TextAppearanceSection.tsx",
+    "line": 29,
+    "source": "onChange={setBaseFontSize}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/TextAppearanceSection.tsx",
+    "line": 31,
+    "source": "value={appearance.baseFontSize}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/TextAppearanceSection.tsx",
+    "line": 35,
+    "source": "disabled={!isReady}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/TextAppearanceSection.tsx",
+    "line": 37,
+    "source": "label=\"Render math\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/TextAppearanceSection.tsx",
+    "line": 38,
+    "source": "value={mathRenderingEnabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/TextAppearanceSection.tsx",
+    "line": 39,
+    "source": "onValueChange={setMathRenderingEnabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 24,
+    "source": "readonly label: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 26,
+    "source": "{ id: \"system\", label: \"System\" },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 27,
+    "source": "{ id: \"light\", label: \"Light\" },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 28,
+    "source": "{ id: \"dark\", label: \"Dark\" },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 31,
+    "source": "const previewPercentage = (value: number) => `${value * 100}%`;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 117,
+    "source": "readonly disabled: boolean;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 119,
+    "source": "readonly label: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 125,
+    "source": "const choice = (appearance: MobileThemeAppearance, selected: boolean) => ("
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 130,
+    "source": "accessibilityState={{ disabled: props.disabled, selected }}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 135,
+    "source": "disabled={props.disabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 160,
+    "source": "disabled: props.disabled,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 161,
+    "source": "selected: props.lightSelected && props.darkSelected,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 164,
+    "source": "disabled={props.disabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 248,
+    "source": "readonly disabled: boolean;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 249,
+    "source": "readonly label: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 252,
+    "source": "readonly selected: boolean;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 259,
+    "source": "accessibilityState={{ checked: props.selected, disabled: props.disabled }}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 266,
+    "source": "disabled={props.disabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 305,
+    "source": "disabled={!isReady}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 307,
+    "source": "label={mode.label}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 310,
+    "source": "selected={mode.id === themeMode}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 324,
+    "source": "disabled={!isReady}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ThemeAppearanceSection.tsx",
+    "line": 326,
+    "source": "label={theme.label}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ToolCallsAppearanceSection.tsx",
+    "line": 12,
+    "source": "readonly value: ToolCallVisibility;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ToolCallsAppearanceSection.tsx",
+    "line": 13,
+    "source": "readonly label: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ToolCallsAppearanceSection.tsx",
+    "line": 15,
+    "source": "{ value: \"showAll\", label: \"Show all\" },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ToolCallsAppearanceSection.tsx",
+    "line": 16,
+    "source": "{ value: \"hideSuccessful\", label: \"Hide successful\" },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ToolCallsAppearanceSection.tsx",
+    "line": 17,
+    "source": "{ value: \"hideAll\", label: \"Hide all\" },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ToolCallsAppearanceSection.tsx",
+    "line": 18,
+    "source": "{ value: \"zen\", label: \"Zen\" },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ToolCallsAppearanceSection.tsx",
+    "line": 30,
+    "source": "<SettingsSection title=\"Tool calls in chat\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ToolCallsAppearanceSection.tsx",
+    "line": 34,
+    "source": "label={option.label}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ToolCallsAppearanceSection.tsx",
+    "line": 35,
+    "source": "selected={selected === option.value}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/appearance/sections/ToolCallsAppearanceSection.tsx",
+    "line": 37,
+    "source": "disabled={selected === null}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/autoSettleSettingsSync.ts",
+    "line": 11,
+    "source": "readonly label: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/AutoSettleDaysField.tsx",
+    "line": 19,
+    "source": "label=\"Days before auto-settle\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/BranchNamingSettings.tsx",
+    "line": 10,
+    "source": "static: { label: \"Static prefix\", description: \"Add your prefix to the generated branch name.\" },"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/BranchNamingSettings.tsx",
+    "line": 12,
+    "source": "label: \"Semantic prefix\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/BranchNamingSettings.tsx",
+    "line": 16,
+    "source": "label: \"Custom instructions\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/BranchNamingSettings.tsx",
+    "line": 19,
+    "source": "} satisfies Record<BranchNamingMode, { label: string; description: string }>;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/BranchNamingSettings.tsx",
+    "line": 26,
+    "source": "disabled: Readonly<Record<\"mode\" | \"prefix\" | \"instructions\", boolean>>;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/BranchNamingSettings.tsx",
+    "line": 27,
+    "source": "onChange: (patch: ServerSettingsPatch) => void;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/BranchNamingSettings.tsx",
+    "line": 37,
+    "source": "// Drop a draft typed over an older saved value: the updated value has already remounted its input."
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/BranchNamingSettings.tsx",
+    "line": 58,
+    "source": "title=\"Worktree branch naming\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/BranchNamingSettings.tsx",
+    "line": 66,
+    "source": "label={MODES[mode].label}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/BranchNamingSettings.tsx",
+    "line": 68,
+    "source": "selected={props.mode === mode}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/BranchNamingSettings.tsx",
+    "line": 70,
+    "source": "disabled={props.disabled.mode}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/DatabaseStorageNotice.tsx",
+    "line": 33,
+    "source": "title=\"Reclaim database space\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/DatabaseStorageNotice.tsx",
+    "line": 40,
+    "source": "label={targets.find((target) => target.environmentId === environmentId)?.label ?? \"\"}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/DatabaseStorageNotice.tsx",
+    "line": 48,
+    "source": "label=\"Dismiss\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/ScheduledTaskPromptField.tsx",
+    "line": 17,
+    "source": "readonly value: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/ScheduledTaskPromptField.tsx",
+    "line": 18,
+    "source": "readonly onChange: (value: string) => void;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/ScheduledTaskPromptField.tsx",
+    "line": 21,
+    "source": "readonly disabled: boolean;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/ScheduledTaskPromptField.tsx",
+    "line": 35,
+    "source": "value={props.value}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/ScheduledTaskPromptField.tsx",
+    "line": 51,
+    "source": "disabled={props.disabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/ScheduledTaskPromptField.tsx",
+    "line": 75,
+    "source": "disabled={props.disabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsDragHandle.tsx",
+    "line": 8,
+    "source": "readonly title: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsDragHandle.tsx",
+    "line": 40,
+    "source": "...(props.canMoveUp ? [{ name: \"decrement\", label: \"Move up\" }] : []),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsDragHandle.tsx",
+    "line": 41,
+    "source": "...(props.canMoveDown ? [{ name: \"increment\", label: \"Move down\" }] : []),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsEnvironmentFilterHeader.tsx",
+    "line": 20,
+    "source": "title: \"Filter settings environments and projects\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsEnvironmentFilterHeader.tsx",
+    "line": 28,
+    "source": "title:"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsEnvironmentFilterHeader.tsx",
+    "line": 35,
+    "source": "title: \"All connected environments\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsEnvironmentFilterHeader.tsx",
+    "line": 36,
+    "source": "selected: selectedIds === null,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsEnvironmentFilterHeader.tsx",
+    "line": 41,
+    "source": "title: entry.label,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsEnvironmentFilterHeader.tsx",
+    "line": 44,
+    "source": "selected: selectedIds === null || selectedIds.has(entry.environmentId),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsEnvironmentFilterHeader.tsx",
+    "line": 51,
+    "source": "title:"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsEnvironmentFilterHeader.tsx",
+    "line": 57,
+    "source": "title: \"All projects\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsEnvironmentFilterHeader.tsx",
+    "line": 58,
+    "source": "selected: selectedProjectKey === null,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsEnvironmentFilterHeader.tsx",
+    "line": 63,
+    "source": "title: projectMenuLabel(group),"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsEnvironmentFilterHeader.tsx",
+    "line": 64,
+    "source": "selected: selectedProjectKey === group.key,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsEnvironmentFilterHeader.tsx",
+    "line": 73,
+    "source": "const projectMenuLabel = (group: { readonly label: string; readonly archived: boolean }) =>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsLegalDocumentRouteScreen.tsx",
+    "line": 32,
+    "source": "title={documentName}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsLegalDocumentRouteScreen.tsx",
+    "line": 70,
+    "source": "label=\"Try Again\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsProjectOverridesSection.tsx",
+    "line": 15,
+    "source": "<SettingsSection title=\"Project\">"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsProjectOverridesSection.tsx",
+    "line": 22,
+    "source": "label=\"Use defaults\""
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsProjectOverridesSection.tsx",
+    "line": 25,
+    "source": "disabled={props.disabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsRow.tsx",
+    "line": 16,
+    "source": "readonly label: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsRow.tsx",
+    "line": 32,
+    "source": "label: props.label,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsRow.tsx",
+    "line": 35,
+    "source": "disabled: props.disabled,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsRow.tsx",
+    "line": 53,
+    "source": "accessibilityState={{ disabled: Boolean(props.disabled), selected }}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsRow.tsx",
+    "line": 54,
+    "source": "disabled={props.disabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsScreen.tsx",
+    "line": 42,
+    "source": "title={props.title}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsScreen.tsx",
+    "line": 52,
+    "source": "<ScreenScrollViewBottomInset value={deviceType === \"pad\" || compactTabs ? 80 : 0}>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsScreen.tsx",
+    "line": 53,
+    "source": "<ScreenScrollViewSurface value={surfaceClassName}>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SettingsSection.tsx",
+    "line": 11,
+    "source": "export const SettingsSidebarContext = createContext<{ readonly selected: string | null } | null>("
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SourceControlSignInSection.tsx",
+    "line": 50,
+    "source": "title={"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SourceControlSignInSection.tsx",
+    "line": 57,
+    "source": "disabled={!props.canWrite(environment.environmentId)}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SourceControlSignInSection.tsx",
+    "line": 67,
+    "source": "readonly title: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SourceControlSignInSection.tsx",
+    "line": 70,
+    "source": "readonly disabled: boolean;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SourceControlSignInSection.tsx",
+    "line": 83,
+    "source": "<SettingsSection title={props.title}>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SourceControlSignInSection.tsx",
+    "line": 86,
+    "source": "label={props.appSignIn.appName}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SourceControlSignInSection.tsx",
+    "line": 89,
+    "source": "disabled={props.disabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SourceControlSignInSection.tsx",
+    "line": 97,
+    "source": "readonly label: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SourceControlSignInSection.tsx",
+    "line": 100,
+    "source": "readonly disabled: boolean;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SourceControlSignInSection.tsx",
+    "line": 117,
+    "source": "label: `sign out of ${appSignIn.appName}`,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SourceControlSignInSection.tsx",
+    "line": 194,
+    "source": "label={props.label}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SourceControlSignInSection.tsx",
+    "line": 195,
+    "source": "value={"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/components/SourceControlSignInSection.tsx",
+    "line": 204,
+    "source": "disabled={props.disabled}"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/lib/legal-document-url.ts",
+    "line": 37,
+    "source": "function webDocumentIdentity(value: string): string | null {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/lib/legal-document-url.ts",
+    "line": 55,
+    "source": "export function isLegalDocumentUrl(value: string): boolean {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/scheduledTaskDraft.ts",
+    "line": 126,
+    "source": "export function parseIntervalMinutes(value: string): number {"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/scheduledTaskDraft.ts",
+    "line": 203,
+    "source": "readonly title: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/scheduledTaskDraft.ts",
+    "line": 295,
+    "source": "title: \"\","
+  },
+  {
+    "file": "apps/mobile/src/features/settings/scheduledTaskDraft.ts",
+    "line": 315,
+    "source": "title: task.title,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/settings-environment-filter.logic.ts",
+    "line": 4,
+    "source": "selected: ReadonlySet<EnvironmentId> | null,"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/settings-environment-filter.tsx",
+    "line": 103,
+    "source": "<SettingsEnvironmentSelectionContext value={value}>"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/settings-search.ts",
+    "line": 133,
+    "source": "readonly label: string;"
+  },
+  {
+    "file": "apps/mobile/src/features/settings/useSettingsWriter.ts",
+    "line": 14,
+    "source": "label: \"environment settings update\","
+  }
+]

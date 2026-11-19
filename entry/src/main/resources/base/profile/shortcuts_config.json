@@ -1,0 +1,30 @@
+{
+  "shortcuts": [
+    {
+      "shortcutId": "new-task",
+      "label": "$string:shortcut_new_task",
+      "icon": "$media:ui_compose",
+      "wants": [
+        {
+          "bundleName": "com.dasungta.t3code.harmony",
+          "moduleName": "entry",
+          "abilityName": "EntryAbility",
+          "parameters": { "t3ShortcutAction": "new-task" }
+        }
+      ]
+    },
+    {
+      "shortcutId": "sessions",
+      "label": "$string:shortcut_sessions",
+      "icon": "$media:ui_folder",
+      "wants": [
+        {
+          "bundleName": "com.dasungta.t3code.harmony",
+          "moduleName": "entry",
+          "abilityName": "EntryAbility",
+          "parameters": { "t3ShortcutAction": "sessions" }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "cellUtf16Limit": 128,
+  "targetedTestsPassed": 26,
+  "build": "successful",
+  "installed": true,
+  "started": true,
+  "hapSha256": "6dc2d5f6715f0a7041b4f8cf0bc873511be671b4245d4af646dea2ebdb501931",
+  "deviceLongRunVerified": false
+}

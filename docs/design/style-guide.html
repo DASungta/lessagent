@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<style>
+  :root{
+    --l-screen:#fcfcfc; --l-group:#f4f4f5; --l-card:#ffffff; --l-ink:#27272a; --l-muted:#71717b;
+    --l-border:#e4e4e7; --l-sep:rgba(228,228,231,.7); --l-primary:#1b4ed8; --l-bubble:#efeff1;
+    --l-danger:#c10007; --l-danger-bg:#fcebec; --l-warn:#bb4d00; --l-warn-bg:#fcf4e8; --l-ok:#146c2e; --l-ok-bg:#e7f6ec;
+    --d-screen:#0a0a0a; --d-group:#1a1b1b; --d-card:#111111; --d-ink:#f5f5f5; --d-muted:#838383;
+    --d-border:#262626; --d-primary:#346bf1; --d-bubble:#1c1c1c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"HarmonyOS Sans SC","PingFang SC",system-ui,-apple-system,sans-serif;color:var(--foreground);font-size:13px;line-height:1.5}
+  h2{font-size:17px;font-weight:600;margin:28px 0 4px}
+  h2:first-child{margin-top:4px}
+  .lead{color:var(--muted-foreground);font-size:13px;margin-bottom:12px}
+  .box{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .pill{display:inline-block;padding:1px 8px;border-radius:999px;background:var(--secondary);font-size:11px;color:var(--muted-foreground)}
+  ul.rules{padding-left:18px} ul.rules li{margin:3px 0}
+  .bad{color:var(--destructive)} .good{color:var(--success)}
+
+  /* swatches */
+  .sw{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+  .sw div{border-radius:10px;height:44px;border:1px solid var(--border);position:relative}
+  .sw span{display:block;font-size:10.5px;color:var(--muted-foreground);margin-top:3px;line-height:1.25}
+  .sw code{font-family:var(--font-mono);font-size:10px}
+
+  /* type table */
+  table{width:100%;border-collapse:collapse}
+  td{padding:6px 4px;border-bottom:1px solid var(--border);vertical-align:middle}
+  td:first-child{color:var(--muted-foreground);width:84px;white-space:nowrap;font-family:var(--font-mono);font-size:11px}
+  td:last-child{color:var(--muted-foreground);font-size:11px;text-align:right;width:92px}
+  td:nth-child(2){white-space:nowrap}
+
+  /* ===== phone mockups (fixed colors = app colors, intentionally) ===== */
+  .phones{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .cap{font-size:12px;color:var(--muted-foreground);margin-top:6px;text-align:center}
+  .phone{width:100%;max-width:340px;margin:0 auto;height:700px;border-radius:34px;border:6px solid #1f1f22;overflow:hidden;
+    background:var(--l-screen);color:var(--l-ink);position:relative;display:flex;flex-direction:column;font-size:15px;line-height:1.45}
+  .phone.dark{background:var(--d-screen);color:var(--d-ink);border-color:#3a3a3d}
+  .status{height:28px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:0 20px;font-size:12px;font-weight:600}
+  .bar{height:52px;flex:none;display:flex;align-items:center;padding:0 8px;gap:4px}
+  .ib{width:40px;height:40px;border-radius:20px;display:flex;align-items:center;justify-content:center;flex:none}
+  .ib svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .bar .t{flex:1;min-width:0;padding-left:4px}
+  .bar .t b{display:block;font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:22px}
+  .bar .t small{display:block;font-size:12px;color:var(--l-muted);line-height:16px}
+  .dark .bar .t small{color:var(--d-muted)}
+  .wordmark{font-size:22px;font-weight:700;letter-spacing:-.3px;padding-left:8px;flex:1}
+  .wordmark i{font-style:normal;font-weight:400;color:var(--l-muted)}
+  .textbtn{color:var(--l-primary);font-size:15px;font-weight:500;padding:0 12px;height:40px;display:flex;align-items:center}
+  .body{flex:1;overflow:hidden;padding:0 16px}
+  .search{height:38px;border-radius:12px;background:var(--l-group);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--l-muted);font-size:15px;margin:4px 0 12px}
+  .search svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2}
+  .sect{font-size:12px;font-weight:600;color:var(--l-muted);margin:14px 4px 6px;display:flex;justify-content:space-between}
+  .row{display:flex;align-items:center;gap:12px;padding:10px 4px;min-height:56px}
+  .row + .row{border-top:1px solid var(--l-sep)}
+  .row .m{flex:1;min-width:0}
+  .row .m b{display:block;font-weight:500;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .m small{display:block;color:var(--l-muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row time{font-size:12px;color:var(--l-muted);flex:none}
+  .dot{width:8px;height:8px;border-radius:4px;flex:none}
+  .fab{position:absolute;right:16px;bottom:24px;height:48px;padding:0 18px;border-radius:24px;background:var(--l-ink);color:#fcfcfc;display:flex;align-items:center;gap:8px;font-weight:600;font-size:15px;box-shadow:0 6px 16px rgba(0,0,0,.18)}
+  .fab svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2}
+
+
+  /* thread list v2 (matches original device screenshot) */
+  .sheet{flex:1;overflow:hidden;background:#fcfcfc;border-radius:26px 26px 0 0;padding:10px 6px 0;margin-top:4px}
+  .tr{padding:9px 10px}
+  .tl{display:flex;align-items:flex-start;gap:8px}
+  .tl b{flex:1;min-width:0;font-weight:500;font-size:16px;line-height:22px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .fav{width:22px;height:22px;border-radius:6px;font-size:10px;font-weight:700;font-family:ui-monospace,Menlo,monospace;display:flex;align-items:center;justify-content:center;flex:none;margin-top:0}
+  .tm{font-size:13px;color:var(--l-muted);line-height:22px;flex:none;font-variant-numeric:tabular-nums}
+  .st{display:flex;align-items:center;gap:3px;font-size:13px;font-weight:700;line-height:22px;flex:none}
+  .st svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.2}
+  .st.run{color:var(--l-primary)} .st.wait{color:var(--l-warn)} .st.done{color:#15803d}
+  .ts{display:flex;align-items:center;gap:8px;padding-left:30px;margin-top:3px;font-size:13px;color:var(--l-muted);line-height:18px}
+  .ts .sp{flex:1}
+  .env{display:flex;align-items:center;gap:4px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .env svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;flex:none}
+  .pr{display:flex;align-items:center;gap:2px;font-family:ui-monospace,Menlo,monospace;color:#059669;flex:none}
+  .pr svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2}
+  .pv{width:16px;height:16px;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:none}
+  .tabbar{position:absolute;left:12px;bottom:18px;width:220px;height:52px;border-radius:26px;background:rgba(244,244,245,.96);box-shadow:0 4px 14px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:space-around;padding:0 6px}
+  .tabbar span{width:48px;height:40px;border-radius:20px;display:flex;align-items:center;justify-content:center}
+  .tabbar span.on{background:#e4e4e7}
+  .tabbar svg{width:21px;height:21px;stroke:#27272a;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .fab2{position:absolute;right:12px;bottom:18px;width:52px;height:52px;border-radius:16px;background:#27272a;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(0,0,0,.18)}
+  .fab2 svg{width:22px;height:22px;stroke:#fcfcfc;fill:none;stroke-width:2}
+
+  /* chat */
+  .msgs{flex:1;overflow:hidden;padding:4px 16px;display:flex;flex-direction:column;gap:14px}
+  .u{align-self:flex-end;max-width:82%;background:var(--l-bubble);border-radius:18px 18px 6px 18px;padding:9px 14px;font-size:15px}
+  .dark .u{background:var(--d-bubble)}
+  .a{font-size:15px;line-height:1.6}
+  .a code{font-family:ui-monospace,Menlo,monospace;font-size:13px;background:var(--l-group);padding:1px 5px;border-radius:5px}
+  .dark .a code{background:var(--d-group)}
+  .tool{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--l-muted);padding:7px 10px;border:1px solid var(--l-border);border-radius:10px}
+  .dark .tool{color:var(--d-muted);border-color:var(--d-border)}
+  .tool svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;flex:none}
+  .tool .x{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tool .ok{color:var(--l-ok);font-weight:500}
+  .dark .tool .ok{color:#4ade80}
+  .codeblk{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--l-card);border:1px solid var(--l-border);border-radius:10px;padding:8px 10px;line-height:1.5;position:relative}
+  .dark .codeblk{background:var(--d-card);border-color:var(--d-border)}
+  .codeblk .lang{position:absolute;right:8px;top:6px;font-size:10px;color:var(--l-muted);font-family:inherit}
+  .composer{flex:none;margin:6px 10px 14px;border-radius:22px;background:var(--l-group);border:1px solid var(--l-border);padding:10px 10px 8px 14px}
+  .dark .composer{background:var(--d-group);border-color:var(--d-border)}
+  .composer .ph{color:var(--l-muted);font-size:15px;min-height:24px}
+  .composer .tb{display:flex;align-items:center;gap:6px;margin-top:8px}
+  .chip{height:30px;border-radius:15px;padding:0 10px;display:flex;align-items:center;gap:4px;font-size:13px;color:var(--l-ink);background:rgba(0,0,0,.04)}
+  .dark .chip{color:var(--d-ink);background:rgba(255,255,255,.06)}
+  .chip svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+  .send{margin-left:auto;width:34px;height:34px;border-radius:17px;background:var(--l-ink);display:flex;align-items:center;justify-content:center}
+  .send svg{width:18px;height:18px;stroke:#fcfcfc;fill:none;stroke-width:2.2}
+  .dark .send{background:var(--d-ink)} .dark .send svg{stroke:#0a0a0a}
+  .send.off{opacity:.3}
+
+  /* grouped forms */
+  .phone.grouped{background:var(--l-group)}
+  .gl{font-size:12px;color:var(--l-muted);margin:12px 16px 5px}
+  .gcard{background:var(--l-card);border-radius:14px;margin:0 12px;overflow:hidden}
+  .gr{display:flex;align-items:center;min-height:46px;padding:0 14px;gap:10px;font-size:15px}
+  .gr + .gr{border-top:1px solid var(--l-sep)}
+  .gr .k{flex:none;width:72px}
+  .gr .v{flex:1;color:var(--l-muted);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gr .v.ph{color:#a1a1aa}
+  .gr .v.set{color:var(--l-ink)}
+  .gr .chev{color:rgba(113,113,123,.5);font-size:18px;flex:none}
+  .gr.ta{align-items:flex-start;padding:12px 14px;min-height:72px;color:#a1a1aa}
+  .note{font-size:12px;color:var(--l-muted);margin:6px 18px 0;line-height:1.5}
+  .sw2{width:42px;height:26px;border-radius:13px;background:var(--l-primary);position:relative;flex:none}
+  .sw2::after{content:"";position:absolute;right:3px;top:3px;width:20px;height:20px;border-radius:10px;background:#fff}
+  .sw2.off{background:#e4e4e7} .sw2.off::after{right:auto;left:3px}
+  .seg{display:flex;background:var(--l-group);border-radius:9px;padding:2px;font-size:13px}
+  .seg span{padding:4px 10px;border-radius:7px;color:var(--l-muted)}
+  .seg span.on{background:#fff;color:var(--l-ink);font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  .footer{flex:none;padding:10px 12px 18px}
+  .btn{height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px}
+  .btn.primary{background:var(--l-ink);color:#fcfcfc}
+
+  /* button & component specimens */
+  .spec{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px;border-radius:12px;background:#fcfcfc;color:#27272a;border:1px solid #e4e4e7}
+  .spec .btn{height:40px;padding:0 16px;font-size:14px}
+  .b1{background:#27272a;color:#fcfcfc}
+  .b2{background:#f4f4f5;color:#27272a}
+  .b3{color:#1b4ed8}
+  .b4{background:#fcebec;color:#c10007}
+  .b5{background:#1b4ed8;color:#fff}
+  .badge{font-size:11px;font-weight:500;padding:2px 8px;border-radius:6px}
+</style>
+</head>
+<body>
+
+<h2>设计方向：克制、紧凑的工具感</h2>
+<p class="lead">以原版 T3 Code 移动端（Zinc 中性灰 + 深灰主按钮）为准，换成鸿蒙的手势与系统字体。不加装饰，靠层级、留白和对齐来区分信息。</p>
+<div class="grid2">
+  <div class="box"><b>现在看着难受的根源</b>
+    <ul class="rules" style="margin-top:6px">
+      <li>字号散成 15 档（10–30），层级读不出来</li>
+      <li>「返回 / 刷新 / 发送」混用纯文字和色块按钮</li>
+      <li>每条消息都挂着「···」，视觉噪声大</li>
+      <li>表单用「标签 + 大灰胶囊」上下堆叠，一屏只放得下 4 项</li>
+      <li>标题栏里的胶囊按钮居中摆放，和标题层级打架</li>
+    </ul>
+  </div>
+  <div class="box"><b>固定下来的五条规则</b>
+    <ul class="rules" style="margin-top:6px">
+      <li>字号只用 <b>6 档</b>，字重只用 400 / 500 / 600</li>
+      <li>一屏最多 <b>一个</b> 实心主按钮，其余用图标或文字按钮</li>
+      <li>标题栏只放图标按钮，文字动作统一放右侧、用主色</li>
+      <li>设置和表单一律用 <b>分组列表行</b>（左标签、右取值、›）</li>
+      <li>消息不常驻操作，长按调出菜单</li>
+    </ul>
+  </div>
+</div>
+
+<h2>1 · 颜色令牌</h2>
+<p class="lead">直接沿用原版 <code>generated-uniwind-default-theme-variables.json</code>，ArkUI 里 <code>base/</code> 和 <code>dark/</code> 下的 color.json 同名定义，组件只准用 <code>$r('app.color.xxx')</code>。</p>
+<div class="sw">
+  <div style="background:#fcfcfc"></div><div style="background:#f4f4f5"></div><div style="background:#ffffff"></div><div style="background:#27272a"></div><div style="background:#71717b"></div><div style="background:#e4e4e7"></div>
+</div>
+<div class="sw" style="margin-top:0">
+  <span><b>screen</b><br><code>#fcfcfc / #0a0a0a</code></span><span><b>group</b> 分组底·输入区<br><code>#f4f4f5 / #1a1b1b</code></span><span><b>card</b> 卡片·列表组<br><code>#ffffff / #111111</code></span><span><b>ink</b> 正文·主按钮<br><code>#27272a / #f5f5f5</code></span><span><b>muted</b> 次要文字<br><code>#71717b / #838383</code></span><span><b>border</b><br><code>#e4e4e7 / #191919</code></span>
+</div>
+<div class="sw" style="margin-top:10px">
+  <div style="background:#1b4ed8"></div><div style="background:#efeff1"></div><div style="background:#fcebec;border-color:rgba(251,44,54,.32)"></div><div style="background:#fcf4e8;border-color:rgba(254,154,0,.32)"></div><div style="background:#e7f6ec"></div><div style="background:#e0e6f7"></div>
+</div>
+<div class="sw" style="margin-top:0">
+  <span><b>primary</b> 链接·开关·文字按钮<br><code>#1b4ed8 / #346bf1</code></span><span><b>bubble</b> 用户消息<br><code>#efeff1 / #161616</code></span><span><b>danger</b> 底 / 字<br><code>#fcebec · #c10007</code></span><span><b>warning</b> 底 / 字<br><code>#fcf4e8 · #bb4d00</code></span><span><b>success</b> 底 / 字<br><code>#e7f6ec · #146c2e</code></span><span><b>info</b> 底 / 字<br><code>#e0e6f7 · #1b4ed8</code></span>
+</div>
+<p class="lead" style="margin-top:10px">注意：主按钮用 <b>ink（近黑）</b>，跟原版 <code>prominent-action</code> 一致；蓝色 primary 只用于链接、开关、选中态和文字按钮，不再刷大面积蓝色块。</p>
+
+<h2>2 · 字体、间距、圆角</h2>
+<div class="grid2">
+  <div class="box">
+    <table>
+      <tr><td>title · 22/28</td><td style="font-size:22px;font-weight:700">T3 Code</td><td>首页字标、空态标题</td></tr>
+      <tr><td>headline · 17/22</td><td style="font-size:17px;font-weight:600">会话标题</td><td>标题栏、弹层标题</td></tr>
+      <tr><td>body · 15/22</td><td style="font-size:15px">正文与列表主行</td><td>消息、列表、表单</td></tr>
+      <tr><td>callout · 13/18</td><td style="font-size:13px">副标题与说明</td><td>列表副行、工具行</td></tr>
+      <tr><td>caption · 12/16</td><td style="font-size:12px;color:var(--muted-foreground)">分组标题 · 时间</td><td>分组名、时间、提示</td></tr>
+      <tr><td>mono · 13/19</td><td style="font-size:13px;font-family:var(--font-mono)">git diff --stat</td><td>代码、终端、Diff</td></tr>
+    </table>
+    <p class="lead" style="margin:8px 0 0">11 号只留给角标。所有字号用 fp，跟随系统字号缩放。</p>
+  </div>
+  <div class="box">
+    <b>间距（4 的倍数）</b>
+    <p style="margin:4px 0 10px;color:var(--muted-foreground)">4 · 8 · 12 · <b>16</b>（页面左右边距）· 24 · 32</p>
+    <b>圆角</b>
+    <p style="margin:4px 0 10px;color:var(--muted-foreground)">6 角标 · 10 工具行/代码块 · <b>12</b> 按钮/搜索框 · 14 分组卡片 · 18 气泡 · 22 输入区 · 全圆 图标按钮</p>
+    <b>尺寸</b>
+    <p style="margin:4px 0 10px;color:var(--muted-foreground)">标题栏 52 · 图标按钮热区 40（图标 22）· 列表行最低 56 · 设置行最低 50 · 主按钮高 46</p>
+    <b>图标</b>
+    <p style="margin:4px 0 0;color:var(--muted-foreground)">统一线形，描边 1.8，22px；只用 ink / muted 两种颜色</p>
+  </div>
+</div>
+
+<h2>3 · 按钮层级</h2>
+<div class="spec">
+  <span class="btn b1">主操作</span>
+  <span class="btn b2">次要操作</span>
+  <span class="btn b3">文字按钮</span>
+  <span class="btn b4">删除 / 危险</span>
+  <span class="btn b5" style="opacity:.9">审批「允许」</span>
+  <span class="badge" style="background:#e7f6ec;color:#146c2e">已完成</span>
+  <span class="badge" style="background:#fcf4e8;color:#bb4d00">等待审批</span>
+  <span class="badge" style="background:#fcebec;color:#c10007">失败</span>
+  <span class="badge" style="background:#f4f4f5;color:#71717b">草稿</span>
+</div>
+<p class="lead" style="margin-top:8px">蓝色实心按钮只留给审批卡片里的「允许」这类需要用户明确确认的动作。</p>
+
+<h2>4 · 关键页面样稿</h2>
+<div class="phones">
+  <!-- HOME -->
+  <div>
+  <div class="phone" style="background:#f4f4f5">
+    <svg width="0" height="0" style="position:absolute"><defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f59e0b"/><stop offset=".5" stop-color="#ec4899"/><stop offset="1" stop-color="#3b82f6"/></linearGradient></defs></svg>
+    <div class="status"><span>15:36</span><span>68</span></div>
+    <div class="bar">
+      <div class="wordmark">T3 <i>Code</i></div>
+      <div class="ib"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div>
+      <div class="ib"><svg viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg></div>
+    </div>
+    <div class="sheet">
+      <div class="tr"><div class="tl"><span class="fav" style="color:#2563eb;background:#dbeafe">HP</span><b>拉文克劳视频运镜重新设计</b><span class="st done"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>完成</span></div><div class="ts"><span class="env"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/></svg>DESKTOP-TC403OS</span><span class="sp"></span><svg class="pv" viewBox="0 0 24 24" style="stroke:#d97757;stroke-width:2.2"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/></svg></div></div>
+
+      <div class="tr"><div class="tl"><span class="fav" style="color:#c026d3;background:#fae8ff">T3</span><b>了解项目当前进度</b><span class="st run"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>运行中 2分</span></div><div class="ts"><span class="env"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>奋斗的iMac Pro</span><span class="sp"></span><svg class="pv" viewBox="0 0 24 24" style="stroke:url(#g1);stroke-width:2.6"><path d="M5 20 12 4l7 16"/></svg></div></div>
+
+      <div class="tr"><div class="tl"><span class="fav" style="color:#65a30d;background:#ecfccb">MM</span><b>落地约见体验优化设计稿</b><span class="st wait"><svg viewBox="0 0 24 24"><path d="M12 8v4l2 2"/><circle cx="12" cy="12" r="9"/></svg>待审批</span></div><div class="ts"><span class="env"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>macOS-RX570</span><span class="sp"></span><svg class="pv" viewBox="0 0 24 24" style="stroke:#d97757;stroke-width:2.2"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/></svg></div></div>
+
+      <div class="tr"><div class="tl"><span class="fav" style="color:#c026d3;background:#fae8ff">T3</span><b>汇总项目开发进度并整理文档</b><span class="tm">54分</span></div><div class="ts"><span class="env"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>奋斗的iMac Pro</span><span class="sp"></span><svg class="pv" viewBox="0 0 24 24" style="stroke:#71717b;stroke-width:1.8"><circle cx="12" cy="12" r="8"/><path d="M12 4v8l6 4M12 12l-6 4"/></svg></div></div>
+
+      <div class="tr"><div class="tl"><span class="fav" style="color:#0891b2;background:#cffafe">YY</span><b>Build a Linux Version for Omarchy</b><span class="tm">2小时</span></div><div class="ts"><span class="env"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>奋斗的iMac Pro</span><span class="sp"></span><span class="pr"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><path d="M6 8v8M18 16V9a3 3 0 0 0-3-3h-4m2-2-2 2 2 2"/></svg>14</span><svg class="pv" viewBox="0 0 24 24" style="stroke:url(#g1);stroke-width:2.6"><path d="M5 20 12 4l7 16"/></svg></div></div>
+
+      <div class="tr"><div class="tl"><span class="fav" style="color:#2563eb;background:#dbeafe">HP</span><b>拉文克劳塔《天亮之前》：第一阶段静帧</b><span class="tm">3小时</span></div><div class="ts"><span class="env"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/></svg>DESKTOP-TC403OS</span><span class="sp"></span><svg class="pv" viewBox="0 0 24 24" style="stroke:#d97757;stroke-width:2.2"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/></svg></div></div>
+
+      <div class="tr"><div class="tl"><span class="fav" style="color:#0d9488;background:#ccfbf1">OS</span><b>排查 10.5 Cloudflare 隧道连接超时</b><span class="tm">4小时</span></div><div class="ts"><span class="env"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>奋斗的iMac Pro</span><span class="sp"></span><svg class="pv" viewBox="0 0 24 24" style="stroke:#71717b;stroke-width:1.8"><circle cx="12" cy="12" r="8"/><path d="M12 4v8l6 4M12 12l-6 4"/></svg></div></div>
+
+    </div>
+    <div class="tabbar">
+      <span class="on"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/></svg></span>
+      <span><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><path d="M6 8v8M18 16V9a3 3 0 0 0-3-3h-4m2-2-2 2 2 2"/></svg></span>
+      <span><svg viewBox="0 0 24 24"><path d="M6 20V10M12 20V4M18 20v-7"/></svg></span>
+      <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg></span>
+    </div>
+    <div class="fab2"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div>
+  </div>
+  <p class="cap">首页：按原版真机布局。顶部灰底、列表在圆角浅色面板上；项目用双字母色块；右侧只显示状态或相对时间；第二行是环境、PR 和 Provider 图标，不显示具体模型名；底部悬浮四栏 + 新任务按钮</p>
+  </div>
+
+  <!-- CHAT -->
+  <div>
+  <div class="phone">
+    <div class="status"><span>10:44</span><span>76</span></div>
+    <div class="bar">
+      <div class="ib"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></div>
+      <div class="t"><b>Unclear Subject</b><small>r5-round2 · 奋斗的iMac Pro</small></div>
+      <div class="ib"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3M13 15h4"/></svg></div>
+      <div class="ib"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></div>
+    </div>
+    <div class="msgs">
+      <div class="u">把终端选字的按钮挪到输出区域下面</div>
+      <div class="a">好的。我先看一下 <code>TerminalPanel.ets</code> 的布局。</div>
+      <div class="tool"><svg viewBox="0 0 24 24"><path d="m4 17 6-6-6-6M12 19h8"/></svg><span class="x">rg "复制全部" entry/src</span><span class="ok">exit 0</span></div>
+      <div class="tool"><svg viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/></svg><span class="x">编辑 TerminalPanel.ets</span><span style="color:#146c2e">+18</span><span style="color:#c10007">−9</span></div>
+      <div class="a">已把「关闭选字」「复制全部」移到输出区下方：</div>
+      <div class="codeblk"><span class="lang">ets</span>Column() {<br>&nbsp;&nbsp;this.Output()<br>&nbsp;&nbsp;this.SelectionBar()<br>}</div>
+    </div>
+    <div class="composer">
+      <div class="ph">继续追问…</div>
+      <div class="tb">
+        <div class="chip"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div>
+        <div class="chip">模型 <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+        <div class="chip">自动</div>
+        <div class="send off"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></div>
+      </div>
+    </div>
+  </div>
+  <p class="cap">会话：去掉每条消息的「···」，工具调用收成一行；输入区下方用胶囊放模型选择和模式（不展示具体模型名），发送是圆形图标按钮</p>
+  </div>
+
+  <!-- FORM -->
+  <div>
+  <div class="phone grouped">
+    <div class="status"><span>12:52</span><span>76</span></div>
+    <div class="bar">
+      <div class="ib"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></div>
+      <div class="t"><b>新建定时任务</b></div>
+    </div>
+    <div class="body" style="padding:0">
+      <div class="gl">内容</div>
+      <div class="gcard">
+        <div class="gr"><span class="k">标题</span><span class="v ph" style="text-align:left">任务标题</span></div>
+        <div class="gr ta">任务执行内容</div>
+      </div>
+      <div class="gl">运行位置</div>
+      <div class="gcard">
+        <div class="gr"><span class="k">项目</span><span class="v set">r5-round2</span><span class="chev">›</span></div>
+        <div class="gr"><span class="k">Provider</span><span class="v">请选择</span><span class="chev">›</span></div>
+        <div class="gr"><span class="k">模型</span><span class="v">请选择</span><span class="chev">›</span></div>
+      </div>
+      <p class="note">每次新建线程，使用项目根工作区；新任务需要审批权限。</p>
+      <div class="gl">调度 · Asia/Shanghai</div>
+      <div class="gcard">
+        <div class="gr"><span class="k">方式</span><span style="flex:1"></span><div class="seg"><span class="on">固定时间</span><span>间隔</span></div></div>
+        <div class="gr"><span class="k">时间</span><span class="v set">每天 09:00</span><span class="chev">›</span></div>
+        <div class="gr"><span class="k">启用</span><span style="flex:1"></span><span class="sw2 off"></span></div>
+      </div>
+    </div>
+    <div class="footer"><div class="btn primary">保存</div></div>
+  </div>
+  <p class="cap">表单与设置：分组卡片 + 列表行代替「标签 + 大灰胶囊」，同样高度能放下 9 项；保存按钮固定在底部</p>
+  </div>
+
+  <!-- DARK CHAT -->
+  <div>
+  <div class="phone dark">
+    <div class="status"><span>22:10</span><span>64</span></div>
+    <div class="bar">
+      <div class="ib"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></div>
+      <div class="t"><b>Review PR #42</b><small>t3code-harmony · main</small></div>
+      <div class="ib"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></div>
+    </div>
+    <div class="msgs">
+      <div class="u">这个 PR 有没有风险？</div>
+      <div class="a">主要风险在 <code>ShareInbox.ets</code>：图片解码失败时没有回退。</div>
+      <div class="tool"><svg viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/></svg><span class="x">读取 ShareInbox.ets</span><span class="ok">完成</span></div>
+      <div style="border:1px solid rgba(254,154,0,.32);background:#312108;border-radius:14px;padding:12px">
+        <div style="font-size:13px;color:#ffb900;font-weight:600;margin-bottom:4px">需要审批 · 执行命令</div>
+        <div style="font-family:ui-monospace,Menlo,monospace;font-size:12px;margin-bottom:10px">git push origin fix/share</div>
+        <div style="display:flex;gap:8px">
+          <div class="btn" style="flex:1;height:38px;font-size:14px;background:#1a1b1b;color:#f5f5f5">拒绝</div>
+          <div class="btn" style="flex:1;height:38px;font-size:14px;background:#346bf1;color:#fff">允许</div>
+        </div>
+      </div>
+    </div>
+    <div class="composer">
+      <div class="ph" style="color:#838383">继续追问…</div>
+      <div class="tb">
+        <div class="chip"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div>
+        <div class="chip">模型 <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+        <div class="send"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></div>
+      </div>
+    </div>
+  </div>
+  <p class="cap">深色：同一套令牌，审批卡片用 warning 底色，「允许」是全屏唯一的蓝色实心按钮</p>
+  </div>
+</div>
+
+<h2>5 · 落地顺序</h2>
+<div class="box">
+  <ol class="rules" style="padding-left:18px">
+    <li>新增 <code>common/Theme.ets</code>：字号 / 间距 / 圆角常量，补齐 color.json 中的 group、card、bubble、各状态色</li>
+    <li>抽公共组件：<code>TopBar</code>、<code>IconButton</code>、<code>ListRow</code>、<code>GroupCard</code> + <code>FormRow</code>、<code>Button(kind)</code>、<code>Badge</code></li>
+    <li>按使用频率逐页替换：会话页 → 首页 → 设置 / 表单类面板 → 终端 / 文件 / Git</li>
+    <li>每页保留改造前后真机截图（普通 + 特大字号 + 深色）</li>
+  </ol>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,41 @@
+{
+  "source": {
+    "kind": "working-tree",
+    "title": "Uncommitted",
+    "truncated": false,
+    "files": [
+      {
+        "path": "small.png",
+        "previousPath": null,
+        "additions": 0,
+        "deletions": 0
+      },
+      {
+        "path": "src/app.ts",
+        "previousPath": null,
+        "additions": 1,
+        "deletions": 0
+      },
+      {
+        "path": "src/newer.ts",
+        "previousPath": "src/new.ts",
+        "additions": 0,
+        "deletions": 0
+      }
+    ],
+    "diffHasLongLine": true,
+    "diffBytes": 4458
+  },
+  "appPresent": true,
+  "renamePresent": true,
+  "binaryReadError": "{\"_tag\":\"Failure\",\"cause\":[{\"_tag\":\"Fail\",\"error\":{\"_tag\":\"ProjectReadFileError\",\"cwd\":\"/tmp/t3-r4-accept-gHC0QI/data/pr",
+  "asset": {
+    "status": 200,
+    "bytes": 70,
+    "contentType": "image/png"
+  },
+  "diffFileContents": {
+    "hasOld": true,
+    "newBytes": 4105
+  }
+}

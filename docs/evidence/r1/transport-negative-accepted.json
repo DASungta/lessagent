@@ -1,0 +1,50 @@
+{
+  "device": "23E0224122000135",
+  "checkedAt": "2026-11-16T20:49:46.103260+08:00",
+  "native": {
+    "deviceTime": 1794833374447,
+    "results": [
+      {
+        "name": "oauth-redirect-not-followed",
+        "passed": true,
+        "status": "HTTP /oauth/token 失败，系统错误码 2300047",
+        "noCredentialSaved": true
+      },
+      {
+        "name": "oauth-307-body-not-forwarded",
+        "passed": true,
+        "status": "HTTP /oauth/token 失败，系统错误码 2300047",
+        "noCredentialSaved": true
+      },
+      {
+        "name": "self-signed-tls-rejected",
+        "passed": true,
+        "status": "HTTP /.well-known/t3/environment 失败，系统错误码 2300060",
+        "noCredentialSaved": true
+      },
+      {
+        "name": "protocol-rejected-before-credential",
+        "passed": true,
+        "status": "服务端协议不兼容：本原型仅支持 orchestrationProtocol=2",
+        "noCredentialSaved": true
+      }
+    ],
+    "noRealCredentialsUsed": true
+  },
+  "hostCounterDelta": {
+    "redirectDescriptor": 1,
+    "redirectOAuth": 1,
+    "redirect307Descriptor": 1,
+    "redirect307OAuth": 1,
+    "captureRequests": 0,
+    "protocolDescriptor": 1,
+    "protocolOAuth": 0,
+    "tlsHttpRequests": 0,
+    "tlsErrors": [
+      "ERR_SSL_TLSV1_ALERT_UNKNOWN_CA"
+    ]
+  },
+  "accepted": true,
+  "validHttpsPairingProven": false,
+  "officialApiReference": "https://developer.huawei.com/consumer/cn/doc/doccenter-references/api/js-apis-http/"
+}

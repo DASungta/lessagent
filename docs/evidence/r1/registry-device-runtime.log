@@ -1,0 +1,7 @@
+11-16 17:40:52.900 37956 37956 I A00000/com.dasungta.t3code.harmony/R1RegistryCheck: PASS registry-two-real-environments
+11-16 17:40:53.022 37956 37956 I A00000/com.dasungta.t3code.harmony/R1RegistryCheck: PASS duplicate-before-credential-exchange
+11-16 17:40:58.445 37956 37956 I A00000/com.dasungta.t3code.harmony/R1RegistryCheck: PASS select-disable-reenable-independent
+11-16 17:40:58.593 37956 37956 I A00000/com.dasungta.t3code.harmony/R1RegistryCheck: PASS same-thread-scope-and-unknown-removal-protection
+11-16 17:40:58.821 37956 37956 I A00000/com.dasungta.t3code.harmony/R1RegistryCheck: PASS removal-cleans-only-target-environment
+11-16 17:40:58.897 37956 37956 I A00000/com.dasungta.t3code.harmony/R1RegistryCheck: PASS no-legacy-resurrection-and-cleanup
+11-16 17:40:58.897 37956 37956 I A00000/com.dasungta.t3code.harmony/R1RegistryCheck: DONE passed=6 failed=0

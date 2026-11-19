@@ -1,0 +1,11 @@
+{
+  "device": "23E0224122000135",
+  "targetEnvironmentId": "13c32a79-8e73-4c09-9e59-738dff57907b",
+  "publicOrigin": "https://cold-trams-pull.loca.lt",
+  "protectedResource": "https://cold-trams-pull.loca.lt/mcp",
+  "issuer": "https://cold-trams-pull.loca.lt",
+  "tlsVerifiedBySystemTrust": true,
+  "forwardedHttpsOriginVerified": true,
+  "note": "Temporary tunnel plus local header-correction proxy; reached only isolated B.",
+  "capturedAt": "2026-11-16T23:11:00.049688+08:00"
+}

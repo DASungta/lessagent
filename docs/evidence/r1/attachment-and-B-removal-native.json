@@ -1,0 +1,14 @@
+{
+  "device": "23E0224122000135",
+  "checkedAt": "2026-11-16T21:24:16.000995+08:00",
+  "ordinaryProductTestEpoch": 109,
+  "explicitNativeRemovalOfB": true,
+  "aDirectoryEntryExactlyUnchanged": true,
+  "selectedARetained": true,
+  "aAttachmentChipRetained": true,
+  "aUnsentDraftRetained": true,
+  "aPendingBytesSha256": "052f0a6c31c1e12cca51f0c55c4436e75d8bf447ce550352697b43763ef588a9",
+  "bPendingUploads": 0,
+  "serverMessagesAndRunsRemainZero": true,
+  "bAssetDeletionIndependentlyAudited": true
+}

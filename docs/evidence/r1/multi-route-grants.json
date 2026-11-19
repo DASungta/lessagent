@@ -1,0 +1,14 @@
+{
+  "primary": {
+    "consumed": true,
+    "revoked": false
+  },
+  "alternate": {
+    "consumed": true,
+    "revoked": false
+  },
+  "foreign": {
+    "consumed": false,
+    "revoked": false
+  }
+}

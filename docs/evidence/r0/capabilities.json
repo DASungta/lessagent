@@ -1,0 +1,1834 @@
+[
+  {
+    "name": "repositoryIdentity",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 87,
+      "source": "repositoryIdentity: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/projects/AddProjectScreen.tsx",
+        "line": 774,
+        "source": "existing.repositoryIdentity?.canonicalKey !=="
+      },
+      {
+        "file": "apps/mobile/src/features/pull-requests/pullRequestEnvironmentFallback.ts",
+        "line": 39,
+        "source": "const host = target.host ?? own?.repositoryIdentity?.canonicalKey.split(\"/\")[0];"
+      },
+      {
+        "file": "apps/mobile/src/features/pull-requests/pullRequestEnvironmentFallback.ts",
+        "line": 46,
+        "source": "project.repositoryIdentity?.canonicalKey.toLowerCase() === key,"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/ThreadComposer.tsx",
+        "line": 585,
+        "source": "pullRequestRepository: project?.repositoryIdentity?.displayName ?? null,"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/git/GitConfirmSheet.tsx",
+        "line": 35,
+        "source": "selectedThreadProject?.repositoryIdentity?.provider,"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/new-task-flow-provider.tsx",
+        "line": 809,
+        "source": "const selectedRepositoryKey = selectedProject?.repositoryIdentity"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/new-task-flow-provider.tsx",
+        "line": 810,
+        "source": "? repositoryGroupingKeyOf(selectedProject.repositoryIdentity)"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/new-task-flow-provider.tsx",
+        "line": 831,
+        "source": "const projectKey = project.repositoryIdentity"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/new-task-flow-provider.tsx",
+        "line": 832,
+        "source": "? repositoryGroupingKeyOf(project.repositoryIdentity)"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/new-task-project-selection.ts",
+        "line": 82,
+        "source": "const repositoryKey = selectedProject?.repositoryIdentity"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/new-task-project-selection.ts",
+        "line": 83,
+        "source": "? repositoryGroupingKeyOf(selectedProject.repositoryIdentity)"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/new-task-project-selection.ts",
+        "line": 89,
+        "source": "const projectKey = project.repositoryIdentity"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/new-task-project-selection.ts",
+        "line": 90,
+        "source": "? repositoryGroupingKeyOf(project.repositoryIdentity)"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/new-task-project-selection.ts",
+        "line": 98,
+        "source": "(project.repositoryIdentity"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/new-task-project-selection.ts",
+        "line": 99,
+        "source": "? repositoryGroupingKeyOf(project.repositoryIdentity)"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/new-task-project-selection.ts",
+        "line": 126,
+        "source": "left?.repositoryIdentity != null &&"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/new-task-project-selection.ts",
+        "line": 127,
+        "source": "right?.repositoryIdentity != null &&"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/new-task-project-selection.ts",
+        "line": 128,
+        "source": "repositoryGroupingKeyOf(left.repositoryIdentity) ==="
+      },
+      {
+        "file": "apps/mobile/src/features/threads/new-task-project-selection.ts",
+        "line": 129,
+        "source": "repositoryGroupingKeyOf(right.repositoryIdentity)"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/useLinkedPullRequestActions.ts",
+        "line": 41,
+        "source": "const terminology = sourceControlClients.get(project?.repositoryIdentity?.provider).changeRequest;"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/useLinkedPullRequestActions.ts",
+        "line": 98,
+        "source": "project: pullRequestLinkProject(project?.repositoryIdentity),"
+      },
+      {
+        "file": "apps/mobile/src/lib/pullRequestNavigation.ts",
+        "line": 10,
+        "source": "projects: ReadonlyArray<Pick<EnvironmentProject, \"id\" | \"environmentId\" | \"repositoryIdentity\">>,"
+      }
+    ]
+  },
+  {
+    "name": "connectionProbe",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 88,
+      "source": "connectionProbe: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "attachmentUploads",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 89,
+      "source": "attachmentUploads: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/files/AttachmentFileScreen.tsx",
+        "line": 233,
+        "source": "capabilities?.attachmentUploads && capabilities.fileAttachments"
+      }
+    ]
+  },
+  {
+    "name": "questionAttachments",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 90,
+      "source": "questionAttachments: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "fileAttachments",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 91,
+      "source": "fileAttachments: Schema.optionalKey("
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/files/AttachmentFileScreen.tsx",
+        "line": 233,
+        "source": "capabilities?.attachmentUploads && capabilities.fileAttachments"
+      },
+      {
+        "file": "apps/mobile/src/features/files/AttachmentFileScreen.tsx",
+        "line": 234,
+        "source": "? clampFileAttachmentUploadBytes(capabilities.fileAttachments.maxUploadBytes)"
+      },
+      {
+        "file": "apps/mobile/src/features/sharing/incoming-share-model.ts",
+        "line": 134,
+        "source": "readonly fileAttachments?: { readonly maxUploadBytes: number };"
+      },
+      {
+        "file": "apps/mobile/src/features/sharing/incoming-share-model.ts",
+        "line": 150,
+        "source": "const maxFileAttachmentBytes = capabilities?.fileAttachments?.maxUploadBytes ?? null;"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/QuestionAttachments.tsx",
+        "line": 149,
+        "source": "maxBytes: capabilities?.fileAttachments?.maxUploadBytes,"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/QuestionAttachments.tsx",
+        "line": 153,
+        "source": "maxVideoBytes: capabilities?.fileAttachments?.maxUploadBytes,"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/ThreadComposer.tsx",
+        "line": 1041,
+        "source": "const advertisedMax = capabilities?.fileAttachments?.maxUploadBytes;"
+      },
+      {
+        "file": "apps/mobile/src/lib/composerAttachmentUploadQueue.ts",
+        "line": 61,
+        "source": "readonly capabilities: Pick<ServerConfig[\"environment\"][\"capabilities\"], \"fileAttachments\">;"
+      },
+      {
+        "file": "apps/mobile/src/lib/composerAttachmentUploadQueue.ts",
+        "line": 73,
+        "source": "(capabilities.fileAttachments !== undefined &&"
+      },
+      {
+        "file": "apps/mobile/src/lib/composerAttachmentUploadQueue.ts",
+        "line": 75,
+        "source": "clampFileAttachmentUploadBytes(capabilities.fileAttachments.maxUploadBytes)))"
+      },
+      {
+        "file": "apps/mobile/src/state/thread-outbox-model.ts",
+        "line": 233,
+        "source": "readonly fileAttachments: ReadonlyArray<{ readonly name: string; readonly sizeBytes: number }>;"
+      },
+      {
+        "file": "apps/mobile/src/state/thread-outbox-model.ts",
+        "line": 242,
+        "source": "if (input.fileAttachments.length === 0) {"
+      },
+      {
+        "file": "apps/mobile/src/state/thread-outbox-model.ts",
+        "line": 250,
+        "source": "const oversized = input.fileAttachments.find("
+      },
+      {
+        "file": "apps/mobile/src/state/threadOutboxDelivery.ts",
+        "line": 1334,
+        "source": "fileAttachments: nextQueuedMessage.attachments.filter("
+      },
+      {
+        "file": "apps/mobile/src/state/threadOutboxDelivery.ts",
+        "line": 1340,
+        "source": "serverConfig.environment.capabilities.fileAttachments?.maxUploadBytes,"
+      },
+      {
+        "file": "apps/mobile/src/state/use-composer-attachment-actions.ts",
+        "line": 68,
+        "source": "maxVideoBytes: capabilities?.fileAttachments?.maxUploadBytes,"
+      },
+      {
+        "file": "apps/mobile/src/state/use-composer-attachment-actions.ts",
+        "line": 80,
+        "source": "const maxBytes = capabilities?.fileAttachments?.maxUploadBytes;"
+      },
+      {
+        "file": "apps/mobile/src/state/use-composer-attachment-actions.ts",
+        "line": 121,
+        "source": "const maxBytes = capabilities?.fileAttachments?.maxUploadBytes;"
+      }
+    ]
+  },
+  {
+    "name": "pullRequests",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 96,
+      "source": "pullRequests: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/keyboard/HardwareKeyboardCommandProvider.tsx",
+        "line": 67,
+        "source": "pullRequests: activeThread?.pullRequests,"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/WorkspaceEmptyDetail.tsx",
+        "line": 16,
+        "source": "const pullRequests = props.tab === \"pullRequests\";"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/WorkspaceEmptyDetail.tsx",
+        "line": 56,
+        "source": ": pullRequests"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/WorkspaceEmptyDetail.tsx",
+        "line": 63,
+        "source": ": pullRequests"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/WorkspaceEmptyDetail.tsx",
+        "line": 69,
+        "source": "{props.onStartNewTask && !pullRequests && !settings ? ("
+      },
+      {
+        "file": "apps/mobile/src/features/layout/createWorkspaceStackNavigator.ios.tsx",
+        "line": 265,
+        "source": "deviceType === \"duo-unfolded\" && selectedTab !== \"pullRequests\" && !settingsOpen"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/createWorkspaceStackNavigator.ios.tsx",
+        "line": 368,
+        "source": ": ([\"threads\", \"pullRequests\", \"usage\"] as const).find((candidate) =>"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/AndroidWorkspaceSidebar.android.tsx",
+        "line": 49,
+        "source": ") : tab !== \"pullRequests\" ? ("
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/PullRequestToolbar.android.tsx",
+        "line": 22,
+        "source": "const tab = workspace.state.tabs.pullRequests;"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/PullRequestToolbar.android.tsx",
+        "line": 28,
+        "source": "tab: \"pullRequests\","
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/PullRequestToolbar.android.tsx",
+        "line": 29,
+        "source": "offset: getScrollOffset(\"pullRequests\"),"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/PullRequestToolbar.android.tsx",
+        "line": 31,
+        "source": "dispatch({ type: \"search\", tab: \"pullRequests\" });"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/PullRequestToolbar.android.tsx",
+        "line": 37,
+        "source": "recordScrollOffset(\"pullRequests\", tab.searchEntryOffset);"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/PullRequestToolbar.android.tsx",
+        "line": 38,
+        "source": "dispatch({ type: \"cancel\", tab: \"pullRequests\" });"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/PullRequestToolbar.android.tsx",
+        "line": 47,
+        "source": "if (!state || state.routes[state.index]?.name !== \"Home\" || !isTabActive(\"pullRequests\"))"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/PullRequestToolbar.android.tsx",
+        "line": 66,
+        "source": "onChangeText: (query) => dispatch({ type: \"query\", tab: \"pullRequests\", query }),"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/WorkspaceExtraTab.tsx",
+        "line": 6,
+        "source": "tab: Exclude<NavigationTab, \"threads\" | \"pullRequests\">;"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/WorkspaceNativeTabs.ios.tsx",
+        "line": 248,
+        "source": ": tab === \"pullRequests\""
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/WorkspaceRootScreen.android.tsx",
+        "line": 98,
+        "source": ") : tab !== \"pullRequests\" ? ("
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/WorkspaceRootScreen.android.tsx",
+        "line": 106,
+        "source": "<WorkspaceEmptyDetail tab=\"pullRequests\" />"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/WorkspaceRootScreen.tsx",
+        "line": 163,
+        "source": ") : state.selectedTab === \"pullRequests\" ? ("
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/WorkspaceRootScreen.tsx",
+        "line": 174,
+        "source": "state.selectedTab === \"pullRequests\" ? ("
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/WorkspaceSectionToolbar.tsx",
+        "line": 37,
+        "source": "tab === \"pullRequests\""
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/WorkspaceTabsContext.tsx",
+        "line": 61,
+        "source": "pullRequests: 0,"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/WorkspaceToolbar.tsx",
+        "line": 26,
+        "source": "pullRequests: \"Search pull requests\","
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/navigation-tab-order.ts",
+        "line": 1,
+        "source": "export const NAVIGATION_TAB_ORDER = [\"threads\", \"pullRequests\", \"usage\"] as const;"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/navigation-tab-order.ts",
+        "line": 12,
+        "source": "pullRequests: \"Pulls\","
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/navigation-tabs.ts",
+        "line": 18,
+        "source": "...(Platform.OS === \"ios\" ? { threads: \"Chats\", pullRequests: \"PRs\" } : {}),"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/navigation-tabs.ts",
+        "line": 23,
+        "source": "pullRequests: PullRequestGlyph.pullRequest,"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/workspace-selection-store.ts",
+        "line": 58,
+        "source": "const { threads, pullRequests, settingsKey: _, threadsDraft: _draft, ...rest } = saved ?? {};"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/workspace-selection-store.ts",
+        "line": 62,
+        "source": "...(pullRequests ? { pullRequests: omitKey(pullRequests) } : {}),"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/workspace-tab-navigation.ts",
+        "line": 15,
+        "source": "type PullRequestSelection = NonNullable<WorkspaceSelections[\"pullRequests\"]>;"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/workspace-tab-navigation.ts",
+        "line": 119,
+        "source": "(!samePullRequest(next.pullRequests, pullRequest) ||"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/workspace-tab-navigation.ts",
+        "line": 120,
+        "source": "next.pullRequests?.key !== pullRequestRoute?.key)"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/workspace-tab-navigation.ts",
+        "line": 122,
+        "source": "next = { ...next, pullRequests: { ...pullRequest, key: pullRequestRoute?.key } };"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/workspace-tab-navigation.ts",
+        "line": 151,
+        "source": "tab: \"threads\" | \"pullRequests\","
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/workspace-tab-navigation.ts",
+        "line": 182,
+        "source": "const pullRequest = selections.pullRequests;"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/workspace-tabs-state.ts",
+        "line": 21,
+        "source": "return settingsOpen || tab === \"threads\" || tab === \"pullRequests\";"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/workspace-tabs-state.ts",
+        "line": 43,
+        "source": "return routeName === \"PullRequest\" ? \"pullRequests\" : \"threads\";"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/workspace-tabs-state.ts",
+        "line": 54,
+        "source": "pullRequests: emptyTab(),"
+      },
+      {
+        "file": "apps/mobile/src/features/layout/workspace/workspace-tabs-state.ts",
+        "line": 82,
+        "source": "if (tab !== \"threads\" && tab !== \"pullRequests\" && tab !== \"settings\") return state;"
+      },
+      {
+        "file": "apps/mobile/src/features/pull-requests/PullRequestsScreen.tsx",
+        "line": 108,
+        "source": "const tab = workspace.state.tabs.pullRequests;"
+      },
+      {
+        "file": "apps/mobile/src/features/pull-requests/PullRequestsScreen.tsx",
+        "line": 109,
+        "source": "const [initialScrollOffset] = useState(() => workspace.getScrollOffset(\"pullRequests\"));"
+      },
+      {
+        "file": "apps/mobile/src/features/pull-requests/PullRequestsScreen.tsx",
+        "line": 118,
+        "source": "shouldRestorePosition: () => workspace.getScrollOffset(\"pullRequests\") > 0,"
+      },
+      {
+        "file": "apps/mobile/src/features/pull-requests/PullRequestsScreen.tsx",
+        "line": 225,
+        "source": "servesPullRequests: (id) => configs.get(id)?.environment.capabilities.pullRequests === true,"
+      },
+      {
+        "file": "apps/mobile/src/features/pull-requests/PullRequestsScreen.tsx",
+        "line": 241,
+        "source": "workspace.dispatch({ type: \"query\", tab: \"pullRequests\", query: update.query });"
+      },
+      {
+        "file": "apps/mobile/src/features/pull-requests/PullRequestsScreen.tsx",
+        "line": 311,
+        "source": "\"pullRequests\","
+      },
+      {
+        "file": "apps/mobile/src/features/pull-requests/usePullRequestStack.ts",
+        "line": 32,
+        "source": ".flatMap((thread) => thread.pullRequests ?? []),"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/LinkedPullRequestList.tsx",
+        "line": 42,
+        "source": "const pullRequests = thread?.pullRequests;"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/LinkedPullRequestList.tsx",
+        "line": 44,
+        "source": "const chains = resolveThreadPullRequestChains(supported ? (pullRequests ?? []) : []);"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/LinkedPullRequestList.tsx",
+        "line": 48,
+        "source": "}, [pullRequests, supported]);"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/ThreadComposer.tsx",
+        "line": 586,
+        "source": "threadPullRequests: props.selectedThread.pullRequests,"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/draft-thread-shell.ts",
+        "line": 33,
+        "source": "pullRequests: [],"
+      },
+      {
+        "file": "apps/mobile/src/persistence/mobile-preferences.ts",
+        "line": 65,
+        "source": "pullRequests: Schema.optional("
+      },
+      {
+        "file": "apps/mobile/src/state/pending-thread-creation.ts",
+        "line": 182,
+        "source": "pullRequests: [],"
+      },
+      {
+        "file": "apps/mobile/src/state/thread-pr-presentation.ts",
+        "line": 109,
+        "source": "thread: Pick<EnvironmentThreadShell, \"pullRequests\" | \"linkedPullRequest\" | \"branchPullRequest\">,"
+      },
+      {
+        "file": "apps/mobile/src/state/thread-pr-presentation.ts",
+        "line": 114,
+        "source": "? presentThreadLinkedPullRequests(thread.pullRequests)"
+      },
+      {
+        "file": "apps/mobile/src/state/thread-pr-presentation.ts",
+        "line": 151,
+        "source": "threads: Iterable<Pick<EnvironmentThreadShell, \"projectId\" | \"pullRequests\">>,"
+      },
+      {
+        "file": "apps/mobile/src/state/thread-pr-presentation.ts",
+        "line": 175,
+        "source": "for (const link of thread.pullRequests) {"
+      },
+      {
+        "file": "apps/mobile/src/state/use-thread-pr.ts",
+        "line": 90,
+        "source": "pullRequests: thread.pullRequests,"
+      },
+      {
+        "file": "apps/mobile/src/state/use-thread-pr.ts",
+        "line": 96,
+        "source": "[thread.pullRequests, thread.linkedPullRequest, thread.branchPullRequest, supportsLinks],"
+      },
+      {
+        "file": "apps/mobile/src/state/use-thread-selection.ts",
+        "line": 80,
+        "source": "pullRequests: thread.pullRequests,"
+      }
+    ]
+  },
+  {
+    "name": "pullRequestChecks",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 97,
+      "source": "pullRequestChecks: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/pull-requests/usePullRequestLiveChecks.ts",
+        "line": 24,
+        "source": "useEnvironmentServerConfig(target.environmentId)?.environment.capabilities.pullRequestChecks ==="
+      }
+    ]
+  },
+  {
+    "name": "sideChats",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 99,
+      "source": "sideChats: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/threads/ThreadSideChatsRow.tsx",
+        "line": 18,
+        "source": "const sideChats = useSideChats({ environmentId: props.environmentId, threadId: props.threadId });"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/ThreadSideChatsRow.tsx",
+        "line": 20,
+        "source": "if (sideChats.length === 0) return null;"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/ThreadSideChatsRow.tsx",
+        "line": 36,
+        "source": "{sideChats.map((sideChat) => {"
+      },
+      {
+        "file": "apps/mobile/src/state/use-thread-composer-state.ts",
+        "line": 865,
+        "source": "if (serverConfig.environment.capabilities.sideChats !== true) {"
+      }
+    ]
+  },
+  {
+    "name": "vcsBranchStatus",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 100,
+      "source": "vcsBranchStatus: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "inlineMessageContext",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 102,
+      "source": "inlineMessageContext: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "requiredWorktreeBootstrap",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 103,
+      "source": "requiredWorktreeBootstrap: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "threadSettlement",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 104,
+      "source": "threadSettlement: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "threadAutoSettlement",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 105,
+      "source": "threadAutoSettlement: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "storageCleanup",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 106,
+      "source": "storageCleanup: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "storageCleanupRun",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 107,
+      "source": "storageCleanupRun: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "databaseStorage",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 108,
+      "source": "databaseStorage: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/settings/SettingsServerControlsRouteScreen.tsx",
+        "line": 537,
+        "source": "target.serverConfig.environment.capabilities.databaseStorage === true,"
+      }
+    ]
+  },
+  {
+    "name": "otlpEndpointCheck",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 109,
+      "source": "otlpEndpointCheck: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "secretSourceCheck",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 111,
+      "source": "secretSourceCheck: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "projectWorktreeCleanup",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 112,
+      "source": "projectWorktreeCleanup: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "settledWorktreeCleanup",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 113,
+      "source": "settledWorktreeCleanup: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "worktreesDirectory",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 114,
+      "source": "worktreesDirectory: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "fastWorktreeCheckout",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 116,
+      "source": "fastWorktreeCheckout: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+        "line": 56,
+        "source": "capability=\"fastWorktreeCheckout\""
+      },
+      {
+        "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+        "line": 57,
+        "source": "setting=\"fastWorktreeCheckout\""
+      },
+      {
+        "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+        "line": 241,
+        "source": "type MachineBetaSetting = \"linkedEnvironmentsEnabled\" | \"fastWorktreeCheckout\";"
+      },
+      {
+        "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+        "line": 253,
+        "source": "readonly capability: \"peerLinks\" | \"fastWorktreeCheckout\";"
+      },
+      {
+        "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+        "line": 290,
+        "source": ": { fastWorktreeCheckout: value },"
+      }
+    ]
+  },
+  {
+    "name": "threadAutoSettlementScope",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 117,
+      "source": "threadAutoSettlementScope: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "threadRestartContinuation",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 118,
+      "source": "threadRestartContinuation: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "projectSettingsOverrides",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 119,
+      "source": "projectSettingsOverrides: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/settings/settings-scoped-server.ts",
+        "line": 83,
+        "source": "target.environment.serverConfig.settings.projectSettingsOverrides[target.projectId] ?? {};"
+      },
+      {
+        "file": "apps/mobile/src/features/settings/settings-scoped-server.ts",
+        "line": 99,
+        "source": "return [...writes].map(([environmentId, projectSettingsOverrides]) => ({"
+      },
+      {
+        "file": "apps/mobile/src/features/settings/settings-scoped-server.ts",
+        "line": 101,
+        "source": "patch: { projectSettingsOverrides } as ServerSettingsPatch,"
+      },
+      {
+        "file": "apps/mobile/src/features/settings/settings-scoped-server.ts",
+        "line": 130,
+        "source": "return [...writes].map(([environmentId, projectSettingsOverrides]) => ({"
+      },
+      {
+        "file": "apps/mobile/src/features/settings/settings-scoped-server.ts",
+        "line": 132,
+        "source": "patch: { projectSettingsOverrides } as ServerSettingsPatch,"
+      },
+      {
+        "file": "apps/mobile/src/lib/modelOptions.ts",
+        "line": 100,
+        "source": "config.settings.projectSettingsOverrides[projectId]?.providerInstances?.[instanceId]"
+      }
+    ]
+  },
+  {
+    "name": "projectProviderInstanceOverrides",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 121,
+      "source": "projectProviderInstanceOverrides: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "threadSnooze",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 122,
+      "source": "threadSnooze: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "threadForceStop",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 124,
+      "source": "threadForceStop: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/threads/ThreadDetailScreen.tsx",
+        "line": 599,
+        "source": "props.serverConfig?.environment.capabilities.threadForceStop === true;"
+      }
+    ]
+  },
+  {
+    "name": "environmentThemes",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 126,
+      "source": "environmentThemes: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "usageLimitSources",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 127,
+      "source": "usageLimitSources: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/connection/runtime.ts",
+        "line": 40,
+        "source": "usageLimitSources: true,"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/ThreadComposer.tsx",
+        "line": 549,
+        "source": "props.serverConfig?.usageLimitSources ?? [],"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/ThreadComposer.tsx",
+        "line": 555,
+        "source": "props.serverConfig?.usageLimitSources ?? [],"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/ThreadDetailScreen.tsx",
+        "line": 991,
+        "source": "props.serverConfig?.usageLimitSources ?? [],"
+      },
+      {
+        "file": "apps/mobile/src/state/server.ts",
+        "line": 14,
+        "source": "usageLimitSources: true,"
+      }
+    ]
+  },
+  {
+    "name": "providerWorkspaceSnapshotsOnDemand",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 129,
+      "source": "providerWorkspaceSnapshotsOnDemand: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "modelCatalogRefresh",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 131,
+      "source": "modelCatalogRefresh: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/threads/ThreadSettingsSheet.tsx",
+        "line": 957,
+        "source": "if (config?.environment.capabilities.modelCatalogRefresh !== true) return;"
+      }
+    ]
+  },
+  {
+    "name": "usagePriceOverrides",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 132,
+      "source": "usagePriceOverrides: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "usageModelAliases",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 133,
+      "source": "usageModelAliases: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "threadPinning",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 134,
+      "source": "threadPinning: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "threadPinReorder",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 135,
+      "source": "threadPinReorder: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "threadActiveReorder",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 136,
+      "source": "threadActiveReorder: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "threadAutoSettleOptOut",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 137,
+      "source": "threadAutoSettleOptOut: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/home/useThreadListActions.ts",
+        "line": 52,
+        "source": ".threadAutoSettleOptOut === true"
+      },
+      {
+        "file": "apps/mobile/src/state/thread-list-environments.ts",
+        "line": 15,
+        "source": "const capabilityKeys = [\"threadAutoSettleOptOut\"] as const;"
+      },
+      {
+        "file": "apps/mobile/src/state/thread-list-environments.ts",
+        "line": 74,
+        "source": "if (capabilities.threadAutoSettleOptOut === true) autoSettleOptOutEnvironmentIds.add(id);"
+      }
+    ]
+  },
+  {
+    "name": "threadProjectFromScratch",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 138,
+      "source": "threadProjectFromScratch: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/threads/turnThreadIntoProject.ts",
+        "line": 20,
+        "source": "if (config?.environment.capabilities.threadProjectFromScratch !== true) return false;"
+      }
+    ]
+  },
+  {
+    "name": "threadTitleRegeneration",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 139,
+      "source": "threadTitleRegeneration: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "threadVisitedTracking",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 140,
+      "source": "threadVisitedTracking: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "threadPullRequestLinking",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 141,
+      "source": "threadPullRequestLinking: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "serverResolvedCommandContext",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 142,
+      "source": "serverResolvedCommandContext: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "threadStop",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 143,
+      "source": "threadStop: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "localServerStop",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 145,
+      "source": "localServerStop: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "threadPullRequests",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 146,
+      "source": "threadPullRequests: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/threads/ThreadComposer.tsx",
+        "line": 586,
+        "source": "threadPullRequests: props.selectedThread.pullRequests,"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/use-composer-command-menu.ts",
+        "line": 251,
+        "source": "threadPullRequests,"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/use-composer-command-menu.ts",
+        "line": 276,
+        "source": "readonly threadPullRequests?: ReadonlyArray<ThreadPullRequestLink>;"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/use-composer-command-menu.ts",
+        "line": 357,
+        "source": "threadPullRequests,"
+      },
+      {
+        "file": "apps/mobile/src/state/queries.ts",
+        "line": 114,
+        "source": "threadPullRequests?: ReadonlyArray<ThreadPullRequestLink> | undefined;"
+      },
+      {
+        "file": "apps/mobile/src/state/queries.ts",
+        "line": 121,
+        "source": ": composerPullRequestsFromLinks(input.threadPullRequests ?? [], input.projectId);"
+      }
+    ]
+  },
+  {
+    "name": "threadPullRequestWatch",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 147,
+      "source": "threadPullRequestWatch: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/pull-requests/usePullRequestThreads.ts",
+        "line": 184,
+        "source": "canWatch: config?.environment.capabilities.threadPullRequestWatch === true,"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/useLinkedPullRequestActions.ts",
+        "line": 48,
+        "source": "const canWatch = canOperate && capabilities?.threadPullRequestWatch === true;"
+      }
+    ]
+  },
+  {
+    "name": "pullRequestStackActions",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 148,
+      "source": "pullRequestStackActions: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "serverSelfUpdate",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 149,
+      "source": "serverSelfUpdate: Schema.optionalKey(ServerSelfUpdateCapability),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+        "line": 126,
+        "source": "`Install T3 Code ${targetVersion}. ${capabilities.serverSelfUpdate === \"desktop-managed\" ? \"The desktop app will close and relaunch.\" : \"The server will restart and reconnect.\"} Running threads may be interrupted.`,"
+      },
+      {
+        "file": "apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx",
+        "line": 268,
+        "source": "{capabilities?.serverSelfUpdate === \"desktop-managed\""
+      },
+      {
+        "file": "apps/mobile/src/features/settings/environment-maintenance.ts",
+        "line": 26,
+        "source": "capabilities: Pick<ExecutionEnvironmentCapabilities, \"serverSelfUpdate\" | \"desktopAppUpdate\">,"
+      },
+      {
+        "file": "apps/mobile/src/features/settings/environment-maintenance.ts",
+        "line": 29,
+        "source": "capabilities.serverSelfUpdate !== undefined &&"
+      },
+      {
+        "file": "apps/mobile/src/features/settings/environment-maintenance.ts",
+        "line": 30,
+        "source": "(capabilities.serverSelfUpdate !== \"desktop-managed\" || capabilities.desktopAppUpdate === true)"
+      }
+    ]
+  },
+  {
+    "name": "npmReleaseLookup",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 151,
+      "source": "npmReleaseLookup: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "serverInstallation",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 153,
+      "source": "serverInstallation: ForwardCompatibleOptional(ServerInstallation),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "serverSelfUpdateProgress",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 154,
+      "source": "serverSelfUpdateProgress: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "serverUpdateStaging",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 155,
+      "source": "serverUpdateStaging: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "serverUpdateThreadContinuation",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 156,
+      "source": "serverUpdateThreadContinuation: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "agentActivityPublishing",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 158,
+      "source": "agentActivityPublishing: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/agent-awareness/remoteRegistration.ts",
+        "line": 486,
+        "source": ".agentActivityPublishing !== false"
+      }
+    ]
+  },
+  {
+    "name": "projectCloneTracking",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 159,
+      "source": "projectCloneTracking: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "projectOrganization",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 161,
+      "source": "projectOrganization: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/settings/SettingsProjectOverviewRouteScreen.tsx",
+        "line": 178,
+        "source": "target.serverConfig.environment.capabilities.projectOrganization === true,"
+      }
+    ]
+  },
+  {
+    "name": "ignoredFileListing",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 163,
+      "source": "ignoredFileListing: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "ignoredFileSearch",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 165,
+      "source": "ignoredFileSearch: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "environmentIcon",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 166,
+      "source": "environmentIcon: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "desktopAppUpdate",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 167,
+      "source": "desktopAppUpdate: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/settings/environment-maintenance.ts",
+        "line": 26,
+        "source": "capabilities: Pick<ExecutionEnvironmentCapabilities, \"serverSelfUpdate\" | \"desktopAppUpdate\">,"
+      },
+      {
+        "file": "apps/mobile/src/features/settings/environment-maintenance.ts",
+        "line": 30,
+        "source": "(capabilities.serverSelfUpdate !== \"desktop-managed\" || capabilities.desktopAppUpdate === true)"
+      }
+    ]
+  },
+  {
+    "name": "desktopAppChannelSwitch",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 169,
+      "source": "desktopAppChannelSwitch: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "commandOutputStreaming",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 171,
+      "source": "commandOutputStreaming: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/threads/thread-command-output.tsx",
+        "line": 16,
+        "source": "useServerConfigs().get(environmentId)?.environment.capabilities.commandOutputStreaming === true"
+      }
+    ]
+  },
+  {
+    "name": "serverBrowser",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 173,
+      "source": "serverBrowser: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/threads/ThreadDetailScreen.tsx",
+        "line": 448,
+        "source": "!props.draftMode && props.serverConfig?.environment.capabilities.serverBrowser === true,"
+      }
+    ]
+  },
+  {
+    "name": "peerLinks",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 177,
+      "source": "peerLinks: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/components/ComposerEditor.tsx",
+        "line": 33,
+        "source": "import { useLinkedEnvironments } from \"../state/peerLinks\";"
+      },
+      {
+        "file": "apps/mobile/src/features/connection/LinkedEnvironmentsSection.tsx",
+        "line": 3,
+        "source": "import { peerLinkHealth } from \"@t3tools/client-runtime/state/peerLinks\";"
+      },
+      {
+        "file": "apps/mobile/src/features/connection/LinkedEnvironmentsSection.tsx",
+        "line": 12,
+        "source": "import { peerLinkEnvironment } from \"../../state/peerLinks\";"
+      },
+      {
+        "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+        "line": 49,
+        "source": "capability=\"peerLinks\""
+      },
+      {
+        "file": "apps/mobile/src/features/settings/ThreadSettingsSections.tsx",
+        "line": 253,
+        "source": "readonly capability: \"peerLinks\" | \"fastWorktreeCheckout\";"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/LinkRequestCard.tsx",
+        "line": 36,
+        "source": "import { peerLinkEnvironment, useLinkableMachines } from \"../../state/peerLinks\";"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/ThreadComposer.tsx",
+        "line": 70,
+        "source": "import { useLinkedEnvironments } from \"../../state/peerLinks\";"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/new-task-flow-provider.tsx",
+        "line": 42,
+        "source": "import { useLinkedEnvironments } from \"../../state/peerLinks\";"
+      },
+      {
+        "file": "apps/mobile/src/state/peerLinks.ts",
+        "line": 7,
+        "source": "import { createPeerLinkEnvironmentAtoms } from \"@t3tools/client-runtime/state/peerLinks\";"
+      }
+    ]
+  },
+  {
+    "name": "mcpModeLimitHeader",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 181,
+      "source": "mcpModeLimitHeader: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "linkFence",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 185,
+      "source": "linkFence: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "mcpApprovalCodes",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 187,
+      "source": "mcpApprovalCodes: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "mcpHostedApproval",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 189,
+      "source": "mcpHostedApproval: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "triage",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 191,
+      "source": "triage: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/keyboard/CommandPalette.tsx",
+        "line": 62,
+        "source": "import { pickTriageEnvironment } from \"../triage/triageTarget\";"
+      },
+      {
+        "file": "apps/mobile/src/features/keyboard/CommandPalette.tsx",
+        "line": 63,
+        "source": "import { useStartTriage } from \"../triage/useStartTriage\";"
+      },
+      {
+        "file": "apps/mobile/src/features/keyboard/CommandPalette.tsx",
+        "line": 283,
+        "source": "serverConfigs.get(environmentId)?.environment.capabilities.triage === true,"
+      },
+      {
+        "file": "apps/mobile/src/features/keyboard/CommandPalette.tsx",
+        "line": 288,
+        "source": "serverConfigs.get(triageEnvironmentId)?.environment.capabilities.triage === true;"
+      },
+      {
+        "file": "apps/mobile/src/features/keyboard/CommandPalette.tsx",
+        "line": 355,
+        "source": "key: \"triage\","
+      },
+      {
+        "file": "apps/mobile/src/features/keyboard/CommandPalette.tsx",
+        "line": 358,
+        "source": "// Mobile has no triage hero, so name the machine before it starts."
+      },
+      {
+        "file": "apps/mobile/src/features/keyboard/CommandPalette.tsx",
+        "line": 360,
+        "source": "searchTerms: [\"triage\", \"bug\", \"issue\", \"report\", \"broken\", \"debug\", \"help\", \"support\"],"
+      },
+      {
+        "file": "apps/mobile/src/features/pull-requests/PullRequestLabelsScreen.tsx",
+        "line": 46,
+        "source": ": \"Changing labels needs triage access on this repository.\";"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/new-task-flow-provider.tsx",
+        "line": 106,
+        "source": "import { usePrepareTriage } from \"../triage/usePrepareTriage\";"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/new-task-flow-provider.tsx",
+        "line": 620,
+        "source": "// A triage draft takes its session along: the playbook and context files"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/new-task-flow-provider.tsx",
+        "line": 623,
+        "source": "const triage ="
+      },
+      {
+        "file": "apps/mobile/src/features/threads/new-task-flow-provider.tsx",
+        "line": 628,
+        "source": "triage?._tag === \"Failure\" ? triage : await openScratch({ environmentId, input: {} });"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/new-task-flow-provider.tsx",
+        "line": 635,
+        "source": "if (triage?._tag === \"Success\" && draftKey !== null && readFlow().draftKey === draftKey) {"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/new-task-flow-provider.tsx",
+        "line": 638,
+        "source": "const nextText = replaceTriagePlaybookLink(text, triage.value.prompt);"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/new-task-flow-provider.tsx",
+        "line": 650,
+        "source": ": triage?._tag === \"Failure\""
+      },
+      {
+        "file": "apps/mobile/src/features/threads/new-task-flow-provider.tsx",
+        "line": 651,
+        "source": "? \"The server could not prepare triage.\""
+      },
+      {
+        "file": "apps/mobile/src/features/triage/triageTarget.ts",
+        "line": 2,
+        "source": "* The machine triage runs on: the one on screen, else the first connected"
+      },
+      {
+        "file": "apps/mobile/src/features/triage/triageTarget.ts",
+        "line": 3,
+        "source": "* machine whose server supports triage. The palette row names the pick."
+      },
+      {
+        "file": "apps/mobile/src/features/triage/usePrepareTriage.ts",
+        "line": 9,
+        "source": "* Asks a machine to prepare a triage session. The result carries the prompt"
+      },
+      {
+        "file": "apps/mobile/src/features/triage/useStartTriage.ts",
+        "line": 21,
+        "source": "const CLI_COMMAND = \"npx t3 triage\";"
+      },
+      {
+        "file": "apps/mobile/src/features/triage/useStartTriage.ts",
+        "line": 24,
+        "source": "* In-app `t3 triage`, as on web: the server writes the session files and"
+      },
+      {
+        "file": "apps/mobile/src/features/triage/useStartTriage.ts",
+        "line": 35,
+        "source": "\"Could not start triage\","
+      }
+    ]
+  },
+  {
+    "name": "oneTimeSchedules",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 193,
+      "source": "oneTimeSchedules: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+        "line": 733,
+        "source": "config?.environment.capabilities.oneTimeSchedules === true ||"
+      }
+    ]
+  },
+  {
+    "name": "freshContext",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 195,
+      "source": "freshContext: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/threads/FreshSessionNotice.tsx",
+        "line": 8,
+        "source": "if (useComposerDraftSettings(props.threadKey).freshContext !== true) return null;"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/ThreadDetailScreen.tsx",
+        "line": 943,
+        "source": "props.serverConfig?.environment.capabilities.freshContext === true;"
+      },
+      {
+        "file": "apps/mobile/src/features/threads/ThreadFeed.tsx",
+        "line": 3828,
+        "source": "info.item.message.projectedItem.item.freshContext ? ("
+      },
+      {
+        "file": "apps/mobile/src/features/threads/ThreadQueueControl.tsx",
+        "line": 263,
+        "source": "(run.freshContext !== true || workflow?.promoteSkipsCompaction === true),"
+      },
+      {
+        "file": "apps/mobile/src/state/thread-outbox-model.ts",
+        "line": 62,
+        "source": "freshContext: Schema.optional(Schema.Boolean),"
+      },
+      {
+        "file": "apps/mobile/src/state/thread-outbox-model.ts",
+        "line": 99,
+        "source": "readonly freshContext?: boolean;"
+      },
+      {
+        "file": "apps/mobile/src/state/threadOutboxDelivery.ts",
+        "line": 466,
+        "source": "...(queuedMessage.freshContext ? { freshContext: true } : {}),"
+      },
+      {
+        "file": "apps/mobile/src/state/threadOutboxDelivery.ts",
+        "line": 960,
+        "source": "...(queuedMessage.freshContext ? { freshContext: true } : {}),"
+      },
+      {
+        "file": "apps/mobile/src/state/use-composer-drafts.ts",
+        "line": 449,
+        "source": "readonly freshContext?: boolean;"
+      },
+      {
+        "file": "apps/mobile/src/state/use-composer-drafts.ts",
+        "line": 486,
+        "source": "| \"freshContext\""
+      },
+      {
+        "file": "apps/mobile/src/state/use-composer-drafts.ts",
+        "line": 520,
+        "source": "freshContext: Schema.optional(Schema.Boolean),"
+      },
+      {
+        "file": "apps/mobile/src/state/use-composer-drafts.ts",
+        "line": 700,
+        "source": "draft.freshContext !== true &&"
+      },
+      {
+        "file": "apps/mobile/src/state/use-composer-drafts.ts",
+        "line": 1622,
+        "source": "if ((getComposerDraftSnapshot(draftKey).freshContext === true) === pending) return;"
+      },
+      {
+        "file": "apps/mobile/src/state/use-composer-drafts.ts",
+        "line": 1623,
+        "source": "updateComposerDraftSettings(draftKey, { freshContext: pending ? true : undefined });"
+      },
+      {
+        "file": "apps/mobile/src/state/use-composer-drafts.ts",
+        "line": 1627,
+        "source": "return getComposerDraftSnapshot(draftKey).freshContext === true;"
+      },
+      {
+        "file": "apps/mobile/src/state/use-composer-drafts.ts",
+        "line": 1878,
+        "source": "a.freshContext === b.freshContext &&"
+      },
+      {
+        "file": "apps/mobile/src/state/use-composer-drafts.ts",
+        "line": 1908,
+        "source": "| \"freshContext\""
+      },
+      {
+        "file": "apps/mobile/src/state/use-composer-drafts.ts",
+        "line": 1929,
+        "source": "freshContext: undoSetting(\"freshContext\"),"
+      },
+      {
+        "file": "apps/mobile/src/state/use-composer-drafts.ts",
+        "line": 2180,
+        "source": "\"modelSelection\" | \"runtimeMode\" | \"interactionMode\" | \"freshContext\""
+      },
+      {
+        "file": "apps/mobile/src/state/use-composer-drafts.ts",
+        "line": 2190,
+        "source": "freshContext: draft.freshContext,"
+      },
+      {
+        "file": "apps/mobile/src/state/use-composer-drafts.ts",
+        "line": 2198,
+        "source": "a.freshContext === b.freshContext,"
+      },
+      {
+        "file": "apps/mobile/src/state/use-thread-composer-state.ts",
+        "line": 452,
+        "source": "selectedDraft.freshContext === true"
+      },
+      {
+        "file": "apps/mobile/src/state/use-thread-composer-state.ts",
+        "line": 678,
+        "source": "selectedEnvironmentRuntime?.serverConfig?.environment.capabilities.freshContext === true &&"
+      },
+      {
+        "file": "apps/mobile/src/state/use-thread-composer-state.ts",
+        "line": 797,
+        "source": "const freshContext = beforeDispatch === undefined && isFreshSessionPending(threadKey);"
+      },
+      {
+        "file": "apps/mobile/src/state/use-thread-composer-state.ts",
+        "line": 803,
+        "source": "!freshContext &&"
+      },
+      {
+        "file": "apps/mobile/src/state/use-thread-composer-state.ts",
+        "line": 826,
+        "source": "...(freshContext ? { freshContext: true } : {}),"
+      },
+      {
+        "file": "apps/mobile/src/state/use-thread-composer-state.ts",
+        "line": 830,
+        "source": "if (freshContext) setFreshSessionPending(threadKey, false);"
+      },
+      {
+        "file": "apps/mobile/src/state/use-thread-composer-state.ts",
+        "line": 844,
+        "source": "if (freshContext) setFreshSessionPending(threadKey, true);"
+      }
+    ]
+  },
+  {
+    "name": "scheduledTaskThreadModes",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 197,
+      "source": "scheduledTaskThreadModes: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx",
+        "line": 735,
+        "source": "const offersThreadModes = config?.environment.capabilities.scheduledTaskThreadModes === true;"
+      }
+    ]
+  },
+  {
+    "name": "voiceTranscription",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 199,
+      "source": "voiceTranscription: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/voice-input/VoiceInputProvider.tsx",
+        "line": 16,
+        "source": "import { getLocalVoiceTranscriber } from \"../../native/voiceTranscription\";"
+      },
+      {
+        "file": "apps/mobile/src/features/voice-input/voiceDestination.ts",
+        "line": 93,
+        "source": "const voiceConnections = (capability: \"voiceTranscription\" | \"cloudVoiceTranscription\") =>"
+      },
+      {
+        "file": "apps/mobile/src/features/voice-input/voiceDestination.ts",
+        "line": 110,
+        "source": "export const voiceConnectionAtom = voiceConnections(\"voiceTranscription\");"
+      },
+      {
+        "file": "apps/mobile/src/native/voiceRecorder.android.ts",
+        "line": 2,
+        "source": "import { createLiveVoiceRecorder } from \"./voiceTranscription.android\";"
+      }
+    ]
+  },
+  {
+    "name": "cloudVoiceTranscription",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 200,
+      "source": "cloudVoiceTranscription: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+        "line": 183,
+        "source": "environment.serverConfig?.environment.capabilities.cloudVoiceTranscription === true ||"
+      },
+      {
+        "file": "apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx",
+        "line": 221,
+        "source": "environment.serverConfig?.environment.capabilities.cloudVoiceTranscription === true,"
+      },
+      {
+        "file": "apps/mobile/src/features/voice-input/voiceDestination.ts",
+        "line": 93,
+        "source": "const voiceConnections = (capability: \"voiceTranscription\" | \"cloudVoiceTranscription\") =>"
+      },
+      {
+        "file": "apps/mobile/src/features/voice-input/voiceDestination.ts",
+        "line": 111,
+        "source": "export const cloudVoiceConnectionAtom = voiceConnections(\"cloudVoiceTranscription\");"
+      }
+    ]
+  },
+  {
+    "name": "shellThreadFamilies",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 205,
+      "source": "shellThreadFamilies: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": [
+      {
+        "file": "apps/mobile/src/state/threadOutboxDelivery.ts",
+        "line": 1274,
+        "source": "serverConfig?.shellThreadFamilies === true"
+      }
+    ]
+  },
+  {
+    "name": "shellOlderSettled",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 206,
+      "source": "shellOlderSettled: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  },
+  {
+    "name": "linkedThreadRefreshes",
+    "declaration": {
+      "file": "packages/contracts/src/environment.ts",
+      "line": 208,
+      "source": "linkedThreadRefreshes: Schema.optionalKey(Schema.Boolean),"
+    },
+    "mobileReferences": []
+  }
+]

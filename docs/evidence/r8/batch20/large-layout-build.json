@@ -1,0 +1,9 @@
+{
+  "build": "successful",
+  "installed": true,
+  "fontStepTested": 5,
+  "fontStepRestored": 2,
+  "weightStep": 1,
+  "displayScaleStep": 1,
+  "hapSha256": "e7d60f6dc05a74ddccc8f5fd7a01c8a7a03f4553da49788bee203d75dbc3bfe2"
+}

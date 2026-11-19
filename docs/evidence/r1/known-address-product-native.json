@@ -1,0 +1,13 @@
+{
+  "device": "23E0224122000135",
+  "checkedAt": "2026-11-16T20:56:14.679041+08:00",
+  "ordinaryProductTestEpoch": 108,
+  "explicitPairingConfirmation": true,
+  "freshOwnedGrantConsumed": true,
+  "returnedToConnections": true,
+  "sameEnvironmentConnected": true,
+  "directoryBytesUnchanged": true,
+  "unsentDraftPreservedWithinProcess": true,
+  "noMessageSent": true,
+  "unknownPreservationOnExpiredSession": "separate native credential-refresh diagnostic 5/5; product session had no unknown marker"
+}

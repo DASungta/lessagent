@@ -1,0 +1,13 @@
+{
+  "device": "23E0224122000135",
+  "model": "ALN-AL80",
+  "threadId": "r1-c05-replay-source-10",
+  "turnItemId": "turn-item:link-request:r1-c05-replay-source-10:b9e735a8-13fc-4db6-aa63-9819aef9d4de:r1-link-fixture-once",
+  "linkStatus": "declined",
+  "notificationOutcome": "cancelled",
+  "noPairingCodeCreated": true,
+  "sourcePeerLinkUnchanged": true,
+  "nativeDeclineClickedExactlyOnce": true,
+  "nativeVerified": true,
+  "capturedAt": "2026-11-16T23:23:18.416455+08:00"
+}
