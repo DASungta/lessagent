@@ -44,6 +44,8 @@
 | `switch_track_off` | `#e4e4e7` | `#262626` | 取设计稿（原版深色 `#111111` 与 card 同色，看不见） | 自绘开关关闭态轨道（系统 Toggle 暂未用） |
 | `backdrop` | `#38000000` | `#7A000000` | `--color-backdrop` | 弹层遮罩 |
 | `monogram_1..8_fg/_bg` | 见 color.json | 见 color.json | 原版无，取设计稿首页色块 | ProjectMonogram 的 8 组配色 |
+| `tab_bar_bg` | `#f4f4f5` | `#1a1b1b` | 原版悬浮底栏 | 首页底部四栏胶囊底色 |
+| `tab_bar_active` | `#e0e0e5` | `#2e2e33` | 原版悬浮底栏激活态 | 首页底部四栏选中态胶囊 |
 
 ⚠ 标记的是**现有颜色名，深色取值与原版不一致**，本步骤没有改（改了会改变现有页面外观）。新组件在深色模式下用到它们时，会暂时沿用旧值，见第 5 节。
 
@@ -184,6 +186,10 @@ GroupCard({ title: '调度' }) {
 - `projectInitials(name)`：取前两个词的首字母（`t3code-harmony` → `TH`），只有一个词时取前两个字符（`T3Code` → `T3`）；camelCase 在小写→大写处拆词（`myProject` → `MP`）；CJK / 符号开头只取一个字符（`拉文克劳` → `拉`）；空名 `?`。
 - `monogramTone(id, count = 8)`：FNV-1a 32 位哈希取模，同一 id 永远同色。
 - 测试：`tests/monogram.test.mjs`。
+
+### HomeBottomBar
+
+`activeTab: 'sessions' | 'home-pulls' | 'usage' | 'settings'`、`onSelectTab`、`onNewTask`。首页底部悬浮四栏胶囊（`tab_bar_bg` 底、`tab_bar_active` 选中态）与右侧深色方形圆角「新任务」按钮（`prominent` 底 + `ui_fab_compose`）。外层留白透传点击（`HitTestMode.Transparent`），列表通过 `bottomInset` 留出滚动空间避免末尾被遮挡。
 
 ## 4. 图标
 
