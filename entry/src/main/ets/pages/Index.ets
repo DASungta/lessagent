@@ -30,7 +30,7 @@ import { draftStore } from '../storage/DraftStore';
 import { ComposerCommandPanel } from '../components/ComposerCommandPanel';
 import { ThreadExtrasPanel } from '../components/ThreadExtrasPanel';
 import { ThreadActivity } from '../components/ThreadActivity';
-import { ActivityLine } from '../protocol/ThreadItems';
+import { ActivityLine, isPlainUserText } from '../protocol/ThreadItems';
 import { TaskSettingsPanel } from '../components/TaskSettingsPanel';
 import { QueuePanel } from '../components/QueuePanel';
 import { PeerLinkForm } from '../components/PeerLinkForm';
@@ -226,6 +226,7 @@ struct Index {
   @State searchOpen: boolean = false;
   @State homeTabDetailOpen: boolean = false;
   @State showTools: boolean = false;
+  @State threadTerminalEnabled: boolean = false;
   @State panelOpen: boolean = false;
   @State panel: string = 'server';
   @State address: string = '';
@@ -327,6 +328,7 @@ struct Index {
       this.status = client.status;
       this.server = client.server;
       this.ready = client.ready;
+      this.threadTerminalEnabled = client.ready && !this.draftMode && !!client.threadCwd() && client.canScope('terminal:read') !== false;
       this.settingsWriteAllowed = client.ready ? client.canScope('settings:write') : false;
       this.scheduledConnectionKey = this.selectedLocalId + ':' + client.generationValue() + ':' +
         String(client.ready) + ':' + String(client.canScope('orchestration:operate') !== false);
@@ -1824,6 +1826,7 @@ struct Index {
     try {
       await client.watch(id);
       this.page = 'chat'; this.showTools = false; this.panelOpen = false;
+      this.threadTerminalEnabled = this.ready && !this.draftMode && !!this.currentWorkspace() && client.canScope('terminal:read') !== false;
       const thread = this.scopedThreads.find((item: ScopedThread) => item.localId === this.selectedLocalId && item.id === id);
       if (thread && !thread.archivedAt) this.rememberProject(thread.projectId);
     }
@@ -2636,44 +2639,94 @@ struct Index {
   }
 
   @Builder
-  messageActions(message: ChatMessage) {
-    Button({ type: ButtonType.Circle }) {
-      Image($r('app.media.ui_more')).width(18).height(18)
-    }.width(44).height(44).backgroundColor(Color.Transparent)
-      .accessibilityText(message.role === 'user' ? '我的消息操作' : '回复操作')
-      .bindMenu([
-        { value: '复制消息', action: () => { void this.copy(message.text); } },
-        { value: '分享消息', action: () => { void this.shareMessage(message.text); } }
-      ])
+  messageMenu(message: ChatMessage) {
+    Menu() {
+      MenuItem({ content: '复制消息' }).onClick(() => { void this.copy(message.text); })
+      MenuItem({ content: '分享消息' }).onClick(() => { void this.shareMessage(message.text); })
+    }
+  }
+
+  @Builder
+  userBubble(message: ChatMessage) {
+    Row() {
+      Column({ space: Space.xs }) {
+        ForEach(message.attachmentNames || [], (name: string) => {
+          Button('附件 · ' + name).quietButton().fontSize(FontSize.callout)
+            .onClick(() => { void this.openAttachment(name); })
+        })
+        if (isPlainUserText(message.text)) {
+          Text(message.text)
+            .fontSize(FontSize.body).lineHeight(LineHeight.body)
+            .fontColor($r('app.color.bubble_ink'))
+            .copyOption(CopyOptions.InApp)
+        } else {
+          MarkdownView({ markdown: message.text, selectable: true,
+            onCopy: (value: string) => { void this.copy(value); },
+            onOpenLink: (url: string) => { void this.openLink(url); },
+            onOpenImage: (url: string) => { void this.openMarkdownImage(url); } })
+        }
+      }.alignItems(HorizontalAlign.Start)
+        .constraintSize({ maxWidth: '84%' })
+        .padding({ left: 14, right: 14, top: 10, bottom: 10 })
+        .backgroundColor($r('app.color.bubble'))
+        .borderRadius({ topLeft: Radius.bubble, topRight: Radius.bubble, bottomLeft: Radius.bubble, bottomRight: 6 })
+    }.width('100%').justifyContent(FlexAlign.End)
+      .accessibilityText('我的消息：' + message.text)
+  }
+
+  @Builder
+  assistantBlock(message: ChatMessage) {
+    Column({ space: Space.xs }) {
+      if (message.streaming) {
+        Text('正在回复…').fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
+      }
+      ForEach(message.attachmentNames || [], (name: string) => {
+        Button('附件 · ' + name).quietButton().fontSize(FontSize.callout).width('100%')
+          .onClick(() => { void this.openAttachment(name); })
+      })
+      MarkdownView({ markdown: message.text, selectable: true,
+        onCopy: (value: string) => { void this.copy(value); },
+        onOpenLink: (url: string) => { void this.openLink(url); },
+        onOpenImage: (url: string) => { void this.openMarkdownImage(url); } })
+    }.width('100%').alignItems(HorizontalAlign.Start)
+      .accessibilityText('回复：' + message.text)
   }
 
   @Builder
   chatPage() {
     if (this.draftMode) {
-      Row({ space: 6 }) {
+      Row({ space: Space.xs }) {
         Button({ type: ButtonType.Normal }) {
-          Text((this.environmentEntries.find((entry: EnvironmentEntry) => entry.localId === this.selectedLocalId)?.label || '环境') + ' ›')
-            .fontSize(13).fontColor($r('app.color.ink')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
-        }.quietButton().backgroundColor($r('app.color.surface')).layoutWeight(1).enabled(!this.busy)
+          Row({ space: 4 }) {
+            Text(this.environmentEntries.find((entry: EnvironmentEntry) => entry.localId === this.selectedLocalId)?.label || '环境')
+              .fontSize(FontSize.callout).fontColor($r('app.color.ink')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
+            Image($r('app.media.ui_chevron_right')).width(12).height(12).accessibilityLevel('no')
+          }.width('100%').alignItems(VerticalAlign.Center)
+        }.constraintSize({ minHeight: 38 }).padding({ left: Space.sm, right: Space.xs })
+          .backgroundColor($r('app.color.group')).borderRadius(Radius.button).layoutWeight(1).enabled(!this.busy)
           .accessibilityDescription('选择环境').onClick(() => this.openComposerCommand('environment'))
         Button({ type: ButtonType.Normal }) {
-          Text((this.draftWorkspace.mode === 'worktree' ? '新工作树' :
-            this.draftWorkspace.worktreePath ? '已有工作树' : '当前 checkout') + ' · ' +
-            (this.draftWorkspace.branch || '未选分支') + ' ›')
-            .fontSize(13).fontColor($r('app.color.ink')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
-        }.quietButton().backgroundColor($r('app.color.surface')).layoutWeight(1).enabled(!this.busy)
+          Row({ space: 4 }) {
+            Text((this.draftWorkspace.mode === 'worktree' ? '新工作树' :
+              this.draftWorkspace.worktreePath ? '已有工作树' : '当前 checkout') + ' · ' +
+              (this.draftWorkspace.branch || '未选分支'))
+              .fontSize(FontSize.callout).fontColor($r('app.color.ink')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
+            Image($r('app.media.ui_chevron_right')).width(12).height(12).accessibilityLevel('no')
+          }.width('100%').alignItems(VerticalAlign.Center)
+        }.constraintSize({ minHeight: 38 }).padding({ left: Space.sm, right: Space.xs })
+          .backgroundColor($r('app.color.group')).borderRadius(Radius.button).layoutWeight(1).enabled(!this.busy)
           .accessibilityDescription('选择分支与工作区').onClick(() => this.openComposerCommand('branch'))
-      }.width('100%').padding({ left: 10, right: 10 })
+      }.width('100%').padding({ left: Space.md, right: Space.md, top: Space.xxs, bottom: Space.xs })
     }
-    List({ space: 16, scroller: this.scroller }) {
+    List({ space: 14, scroller: this.scroller }) {
       if (!this.draftMode && client.thread?.hasMoreHistory) {
         ListItem() {
-          Button('加载更早的记录').quietButton().fontSize(12).enabled(!this.busy)
-            .onClick(() => {
+          AppButton({ label: '加载更早的记录', kind: 'text', fill: true, disabled: this.busy,
+            onTap: () => {
               this.busy = true;
               void client.loadOlderHistory().catch((error: Error) => this.status = error.message)
                 .finally(() => this.busy = false);
-            })
+            } })
         }
       }
       if (!this.messages.length) {
@@ -2681,28 +2734,18 @@ struct Index {
       }
       LazyForEach(this.source, (message: ChatMessage) => {
         ListItem() {
-          Column({ space: 2 }) {
-          Row() {
-            if (message.role === 'user') { this.messageActions(message) }
-            Column({ space: 10 }) {
-              if (message.streaming) { Text('正在回复…').fontSize(12).fontColor($r('app.color.muted')).width('100%') }
-              ForEach(message.attachmentNames || [], (name: string) => {
-                Button('附件 · ' + name).quietButton().fontSize(13).width('100%')
-                  .onClick(() => { void this.openAttachment(name); })
-              })
-              MarkdownView({ markdown: message.text, selectable: true,
-                onCopy: (value: string) => { void this.copy(value); },
-                onOpenLink: (url: string) => { void this.openLink(url); },
-                onOpenImage: (url: string) => { void this.openMarkdownImage(url); } })
-            }.layoutWeight(1).padding(message.role === 'user' ? 14 : 0)
-              .backgroundColor(message.role === 'user' ? $r('app.color.selected') : Color.Transparent).borderRadius(16)
-            if (message.role !== 'user') { this.messageActions(message) }
-          }.width('100%').alignItems(VerticalAlign.Top)
-          if (this.messageTime(message.timestamp)) {
-            Text(this.messageTime(message.timestamp)).fontSize(11).fontColor($r('app.color.muted'))
-              .width('100%').textAlign(message.role === 'user' ? TextAlign.End : TextAlign.Start)
-          }
+          Column({ space: 4 }) {
+            if (message.role === 'user') {
+              this.userBubble(message)
+            } else {
+              this.assistantBlock(message)
+            }
+            if (this.messageTime(message.timestamp)) {
+              Text(this.messageTime(message.timestamp)).fontSize(FontSize.badge).fontColor($r('app.color.muted'))
+                .width('100%').textAlign(message.role === 'user' ? TextAlign.End : TextAlign.Start)
+            }
           }.width('100%')
+            .bindContextMenu(this.messageMenu(message), ResponseType.LongPress)
         }
       }, (message: ChatMessage) => JSON.stringify(message))
       if (!this.draftMode && client.thread && this.tools.length > 0) {
@@ -2716,27 +2759,36 @@ struct Index {
       ForEach(this.linkItems, (item: LinkRequestView) => {
         ListItem() {
           if (item.status === 'pending' && item.visibility === 'local') {
-            Column({ space: 12 }) {
-              Text(item.url || item.environmentId ? '将 ' + (linkOrigin(item.url) || '目标环境') + ' 链接到此环境' : '将一台机器链接到此环境').fontSize(16).fontWeight(FontWeight.Medium).width('100%')
-              if (item.reason.trim()) { Text(item.reason).fontSize(14).width('100%') }
+            Column({ space: Space.sm }) {
+              Text(item.url || item.environmentId ? '将 ' + (linkOrigin(item.url) || '目标环境') + ' 链接到此环境' : '将一台机器链接到此环境')
+                .fontSize(FontSize.body).fontWeight(Weight.semibold).fontColor($r('app.color.ink')).width('100%')
+              if (item.reason.trim()) { Text(item.reason).fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%') }
               if (this.peerCanAnswer) {
-                Button(item.url || item.environmentId ? '审阅链接…' : '选择机器…').primaryButton().width('100%').enabled(!this.busy && !this.unknown).onClick(() => this.openPeerLink(item))
-                Button('拒绝').quietButton().enabled(!this.busy && !this.unknown).onClick(() => this.declinePeerLink(item))
-              } else { Text('只有管理此环境访问权限的连接才能答复此请求。').fontSize(13).fontColor($r('app.color.muted')).width('100%') }
-            }.padding(16).width('100%').border({ width: 1, color: $r('app.color.border') }).borderRadius(20)
-          } else { Text(this.peerOutcome(item)).fontSize(13).fontColor($r('app.color.muted')).width('100%') }
+                Row({ space: Space.xs }) {
+                  Column() {
+                    AppButton({ label: '拒绝', kind: 'secondary', compact: true, fill: true, disabled: this.busy || this.unknown,
+                      onTap: () => this.declinePeerLink(item) })
+                  }.layoutWeight(1)
+                  Column() {
+                    AppButton({ label: item.url || item.environmentId ? '审阅链接…' : '选择机器…', kind: 'primary', compact: true, fill: true,
+                      disabled: this.busy || this.unknown, onTap: () => { void this.openPeerLink(item); } })
+                  }.layoutWeight(1)
+                }.width('100%')
+              } else { Text('只有管理此环境访问权限的连接才能答复此请求。').fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%') }
+            }.padding(Space.md).width('100%').backgroundColor($r('app.color.card')).border({ width: 1, color: $r('app.color.border') }).borderRadius(Radius.card)
+          } else { Text(this.peerOutcome(item)).fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%') }
         }
       }, (item: LinkRequestView) => this.selectedLocalId + ':' + item.id)
       if (!this.draftMode) {
         ForEach(this.extraPlans, (plan: PlanView) => {
           ListItem() {
-            Column({ space: 8 }) {
-              Text(plan.streaming ? '正在生成计划…' : '计划').fontSize(12).fontColor($r('app.color.muted')).width('100%')
-              Text(plan.markdown).fontSize(14).lineHeight('20fp').width('100%').copyOption(CopyOptions.InApp)
-              Row({ space: 8 }) {
-                Button('复制计划').quietButton().fontSize(12).onClick(() => { void this.copy(plan.markdown); })
-                Button('保存 plan.md').quietButton().fontSize(12).enabled(!this.busy && client.canWriteSourceControl())
-                  .onClick(() => {
+            Column({ space: Space.xs }) {
+              Text(plan.streaming ? '正在生成计划…' : '计划').fontSize(FontSize.caption).fontWeight(Weight.semibold).fontColor($r('app.color.muted')).width('100%')
+              Text(plan.markdown).fontSize(FontSize.callout).lineHeight(LineHeight.callout).width('100%').copyOption(CopyOptions.InApp)
+              Row({ space: Space.xs }) {
+                AppButton({ label: '复制计划', kind: 'secondary', compact: true, onTap: () => { void this.copy(plan.markdown); } })
+                AppButton({ label: '保存 plan.md', kind: 'secondary', compact: true, disabled: this.busy || !client.canWriteSourceControl(),
+                  onTap: () => {
                     const project = this.scopedProjects.find((item: ScopedProject) =>
                       item.localId === this.selectedLocalId && item.id === this.projectId) ||
                       this.scopedProjects.find((item: ScopedProject) => item.localId === this.selectedLocalId);
@@ -2746,54 +2798,60 @@ struct Index {
                       .then((path: string) => this.status = '计划已保存：' + path)
                       .catch((error: Error) => this.status = error.message)
                       .finally(() => this.busy = false);
-                  })
+                  } })
               }.width('100%')
-            }.padding(14).width('100%').backgroundColor($r('app.color.surface')).borderRadius(16)
+            }.padding(Space.md).width('100%').backgroundColor($r('app.color.card')).border({ width: 1, color: $r('app.color.border') }).borderRadius(Radius.card)
           }
         }, (plan: PlanView) => plan.id)
         if (this.extraUsage) {
           ListItem() {
             Text(this.extraUsage.inputTokens + ' 输入 · ' + this.extraUsage.outputTokens + ' 输出')
-              .fontSize(11).fontColor($r('app.color.muted')).width('100%')
+              .fontSize(FontSize.badge).fontColor($r('app.color.muted')).width('100%')
           }
         }
         if (this.extraGuest) {
           ForEach(this.extraGuest.messages.filter((message: GuestMessageView) => message.status === 'pending'), (message: GuestMessageView) => {
             ListItem() {
-              Column({ space: 8 }) {
+              Column({ space: Space.xs }) {
                 Text('来自访客 ' + (this.extraGuest?.guestName || '') + (message.text ? '\n' + message.text : ''))
-                  .fontSize(14).width('100%')
-                Row({ space: 8 }) {
-                  Button('忽略').quietButton().enabled(!this.busy).onClick(() => {
-                    this.busy = true;
-                    void client.resolveGuestMessage(message.id, false).catch((error: Error) => this.status = error.message)
-                      .finally(() => { this.busy = false; this.refreshExtras(); });
-                  })
-                  Button('发送').primaryButton().enabled(!this.busy).onClick(() => {
-                    this.busy = true;
-                    void client.resolveGuestMessage(message.id, true).catch((error: Error) => this.status = error.message)
-                      .finally(() => { this.busy = false; this.refreshExtras(); });
-                  })
+                  .fontSize(FontSize.callout).width('100%')
+                Row({ space: Space.xs }) {
+                  Column() {
+                    AppButton({ label: '忽略', kind: 'secondary', compact: true, fill: true, disabled: this.busy,
+                      onTap: () => {
+                        this.busy = true;
+                        void client.resolveGuestMessage(message.id, false).catch((error: Error) => this.status = error.message)
+                          .finally(() => { this.busy = false; this.refreshExtras(); });
+                      } })
+                  }.layoutWeight(1)
+                  Column() {
+                    AppButton({ label: '发送', kind: 'primary', compact: true, fill: true, disabled: this.busy,
+                      onTap: () => {
+                        this.busy = true;
+                        void client.resolveGuestMessage(message.id, true).catch((error: Error) => this.status = error.message)
+                          .finally(() => { this.busy = false; this.refreshExtras(); });
+                      } })
+                  }.layoutWeight(1)
                 }.width('100%')
-              }.padding(12).width('100%').border({ width: 1, color: $r('app.color.border') }).borderRadius(14)
+              }.padding(Space.md).width('100%').backgroundColor($r('app.color.card')).border({ width: 1, color: $r('app.color.border') }).borderRadius(Radius.card)
             }
           })
         }
       }
       if (this.worktreeSetup) {
         ListItem() {
-          Column({ space: 8 }) {
-            Text('工作树准备 · ' + String(this.worktreeSetup.phase || 'running')).fontSize(14).fontWeight(FontWeight.Medium).width('100%')
+          Column({ space: Space.xs }) {
+            Text('工作树准备 · ' + String(this.worktreeSetup.phase || 'running')).fontSize(FontSize.callout).fontWeight(Weight.semibold).width('100%')
             if (typeof this.worktreeSetup.branch === 'string') {
               Text('分支 ' + this.worktreeSetup.branch + (typeof this.worktreeSetup.worktreePath === 'string' ? '\n' + this.worktreeSetup.worktreePath : ''))
-                .fontSize(12).fontColor($r('app.color.muted')).width('100%')
+                .fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
             }
             if (typeof this.worktreeSetup.error === 'string' && this.worktreeSetup.error) {
-              Text(this.worktreeSetup.error).fontSize(12).fontColor($r('app.color.ink')).width('100%')
+              Text(this.worktreeSetup.error).fontSize(FontSize.caption).fontColor($r('app.color.danger')).width('100%')
             }
             if (this.worktreeSetup.phase === 'failed') {
-              Row({ space: 8 }) {
-                Button('重试准备').quietButton().enabled(!this.busy).onClick(() => {
+              Row({ space: Space.xs }) {
+                AppButton({ label: '重试准备', kind: 'secondary', compact: true, disabled: this.busy, onTap: () => {
                   const runs = client.thread?.runs || [];
                   const failed = runs.slice().reverse().find((run: Record<string, Object>) =>
                     ['preparing', 'failed'].includes(String(run.status)));
@@ -2801,147 +2859,202 @@ struct Index {
                   this.busy = true;
                   void client.retryPreparedRun(String(failed.id)).catch((error: Error) => this.status = error.message)
                     .finally(() => this.busy = false);
-                })
-                Button('取消准备').quietButton().enabled(!this.busy).onClick(() => {
+                } })
+                AppButton({ label: '取消准备', kind: 'secondary', compact: true, disabled: this.busy, onTap: () => {
                   this.busy = true;
                   void client.cancelWorktreeSetup().catch((error: Error) => this.status = error.message)
                     .finally(() => this.busy = false);
-                })
+                } })
               }.width('100%')
             }
-          }.padding(12).width('100%').border({ width: 1, color: $r('app.color.border') }).borderRadius(14)
+          }.padding(Space.md).width('100%').backgroundColor($r('app.color.card')).border({ width: 1, color: $r('app.color.border') }).borderRadius(Radius.card)
         }
       }
       if (!this.draftMode && client.thread && typeof client.thread.details.usageLimitResetAt === 'string') {
         ListItem() {
-          Column({ space: 8 }) {
-            Text('用量限制').fontSize(14).fontWeight(FontWeight.Medium).width('100%')
+          Column({ space: Space.xs }) {
+            Text('用量限制').fontSize(FontSize.callout).fontWeight(Weight.semibold).width('100%')
             Text('重置时间：' + String(client.thread.details.usageLimitResetAt))
-              .fontSize(12).fontColor($r('app.color.muted')).width('100%')
-            Row({ space: 8 }) {
-              Button('到点自动恢复').quietButton().enabled(!this.busy).onClick(() => {
+              .fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
+            Flex({ wrap: FlexWrap.Wrap }) {
+              AppButton({ label: '到点自动恢复', kind: 'secondary', compact: true, disabled: this.busy, onTap: () => {
                 this.busy = true;
                 void client.setLimitRecovery(true, undefined).catch((error: Error) => this.status = error.message)
                   .finally(() => this.busy = false);
-              })
-              Button('取消自动恢复').quietButton().enabled(!this.busy).onClick(() => {
+              } })
+              AppButton({ label: '取消自动恢复', kind: 'secondary', compact: true, disabled: this.busy, onTap: () => {
                 this.busy = true;
                 void client.setLimitRecovery(false, undefined).catch((error: Error) => this.status = error.message)
                   .finally(() => this.busy = false);
-              })
-              Button('暂缓到重置').quietButton().enabled(!this.busy).onClick(() => {
+              } })
+              AppButton({ label: '暂缓到重置', kind: 'secondary', compact: true, disabled: this.busy, onTap: () => {
                 this.busy = true;
                 void client.setLimitRecovery(undefined, true).catch((error: Error) => this.status = error.message)
                   .finally(() => this.busy = false);
-              })
+              } })
             }.width('100%')
-          }.padding(12).width('100%').border({ width: 1, color: $r('app.color.border') }).borderRadius(14)
+          }.padding(Space.md).width('100%').backgroundColor($r('app.color.card')).border({ width: 1, color: $r('app.color.border') }).borderRadius(Radius.card)
         }
       }
       if (this.unknown) {
         ListItem() {
-          Column({ space: 10 }) {
-            Text('核对上次提交').fontSize(15).fontWeight(FontWeight.Medium).width('100%')
-            Text('同步原会话并核对结果后，才能再次发送。').fontSize(13).fontColor($r('app.color.muted')).width('100%')
-            Button('同步会话').quietButton().enabled(this.ready && !this.busy && !this.draftMode).onClick(() => this.watch(this.threadId))
-            Button('已核对提交结果').primaryButton().enabled(this.ready && !this.busy).onClick(() => this.acknowledge())
-          }.padding(16).width('100%').border({ width: 1, color: $r('app.color.border') }).borderRadius(16)
+          Column({ space: Space.sm }) {
+            Text('核对上次提交').fontSize(FontSize.body).fontWeight(Weight.semibold).width('100%')
+            Text('同步原会话并核对结果后，才能再次发送。').fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%')
+            Row({ space: Space.xs }) {
+              Column() {
+                AppButton({ label: '同步会话', kind: 'secondary', compact: true, fill: true,
+                  disabled: !this.ready || this.busy || this.draftMode, onTap: () => { void this.watch(this.threadId); } })
+              }.layoutWeight(1)
+              Column() {
+                AppButton({ label: '已核对提交结果', kind: 'primary', compact: true, fill: true,
+                  disabled: !this.ready || this.busy, onTap: () => this.acknowledge() })
+              }.layoutWeight(1)
+            }.width('100%')
+          }.padding(Space.md).width('100%').backgroundColor($r('app.color.card')).border({ width: 1, color: $r('app.color.border') }).borderRadius(Radius.card)
         }
       }
-    }.width('100%').layoutWeight(1).cachedCount(2).padding({ left: 20, right: 20, top: 16, bottom: 16 })
-    Row() {
-      if (this.unknown || this.actions.length) {
-        Button(this.unknown ? '核对提交结果' : this.actions.length + ' 个请求待处理').quietButton().fontSize(12)
-          .onClick((): void => { this.scroller.scrollEdge(Edge.Bottom); })
-      }
-      Blank()
-      this.iconButton($r('app.media.ui_down'), '滚动到最新消息', (): void => { this.scroller.scrollEdge(Edge.Bottom); })
-    }.width('100%').padding({ left: 12, right: 12 })
+    }.width('100%').layoutWeight(1).cachedCount(2).padding({ left: Space.md, right: Space.md, top: Space.xs, bottom: Space.md })
+      .scrollBar(BarState.Off)
+    if (this.unknown || this.actions.length || this.messages.length > 0) {
+      Row() {
+        if (this.unknown || this.actions.length) {
+          Button(this.unknown ? '核对提交结果' : this.actions.length + ' 个请求待处理', { type: ButtonType.Normal })
+            .height(32).padding({ left: Space.sm, right: Space.sm }).borderRadius(Radius.full)
+            .fontSize(FontSize.caption).fontColor($r('app.color.warning')).backgroundColor($r('app.color.warning_bg'))
+            .border({ width: 1, color: $r('app.color.warning_border') })
+            .onClick((): void => { this.scroller.scrollEdge(Edge.Bottom); })
+        }
+        Blank()
+        if (this.messages.length > 0) {
+          Button({ type: ButtonType.Circle, stateEffect: true }) {
+            Image($r('app.media.ui_down')).width(18).height(18).accessibilityLevel('no')
+          }.width(36).height(36).backgroundColor($r('app.color.card'))
+            .border({ width: 0.5, color: $r('app.color.border') })
+            .accessibilityText('滚动到最新消息')
+            .onClick((): void => { this.scroller.scrollEdge(Edge.Bottom); })
+        }
+      }.width('100%').padding({ left: Space.md, right: Space.md, bottom: Space.xxs })
+    }
     Column({ space: 0 }) {
       if (this.draftContext.length) {
         Scroll() {
           Row({ space: 6 }) {
             ForEach(this.draftContext, (item: ComposerContextRecord) => {
-              Button((item.kind + ': ' + item.label) + ' ×').constraintSize({ minWidth: 44, minHeight: 44 }).fontSize(12)
-                .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
+              Button((item.kind + ': ' + item.label) + ' ×', { type: ButtonType.Normal })
+                .constraintSize({ minHeight: 32 }).padding({ left: 10, right: 10 }).borderRadius(Radius.tool)
+                .fontSize(FontSize.caption).backgroundColor($r('app.color.card')).fontColor($r('app.color.ink'))
+                .border({ width: 0.5, color: $r('app.color.border') })
                 .accessibilityDescription('移除引用')
                 .onClick(() => this.removeContext(item.contextId))
             }, (item: ComposerContextRecord) => item.contextId)
-          }.padding({ left: 8, right: 8, top: 6 })
-        }.scrollable(ScrollDirection.Horizontal).width('100%')
+          }.padding({ left: Space.xxs, right: Space.xxs, bottom: 6 })
+        }.scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).align(Alignment.Start).width('100%')
       }
       if (this.attachments.length) {
         Scroll() {
           Row({ space: 6 }) {
             ForEach(this.attachments, (item: DraftAttachment) => {
               Row({ space: 2 }) {
-                Button((item.type === 'image' ? '图 · ' : '文件 · ') + item.name).constraintSize({ minWidth: 44, minHeight: 44 }).fontSize(12)
-                  .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
+                Button((item.type === 'image' ? '图 · ' : '文件 · ') + item.name, { type: ButtonType.Normal })
+                  .constraintSize({ minHeight: 32 }).padding({ left: 10, right: 8 }).borderRadius(Radius.tool)
+                  .fontSize(FontSize.caption).backgroundColor($r('app.color.card')).fontColor($r('app.color.ink'))
+                  .border({ width: 0.5, color: $r('app.color.border') })
                   .onClick(() => { void this.openAttachment(item.name); })
-                Button('×').width(44).constraintSize({ minHeight: 44 }).fontSize(14).backgroundColor($r('app.color.surface'))
-                  .fontColor($r('app.color.muted'))
+                Button('×', { type: ButtonType.Normal }).width(32).constraintSize({ minHeight: 32 }).borderRadius(Radius.tool)
+                  .fontSize(FontSize.callout).backgroundColor($r('app.color.card')).fontColor($r('app.color.muted'))
+                  .border({ width: 0.5, color: $r('app.color.border') })
                   .accessibilityText('移除附件 ' + item.name)
                   .onClick(() => { client.removeAttachment(item.id); this.refreshAttachments(); this.scheduleDraftSave(); })
               }
             }, (item: DraftAttachment) => item.id)
-          }.padding({ left: 8, right: 8, top: 6 })
-        }.scrollable(ScrollDirection.Horizontal).width('100%')
+          }.padding({ left: Space.xxs, right: Space.xxs, bottom: 6 })
+        }.scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).align(Alignment.Start).width('100%')
       }
-      Row({ space: 4 }) {
-        Button({ type: ButtonType.Normal }) {
-          Image($r('app.media.ui_plus')).width(20).height(20)
-        }.width(44).height(44).backgroundColor(Color.Transparent).borderRadius(22).accessibilityText('添加附件')
-          .bindMenu([
-            { value: '选择文件', action: () => { if (this.ready && !this.busy && !this.unknown) void this.attach(false); } },
-            { value: '重试上传', action: () => { if (this.ready && !this.busy && !this.unknown) void this.attach(true); } },
-            { value: '粘贴结构化上下文', action: () => { this.openPanel('paste-context'); } },
-            { value: '取消上传', action: () => { this.picker.cancel(); this.status = '附件上传已取消'; } },
-            { value: '移除附件', action: () => { if (!this.busy && !this.unknown) { client.attachments = []; client.attachment = undefined; this.picker.clear(); this.refreshAttachments(); this.scheduleDraftSave(); } } }
-          ])
-        TextArea({ placeholder: this.draftMode ? '描述要完成的任务…' : '输入消息…', text: this.prompt }).fontSize(15)
-          .onChange((value: string, preview: PreviewText) => { this.composingText = !!preview?.value; this.prompt = value; this.scheduleDraftSave(); })
-          .onFocus(() => { this.composerFocused = true; this.keyboard.reset(); })
-          .onBlur(() => { this.composerFocused = false; this.composingText = false; this.keyboard.reset(); })
-          .onKeyPreIme((event: KeyEvent): boolean => this.keyboardEvent(event, true))
-          .constraintSize({ minHeight: 48 }).maxLines(4, { overflowMode: MaxLinesMode.SCROLL })
-          .layoutWeight(1).padding({ left: 4, right: 4, top: 10, bottom: 10 })
-          .backgroundColor(Color.Transparent).accessibilityText('消息输入框')
-        if (this.busy) { LoadingProgress().width(20).height(20).color($r('app.color.muted')).accessibilityText('正在提交') }
-        Button('发送').primaryButton().constraintSize({ minWidth: 44, minHeight: 44 }).margin(4).accessibilityText('发送消息')
-          .enabled(this.ready && !this.busy && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0)).onClick(() => this.send())
-      }.width('100%').padding({ left: 4, right: 4, top: 3, bottom: 3 }).alignItems(VerticalAlign.Bottom)
-      Divider().color($r('app.color.border'))
-      Flex({ wrap: FlexWrap.Wrap }) {
-        Button({ type: ButtonType.Normal }) {
-          Text(this.draftMode ? this.taskSettings.modelSelection.model || '选择模型' : '模型与选项')
-            .fontSize(12).fontColor($r('app.color.ink')).maxLines(2)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }.quietButton().constraintSize({ minWidth: 44, minHeight: 44, maxWidth: 144 })
-          .enabled(!this.busy && !this.unknown)
-          .accessibilityText('选择模型与选项' + (this.draftMode && this.taskSettings.modelSelection.model ?
-            '，当前：' + this.taskSettings.modelSelection.model : '')).onClick(() => this.openTaskSettings())
-        Button('工具').quietButton().fontSize(12).enabled(!this.busy)
-          .bindMenu([
-            { value: '语音输入', action: () => { this.voiceTarget = this.draftKey(); this.page = 'voice'; } },
-            { value: '命令 /', action: () => this.openComposerCommand('commands') },
-            { value: '技能', action: () => this.openComposerCommand('skill') },
-            { value: '引用文件 @', action: () => this.openComposerCommand('mention') }
-          ])
-        if (!this.draftMode) {
-          Button('队列' + (this.queued.length ? ' · ' + this.queued.length : '')).quietButton().fontSize(12)
-            .onClick(() => this.openPanel('queue'))
-          Button(this.sendMode === 'queue' ? '方式 · 排队' : this.sendMode === 'steer' ? '方式 · 引导' : '方式 · 自动')
-            .quietButton().fontSize(12).accessibilityText('消息发送方式，' +
-              (this.sendMode === 'queue' ? '排队' : this.sendMode === 'steer' ? '引导' : '自动'))
-            .bindMenu([
-              { value: '自动发送', action: () => { this.sendMode = 'auto'; } },
-              { value: '排队发送', action: () => { this.sendMode = 'queue'; } },
-              { value: '引导运行', action: () => { this.sendMode = 'steer'; } }
-            ])
-        }
-      }.width('100%').padding({ left: 6, right: 6 })
-    }.width('100%').backgroundColor($r('app.color.composer')).borderRadius(20)
-      .border({ width: 0.5, color: $r('app.color.border') }).margin({ bottom: 8 })
+      TextArea({ placeholder: this.draftMode ? '描述要完成的任务…' : '继续追问…', text: this.prompt })
+        .fontSize(FontSize.body).lineHeight(LineHeight.body)
+        .fontColor($r('app.color.ink')).placeholderColor($r('app.color.placeholder'))
+        .onChange((value: string, preview: PreviewText) => { this.composingText = !!preview?.value; this.prompt = value; this.scheduleDraftSave(); })
+        .onFocus(() => { this.composerFocused = true; this.keyboard.reset(); })
+        .onBlur(() => { this.composerFocused = false; this.composingText = false; this.keyboard.reset(); })
+        .onKeyPreIme((event: KeyEvent): boolean => this.keyboardEvent(event, true))
+        .constraintSize({ minHeight: 38 }).maxLines(4, { overflowMode: MaxLinesMode.SCROLL })
+        .width('100%').padding({ left: 4, right: 8, top: 6, bottom: 6 })
+        .backgroundColor(Color.Transparent).accessibilityText('消息输入框')
+      Row({ space: 6 }) {
+        Scroll() {
+          Row({ space: 6 }) {
+            Button({ type: ButtonType.Circle, stateEffect: true }) {
+              Image($r('app.media.ui_plus')).width(15).height(15).accessibilityLevel('no')
+            }.width(32).height(32)
+              .backgroundColor($r('app.color.card')).border({ width: 0.5, color: $r('app.color.border') })
+              .accessibilityText('添加附件')
+              .bindMenu([
+                { value: '选择文件', action: () => { if (this.ready && !this.busy && !this.unknown) void this.attach(false); } },
+                { value: '重试上传', action: () => { if (this.ready && !this.busy && !this.unknown) void this.attach(true); } },
+                { value: '粘贴结构化上下文', action: () => { this.openPanel('paste-context'); } },
+                { value: '取消上传', action: () => { this.picker.cancel(); this.status = '附件上传已取消'; } },
+                { value: '移除附件', action: () => { if (!this.busy && !this.unknown) { client.attachments = []; client.attachment = undefined; this.picker.clear(); this.refreshAttachments(); this.scheduleDraftSave(); } } }
+              ])
+            Button({ type: ButtonType.Capsule, stateEffect: true }) {
+              Row({ space: 4 }) {
+                Text('模型').fontSize(FontSize.callout).fontColor($r('app.color.ink'))
+                Image($r('app.media.ui_chevron_down')).width(12).height(12).opacity(0.65).accessibilityLevel('no')
+              }.alignItems(VerticalAlign.Center)
+            }.constraintSize({ minHeight: 32 }).padding({ left: 10, right: 8, top: 4, bottom: 4 })
+              .backgroundColor($r('app.color.card')).border({ width: 0.5, color: $r('app.color.border') })
+              .enabled(!this.busy && !this.unknown)
+              .accessibilityText('模型与选项').onClick(() => this.openTaskSettings())
+            Button({ type: ButtonType.Capsule, stateEffect: true }) {
+              Text('工具').fontSize(FontSize.callout).fontColor($r('app.color.ink'))
+            }.constraintSize({ minHeight: 32 }).padding({ left: 10, right: 10, top: 4, bottom: 4 })
+              .backgroundColor($r('app.color.card')).border({ width: 0.5, color: $r('app.color.border') })
+              .enabled(!this.busy)
+              .accessibilityText('工具')
+              .bindMenu([
+                { value: '语音输入', action: () => { this.voiceTarget = this.draftKey(); this.page = 'voice'; } },
+                { value: '命令 /', action: () => this.openComposerCommand('commands') },
+                { value: '技能', action: () => this.openComposerCommand('skill') },
+                { value: '引用文件 @', action: () => this.openComposerCommand('mention') }
+              ])
+            if (!this.draftMode) {
+              Button({ type: ButtonType.Capsule, stateEffect: true }) {
+                Text(this.sendMode === 'queue' ? '排队' : this.sendMode === 'steer' ? '引导' : '自动')
+                  .fontSize(FontSize.callout).fontColor($r('app.color.ink'))
+              }.constraintSize({ minHeight: 32 }).padding({ left: 10, right: 10, top: 4, bottom: 4 })
+                .backgroundColor($r('app.color.card')).border({ width: 0.5, color: $r('app.color.border') })
+                .accessibilityText('消息发送方式，' + (this.sendMode === 'queue' ? '排队' : this.sendMode === 'steer' ? '引导' : '自动'))
+                .bindMenu([
+                  { value: '自动发送', action: () => { this.sendMode = 'auto'; } },
+                  { value: '排队发送', action: () => { this.sendMode = 'queue'; } },
+                  { value: '引导运行', action: () => { this.sendMode = 'steer'; } }
+                ])
+              Button({ type: ButtonType.Capsule, stateEffect: true }) {
+                Text('队列' + (this.queued.length ? ' ' + this.queued.length : ''))
+                  .fontSize(FontSize.callout).fontColor($r('app.color.ink'))
+              }.constraintSize({ minHeight: 32 }).padding({ left: 10, right: 10, top: 4, bottom: 4 })
+                .backgroundColor($r('app.color.card')).border({ width: 0.5, color: $r('app.color.border') })
+                .accessibilityText('队列' + (this.queued.length ? '，' + this.queued.length + ' 条' : ''))
+                .onClick(() => this.openPanel('queue'))
+            }
+          }
+        }.scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).align(Alignment.Start).layoutWeight(1)
+        Button({ type: ButtonType.Circle, stateEffect: true }) {
+          if (this.busy) {
+            LoadingProgress().width(18).height(18).color($r('app.color.on_prominent')).accessibilityLevel('no')
+          } else {
+            Image($r('app.media.ui_send')).width(18).height(18).accessibilityLevel('no')
+          }
+        }.width(36).height(36).backgroundColor($r('app.color.prominent'))
+          .opacity(this.busy || (this.ready && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0)) ? 1 : 0.3)
+          .accessibilityText(this.busy ? '正在提交' : '发送消息')
+          .enabled(this.ready && !this.busy && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0))
+          .onClick(() => this.send())
+      }.width('100%').alignItems(VerticalAlign.Center).margin({ top: 4 })
+    }.margin({ left: Space.sm, right: Space.sm, bottom: Space.sm })
+      .padding({ left: Space.sm, right: Space.xs, top: Space.xs, bottom: Space.xs })
+      .backgroundColor($r('app.color.group')).borderRadius(Radius.composer)
+      .border({ width: 1, color: $r('app.color.border') })
   }
 
   private isRootTab(): boolean {
@@ -3230,23 +3343,40 @@ struct Index {
           onBack: () => this.page = 'chat', onStatus: (value: string) => this.status = value,
           onCopy: (value: string) => { void this.copy(value); } })
         } else if (this.page === 'chat') {
-          Row({ space: 4 }) {
-            this.iconButton($r('app.media.ui_back'), '返回会话列表', () => this.page = 'sessions')
-            Column({ space: 2 }) {
-              Text(this.draftMode ? '新任务' : this.threads.find((t: ThreadView) => t.id === this.threadId)?.label || '会话').fontSize(16).fontWeight(FontWeight.Medium)
-                .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%')
+          Row({ space: Space.xxs }) {
+            IconButton({ icon: $r('app.media.ui_back'), label: '返回会话列表', onTap: () => { this.page = 'sessions'; } })
+            Column() {
+              Text(this.draftMode ? '新任务' : this.threads.find((t: ThreadView) => t.id === this.threadId)?.label || '会话')
+                .fontSize(FontSize.headline).lineHeight(LineHeight.headline).fontWeight(Weight.semibold)
+                .fontColor($r('app.color.ink')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
               Text((this.projects.find((p: ProjectView) => p.id === this.projectId)?.label || 'No project') + ' · ' +
                 (this.environmentEntries.find((e: EnvironmentEntry) => e.localId === this.selectedLocalId)?.label || '环境'))
-                .fontSize(12).fontColor($r('app.color.muted'))
-                .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%')
-            }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-            if (!this.draftMode) { Button('状态').quietButton().fontSize(12).onClick(() => this.openThreadExtras()) }
-            this.iconButton($r('app.media.ui_more'), '会话操作', () => this.openPanel('thread'))
-          }.width('100%').constraintSize({ minHeight: 56 }).padding({ left: 12, right: 12 })
+                .fontSize(FontSize.caption).lineHeight(LineHeight.caption)
+                .fontColor($r('app.color.muted')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+            }.layoutWeight(1).alignItems(HorizontalAlign.Start).justifyContent(FlexAlign.Center)
+              .padding({ left: Space.xxs }).accessibilityGroup(true)
+            if (!this.draftMode) {
+              IconButton({
+                icon: $r('app.media.ui_terminal'),
+                label: '打开终端',
+                disabled: !this.threadTerminalEnabled,
+                onTap: () => {
+                  this.terminalConnection = client;
+                  this.terminalThreadId = this.threadId;
+                  this.terminalCwd = this.currentWorkspace();
+                  this.panelOpen = false;
+                  this.page = 'terminal';
+                }
+              })
+            }
+            IconButton({ icon: $r('app.media.ui_more'), label: '会话操作', onTap: () => this.openPanel('thread') })
+          }.width('100%').constraintSize({ minHeight: Sizes.topBar }).padding({ left: Space.xs, right: Space.xs })
+            .alignItems(VerticalAlign.Center)
           if (this.status !== '会话已同步' && this.status !== '已连接' && this.status !== '未连接') {
-            Text(this.status).fontSize(12).fontColor($r('app.color.muted')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
-              .width('100%').padding({ left: 20, right: 20, bottom: 6 }).accessibilityText('状态：' + this.status)
-              .onClick(() => this.openPanel('thread'))
+            Text(this.status).fontSize(FontSize.caption).lineHeight(LineHeight.caption)
+              .fontColor($r('app.color.muted')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
+              .width('100%').padding({ left: Space.md, right: Space.md, bottom: Space.xxs })
+              .accessibilityText('状态：' + this.status).onClick(() => this.openPanel('thread'))
           }
           this.chatPage()
         } else {
@@ -3305,9 +3435,9 @@ struct Index {
           }
         }.width('100%').hitTestBehavior(HitTestMode.Transparent)
       }
-    }.width('100%').height('100%').padding({ left: this.isRootTab() ? 0 : 8, right: this.isRootTab() ? 0 : 8 })
+    }.width('100%').height('100%').padding({ left: (this.isRootTab() || this.page === 'chat') ? 0 : 8, right: (this.isRootTab() || this.page === 'chat') ? 0 : 8 })
       .focusable(true).onKeyEvent((event: KeyEvent) => { this.keyboardEvent(event, false); })
-      .backgroundColor(this.page === 'sessions' ? $r('app.color.group') : $r('app.color.canvas'))
+      .backgroundColor(this.page === 'sessions' ? $r('app.color.group') : this.page === 'chat' ? $r('app.color.screen') : $r('app.color.canvas'))
       .foregroundColor($r('app.color.ink'))
       .bindSheet($$this.panelOpen, this.panelContent(), { height: this.panel === 'thread' ? '66%' :
         this.panel === 'attachment' ? '80%' :

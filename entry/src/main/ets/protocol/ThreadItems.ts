@@ -80,3 +80,73 @@ export function appendOutput(previous: string, kind: string, textValue: string, 
   return (truncated ? '' : '…') + next.slice(next.length - 200000);
 }
 
+export interface ActivitySummary {
+  icon: 'cmd' | 'file' | 'info';
+  title: string;
+  badge: string;
+  badgeTone: 'success' | 'danger' | 'neutral';
+  additions: string;
+  deletions: string;
+}
+
+function firstLine(value: string): string {
+  for (const raw of value.split('\n')) {
+    const trimmed = raw.replace(/\s+/g, ' ').trim();
+    if (trimmed) return trimmed;
+  }
+  return '';
+}
+
+function statusBadge(label: string, inProgressText: string): { badge: string; tone: 'success' | 'danger' | 'neutral' } {
+  if (/\bcompleted\b/i.test(label)) return { badge: '完成', tone: 'success' };
+  if (/\binProgress\b/i.test(label)) return { badge: inProgressText, tone: 'neutral' };
+  if (/\bfailed\b/i.test(label)) return { badge: '失败', tone: 'danger' };
+  return { badge: '', tone: 'neutral' };
+}
+
+export function activitySummary(line: ActivityLine): ActivitySummary {
+  if (line.kind === 'command_execution') {
+    const exitMatch = /exit\s+(\d+)/.exec(line.label);
+    const title = firstLine(line.text) || '命令';
+    if (exitMatch) {
+      const code = exitMatch[1];
+      return { icon: 'cmd', title, badge: 'exit ' + code, badgeTone: code === '0' ? 'success' : 'danger', additions: '', deletions: '' };
+    }
+    const status = statusBadge(line.label, '运行中');
+    return { icon: 'cmd', title, badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
+  }
+  if (line.kind === 'file_change') {
+    const match = /^(.*?)\s*·\s*(\+\d+)\s*([−-]\d+)$/.exec(line.label);
+    if (match) {
+      return { icon: 'file', title: match[1].trim() || '文件变更', badge: '', badgeTone: 'neutral', additions: match[2], deletions: match[3] };
+    }
+    return { icon: 'file', title: line.label || '文件变更', badge: '', badgeTone: 'neutral', additions: '', deletions: '' };
+  }
+  if (line.kind === 'file_search') {
+    const pattern = firstLine(line.text);
+    const status = statusBadge(line.label, '进行中');
+    return { icon: 'file', title: pattern ? '搜索 ' + pattern : '文件搜索', badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
+  }
+  if (line.kind === 'reasoning') {
+    const status = statusBadge(line.label, '思考中');
+    return { icon: 'info', title: '思考过程', badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
+  }
+  if (line.kind === 'checkpoint') {
+    return { icon: 'info', title: '检查点', badge: '', badgeTone: 'neutral', additions: '', deletions: '' };
+  }
+  if (line.kind === 'error') {
+    return { icon: 'info', title: line.label || '错误', badge: '失败', badgeTone: 'danger', additions: '', deletions: '' };
+  }
+  return { icon: 'info', title: line.label || line.kind, badge: '', badgeTone: 'neutral', additions: '', deletions: '' };
+}
+
+export function isPlainUserText(value: string): boolean {
+  if (!value) return true;
+  if (/[`*_\[<|]|\$\$|https?:\/\//i.test(value)) return false;
+  for (const line of value.split('\n')) {
+    const trimmed = line.trimStart();
+    if (/^(?:#{1,6}\s|>\s?|[-*+]\s|\d+\.\s|-{3,}\s*$|={3,}\s*$)/.test(trimmed)) return false;
+  }
+  return true;
+}
+

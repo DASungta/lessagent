@@ -5,6 +5,7 @@ import { MermaidView } from './MermaidView';
 import { SequenceView } from './SequenceView';
 import { ClassDiagramView } from './ClassDiagramView';
 import { StateDiagramView } from './StateDiagramView';
+import { FontSize, LineHeight, Radius, Space, Weight } from '../common/Theme';
 
 @Component
 export struct MarkdownView {
@@ -44,10 +45,10 @@ export struct MarkdownView {
         } else if (span.kind === 'strike') {
           Span(span.text).decoration({ type: TextDecorationType.LineThrough, color: $r('app.color.muted') })
         } else if (span.kind === 'code') {
-          Span(span.text).fontFamily('monospace').fontSize(size - 2).backgroundColor($r('app.color.surface'))
+          Span(span.text).fontFamily('monospace').fontSize(size - 2).backgroundColor($r('app.color.group'))
         } else if (span.kind === 'link') {
-          Span(span.text).fontColor($r('app.color.primary'))
-            .decoration({ type: TextDecorationType.Underline, color: $r('app.color.primary') })
+          Span(span.text).fontColor($r('app.color.primary_text'))
+            .decoration({ type: TextDecorationType.Underline, color: $r('app.color.primary_text') })
             .onClick(() => { if (span.href) this.onOpenLink(span.href); })
         } else if (span.kind === 'image') {
           Span('[图片] ' + span.text).fontColor($r('app.color.muted'))
@@ -72,7 +73,7 @@ export struct MarkdownView {
             .fontSize(15).fontColor(item.checked === undefined ? $r('app.color.muted') : $r('app.color.primary'))
             .width(28).textAlign(TextAlign.End)
           Column() {
-            this.inline(item.spans, 16, 24, $r('app.color.ink'), FontWeight.Normal)
+            this.inline(item.spans, FontSize.body, 23, $r('app.color.ink'), FontWeight.Normal)
           }.layoutWeight(1)
         }.width('100%').padding({ left: Math.min(item.depth, 4) * 18 }).alignItems(VerticalAlign.Top)
       }, (item: MarkdownListItem, index: number) => index + ':' + item.text)
@@ -98,18 +99,20 @@ export struct MarkdownView {
           }.border({ width: { top: 1 }, color: $r('app.color.border') })
         }, (row: string[], rowIndex: number) => 'r' + rowIndex)
       }.alignItems(HorizontalAlign.Start).border({ width: 1, color: $r('app.color.border') }).borderRadius(10)
-    }.scrollable(ScrollDirection.Horizontal).width('100%')
+    }.scrollable(ScrollDirection.Horizontal).align(Alignment.Start).width('100%')
   }
 
   @Builder
   codeBlock(block: MarkdownBlock, key: string) {
-    Column({ space: 6 }) {
-      Row() {
-        Text(block.language || '代码').fontSize(12).fontColor($r('app.color.muted'))
+    Column({ space: Space.xxs }) {
+      Row({ space: Space.xs }) {
+        Text(block.language || '代码').fontSize(FontSize.caption).fontColor($r('app.color.muted'))
         Blank()
-        Button(this.wrapCode[key] ? '不换行' : '换行').backgroundColor(Color.Transparent).fontColor($r('app.color.ink')).fontSize(12).constraintSize({ minHeight: 44 })
+        Button(this.wrapCode[key] ? '不换行' : '换行').backgroundColor(Color.Transparent).fontColor($r('app.color.muted'))
+          .fontSize(FontSize.caption).constraintSize({ minHeight: 36 }).padding({ left: Space.xs, right: Space.xs })
           .onClick(() => { this.wrapCode[key] = !this.wrapCode[key]; })
-        Button('复制').backgroundColor(Color.Transparent).fontColor($r('app.color.ink')).fontSize(12).constraintSize({ minHeight: 44 })
+        Button('复制').backgroundColor(Color.Transparent).fontColor($r('app.color.muted'))
+          .fontSize(FontSize.caption).constraintSize({ minHeight: 36 }).padding({ left: Space.xs, right: 0 })
           .onClick(() => this.onCopy(block.text))
       }.width('100%')
       if (this.wrapCode[key]) {
@@ -119,7 +122,7 @@ export struct MarkdownView {
               ForEach(tokens, (token: CodeToken, tokenIndex: number) => {
                 Span(token.text).fontColor(this.tokenColor(token.kind))
               }, (token: CodeToken, tokenIndex: number) => tokenIndex + ':' + token.kind)
-            }.fontFamily('monospace').fontSize(13).lineHeight('20fp').width('100%')
+            }.fontFamily('monospace').fontSize(FontSize.mono).lineHeight(LineHeight.mono).width('100%')
               .copyOption(CopyOptions.InApp)
           }, (tokens: CodeToken[], lineIndex: number) => String(lineIndex))
         }.width('100%').alignItems(HorizontalAlign.Start)
@@ -131,73 +134,78 @@ export struct MarkdownView {
                 ForEach(tokens, (token: CodeToken, tokenIndex: number) => {
                   Span(token.text).fontColor(this.tokenColor(token.kind))
                 }, (token: CodeToken, tokenIndex: number) => tokenIndex + ':' + token.kind)
-              }.fontFamily('monospace').fontSize(13).lineHeight('20fp').constraintSize({ minHeight: '20fp' })
+              }.fontFamily('monospace').fontSize(FontSize.mono).lineHeight(LineHeight.mono).constraintSize({ minHeight: LineHeight.mono })
                 .copyOption(CopyOptions.InApp)
             }, (tokens: CodeToken[], lineIndex: number) => String(lineIndex))
           }.alignItems(HorizontalAlign.Start)
-        }.scrollable(ScrollDirection.Horizontal).width('100%')
+        }.scrollable(ScrollDirection.Horizontal).align(Alignment.Start).width('100%')
       }
-    }.width('100%').padding(12).backgroundColor($r('app.color.surface')).borderRadius(12)
+    }.width('100%').padding({ left: Space.sm, right: Space.sm, top: Space.xs, bottom: Space.sm })
+      .backgroundColor($r('app.color.card')).borderRadius(Radius.tool).border({ width: 1, color: $r('app.color.border') })
   }
 
   @Builder
   mermaidBlock(block: MarkdownBlock) {
-    Column({ space: 6 }) {
+    Column({ space: Space.xxs }) {
       Row() {
-        Text('mermaid').fontSize(12).fontColor($r('app.color.muted'))
+        Text('mermaid').fontSize(FontSize.caption).fontColor($r('app.color.muted'))
         Blank()
-        Button('复制').backgroundColor(Color.Transparent).fontColor($r('app.color.ink')).fontSize(12).constraintSize({ minHeight: 44 })
-          .onClick(() => this.onCopy(block.text))
+        Button('复制').backgroundColor(Color.Transparent).fontColor($r('app.color.muted')).fontSize(FontSize.caption)
+          .constraintSize({ minHeight: 36 }).padding({ left: Space.xs, right: 0 }).onClick(() => this.onCopy(block.text))
       }.width('100%')
       Scroll() {
         MermaidView({ source: block.text })
-      }.scrollable(ScrollDirection.Horizontal).width('100%')
-    }.width('100%').padding(12).backgroundColor($r('app.color.surface')).borderRadius(12)
+      }.scrollable(ScrollDirection.Horizontal).align(Alignment.Start).width('100%')
+    }.width('100%').padding(Space.sm).backgroundColor($r('app.color.card')).borderRadius(Radius.tool)
+      .border({ width: 1, color: $r('app.color.border') })
   }
 
   @Builder
   sequenceBlock(block: MarkdownBlock) {
-    Column({ space: 6 }) {
+    Column({ space: Space.xxs }) {
       Row() {
-        Text('mermaid').fontSize(12).fontColor($r('app.color.muted'))
+        Text('mermaid').fontSize(FontSize.caption).fontColor($r('app.color.muted'))
         Blank()
-        Button('复制').backgroundColor(Color.Transparent).fontColor($r('app.color.ink')).fontSize(12).constraintSize({ minHeight: 44 })
-          .onClick(() => this.onCopy(block.text))
+        Button('复制').backgroundColor(Color.Transparent).fontColor($r('app.color.muted')).fontSize(FontSize.caption)
+          .constraintSize({ minHeight: 36 }).padding({ left: Space.xs, right: 0 }).onClick(() => this.onCopy(block.text))
       }.width('100%')
       Scroll() {
         SequenceView({ source: block.text })
-      }.scrollable(ScrollDirection.Horizontal).width('100%')
-    }.width('100%').padding(12).backgroundColor($r('app.color.surface')).borderRadius(12)
+      }.scrollable(ScrollDirection.Horizontal).align(Alignment.Start).width('100%')
+    }.width('100%').padding(Space.sm).backgroundColor($r('app.color.card')).borderRadius(Radius.tool)
+      .border({ width: 1, color: $r('app.color.border') })
   }
 
   @Builder
   classBlock(block: MarkdownBlock) {
-    Column({ space: 6 }) {
+    Column({ space: Space.xxs }) {
       Row() {
-        Text('mermaid').fontSize(12).fontColor($r('app.color.muted'))
+        Text('mermaid').fontSize(FontSize.caption).fontColor($r('app.color.muted'))
         Blank()
-        Button('复制').backgroundColor(Color.Transparent).fontColor($r('app.color.ink')).fontSize(12).constraintSize({ minHeight: 44 })
-          .onClick(() => this.onCopy(block.text))
+        Button('复制').backgroundColor(Color.Transparent).fontColor($r('app.color.muted')).fontSize(FontSize.caption)
+          .constraintSize({ minHeight: 36 }).padding({ left: Space.xs, right: 0 }).onClick(() => this.onCopy(block.text))
       }.width('100%')
       Scroll() {
         ClassDiagramView({ source: block.text })
-      }.scrollable(ScrollDirection.Horizontal).width('100%')
-    }.width('100%').padding(12).backgroundColor($r('app.color.surface')).borderRadius(12)
+      }.scrollable(ScrollDirection.Horizontal).align(Alignment.Start).width('100%')
+    }.width('100%').padding(Space.sm).backgroundColor($r('app.color.card')).borderRadius(Radius.tool)
+      .border({ width: 1, color: $r('app.color.border') })
   }
 
   @Builder
   stateBlock(block: MarkdownBlock) {
-    Column({ space: 6 }) {
+    Column({ space: Space.xxs }) {
       Row() {
-        Text('mermaid').fontSize(12).fontColor($r('app.color.muted'))
+        Text('mermaid').fontSize(FontSize.caption).fontColor($r('app.color.muted'))
         Blank()
-        Button('复制').backgroundColor(Color.Transparent).fontColor($r('app.color.ink')).fontSize(12).constraintSize({ minHeight: 44 })
-          .onClick(() => this.onCopy(block.text))
+        Button('复制').backgroundColor(Color.Transparent).fontColor($r('app.color.muted')).fontSize(FontSize.caption)
+          .constraintSize({ minHeight: 36 }).padding({ left: Space.xs, right: 0 }).onClick(() => this.onCopy(block.text))
       }.width('100%')
       Scroll() {
         StateDiagramView({ source: block.text })
-      }.scrollable(ScrollDirection.Horizontal).width('100%')
-    }.width('100%').padding(12).backgroundColor($r('app.color.surface')).borderRadius(12)
+      }.scrollable(ScrollDirection.Horizontal).align(Alignment.Start).width('100%')
+    }.width('100%').padding(Space.sm).backgroundColor($r('app.color.card')).borderRadius(Radius.tool)
+      .border({ width: 1, color: $r('app.color.border') })
   }
 
   @Builder
@@ -222,12 +230,12 @@ export struct MarkdownView {
       this.inline(block.spans, this.headingSize(block.level), this.headingSize(block.level) * 1.35,
         $r('app.color.ink'), FontWeight.Medium)
     } else if (block.kind === 'paragraph') {
-      this.inline(block.spans, 16, 24, $r('app.color.ink'), FontWeight.Normal)
+      this.inline(block.spans, FontSize.body, 23, $r('app.color.ink'), FontWeight.Normal)
     } else if (block.kind === 'quote') {
       Row({ space: 10 }) {
         Divider().vertical(true).height('100%').color($r('app.color.border'))
         Column() {
-          this.inline(block.spans, 15, 23, $r('app.color.muted'), FontWeight.Normal)
+          this.inline(block.spans, FontSize.body, 22, $r('app.color.muted'), FontWeight.Normal)
         }.layoutWeight(1)
       }.width('100%').alignItems(VerticalAlign.Top)
     } else if (block.kind === 'list') {
@@ -250,10 +258,10 @@ export struct MarkdownView {
       this.detailsBlock(block, String(index))
     } else if (block.kind === 'math') {
       Scroll() {
-        Text(mathText(block.text)).fontFamily('monospace').fontSize(15).padding(10)
+        Text(mathText(block.text)).fontFamily('monospace').fontSize(FontSize.body).padding(Space.sm)
           .copyOption(CopyOptions.InApp)
-      }.scrollable(ScrollDirection.Horizontal).width('100%')
-        .backgroundColor($r('app.color.surface')).borderRadius(10)
+      }.scrollable(ScrollDirection.Horizontal).align(Alignment.Start).width('100%')
+        .backgroundColor($r('app.color.card')).borderRadius(Radius.tool).border({ width: 1, color: $r('app.color.border') })
     } else if (block.kind === 'hr') {
       Divider().color($r('app.color.border')).width('100%')
     } else if (block.kind === 'image') {

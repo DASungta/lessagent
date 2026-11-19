@@ -3,6 +3,8 @@ import { ActionCard, ApprovalChoice, Question, answerSelected, inputAnswers } fr
 import { AttachmentPicker } from '../services/AttachmentPicker';
 import { DraftAttachment } from '../protocol/R4';
 import { common } from '@kit.AbilityKit';
+import { FontSize, LineHeight, Radius, Space, Weight } from '../common/Theme';
+import { AppButton } from './ui/AppButton';
 
 @Component
 export struct RequestCard {
@@ -155,104 +157,154 @@ export struct RequestCard {
   }
 
   build() {
-    Column({ space: 10 }) {
-      Text(this.card.kind === 'secret' ? '安全输入' : this.card.kind === 'approval' ? '需要你的许可' : '需要你的回答').fontSize(12).fontColor($r('app.color.muted')).width('100%')
-      Text(this.card.label).fontSize(17).fontColor($r('app.color.ink')).fontWeight(FontWeight.Medium).width('100%')
+    Column({ space: Space.sm }) {
+      Text(this.card.kind === 'secret' ? '安全输入' : this.card.kind === 'approval' ? '需要审批' : '需要你的回答')
+        .fontSize(FontSize.callout)
+        .fontWeight(Weight.semibold)
+        .fontColor(this.card.kind === 'approval' ? $r('app.color.warning') : $r('app.color.muted'))
+        .width('100%')
+      Text(this.card.label)
+        .fontSize(FontSize.body)
+        .lineHeight(LineHeight.body)
+        .fontColor($r('app.color.ink'))
+        .fontWeight(Weight.medium)
+        .width('100%')
       if (this.card.kind === 'secret') {
         if (!this.card.enabled) {
-          Text('等待在原会话中回答').fontSize(13).width('100%')
+          Text('等待在原会话中回答').fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%')
         } else {
-          Text('敏感值仅发往专用接口，不进入聊天、草稿或剪贴板。').fontSize(12).fontColor($r('app.color.muted')).width('100%')
-          if (this.card.detail && this.card.detail !== this.card.label) { Text(this.card.detail).fontSize(13).width('100%') }
-          if (this.card.secretDelivery === 'file') { Text('该值只会写入仅所有者可读的文件，供 Agent 命令使用。').fontSize(12) }
-          if (this.card.secretUrl) { Button('打开请求页面').backgroundColor(Color.Transparent)
-            .fontColor($r('app.color.primary')).constraintSize({ minHeight: 44 }).fontSize(13).onClick(() => { void this.openSecretUrl(); }) }
+          Text('敏感值仅发往专用接口，不进入聊天、草稿或剪贴板。').fontSize(FontSize.caption).lineHeight(LineHeight.caption)
+            .fontColor($r('app.color.muted')).width('100%')
+          if (this.card.detail && this.card.detail !== this.card.label) {
+            Text(this.card.detail).fontSize(FontSize.callout).lineHeight(LineHeight.callout).width('100%')
+          }
+          if (this.card.secretDelivery === 'file') {
+            Text('该值只会写入仅所有者可读的文件，供 Agent 命令使用。').fontSize(FontSize.caption).lineHeight(LineHeight.caption)
+              .fontColor($r('app.color.muted')).width('100%')
+          }
+          if (this.card.secretUrl) {
+            AppButton({ label: '打开请求页面', kind: 'text', compact: true, onTap: () => { void this.openSecretUrl(); } })
+          }
           if (this.card.secretReference && this.connection.config.secretRequestReferences === true) {
-            Row({ space: 8 }) {
-              Button(this.referenceMode ? '使用引用' : '直接输入').backgroundColor(Color.Transparent)
-                .fontColor($r('app.color.primary')).constraintSize({ minHeight: 44 }).fontSize(13)
-                .onClick(() => this.referenceMode = !this.referenceMode)
+            Row({ space: Space.xs }) {
+              AppButton({ label: this.referenceMode ? '使用引用' : '直接输入', kind: 'text', compact: true,
+                onTap: () => { this.referenceMode = !this.referenceMode; } })
             }.width('100%')
           }
           if (this.referenceMode) {
             if (this.secretProviders().length) {
-              Text('来源').fontSize(12).fontColor($r('app.color.muted')).width('100%')
+              Text('来源').fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
               Flex({ wrap: FlexWrap.Wrap }) {
                 ForEach(this.secretProviders(), (name: string) => {
-                  Button(name).constraintSize({ minHeight: 44 }).fontSize(13).margin({ right: 6, bottom: 6 })
-                    .backgroundColor(this.referenceProvider === name ? $r('app.color.primary') : $r('app.color.surface'))
-                    .fontColor(this.referenceProvider === name ? $r('app.color.on_primary') : $r('app.color.ink'))
+                  Button(name).constraintSize({ minHeight: 38 }).fontSize(FontSize.callout)
+                    .borderRadius(Radius.button).margin({ right: Space.xs, bottom: Space.xs })
+                    .backgroundColor(this.referenceProvider === name ? $r('app.color.prominent') : $r('app.color.group'))
+                    .fontColor(this.referenceProvider === name ? $r('app.color.on_prominent') : $r('app.color.ink'))
                     .onClick(() => this.referenceProvider = name)
                 })
               }.width('100%')
             } else {
-              Text('服务端没有可用的秘密来源，请直接输入或先配置来源。').fontSize(12)
+              Text('服务端没有可用的秘密来源，请直接输入或先配置来源。').fontSize(FontSize.caption).fontColor($r('app.color.muted'))
             }
             TextInput({ placeholder: '引用路径（不会发送秘密值本身）', text: this.referencePath })
-              .enableAutoFill(false).onChange((value: string) => this.referencePath = value)
-            Button('使用引用提交').width('100%').fontSize(14).constraintSize({ minHeight: 44 }).borderRadius(12)
-              .backgroundColor($r('app.color.primary')).fontColor($r('app.color.on_primary'))
-              .enabled(!this.busy && !this.submitted && !!this.referenceProvider.trim() && !!this.referencePath.trim())
-              .onClick(() => this.submit(''))
+              .enableAutoFill(false).fontSize(FontSize.body).constraintSize({ minHeight: 44 })
+              .backgroundColor($r('app.color.input_bg')).border({ width: 1, color: $r('app.color.input_border') })
+              .borderRadius(Radius.button).onChange((value: string) => this.referencePath = value)
+            AppButton({ label: '使用引用提交', kind: 'primary', compact: true, fill: true,
+              disabled: this.busy || this.submitted || !this.referenceProvider.trim() || !this.referencePath.trim(),
+              onTap: () => { void this.submit(''); } })
           } else {
             TextInput({ placeholder: this.card.secretPlaceholder || '敏感输入', text: this.secretValue }).type(InputType.Password).enableAutoFill(false)
-              .onChange((value: string) => this.secretValue = value)
-            Button('安全提交').width('100%').fontSize(14).constraintSize({ minHeight: 44 }).borderRadius(12).backgroundColor($r('app.color.primary')).fontColor($r('app.color.on_primary')).enabled(!this.busy && !this.submitted && this.secretValue.trim().length > 0).onClick(() => this.submit(''))
+              .fontSize(FontSize.body).constraintSize({ minHeight: 44 })
+              .backgroundColor($r('app.color.input_bg')).border({ width: 1, color: $r('app.color.input_border') })
+              .borderRadius(Radius.button).onChange((value: string) => this.secretValue = value)
+            AppButton({ label: '安全提交', kind: 'primary', compact: true, fill: true,
+              disabled: this.busy || this.submitted || this.secretValue.trim().length === 0,
+              onTap: () => { void this.submit(''); } })
           }
-          Button('拒绝提供').width('100%').fontSize(14).constraintSize({ minHeight: 44 }).borderRadius(12).backgroundColor($r('app.color.canvas')).fontColor($r('app.color.ink')).enabled(!this.busy && !this.submitted).onClick(() => this.submit('decline'))
+          AppButton({ label: '拒绝提供', kind: 'secondary', compact: true, fill: true,
+            disabled: this.busy || this.submitted,
+            onTap: () => { void this.submit('decline'); } })
         }
       } else if (this.card.kind === 'approval') {
+        if (this.card.detail && this.card.detail !== this.card.label) {
+          Text(this.card.detail).fontSize(FontSize.mono).lineHeight(LineHeight.mono).fontFamily('monospace')
+            .fontColor($r('app.color.ink')).width('100%')
+        }
         if (this.card.approvalOptions.length) {
           ForEach(this.card.approvalOptions, (option: ApprovalChoice) => {
-            Button(option.label + (option.warning ? ' · ' + option.warning : ''))
-              .width('100%').fontSize(14).constraintSize({ minHeight: 44 }).borderRadius(12)
-              .backgroundColor(option.decision === 'accept' ? $r('app.color.primary') : $r('app.color.canvas'))
-              .fontColor(option.decision === 'accept' ? $r('app.color.on_primary') : $r('app.color.ink'))
-              .enabled(this.card.enabled && this.card.responseType === 'live' && !this.busy && !this.submitted)
-              .onClick(() => this.submit(option.decision))
+            AppButton({
+              label: option.label + (option.warning ? ' · ' + option.warning : ''),
+              kind: option.decision === 'accept' ? 'confirm' : 'secondary',
+              compact: true, fill: true,
+              disabled: !this.card.enabled || this.card.responseType !== 'live' || this.busy || this.submitted,
+              onTap: () => { void this.submit(option.decision); }
+            })
           })
         } else {
-          Button('允许本次').width('100%').fontSize(14).constraintSize({ minHeight: 44 }).borderRadius(12).backgroundColor($r('app.color.primary')).fontColor($r('app.color.on_primary')).enabled(this.card.enabled && this.card.responseType === 'live' && !this.busy && !this.submitted).onClick(() => this.submit('accept'))
-          Button('允许本会话').width('100%').fontSize(14).constraintSize({ minHeight: 44 }).borderRadius(12).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).enabled(this.card.enabled && this.card.responseType === 'live' && !this.busy && !this.submitted).onClick(() => this.submit('acceptForSession'))
-          Button('拒绝本次').width('100%').fontSize(14).constraintSize({ minHeight: 44 }).borderRadius(12).backgroundColor($r('app.color.canvas')).fontColor($r('app.color.ink')).enabled(this.card.enabled && this.card.responseType === 'live' && !this.busy && !this.submitted).onClick(() => this.submit('decline'))
+          Row({ space: Space.xs }) {
+            Column() {
+              AppButton({ label: '拒绝本次', kind: 'secondary', compact: true, fill: true,
+                disabled: !this.card.enabled || this.card.responseType !== 'live' || this.busy || this.submitted,
+                onTap: () => { void this.submit('decline'); } })
+            }.layoutWeight(1)
+            Column() {
+              AppButton({ label: '允许本次', kind: 'confirm', compact: true, fill: true,
+                disabled: !this.card.enabled || this.card.responseType !== 'live' || this.busy || this.submitted,
+                onTap: () => { void this.submit('accept'); } })
+            }.layoutWeight(1)
+          }.width('100%')
+          AppButton({ label: '允许本会话', kind: 'text', fill: true,
+            disabled: !this.card.enabled || this.card.responseType !== 'live' || this.busy || this.submitted,
+            onTap: () => { void this.submit('acceptForSession'); } })
         }
       } else {
         ForEach(this.card.questions, (q: Question) => {
-          Text(q.label + (q.required ? '（必填）' : '（可选）')).fontSize(15).fontWeight(FontWeight.Medium).width('100%')
+          Text(q.label + (q.required ? '（必填）' : '（可选）')).fontSize(FontSize.body).fontWeight(Weight.medium).width('100%')
           ForEach(q.options, (option: string, index: number) => {
             Button((this.selected(q, q.values[index]) ? '✓ ' : '') + option)
-              .width('100%').fontSize(14).constraintSize({ minHeight: 44 }).borderRadius(12)
-              .backgroundColor(this.selected(q, q.values[index]) ? $r('app.color.selected') : $r('app.color.canvas'))
+              .width('100%').fontSize(FontSize.callout).constraintSize({ minHeight: 40 }).borderRadius(Radius.button)
+              .backgroundColor(this.selected(q, q.values[index]) ? $r('app.color.selected') : $r('app.color.group'))
               .fontColor($r('app.color.ink')).accessibilityText(option + (this.selected(q, q.values[index]) ? '，已选中' : '，未选中'))
               .onClick(() => this.choose(q, q.values[index])).enabled(!this.busy && !this.submitted)
           })
           if (q.custom) {
             TextInput({ placeholder: '回答（仅本次提交）', text: this.customText(q) })
-              .enableAutoFill(false).enabled(!this.busy && !this.submitted).onChange((value: string) => {
+              .enableAutoFill(false).fontSize(FontSize.body).constraintSize({ minHeight: 44 })
+              .backgroundColor($r('app.color.input_bg')).border({ width: 1, color: $r('app.color.input_border') })
+              .borderRadius(Radius.button).enabled(!this.busy && !this.submitted).onChange((value: string) => {
                 this.customAnswers.set(q.id, value); this.customAnswers = new Map(this.customAnswers);
               })
           }
-          Button(this.uploadBusy === q.id ? '上传中…' : '添加问题附件').backgroundColor(Color.Transparent)
-            .fontColor($r('app.color.primary')).constraintSize({ minHeight: 44 }).fontSize(13)
-            .enabled(!this.busy && !this.submitted && this.uploadBusy !== q.id).onClick(() => { void this.addQuestionAttachment(q); })
+          AppButton({ label: this.uploadBusy === q.id ? '上传中…' : '添加问题附件', kind: 'text', compact: true,
+            disabled: this.busy || this.submitted || this.uploadBusy === q.id,
+            onTap: () => { void this.addQuestionAttachment(q); } })
           ForEach(this.questionAttachments(q.id), (item: DraftAttachment) => {
-            Text('附件 · ' + item.name + ' ×').fontSize(13).fontColor($r('app.color.muted'))
-              .constraintSize({ minHeight: 44 }).accessibilityText('移除附件：' + item.name)
+            Text('附件 · ' + item.name + ' ×').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+              .constraintSize({ minHeight: 40 }).accessibilityText('移除附件：' + item.name)
               .onClick(() => this.removeQuestionAttachment(q.id, item.id))
           }, (item: DraftAttachment) => q.id + ':' + item.id)
-          Text(this.answers.get(q.id) || (this.customAnswers.get(q.id) || '').trim() ? '已填写/选择' : '待回答').fontSize(12)
+          Text(this.answers.get(q.id) || (this.customAnswers.get(q.id) || '').trim() ? '已填写/选择' : '待回答')
+            .fontSize(FontSize.caption).fontColor($r('app.color.muted'))
         })
-        Button('提交回答').width('100%').fontSize(14).constraintSize({ minHeight: 44 }).borderRadius(12).backgroundColor($r('app.color.primary')).fontColor($r('app.color.on_primary')).enabled(this.card.enabled && !this.busy && !this.submitted).onClick(() => this.submit(''))
+        AppButton({ label: '提交回答', kind: 'primary', compact: true, fill: true,
+          disabled: !this.card.enabled || this.busy || this.submitted,
+          onTap: () => { void this.submit(''); } })
         if (this.card.canDismiss) {
-          Button('关闭问题').width('100%').fontSize(14).constraintSize({ minHeight: 44 }).borderRadius(12)
-            .backgroundColor($r('app.color.canvas')).fontColor($r('app.color.ink')).enabled(!this.busy && !this.submitted)
-            .onClick(() => { void this.dismiss(); })
+          AppButton({ label: '关闭问题', kind: 'secondary', compact: true, fill: true,
+            disabled: this.busy || this.submitted,
+            onTap: () => { void this.dismiss(); } })
         }
       }
-      if (!this.card.enabled) { Text('此请求不可恢复，请停止后重新发起任务') }
-      if (this.status) { Text(this.status).fontSize(13).fontColor($r('app.color.muted')).width('100%') }
-    }.padding(16).width('100%').alignItems(HorizontalAlign.Start)
-      .backgroundColor($r('app.color.canvas')).foregroundColor($r('app.color.ink')).borderRadius(16)
-      .border({ width: 1, color: $r('app.color.border') })
+      if (!this.card.enabled) {
+        Text('此请求不可恢复，请停止后重新发起任务').fontSize(FontSize.caption).fontColor($r('app.color.muted'))
+      }
+      if (this.status) {
+        Text(this.status).fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%')
+      }
+    }.padding(Space.md).width('100%').alignItems(HorizontalAlign.Start)
+      .backgroundColor(this.card.kind === 'approval' ? $r('app.color.warning_bg') : $r('app.color.card'))
+      .foregroundColor($r('app.color.ink')).borderRadius(Radius.card)
+      .border({ width: 1, color: this.card.kind === 'approval' ? $r('app.color.warning_border') : $r('app.color.border') })
   }
 }
