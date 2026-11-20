@@ -1,5 +1,9 @@
 <div align="center">
 
+<p>
+  <img src="docs/assets/logo.png" width="112" alt="T3 Code Harmony Logo" />
+</p>
+
 <h1>T3 Code Harmony</h1>
 
 <p>
@@ -10,7 +14,7 @@
 <p>
   <img src="https://img.shields.io/badge/HarmonyOS_NEXT-API_24%2B-0A59F7?style=flat-square" alt="HarmonyOS API 24+" />
   <img src="https://img.shields.io/badge/ArkTS_%2B_ArkUI-Native-18181B?style=flat-square" alt="ArkTS + ArkUI Native" />
-  <img src="https://img.shields.io/badge/Version-v0.1.1-2563EB?style=flat-square" alt="Version v0.1.1" />
+  <a href="https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.1-preview"><img src="https://img.shields.io/badge/Preview-v0.1.1--preview-2563EB?style=flat-square" alt="Preview v0.1.1-preview" /></a>
   <img src="https://img.shields.io/badge/Tests-562_passing-16A34A?style=flat-square" alt="562 Tests Passing" />
   <img src="https://img.shields.io/badge/License-MIT-52525B?style=flat-square" alt="MIT License" />
 </p>
@@ -75,6 +79,12 @@
 
 ## Development & Build
 
+### Download Preview Sideload Package
+
+This project is currently in **Preview**. You can download the prebuilt **unsigned debug-mode HAP** (`t3code-harmony-v0.1.1-preview-unsigned.hap`, with its `.sha256` checksum) from [GitHub Releases (`v0.1.1-preview`)](https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.1-preview).
+
+> **HarmonyOS NEXT Sideloading Note**: HarmonyOS NEXT rejects unsigned HAPs as well as debug packages signed for another device's UDID. After downloading the `unsigned.hap`, sign it using your own HUAWEI Developer account via a HarmonyOS sideloading/signing helper (such as AutoInstaller) or `hap-sign-tool` + `hdc`, or clone the repo and build with DevEco Studio automatic signing.
+
 ### Prerequisites
 
 - **DevEco Studio 6.1.1+** with HarmonyOS SDK `6.1.1(24)` (`API 24+`)
@@ -100,7 +110,7 @@ node --experimental-strip-types --test tests/*.test.mjs
 
 ```text
 t3code-harmony/
-├── AppScope/                         # App metadata (app.json5), launcher icon & app name
+├── AppScope/                         # App metadata (app.json5), layered icon & app name
 ├── entry/src/main/
 │   ├── ets/
 │   │   ├── common/                   # Theme.ets (typography, spacing, radius & size tokens)
@@ -117,7 +127,7 @@ t3code-harmony/
 │       └── rawfile/                  # Bundled license text & connection presets
 ├── scripts/                          # Build script, replay helpers & device keep-awake tool
 ├── tests/                            # Host unit tests & Light/Dark WCAG AA contrast checks
-└── docs/                             # Design system, migration plans, promo shots & device evidence
+└── docs/                             # Brand logo (assets/), design system, plans, shots & evidence
 ```
 
 ## Documentation

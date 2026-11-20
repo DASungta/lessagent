@@ -1,5 +1,9 @@
 <div align="center">
 
+<p>
+  <img src="docs/assets/logo.png" width="112" alt="T3 Code Harmony Logo" />
+</p>
+
 <h1>T3 Code Harmony</h1>
 
 <p>
@@ -10,7 +14,7 @@
 <p>
   <img src="https://img.shields.io/badge/HarmonyOS_NEXT-API_24%2B-0A59F7?style=flat-square" alt="HarmonyOS API 24+" />
   <img src="https://img.shields.io/badge/ArkTS_%2B_ArkUI-Native-18181B?style=flat-square" alt="ArkTS + ArkUI Native" />
-  <img src="https://img.shields.io/badge/Version-v0.1.1-2563EB?style=flat-square" alt="Version v0.1.1" />
+  <a href="https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.1-preview"><img src="https://img.shields.io/badge/Preview-v0.1.1--preview-2563EB?style=flat-square" alt="Preview v0.1.1-preview" /></a>
   <img src="https://img.shields.io/badge/Tests-562_passing-16A34A?style=flat-square" alt="562 Tests Passing" />
   <img src="https://img.shields.io/badge/License-MIT-52525B?style=flat-square" alt="MIT License" />
 </p>
@@ -75,6 +79,12 @@
 
 ## 本地开发与构建
 
+### 下载预览侧载包
+
+当前项目处于 **Preview** 阶段，可在 [GitHub Releases (`v0.1.1-preview`)](https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.1-preview) 下载预编译的**未签名调试模式 HAP**（`t3code-harmony-v0.1.1-preview-unsigned.hap`，附 SHA-256 校验文件）。
+
+> **HarmonyOS NEXT 侧载说明**：出于系统安全机制，鸿蒙真机拒绝直接安装未签名包，而调试签名又强绑定单台设备 UDID 与个人证书。下载 `unsigned.hap` 后，请使用你自己的华为开发者账号通过社区侧载签名工具（如 AutoInstaller / 鸿蒙侧载助手）或 `hap-sign-tool` + `hdc` 注入调试签名后安装，也可直接克隆源码在 DevEco Studio 中开启自动签名编译安装。
+
 ### 环境要求
 
 - **DevEco Studio 6.1.1+** 与 HarmonyOS SDK `6.1.1(24)`（`API 24+`）
@@ -100,7 +110,7 @@ node --experimental-strip-types --test tests/*.test.mjs
 
 ```text
 t3code-harmony/
-├── AppScope/                         # 应用元信息 (app.json5)、全局图标与名称
+├── AppScope/                         # 应用元信息 (app.json5)、分层图标与名称
 ├── entry/src/main/
 │   ├── ets/
 │   │   ├── common/                   # Theme.ets（字号、行高、间距、圆角与尺寸令牌）
@@ -117,7 +127,7 @@ t3code-harmony/
 │       └── rawfile/                  # 内置开源许可证与连接预设
 ├── scripts/                          # 构建脚本与联调 / 真机常亮工具
 ├── tests/                            # 宿主单元测试与深浅色对比度校验
-└── docs/                             # 设计规范、迁移计划、宣传截图与真机证据
+└── docs/                             # Brand Logo (assets/)、设计规范、迁移计划、宣传截图与证据
 ```
 
 ## 工程文档
