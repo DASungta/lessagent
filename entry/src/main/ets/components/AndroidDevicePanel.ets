@@ -1,6 +1,9 @@
+import { FontSize, Radius, Space } from '../common/Theme';
 import { AndroidDeviceStream } from '../services/AndroidDeviceStream';
 import { AndroidVideoSize, AndroidControlPoint, androidControlPoint, androidTouch, androidButton, androidKey, androidTextInputs } from '../protocol/AndroidVideo';
 import { DecoderStats } from 'libt3device.so';
+import { AppButton } from './ui/AppButton';
+import { TopBar } from './ui/TopBar';
 
 @Component
 export struct AndroidDevicePanel {
@@ -146,54 +149,81 @@ export struct AndroidDevicePanel {
   private surfaceWidth(): number { return Math.max(1, Math.min(this.availableWidth, this.availableHeight * this.videoWidth / this.videoHeight)); }
   private surfaceHeight(): number { return Math.max(1, Math.min(this.availableHeight, this.availableWidth * this.videoHeight / this.videoWidth)); }
   build() {
-    Column({ space: 12 }) {
-      Row({ space: 8 }) {
-        Button('返回', { type: ButtonType.Normal }).height(44).backgroundColor(Color.Transparent)
-          .fontColor($r('app.color.ink')).onClick(() => this.onBack())
-        Column({ space: 2 }) {
-          Text(this.deviceName || 'Android 设备').fontSize(18).fontColor($r('app.color.ink')).maxLines(1)
-          Text(this.hostLabel).fontSize(12).fontColor($r('app.color.muted')).maxLines(1)
-        }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-        Button('连接').height(44).backgroundColor($r('app.color.primary')).fontColor($r('app.color.on_primary'))
-          .enabled(this.foreground && this.surfaceReady && !this.busy).onClick(() => { void this.connect(); })
-      }.width('100%')
-      Text(this.status).fontSize(13).fontColor($r('app.color.muted')).width('100%')
-      Text('当前已验证竖屏控制；画面侧倒时请先在主机恢复竖屏。').fontSize(12).fontColor($r('app.color.muted')).width('100%')
-      if (this.error) Text(this.error).fontSize(13).fontColor($r('app.color.danger')).width('100%')
-      Stack() {
-        XComponent({ id: 'androidDeviceSurface', type: XComponentType.SURFACE, controller: this.surface })
-          .width(this.surfaceWidth()).height(this.surfaceHeight())
-          .onLoad(() => { this.surfaceReady = true; })
-          .onDestroy(() => { this.surfaceReady = false; this.disconnect(); })
-        Column().width('100%').height('100%').backgroundColor(Color.Transparent).hitTestBehavior(HitTestMode.Block)
-          .onAreaChange((_, area: Area) => { this.touchWidth = Number(area.width); this.touchHeight = Number(area.height); })
-          .onTouch((event: TouchEvent) => this.touch(event))
-      }.width('100%').layoutWeight(1).backgroundColor('#101114')
-        .onAreaChange((_, area: Area) => { this.availableWidth = Number(area.width); this.availableHeight = Number(area.height); })
-      Text('已渲染 ' + this.frameCount + ' 帧 · 丢弃 ' + this.dropped + ' 帧').fontSize(12).fontColor($r('app.color.muted'))
-      Row({ space: 8 }) {
-        Button(this.controlling ? '停止控制' : '开启控制').height(44).layoutWeight(1)
-          .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-          .enabled(this.inputReady && !this.controlBusy).onClick(() => { void this.toggleControl(); })
-        Button('返回键').height(44).layoutWeight(1).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-          .enabled(this.controlling && !this.controlBusy).onClick(() => { void this.press('back'); })
-        Button('主屏幕').height(44).layoutWeight(1).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-          .enabled(this.controlling && !this.controlBusy).onClick(() => { void this.press('home'); })
-      }.width('100%')
-      Row({ space: 8 }) {
-        Button('最近任务').height(44).layoutWeight(1).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-          .onClick(() => { void this.press('recents'); })
-        Button('横竖屏').height(44).layoutWeight(1).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-          .onClick(() => { void this.rotateDevice(); })
-      }.width('100%').enabled(this.controlling && !this.controlBusy && this.inputReady)
-      Row({ space: 8 }) {
-        TextInput({ placeholder: '点选远端输入框后输入文字', text: this.input }).layoutWeight(1).maxLength(4096)
-          .onChange((value: string) => { this.input = value; })
-        Button('输入').height(44).backgroundColor($r('app.color.primary')).fontColor($r('app.color.on_primary'))
-          .onClick(() => { void this.sendText(); })
-        Button('↵').height(44).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-          .onClick(() => { void this.press('enter'); })
-      }.width('100%').enabled(this.controlling && !this.controlBusy && this.inputReady)
-    }.padding(16).width('100%').height('100%').backgroundColor($r('app.color.canvas'))
+    Column() {
+      TopBar({
+        title: this.deviceName || 'Android 设备',
+        subtitle: this.hostLabel,
+        showBack: true,
+        onBack: () => this.onBack()
+      }) {
+        AppButton({
+          label: '连接',
+          kind: 'primary',
+          compact: true,
+          disabled: !(this.foreground && this.surfaceReady && !this.busy),
+          onTap: () => { void this.connect(); }
+        })
+      }
+      Column({ space: Space.xs }) {
+        Text(this.status).fontSize(FontSize.callout).fontColor($r('app.color.ink')).width('100%')
+        Text('当前已验证竖屏控制；画面侧倒时请先在主机恢复竖屏。')
+          .fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
+        if (this.error) {
+          Text(this.error).fontSize(FontSize.callout).fontColor($r('app.color.danger')).width('100%')
+        }
+        Stack() {
+          XComponent({ id: 'androidDeviceSurface', type: XComponentType.SURFACE, controller: this.surface })
+            .width(this.surfaceWidth()).height(this.surfaceHeight())
+            .onLoad(() => { this.surfaceReady = true; })
+            .onDestroy(() => { this.surfaceReady = false; this.disconnect(); })
+          Column().width('100%').height('100%').backgroundColor(Color.Transparent).hitTestBehavior(HitTestMode.Block)
+            .onAreaChange((_, area: Area) => { this.touchWidth = Number(area.width); this.touchHeight = Number(area.height); })
+            .onTouch((event: TouchEvent) => this.touch(event))
+        }.width('100%').layoutWeight(1).backgroundColor('#101114').borderRadius(Radius.card).clip(true)
+          .onAreaChange((_, area: Area) => { this.availableWidth = Number(area.width); this.availableHeight = Number(area.height); })
+        Text('已渲染 ' + this.frameCount + ' 帧 · 丢弃 ' + this.dropped + ' 帧')
+          .fontSize(FontSize.caption).fontColor($r('app.color.muted'))
+        Row({ space: Space.xs }) {
+          Button(this.controlling ? '停止控制' : '开启控制')
+            .height(42).fontSize(FontSize.callout).borderRadius(Radius.button).layoutWeight(1)
+            .backgroundColor(this.controlling ? $r('app.color.info_bg') : $r('app.color.card'))
+            .fontColor(this.controlling ? $r('app.color.primary_text') : $r('app.color.ink'))
+            .enabled(this.inputReady && !this.controlBusy).onClick(() => { void this.toggleControl(); })
+          Button('返回键').height(42).fontSize(FontSize.callout).borderRadius(Radius.button).layoutWeight(1)
+            .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink'))
+            .enabled(this.controlling && !this.controlBusy).onClick(() => { void this.press('back'); })
+          Button('主屏幕').height(42).fontSize(FontSize.callout).borderRadius(Radius.button).layoutWeight(1)
+            .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink'))
+            .enabled(this.controlling && !this.controlBusy).onClick(() => { void this.press('home'); })
+        }.width('100%')
+        Row({ space: Space.xs }) {
+          Button('最近任务').height(42).fontSize(FontSize.callout).borderRadius(Radius.button).layoutWeight(1)
+            .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink'))
+            .onClick(() => { void this.press('recents'); })
+          Button('横竖屏').height(42).fontSize(FontSize.callout).borderRadius(Radius.button).layoutWeight(1)
+            .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink'))
+            .onClick(() => { void this.rotateDevice(); })
+        }.width('100%').enabled(this.controlling && !this.controlBusy && this.inputReady)
+        Row({ space: Space.xs }) {
+          TextInput({ placeholder: '点选远端输入框后输入文字', text: this.input })
+            .layoutWeight(1).height(42).maxLength(4096)
+            .fontSize(FontSize.body).fontColor($r('app.color.ink')).placeholderColor($r('app.color.placeholder'))
+            .backgroundColor($r('app.color.card')).borderRadius(Radius.button).padding({ left: Space.sm, right: Space.sm })
+            .onChange((value: string) => { this.input = value; })
+          AppButton({
+            label: '输入',
+            kind: 'primary',
+            compact: true,
+            onTap: () => { void this.sendText(); }
+          })
+          AppButton({
+            label: '↵',
+            kind: 'secondary',
+            compact: true,
+            onTap: () => { void this.press('enter'); }
+          })
+        }.width('100%').alignItems(VerticalAlign.Center).enabled(this.controlling && !this.controlBusy && this.inputReady)
+      }.layoutWeight(1).width('100%').padding({ left: Space.page, right: Space.page, top: Space.xxs, bottom: Space.md })
+    }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

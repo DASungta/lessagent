@@ -98,91 +98,92 @@ export struct ShareImportPanel {
     return count ? text + ' · ' + files : text;
   }
   build() {
-    Column({ space: 16 }) {
-      Row() {
+    Column({ space: 12 }) {
+      Row({ space: 8 }) {
         Button(this.uploading ? '取消上传' : '取消').constraintSize({ minHeight: 44 })
-          .fontColor($r('app.color.ink')).backgroundColor(Color.Transparent)
+          .fontSize(15).fontColor($r('app.color.ink')).backgroundColor(Color.Transparent)
           .enabled(!this.busy || this.uploading).onClick(() => {
             if (this.uploading) this.onCancelUpload(); else this.onCancel();
           })
-        Text('导入分享').fontColor($r('app.color.ink')).fontSize(20).fontWeight(FontWeight.Medium).layoutWeight(1)
-      }.width('100%')
+        Text('导入分享').fontColor($r('app.color.ink')).fontSize(17).fontWeight(FontWeight.Medium).layoutWeight(1)
+      }.width('100%').constraintSize({ minHeight: 52 }).alignItems(VerticalAlign.Center)
       Text(this.attachments.length ? '确认后将附件上传到所选环境，并保存为新草稿。稍后由你手动发送。' :
-        '确认目标并保存为新草稿，稍后由你手动发送。').fontSize(14)
+        '确认目标并保存为新草稿，稍后由你手动发送。').fontSize(13)
         .fontColor($r('app.color.muted')).width('100%')
       Button({ type: ButtonType.Normal }) {
         Row({ space: 8 }) {
-          Text(this.destination || '选择环境与项目').fontSize(15).layoutWeight(1)
-          Image($r('app.media.ui_back')).width(18).height(18).rotate({ angle: 180 })
+          Text(this.destination || '选择环境与项目').fontSize(15).fontColor($r('app.color.ink')).layoutWeight(1)
+          Image($r('app.media.ui_chevron_right')).width(16).height(16).opacity(0.45).accessibilityLevel('no')
         }.width('100%').padding(14)
-      }.width('100%').fontColor($r('app.color.ink')).backgroundColor($r('app.color.surface')).borderRadius(12)
+      }.width('100%').padding(0).backgroundColor($r('app.color.card')).borderRadius(14)
         .enabled(!this.busy).onClick(this.onChooseDestination)
       Text(this.summary()).fontSize(13).fontColor($r('app.color.muted')).width('100%')
       Scroll() {
-        Column({ space: 12 }) {
+        Column({ space: 10 }) {
           ForEach(this.parts, (part: SharePart, index: number) => {
-            Column({ space: 4 }) {
+            Column({ space: 8 }) {
               Row({ space: 8 }) {
                 Text('第 ' + (index + 1) + ' 项 · ' + (part.kind === 'link' ? '链接' : '文字'))
-                  .fontSize(14).fontColor($r('app.color.ink')).fontWeight(FontWeight.Medium).layoutWeight(1)
-                Button('移除', { type: ButtonType.Normal }).constraintSize({ minWidth: 44, minHeight: 44 })
-                  .fontColor($r('app.color.ink')).backgroundColor(Color.Transparent)
+                  .fontSize(13).fontColor($r('app.color.muted')).fontWeight(FontWeight.Medium).layoutWeight(1)
+                Button('移除', { type: ButtonType.Normal }).constraintSize({ minWidth: 44, minHeight: 36 })
+                  .fontSize(13).fontColor($r('app.color.danger')).backgroundColor(Color.Transparent)
                   .accessibilityText('移除第 ' + (index + 1) + ' 项')
                   .enabled(!this.busy).onClick(() => this.onRemove(part.id))
-              }.width('100%')
-              TextArea({ text: part.text, placeholder: '分享内容' }).width('100%').fontSize(16)
+              }.width('100%').alignItems(VerticalAlign.Center)
+              TextArea({ text: part.text, placeholder: '分享内容' }).width('100%').fontSize(15)
                 .constraintSize({ minHeight: 72 }).maxLines(6, { overflowMode: MaxLinesMode.SCROLL })
-                .fontColor($r('app.color.ink')).backgroundColor($r('app.color.canvas'))
+                .fontColor($r('app.color.ink')).backgroundColor($r('app.color.group')).borderRadius(12).padding(12)
                 .maxLength(this.partLimit(part.id)).enabled(!this.busy)
                 .onChange((value: string) => { this.onEdit(part.id, value); })
                 .accessibilityText('编辑第 ' + (index + 1) + ' 项')
-            }.width('100%').padding(8).backgroundColor($r('app.color.surface')).borderRadius(12)
+            }.width('100%').padding(14).backgroundColor($r('app.color.card')).borderRadius(14)
           }, (part: SharePart) => String(part.id))
           ForEach(this.attachments, (item: IncomingShareAttachment) => {
-            Column({ space: 6 }) {
+            Column({ space: 8 }) {
               Row({ space: 8 }) {
-                Column({ space: 3 }) {
-                  Text(item.name).fontColor($r('app.color.ink')).fontSize(14).fontWeight(FontWeight.Medium).width('100%').wordBreak(WordBreak.BREAK_ALL)
-                  Text(this.fileSize(item.sizeBytes)).fontSize(13).fontColor($r('app.color.muted')).width('100%')
+                Column({ space: 2 }) {
+                  Text(item.name).fontColor($r('app.color.ink')).fontSize(15).fontWeight(FontWeight.Medium).width('100%').wordBreak(WordBreak.BREAK_ALL)
+                  Text(this.fileSize(item.sizeBytes)).fontSize(12).fontColor($r('app.color.muted')).width('100%')
                 }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-                Button('移除', { type: ButtonType.Normal }).constraintSize({ minWidth: 44, minHeight: 44 })
-                  .fontColor($r('app.color.ink')).backgroundColor(Color.Transparent)
+                Button('移除', { type: ButtonType.Normal }).constraintSize({ minWidth: 44, minHeight: 36 })
+                  .fontSize(13).fontColor($r('app.color.danger')).backgroundColor(Color.Transparent)
                   .accessibilityText('移除附件 ' + item.name).enabled(!this.busy).onClick(() => {
                     if (this.previewId === item.id) this.closePreview();
                     this.onRemoveAttachment(item.id);
                   })
-              }.width('100%')
+              }.width('100%').alignItems(VerticalAlign.Center)
               if (item.type === 'image') {
                 Button(this.previewId === item.id ? '收起图片预览' : '查看图片', { type: ButtonType.Normal })
-                  .constraintSize({ minWidth: 44, minHeight: 44 }).fontColor($r('app.color.ink'))
-                  .backgroundColor($r('app.color.canvas')).enabled(!this.busy)
+                  .constraintSize({ minWidth: 44, minHeight: 38 }).fontSize(13).fontColor($r('app.color.ink'))
+                  .backgroundColor($r('app.color.group')).borderRadius(10).enabled(!this.busy)
                   .accessibilityText((this.previewId === item.id ? '收起图片预览 ' : '查看图片 ') + item.name)
                   .onClick(() => { void this.showPreview(item.id); })
                 if (this.previewId === item.id) {
                   if (this.thumbnailLoading) Text('正在读取本地预览…').fontSize(13).fontColor($r('app.color.muted')).width('100%')
-                  if (this.thumbnailError) Text(this.thumbnailError).fontSize(13).fontColor($r('app.color.ink')).width('100%')
+                  if (this.thumbnailError) Text(this.thumbnailError).fontSize(13).fontColor($r('app.color.danger')).width('100%')
                   if (this.thumbnail) {
-                    Image(this.thumbnail).width('100%').height(148).objectFit(ImageFit.Contain)
+                    Image(this.thumbnail).width('100%').height(148).objectFit(ImageFit.Contain).borderRadius(10)
                       .accessibilityText(item.name + ' 的本地图片预览')
                   }
                 }
               }
-            }.width('100%').alignItems(HorizontalAlign.Start).padding(8).backgroundColor($r('app.color.surface')).borderRadius(12)
+            }.width('100%').alignItems(HorizontalAlign.Start).padding(14).backgroundColor($r('app.color.card')).borderRadius(14)
           }, (item: IncomingShareAttachment) => item.id)
         }.width('100%')
       }.width('100%').layoutWeight(1).align(Alignment.TopStart)
       if (this.charCount() > MAX_SHARED_TEXT_CHARS) {
         Text('分享内容超过总字数上限，请缩短后保存。').fontSize(13).fontColor($r('app.color.danger')).width('100%')
       }
-      if (this.error) { Text(this.error).fontSize(14).fontColor($r('app.color.ink')).width('100%') }
+      if (this.error) { Text(this.error).fontSize(13).fontColor($r('app.color.danger')).width('100%') }
       if (this.uploadedCount) {
         Text('已确认上传 ' + this.uploadedCount + ' / ' + this.attachments.length + ' 个附件')
           .fontSize(13).fontColor($r('app.color.muted')).width('100%')
       }
       Button(this.uploading ? '正在上传…' : this.busy ? '正在保存…' :
-        this.attachments.length ? '确认上传并保存草稿' : '保存为新草稿').width('100%').constraintSize({ minHeight: 48 })
-        .fontColor($r('app.color.on_primary')).backgroundColor($r('app.color.primary')).borderRadius(24)
+        this.attachments.length ? '确认上传并保存草稿' : '保存为新草稿').width('100%').constraintSize({ minHeight: 46 })
+        .fontSize(15).fontWeight(FontWeight.Medium)
+        .fontColor($r('app.color.on_prominent')).backgroundColor($r('app.color.prominent')).borderRadius(12)
         .enabled(this.canSave()).onClick(this.onConfirm)
-    }.width('100%').height('100%').padding(16).backgroundColor($r('app.color.canvas'))
+    }.width('100%').height('100%').padding(16).backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

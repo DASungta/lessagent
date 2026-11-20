@@ -1,6 +1,9 @@
 import { abilityAccessCtrl, common } from '@kit.AbilityKit';
+import { FontSize, LineHeight, Radius, Space } from '../common/Theme';
 import { VoiceInput } from '../services/VoiceInput';
 import { VoiceState } from '../protocol/Voice';
+import { AppButton } from './ui/AppButton';
+import { TopBar } from './ui/TopBar';
 
 @Component
 export struct VoiceInputPanel {
@@ -42,39 +45,56 @@ export struct VoiceInputPanel {
   }
 
   build() {
-    Column({ space: 16 }) {
-      Row({ space: 8 }) {
-        Button({ type: ButtonType.Circle }) { Image($r('app.media.ui_back')).width(22).height(22) }
-          .width(44).height(44).backgroundColor(Color.Transparent).accessibilityText('取消语音输入并返回')
-          .onClick(() => { void this.cancel(); this.onBack(); })
-        Text('语音输入').fontSize(20).fontWeight(FontWeight.Medium).layoutWeight(1)
-      }.width('100%')
-      Text(this.phase === 'recording' ? '正在聆听…' : this.message).fontSize(14)
-        .fontColor($r('app.color.muted')).width('100%')
-      TextArea({ placeholder: '识别文字会显示在这里，可在完成后修改', text: this.transcript })
-        .layoutWeight(1).width('100%').fontSize(16).fontColor($r('app.color.ink'))
-        .backgroundColor($r('app.color.surface')).borderRadius(12)
-        .enabled(this.phase === 'ready').onChange((value: string) => { this.transcript = value; })
-      if (this.phase === 'recording') {
-        Button('结束录音').width('100%').constraintSize({ minHeight: 48 })
-          .backgroundColor($r('app.color.primary')).fontColor($r('app.color.on_primary'))
-          .onClick(() => { void this.voice.finish(); })
-      } else if (this.phase === 'preparing' || this.phase === 'finishing') {
-        LoadingProgress().width(28).height(28)
-      } else {
-        Button(this.phase === 'ready' ? '重新录入' : '开始语音输入').width('100%').constraintSize({ minHeight: 48 })
-          .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).onClick(() => { void this.start(); })
-      }
-      Button('加入草稿').width('100%').constraintSize({ minHeight: 48 })
-        .backgroundColor($r('app.color.primary')).fontColor($r('app.color.on_primary'))
-        .enabled(this.phase === 'ready' && !!this.transcript.trim())
-        .onClick(() => {
-          const value = this.transcript.trim();
-          if (this.phase !== 'ready' || !value) return;
-          this.phase = 'idle'; this.transcript = ''; this.onInsert(value);
+    Column() {
+      TopBar({
+        title: '语音输入',
+        showBack: true,
+        closeStyle: true,
+        backLabel: '取消语音输入并返回',
+        onBack: () => { void this.cancel(); this.onBack(); }
+      })
+      Column({ space: Space.md }) {
+        Text(this.phase === 'recording' ? '正在聆听…' : this.message)
+          .fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.muted')).width('100%')
+        TextArea({ placeholder: '识别文字会显示在这里，可在完成后修改', text: this.transcript })
+          .layoutWeight(1).width('100%').fontSize(FontSize.body).fontColor($r('app.color.ink'))
+          .backgroundColor($r('app.color.card')).borderRadius(Radius.card).padding(Space.md)
+          .enabled(this.phase === 'ready').onChange((value: string) => { this.transcript = value; })
+        if (this.phase === 'recording') {
+          AppButton({
+            label: '结束录音',
+            kind: 'danger',
+            fill: true,
+            onTap: () => { void this.voice.finish(); }
+          })
+        } else if (this.phase === 'preparing' || this.phase === 'finishing') {
+          LoadingProgress().width(28).height(28)
+        } else {
+          AppButton({
+            label: this.phase === 'ready' ? '重新录入' : '开始语音输入',
+            kind: 'secondary',
+            fill: true,
+            onTap: () => { void this.start(); }
+          })
+        }
+        AppButton({
+          label: '加入草稿',
+          kind: 'primary',
+          fill: true,
+          disabled: !(this.phase === 'ready' && !!this.transcript.trim()),
+          onTap: () => {
+            const value = this.transcript.trim();
+            if (this.phase !== 'ready' || !value) return;
+            this.phase = 'idle'; this.transcript = ''; this.onInsert(value);
+          }
         })
-      Button('取消').width('100%').constraintSize({ minHeight: 44 }).backgroundColor(Color.Transparent)
-        .fontColor($r('app.color.ink')).onClick(() => { void this.cancel(); this.onBack(); })
-    }.width('100%').height('100%').padding(16).foregroundColor($r('app.color.ink')).backgroundColor($r('app.color.canvas'))
+        AppButton({
+          label: '取消',
+          kind: 'text',
+          fill: true,
+          onTap: () => { void this.cancel(); this.onBack(); }
+        })
+      }.layoutWeight(1).width('100%').padding({ left: Space.page, right: Space.page, top: Space.xs, bottom: Space.md })
+    }.width('100%').height('100%').foregroundColor($r('app.color.ink')).backgroundColor($r('app.color.group'))
   }
 }

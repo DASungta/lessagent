@@ -1,3 +1,9 @@
+import { TopBar } from './ui/TopBar';
+import { IconButton } from './ui/IconButton';
+import { GroupCard } from './ui/GroupCard';
+import { AppButton } from './ui/AppButton';
+import { StatusBadge } from './ui/StatusBadge';
+import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { registerSharedFile } from '../services/ShareCache';
 import { T3Client } from '../services/T3Client';
 import { ContentMatch, directEntries, fileLines, FileLine, isAudio, isImage, isMarkdown, matchesContentSearchLine,
@@ -299,26 +305,24 @@ export struct FilesPanel {
 
   @Builder
   header() {
-    Row({ space: 6 }) {
-      Button({ type: ButtonType.Circle }) {
-        Image($r('app.media.ui_back')).width(22).height(22)
-      }.backgroundColor(Color.Transparent).width(44).height(44).accessibilityText('返回').onClick(() => {
-          if (this.selectedPath) { this.closeFile(); return; }
-          if (this.currentDir) { void this.loadDirectory(this.parentDir()); return; }
-          this.onBack();
-        })
-      Column({ space: 2 }) {
-        Text(this.selectedPath ? (this.selectedPath.split('/').pop() || this.selectedPath) : this.title)
-          .fontSize(17).fontWeight(FontWeight.Medium).width('100%').maxLines(2).wordBreak(WordBreak.BREAK_ALL)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-        Text(this.selectedPath ? (this.selectedPath.includes('/') ? this.selectedPath.slice(0, this.selectedPath.lastIndexOf('/')) : this.cwd) : (this.currentDir ? '/' + this.currentDir : this.cwd))
-          .fontSize(11).fontColor($r('app.color.muted')).width('100%').maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+    TopBar({
+      title: this.selectedPath ? (this.selectedPath.split('/').pop() || this.selectedPath) : this.title,
+      subtitle: this.selectedPath ? (this.selectedPath.includes('/') ? this.selectedPath.slice(0, this.selectedPath.lastIndexOf('/')) : this.cwd) : (this.currentDir ? '/' + this.currentDir : this.cwd),
+      showBack: true,
+      closeStyle: !this.selectedPath && !this.currentDir,
+      backLabel: this.selectedPath || this.currentDir ? '返回' : '关闭文件',
+      onBack: () => {
+        if (this.selectedPath) { this.closeFile(); return; }
+        if (this.currentDir) { void this.loadDirectory(this.parentDir()); return; }
+        this.onBack();
+      }
+    }) {
       if (this.selectedPath) {
-        Button({ type: ButtonType.Circle }) {
-          Image($r('app.media.ui_more')).width(22).height(22)
-        }.width(44).height(44).backgroundColor(Color.Transparent).accessibilityText('文件操作')
+        IconButton({
+          icon: $r('app.media.ui_more'),
+          label: '文件操作',
+          onTap: () => {}
+        })
           .bindMenu([
             { value: '复制路径', action: () => this.onCopy(this.selectedPath) },
             { value: this.fileCommentOpen ? '关闭文件评论' : '文件评论',
@@ -327,164 +331,226 @@ export struct FilesPanel {
             { value: '保存到文件', action: () => { void this.saveFile(); } }
           ])
       }
-    }.width('100%').padding({ left: 8, right: 8, top: 4, bottom: 4 })
+    }
   }
 
   @Builder
   browser() {
-    Column({ space: 10 }) {
-      Row({ space: 6 }) {
-        Row() {
-          TextInput({ placeholder: this.searchMode === 'contents' ? '搜索文件内容' : '搜索文件名', text: this.query })
-            .layoutWeight(1).constraintSize({ minHeight: 44 }).backgroundColor(Color.Transparent)
-            .fontColor($r('app.color.ink')).onChange((value: string) => this.setQuery(value))
-            .onSubmit(() => { void this.runSearch(); })
-          if (this.query) {
-            Button('×').width(44).constraintSize({ minHeight: 44 }).backgroundColor(Color.Transparent)
-              .fontColor($r('app.color.muted')).accessibilityText('清除搜索').onClick(() => this.setQuery(''))
-          }
-        }.layoutWeight(1).backgroundColor($r('app.color.surface')).borderRadius(12)
-        Button('搜索').fontSize(14).constraintSize({ minHeight: 44 }).backgroundColor($r('app.color.surface'))
-          .fontColor($r('app.color.ink')).enabled(!!this.query.trim() && !this.loading)
-          .onClick(() => { void this.runSearch(); })
-      }.width('100%')
-      Row({ space: 6 }) {
-        Button(this.searchMode === 'entries' ? '✓ 文件名' : '文件名').fontSize(14).layoutWeight(1)
-          .constraintSize({ minHeight: 44 }).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
+    Column({ space: Space.xs }) {
+      Row({ space: Space.xs }) {
+        Image($r('app.media.ui_search')).width(16).height(16).opacity(0.6).accessibilityLevel('no')
+        TextInput({ placeholder: this.searchMode === 'contents' ? '搜索文件内容' : '搜索文件名', text: this.query })
+          .layoutWeight(1).height(40).fontSize(FontSize.body).fontColor($r('app.color.ink'))
+          .placeholderColor($r('app.color.placeholder')).backgroundColor(Color.Transparent).padding(0)
+          .onChange((value: string) => this.setQuery(value))
+          .onSubmit(() => { void this.runSearch(); })
+        if (this.query) {
+          Button('×').width(32).height(32).backgroundColor(Color.Transparent).fontSize(FontSize.headline)
+            .fontColor($r('app.color.muted')).accessibilityText('清除搜索').onClick(() => this.setQuery(''))
+        }
+        AppButton({
+          label: '搜索',
+          kind: 'secondary',
+          compact: true,
+          disabled: !this.query.trim() || this.loading,
+          onTap: () => { void this.runSearch(); }
+        })
+      }.width('100%').padding({ left: Space.sm, right: 6, top: 4, bottom: 4 })
+        .backgroundColor($r('app.color.card')).borderRadius(Radius.card).alignItems(VerticalAlign.Center)
+
+      Row({ space: 2 }) {
+        Button('文件名')
+          .fontSize(FontSize.callout)
+          .fontWeight(this.searchMode === 'entries' ? Weight.medium : Weight.regular)
+          .fontColor(this.searchMode === 'entries' ? $r('app.color.ink') : $r('app.color.muted'))
+          .backgroundColor(this.searchMode === 'entries' ? $r('app.color.card') : Color.Transparent)
+          .borderRadius(7).layoutWeight(1).constraintSize({ minHeight: 34 })
           .onClick(() => this.setSearchMode('entries'))
-        Button(this.searchMode === 'contents' ? '✓ 文件内容' : '文件内容').fontSize(14).layoutWeight(1)
-          .constraintSize({ minHeight: 44 }).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
+        Button('文件内容')
+          .fontSize(FontSize.callout)
+          .fontWeight(this.searchMode === 'contents' ? Weight.medium : Weight.regular)
+          .fontColor(this.searchMode === 'contents' ? $r('app.color.ink') : $r('app.color.muted'))
+          .backgroundColor(this.searchMode === 'contents' ? $r('app.color.card') : Color.Transparent)
+          .borderRadius(7).layoutWeight(1).constraintSize({ minHeight: 34 })
           .onClick(() => this.setSearchMode('contents'))
-      }.width('100%')
-      if (this.loading) { Text('正在读取…').fontSize(13).fontColor($r('app.color.muted')).width('100%') }
-      if (this.error) { Text(this.error).fontSize(13).fontColor($r('app.color.danger')).width('100%') }
-      List({ space: 1 }) {
-        if (!this.query.trim()) {
-          if (this.currentDir) {
-            ListItem() {
-              Row({ space: 8 }) {
-                Image($r('app.media.ui_up')).width(20).height(20)
-                Text('上一级').fontSize(15).layoutWeight(1)
-              }.constraintSize({ minHeight: 48 }).width('100%').padding({ left: 12, right: 12 })
-                .onClick(() => { void this.loadDirectory(this.parentDir()); })
+      }.width('100%').padding(2).backgroundColor($r('app.color.surface')).border({ width: Sizes.hairline, color: $r('app.color.border') }).borderRadius(9)
+
+      if (this.loading) {
+        Text('正在读取…').fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%')
+          .padding({ left: Space.xxs, right: Space.xxs })
+      }
+      if (this.error) {
+        Text(this.error).fontSize(FontSize.callout).fontColor($r('app.color.danger')).width('100%')
+          .padding({ left: Space.xxs, right: Space.xxs })
+      }
+
+      if (!this.query.trim() ? (this.entries.length > 0 || !!this.currentDir) :
+        (this.matches.length > 0 || this.searchEntries.length > 0 || (this.searchCompleted && !this.loading && !this.error))) {
+        List({ space: 0 }) {
+          if (!this.query.trim()) {
+            if (this.currentDir) {
+              ListItem() {
+                Row({ space: Space.xs }) {
+                  Image($r('app.media.ui_down')).width(18).height(18).rotate({ angle: 180 }).opacity(0.75).accessibilityLevel('no')
+                  Text('上一级').fontSize(FontSize.body).fontWeight(Weight.medium).fontColor($r('app.color.ink')).layoutWeight(1)
+                }.constraintSize({ minHeight: Sizes.formRowMin }).width('100%').padding({ left: 14, right: 14 })
+                  .onClick(() => { void this.loadDirectory(this.parentDir()); })
+              }
             }
-          }
-          ForEach(this.entries, (entry: WorkspaceEntry) => {
-            ListItem() {
-              Row({ space: 8 }) {
-                if (entry.kind === 'directory') {
-                  Image($r('app.media.ui_folder')).width(20).height(20)
-                } else {
-                  Text(isImage(entry.path) ? '图片' : isVideo(entry.path) ? '视频' : isAudio(entry.path) ? '音频' : isPdf(entry.path) ? 'PDF' : isMarkdown(entry.path) ? 'MD' : '文件')
-                    .fontSize(10).fontColor($r('app.color.muted')).width(28)
-                }
-                Text(entry.name).fontSize(15).layoutWeight(1).maxLines(1)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
-                if (entry.ignored) { Text('忽略').fontSize(10).fontColor($r('app.color.muted')) }
-                if (entry.kind === 'directory') { Image($r('app.media.ui_back')).width(16).height(16).rotate({ angle: 180 }) }
-              }.constraintSize({ minHeight: 48 }).width('100%').padding({ left: 12, right: 12 })
-                .onClick(() => {
-                  if (entry.kind === 'directory') void this.loadDirectory(entry.path);
-                  else void this.openFile(entry.path);
-                })
+            ForEach(this.entries, (entry: WorkspaceEntry) => {
+              ListItem() {
+                Row({ space: Space.xs }) {
+                  if (entry.kind === 'directory') {
+                    Image($r('app.media.ui_folder')).width(18).height(18).accessibilityLevel('no')
+                  } else {
+                    StatusBadge({
+                      text: isImage(entry.path) ? '图片' : isVideo(entry.path) ? '视频' : isAudio(entry.path) ? '音频' : isPdf(entry.path) ? 'PDF' : isMarkdown(entry.path) ? 'MD' : '文件',
+                      tone: 'neutral'
+                    })
+                  }
+                  Text(entry.name).fontSize(FontSize.body).fontColor($r('app.color.ink')).layoutWeight(1).maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  if (entry.ignored) { StatusBadge({ text: '忽略', tone: 'neutral' }) }
+                  if (entry.kind === 'directory') {
+                    Image($r('app.media.ui_chevron_right')).width(Sizes.chevron).height(Sizes.chevron).opacity(0.6).accessibilityLevel('no')
+                  }
+                }.constraintSize({ minHeight: Sizes.formRowMin }).width('100%').padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                  .onClick(() => {
+                    if (entry.kind === 'directory') void this.loadDirectory(entry.path);
+                    else void this.openFile(entry.path);
+                  })
+              }
+            }, (entry: WorkspaceEntry) => entry.path)
+          } else {
+            ForEach(this.matches, (match: ContentMatch) => {
+              ListItem() {
+                Column({ space: 3 }) {
+                  Text(match.path + ':' + match.lineNumber).fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
+                  Text(match.lineContent).fontSize(FontSize.mono).fontFamily('monospace').fontColor($r('app.color.ink')).width('100%').maxLines(2)
+                }.padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs }).width('100%')
+                  .constraintSize({ minHeight: Sizes.formRowMin }).alignItems(HorizontalAlign.Start)
+                  .onClick(() => { void this.openFile(match.path, match); })
+              }
+            }, (match: ContentMatch) => match.path + ':' + match.lineNumber + ':' + match.lineContent)
+            ForEach(this.searchEntries, (entry: WorkspaceEntry) => {
+              ListItem() {
+                Row({ space: Space.xs }) {
+                  if (entry.kind === 'directory') {
+                    Image($r('app.media.ui_folder')).width(18).height(18).accessibilityLevel('no')
+                  } else {
+                    StatusBadge({
+                      text: isImage(entry.path) ? '图片' : isVideo(entry.path) ? '视频' : isAudio(entry.path) ? '音频' : isPdf(entry.path) ? 'PDF' : isMarkdown(entry.path) ? 'MD' : '文件',
+                      tone: 'neutral'
+                    })
+                  }
+                  Text(entry.path).fontSize(FontSize.callout).fontColor($r('app.color.ink')).layoutWeight(1).maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                }.constraintSize({ minHeight: Sizes.formRowMin }).padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs }).width('100%')
+                  .onClick(() => { void this.openFile(entry.path); })
+              }
+            }, (entry: WorkspaceEntry) => entry.path)
+            if (this.searchCompleted && !this.loading && !this.error && this.matches.length === 0 && this.searchEntries.length === 0) {
+              ListItem() {
+                Text('没有匹配结果').fontSize(FontSize.body).fontColor($r('app.color.muted'))
+                  .width('100%').textAlign(TextAlign.Center).padding(Space.lg)
+              }
             }
-          }, (entry: WorkspaceEntry) => entry.path)
-        } else {
-          ForEach(this.matches, (match: ContentMatch) => {
-            ListItem() {
-              Column({ space: 3 }) {
-                Text(match.path + ':' + match.lineNumber).fontSize(12).fontColor($r('app.color.muted')).width('100%')
-                Text(match.lineContent).fontSize(13).fontFamily('monospace').width('100%').maxLines(2)
-              }.padding(10).width('100%').onClick(() => { void this.openFile(match.path, match); })
-            }
-          }, (match: ContentMatch) => match.path + ':' + match.lineNumber + ':' + match.lineContent)
-          ForEach(this.searchEntries, (entry: WorkspaceEntry) => {
-            ListItem() {
-              Row({ space: 8 }) {
-                if (entry.kind === 'directory') {
-                  Image($r('app.media.ui_folder')).width(20).height(20)
-                } else {
-                  Text(isImage(entry.path) ? '图片' : isVideo(entry.path) ? '视频' : isAudio(entry.path) ? '音频' : isPdf(entry.path) ? 'PDF' : isMarkdown(entry.path) ? 'MD' : '文件')
-                    .fontSize(10).fontColor($r('app.color.muted')).width(28)
-                }
-                Text(entry.path).fontSize(14).layoutWeight(1).maxLines(1)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
-              }.constraintSize({ minHeight: 48 }).padding({ left: 12, right: 12 }).width('100%')
-                .onClick(() => { void this.openFile(entry.path); })
-            }
-          }, (entry: WorkspaceEntry) => entry.path)
-          if (this.searchCompleted && !this.loading && !this.error && this.matches.length === 0 && this.searchEntries.length === 0) {
-            ListItem() { Text('没有匹配结果').fontSize(13).fontColor($r('app.color.muted')).padding(20) }
           }
         }
-      }.width('100%').layoutWeight(1)
-    }.width('100%').layoutWeight(1)
+        .width('100%').layoutWeight(1)
+        .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
+        .divider({ strokeWidth: Sizes.hairline, color: $r('app.color.separator') })
+      }
+    }.width('100%').layoutWeight(1).padding({ left: Space.sm, right: Space.sm, top: Space.xxs, bottom: Space.sm })
   }
 
   @Builder
   selectionBar() {
-    Row({ space: 8 }) {
+    Row({ space: Space.xs }) {
       Text(this.selectionStart < 0 ? '点按代码行以选取' :
         (this.selectionStart === this.selectionEnd ? '已选行 ' + (this.selectionStart + 1) :
           '已选行 ' + (Math.min(this.selectionStart, this.selectionEnd) + 1) + '–' +
           (Math.max(this.selectionStart, this.selectionEnd) + 1)))
-        .fontSize(12).fontColor($r('app.color.muted')).layoutWeight(1)
-      Button('复制选区').fontSize(12).backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
-        .onClick(() => this.onCopy(this.selectedText()))
-      Button('加入上下文').fontSize(12).backgroundColor($r('app.color.primary'))
-        .fontColor($r('app.color.on_primary')).onClick(() => this.addSelectionContext())
-    }.width('100%').padding({ left: 12, right: 12, top: 6, bottom: 6 })
-      .backgroundColor($r('app.color.surface')).borderRadius(10)
+        .fontSize(FontSize.caption).fontColor($r('app.color.muted')).layoutWeight(1)
+      AppButton({
+        label: '复制选区', kind: 'secondary', compact: true,
+        onTap: () => this.onCopy(this.selectedText())
+      })
+      AppButton({
+        label: '加入上下文', kind: 'primary', compact: true,
+        onTap: () => this.addSelectionContext()
+      })
+    }.width('100%').padding({ left: 12, right: 12, top: Space.xs, bottom: Space.xs })
+      .backgroundColor($r('app.color.card')).borderRadius(Radius.card).alignItems(VerticalAlign.Center)
   }
 
   @Builder
   preview() {
-    Column({ space: 8 }) {
+    Column({ space: Space.xs }) {
       if (this.fileCommentOpen && this.selectedPath) {
-        Column({ space: 8 }) {
-          TextArea({ placeholder: '针对整个文件的评论', text: this.fileComment })
-            .height(80).width('100%').onChange((value: string) => { this.fileComment = value; })
-          Row({ space: 8 }) {
-            Button('取消').fontSize(12).onClick(() => { this.fileCommentOpen = false; this.fileComment = ''; })
-            Button('加入输入').fontSize(12).enabled(!!this.fileComment.trim())
-              .onClick(() => this.submitFileComment())
-          }.width('100%')
-        }.width('100%').padding(10).backgroundColor($r('app.color.surface')).borderRadius(10)
+        GroupCard({ title: '文件评论' }) {
+          Column({ space: Space.xs }) {
+            TextArea({ placeholder: '针对整个文件的评论', text: this.fileComment })
+              .constraintSize({ minHeight: 80 }).width('100%').fontSize(FontSize.body).fontColor($r('app.color.ink'))
+              .placeholderColor($r('app.color.placeholder')).backgroundColor($r('app.color.group')).borderRadius(Radius.tool)
+              .padding(Space.xs).onChange((value: string) => { this.fileComment = value; })
+            Row({ space: Space.xs }) {
+              AppButton({
+                label: '取消', kind: 'secondary', compact: true,
+                onTap: () => { this.fileCommentOpen = false; this.fileComment = ''; }
+              })
+              AppButton({
+                label: '加入输入', kind: 'primary', compact: true, disabled: !this.fileComment.trim(),
+                onTap: () => this.submitFileComment()
+              })
+            }.width('100%')
+          }.width('100%').padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+        }
       }
       if (this.loading) {
-        Text('正在打开…').fontSize(13).fontColor($r('app.color.muted')).padding(20)
+        Text('正在打开…').fontSize(FontSize.callout).fontColor($r('app.color.muted')).padding(Space.md)
       } else if (this.fileError) {
-        Text(this.fileError).fontSize(13).fontColor($r('app.color.danger')).padding(20)
-        Button('重试').onClick(() => { void this.openFile(this.selectedPath, this.selectedMatch); })
+        GroupCard() {
+          Column({ space: Space.xs }) {
+            Text(this.fileError).fontSize(FontSize.callout).fontColor($r('app.color.danger')).width('100%')
+            AppButton({
+              label: '重试', kind: 'secondary', compact: true,
+              onTap: () => { void this.openFile(this.selectedPath, this.selectedMatch); }
+            })
+          }.width('100%').padding(14).alignItems(HorizontalAlign.Start)
+        }
       } else if (this.imageUrl && isImage(this.selectedPath)) {
         Scroll() {
           Image(this.imageUrl).width('100%').objectFit(ImageFit.Contain)
-        }.width('100%').layoutWeight(1)
+        }.width('100%').layoutWeight(1).backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
       } else if (this.imageUrl && isVideo(this.selectedPath)) {
-        Video({ src: this.imageUrl }).width('100%').height(320).controls(true)
+        Video({ src: this.imageUrl }).width('100%').height(320).controls(true).borderRadius(Radius.card).clip(true)
       } else if (this.imageUrl) {
-        Column({ space: 10 }) {
-          Text('此文件类型使用系统打开/分享').fontSize(13).fontColor($r('app.color.muted'))
-          Text(this.selectedPath).fontSize(12).fontColor($r('app.color.muted'))
-        }.padding(20).width('100%')
+        GroupCard() {
+          Column({ space: Space.xs }) {
+            Text('此文件类型使用系统打开/分享').fontSize(FontSize.body).fontColor($r('app.color.ink'))
+            Text(this.selectedPath).fontSize(FontSize.caption).fontColor($r('app.color.muted'))
+          }.padding(14).width('100%').alignItems(HorizontalAlign.Start)
+        }
       } else if (this.file) {
         if (this.linesTruncated) {
-          Text('文件较大，仅显示前 5000 行或服务端预览片段').fontSize(11).fontColor($r('app.color.danger'))
-            .width('100%').padding({ left: 12, right: 12 })
+          Text('文件较大，仅显示前 5000 行或服务端预览片段').fontSize(FontSize.caption).fontColor($r('app.color.danger'))
+            .width('100%').padding({ left: Space.xxs, right: Space.xxs })
         }
         if (this.matchNotice) {
-          Text(this.matchNotice).fontSize(13).fontColor($r('app.color.muted')).width('100%')
-            .padding({ left: 12, right: 12 })
+          Text(this.matchNotice).fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%')
+            .padding({ left: Space.xxs, right: Space.xxs })
         }
         if (isMarkdown(this.selectedPath) && !this.selectedMatch) {
+          if (this.selectionStart >= 0) { this.selectionBar() }
           Scroll() {
             Column() {
-              if (this.selectionStart >= 0) { this.selectionBar() }
               MarkdownView({ markdown: this.file.contents, selectable: true, onCopy: this.onCopy,
                 onOpenLink: () => this.reportStatus('请从会话消息打开链接'),
                 onOpenImage: (path: string) => { void this.openFile(path); } })
             }.padding(14)
           }.width('100%').layoutWeight(1).align(Alignment.TopStart)
+            .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
         } else {
           if (this.selectionStart >= 0) { this.selectionBar() }
           List({ space: 0, initialIndex: this.previewStartIndex }) {
@@ -499,22 +565,25 @@ export struct FilesPanel {
                   .alignItems(VerticalAlign.Top)
                   .backgroundColor(this.selectionStart >= 0 &&
                     index >= Math.min(this.selectionStart, this.selectionEnd) &&
-                    index <= Math.max(this.selectionStart, this.selectionEnd) ? $r('app.color.selected') : Color.Transparent)
+                    index <= Math.max(this.selectionStart, this.selectionEnd) ? $r('app.color.info_bg') : Color.Transparent)
                   .onClick(() => this.selectLine(index))
               }
             }, (line: FileLine) => String(line.number))
           }.width('100%').layoutWeight(1)
+            .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
         }
       }
-    }.width('100%').layoutWeight(1)
+    }.width('100%').layoutWeight(1).padding({ left: Space.sm, right: Space.sm, top: Space.xxs, bottom: Space.sm })
   }
 
   build() {
-    Column({ space: 4 }) {
+    Column({ space: 0 }) {
       this.header()
-      if (this.actionStatus) { Text(this.actionStatus).fontSize(13).fontColor($r('app.color.muted')).width('100%').padding({ left: 16, right: 16, bottom: 8 }) }
-      Divider().color($r('app.color.border'))
+      if (this.actionStatus) {
+        Text(this.actionStatus).fontSize(FontSize.callout).fontColor($r('app.color.primary_text'))
+          .width('100%').padding({ left: Space.md, right: Space.md, bottom: Space.xs })
+      }
       if (this.selectedPath) { this.preview() } else { this.browser() }
-    }.width('100%').height('100%').backgroundColor($r('app.color.canvas')).foregroundColor($r('app.color.ink'))
+    }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

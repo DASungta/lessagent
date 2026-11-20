@@ -1,7 +1,10 @@
 import { image } from '@kit.ImageKit';
+import { FontSize, Radius, Space } from '../common/Theme';
 import { DevicePreviewStream } from '../services/DevicePreviewStream';
 import { DeviceStreamAccess, DeviceScreen, DevicePoint, devicePoint, deviceTouch, deviceButton,
   deviceKey, deviceNextOrientation } from '../protocol/DevicePreview';
+import { AppButton } from './ui/AppButton';
+import { TopBar } from './ui/TopBar';
 
 interface DeviceQueuedInput { tag: number; payload: Object; move: boolean; }
 
@@ -114,44 +117,60 @@ export struct DevicePreviewPanel {
   }
   private sendKey(usage: number): void { this.enqueue(6, deviceKey(usage, true)); this.enqueue(6, deviceKey(usage, false)); }
   build() {
-    Column({ space: 10 }) {
-      Row({ space: 8 }) {
-        Button('返回', { type: ButtonType.Normal }).height(44).backgroundColor(Color.Transparent)
-          .fontColor($r('app.color.ink')).onClick(() => this.onBack())
-        Column({ space: 2 }) {
-          Text(this.deviceName || '设备预览').fontSize(18).fontColor($r('app.color.ink')).maxLines(1)
-          Text(this.hostLabel).fontSize(12).fontColor($r('app.color.muted')).maxLines(1)
-        }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-        Button('连接').height(44).backgroundColor($r('app.color.primary')).fontColor($r('app.color.on_primary'))
-          .enabled(this.foreground && !this.busy && this.platform === 'ios').onClick(() => { void this.connect(); })
-      }.width('100%')
-      Text(this.status + (this.count ? ' · ' + this.count + ' 帧' : '')).fontSize(12).fontColor($r('app.color.muted'))
-      if (this.error) Text(this.error).fontSize(13).fontColor($r('app.color.danger'))
-      Stack() {
-        if (this.frame) Image(this.frame).width('100%').height('100%').objectFit(ImageFit.Contain)
-        else Text('连接后显示远端设备的连续画面\nAndroid / WebRTC 设备尚未支持')
-          .fontSize(14).fontColor($r('app.color.muted')).textAlign(TextAlign.Center).padding(24)
-      }.width('100%').layoutWeight(1).backgroundColor($r('app.color.surface')).borderRadius(12)
-        .onAreaChange((_, area: Area) => { this.areaWidth = Number(area.width); this.areaHeight = Number(area.height); })
-        .onTouch((event: TouchEvent) => this.touch(event))
-      Row({ space: 8 }) {
-        Button('主屏幕').height(44).layoutWeight(1).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-          .onClick(() => this.enqueue(4, deviceButton('home')))
-        Button('切换应用').height(44).layoutWeight(1).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-          .onClick(() => this.enqueue(4, deviceButton('app_switcher')))
-        Button('旋转').height(44).layoutWeight(1).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-          .onClick(() => { if (this.screen) this.enqueue(7, deviceNextOrientation(this.screen)); })
-      }.width('100%').enabled(this.ready && !this.busy && !this.touching)
-      Row({ space: 8 }) {
-        Button('Esc').height(44).layoutWeight(1).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-          .onClick(() => this.sendKey(41))
-        Button('Tab').height(44).layoutWeight(1).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-          .onClick(() => this.sendKey(43))
-        Button('删除').height(44).layoutWeight(1).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-          .onClick(() => this.sendKey(42))
-        Button('回车').height(44).layoutWeight(1).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-          .onClick(() => this.sendKey(40))
-      }.width('100%').enabled(this.ready && !this.busy && !this.touching)
-    }.padding(16).width('100%').height('100%').backgroundColor($r('app.color.canvas'))
+    Column() {
+      TopBar({
+        title: this.deviceName || '设备预览',
+        subtitle: this.hostLabel,
+        showBack: true,
+        onBack: () => this.onBack()
+      }) {
+        AppButton({
+          label: '连接',
+          kind: 'primary',
+          compact: true,
+          disabled: !(this.foreground && !this.busy && this.platform === 'ios'),
+          onTap: () => { void this.connect(); }
+        })
+      }
+      Column({ space: Space.xs }) {
+        Text(this.status + (this.count ? ' · ' + this.count + ' 帧' : ''))
+          .fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
+        if (this.error) {
+          Text(this.error).fontSize(FontSize.callout).fontColor($r('app.color.danger')).width('100%')
+        }
+        Stack() {
+          if (this.frame) Image(this.frame).width('100%').height('100%').objectFit(ImageFit.Contain)
+          else Text('连接后显示远端设备的连续画面\nAndroid / WebRTC 设备尚未支持')
+            .fontSize(FontSize.body).fontColor($r('app.color.muted')).textAlign(TextAlign.Center).padding(Space.lg)
+        }.width('100%').layoutWeight(1).backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
+          .onAreaChange((_, area: Area) => { this.areaWidth = Number(area.width); this.areaHeight = Number(area.height); })
+          .onTouch((event: TouchEvent) => this.touch(event))
+        Row({ space: Space.xs }) {
+          Button('主屏幕').height(42).fontSize(FontSize.callout).borderRadius(Radius.button).layoutWeight(1)
+            .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink'))
+            .onClick(() => this.enqueue(4, deviceButton('home')))
+          Button('切换应用').height(42).fontSize(FontSize.callout).borderRadius(Radius.button).layoutWeight(1)
+            .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink'))
+            .onClick(() => this.enqueue(4, deviceButton('app_switcher')))
+          Button('旋转').height(42).fontSize(FontSize.callout).borderRadius(Radius.button).layoutWeight(1)
+            .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink'))
+            .onClick(() => { if (this.screen) this.enqueue(7, deviceNextOrientation(this.screen)); })
+        }.width('100%').enabled(this.ready && !this.busy && !this.touching)
+        Row({ space: Space.xs }) {
+          Button('Esc').height(42).fontSize(FontSize.callout).borderRadius(Radius.button).layoutWeight(1)
+            .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink'))
+            .onClick(() => this.sendKey(41))
+          Button('Tab').height(42).fontSize(FontSize.callout).borderRadius(Radius.button).layoutWeight(1)
+            .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink'))
+            .onClick(() => this.sendKey(43))
+          Button('删除').height(42).fontSize(FontSize.callout).borderRadius(Radius.button).layoutWeight(1)
+            .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink'))
+            .onClick(() => this.sendKey(42))
+          Button('回车').height(42).fontSize(FontSize.callout).borderRadius(Radius.button).layoutWeight(1)
+            .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink'))
+            .onClick(() => this.sendKey(40))
+        }.width('100%').enabled(this.ready && !this.busy && !this.touching)
+      }.layoutWeight(1).width('100%').padding({ left: Space.page, right: Space.page, top: Space.xxs, bottom: Space.md })
+    }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

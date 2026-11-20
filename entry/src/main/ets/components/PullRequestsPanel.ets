@@ -1,3 +1,8 @@
+import { TopBar } from './ui/TopBar';
+import { GroupCard } from './ui/GroupCard';
+import { AppButton } from './ui/AppButton';
+import { StatusBadge } from './ui/StatusBadge';
+import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { T3Client } from '../services/T3Client';
 import { CodeLine } from './CodeLine';
 import { DiffLineNumber } from './DiffLineNumber';
@@ -386,88 +391,137 @@ export struct PullRequestsPanel {
 
   @Builder
   header() {
-    Row({ space: 6 }) {
-      if (!this.embedded || !!this.selected) {
-        Button('‹').backgroundColor(Color.Transparent).fontColor($r('app.color.ink')).fontSize(24)
-          .width(40).height(40).onClick(() => {
-            if (this.selected) { this.closeDetail(); return; }
-            this.onBack();
+    if (!this.embedded || !!this.selected) {
+      TopBar({
+        title: this.detail ? '#' + this.detail.number : this.selected ? '#' + this.selected.number : '拉取请求',
+        subtitle: this.detail?.repository || this.selected?.repository || this.projectLabel || (this.projectId ? '当前项目' : '所有项目'),
+        showBack: true,
+        closeStyle: !this.selected,
+        backLabel: this.selected ? '返回 PR 列表' : '关闭拉取请求',
+        onBack: () => {
+          if (this.selected) { this.closeDetail(); return; }
+          this.onBack();
+        }
+      }) {
+        if (this.selected) {
+          AppButton({
+            label: '刷新', kind: 'text',
+            onTap: () => { if (this.selected) void this.open(this.selected); }
           })
+        }
       }
-      Column({ space: 2 }) {
-        Text(this.detail ? '#' + this.detail.number : this.selected ? '#' + this.selected.number : '拉取请求')
-          .fontSize(this.embedded && !this.selected ? 20 : 17).fontWeight(FontWeight.Medium).width('100%').maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-        Text(this.detail?.repository || this.selected?.repository || this.projectLabel || (this.projectId ? '当前项目' : '所有项目')).fontSize(11)
-          .fontColor($r('app.color.muted')).width('100%')
-      }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-      if (this.selected) {
-        Button('刷新').fontSize(12).backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
-          .onClick(() => { if (this.selected) void this.open(this.selected); })
+    } else {
+      Row() {
+        Column({ space: 2 }) {
+          Text('拉取请求')
+            .fontSize(FontSize.title).lineHeight(LineHeight.title).fontWeight(Weight.bold)
+            .fontColor($r('app.color.ink')).width('100%')
+          Text(this.projectLabel || (this.projectId ? '当前项目' : '所有项目'))
+            .fontSize(FontSize.caption).lineHeight(LineHeight.caption)
+            .fontColor($r('app.color.muted')).width('100%')
+        }.layoutWeight(1).alignItems(HorizontalAlign.Start)
       }
-    }.width('100%').constraintSize({ minHeight: 52 })
-      .padding({ left: !this.embedded || !!this.selected ? 8 : 16, right: 8, top: 4, bottom: 4 })
+      .width('100%')
+      .constraintSize({ minHeight: Sizes.topBar })
+      .padding({ left: Space.md, right: Space.md, top: Space.xxs, bottom: Space.xxs })
+      .alignItems(VerticalAlign.Center)
+    }
   }
 
   @Builder
   listView() {
-    Column({ space: 8 }) {
-      Row({ space: 6 }) {
+    Column({ space: Space.xs }) {
+      Row({ space: 2 }) {
         ForEach(['open', 'closed', 'merged', 'all'], (state: string) => {
           Button(state === 'open' ? '开放' : state === 'closed' ? '关闭' : state === 'merged' ? '合并' : '全部')
-            .fontSize(11)
-            .backgroundColor(this.filter === state ? $r('app.color.primary') : $r('app.color.surface'))
-            .fontColor(this.filter === state ? $r('app.color.on_primary') : $r('app.color.ink'))
+            .fontSize(FontSize.callout)
+            .fontWeight(this.filter === state ? Weight.medium : Weight.regular)
+            .fontColor(this.filter === state ? $r('app.color.ink') : $r('app.color.muted'))
+            .backgroundColor(this.filter === state ? $r('app.color.card') : Color.Transparent)
+            .borderRadius(7).layoutWeight(1).constraintSize({ minHeight: 34 })
             .onClick(() => { this.filter = state; void this.loadList(); })
         }, (state: string) => state)
-      }.width('100%')
-      Row({ space: 8 }) {
-        TextInput({ placeholder: '搜索 PR', text: this.query }).layoutWeight(1).constraintSize({ minHeight: 44 })
+      }.width('100%').padding(2).backgroundColor($r('app.color.surface'))
+        .border({ width: Sizes.hairline, color: $r('app.color.border') }).borderRadius(9)
+
+      Row({ space: Space.xs }) {
+        Image($r('app.media.ui_search')).width(16).height(16).opacity(0.6).accessibilityLevel('no')
+        TextInput({ placeholder: '搜索 PR', text: this.query })
+          .layoutWeight(1).height(40).fontSize(FontSize.body).fontColor($r('app.color.ink'))
+          .placeholderColor($r('app.color.placeholder')).backgroundColor(Color.Transparent).padding(0)
           .onChange((value: string) => { this.query = value; })
           .onSubmit(() => { void this.loadList(); })
-        Button('搜索').constraintSize({ minHeight: 44 }).fontSize(14)
-          .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-          .enabled(!this.loading || this.query !== this.requestedQuery).onClick(() => { void this.loadList(); })
-      }.width('100%')
-      if (this.loading) { Text('正在读取…').fontSize(12).fontColor($r('app.color.muted')).width('100%') }
-      if (this.error) { Text(this.error).fontSize(12).fontColor($r('app.color.danger')).width('100%') }
-      ForEach(this.errors, (value: string) => {
-        Text(value).fontSize(11).fontColor($r('app.color.danger')).width('100%')
-      }, (value: string) => value)
-      if (!this.loading && !this.error && this.rows.length === 0 && this.errors.length === 0) {
-        Text('没有符合当前筛选条件的拉取请求').fontSize(12).fontColor($r('app.color.muted'))
-          .width('100%').padding(12)
+        AppButton({
+          label: '搜索', kind: 'secondary', compact: true,
+          disabled: this.loading && this.query === this.requestedQuery,
+          onTap: () => { void this.loadList(); }
+        })
+      }.width('100%').padding({ left: Space.sm, right: 6, top: 4, bottom: 4 })
+        .backgroundColor($r('app.color.card')).borderRadius(Radius.card).alignItems(VerticalAlign.Center)
+
+      if (this.loading && this.rows.length > 0) {
+        Text('正在读取…').fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%')
       }
-      List({ space: 1 }) {
-        ForEach(this.rows, (row: PullRequestRow) => {
-          ListItem() {
-            Column({ space: 3 }) {
-              Row({ space: 6 }) {
-                Text('#' + row.number).fontSize(11).fontColor($r('app.color.muted')).maxLines(1)
-                Text(row.title).fontSize(14).layoutWeight(1).maxLines(2)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
-                if (row.stackSize > 1) {
-                  Text(row.stackPosition + '/' + row.stackSize).fontSize(10).fontColor($r('app.color.muted'))
+      if (this.error) { Text(this.error).fontSize(FontSize.callout).fontColor($r('app.color.danger')).width('100%') }
+      ForEach(this.errors, (value: string) => {
+        Text(value).fontSize(FontSize.caption).fontColor($r('app.color.danger')).width('100%')
+      }, (value: string) => value)
+
+      if (this.rows.length > 0 || (this.nextCursor && this.query === this.requestedQuery)) {
+        List({ space: 0 }) {
+          ForEach(this.rows, (row: PullRequestRow) => {
+            ListItem() {
+              Column({ space: 4 }) {
+                Row({ space: Space.xs }) {
+                  Text('#' + row.number).fontSize(FontSize.caption).fontColor($r('app.color.muted')).maxLines(1)
+                  Text(row.title).fontSize(FontSize.body).fontWeight(Weight.medium).fontColor($r('app.color.ink'))
+                    .layoutWeight(1).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
+                  if (row.stackSize > 1) {
+                    StatusBadge({ text: row.stackPosition + '/' + row.stackSize, tone: 'neutral' })
+                  }
+                }.width('100%').alignItems(VerticalAlign.Top)
+                Row({ space: Space.xs }) {
+                  Text(row.repository + ' · ' + row.author)
+                    .fontSize(FontSize.caption).fontColor($r('app.color.muted')).layoutWeight(1).maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  StatusBadge({
+                    text: pullRequestStateLabel(row.state, row.draft) + (row.checksState ? ' · ' + row.checksState : ''),
+                    tone: row.state === 'merged' ? 'info' : row.state === 'open' ? 'success' : 'neutral'
+                  })
+                }.width('100%').alignItems(VerticalAlign.Center)
+                if (row.labels.length) {
+                  Text(row.labels.join(' · ')).fontSize(FontSize.badge).fontColor($r('app.color.primary_text')).width('100%')
                 }
-              }.width('100%')
-              Text(row.repository + ' · ' + row.author + ' · ' + pullRequestStateLabel(row.state, row.draft) +
-                (row.checksState ? ' · ' + row.checksState : '')).fontSize(10).fontColor($r('app.color.muted'))
-                .width('100%').maxLines(1)
-              if (row.labels.length) {
-                Text(row.labels.join(' · ')).fontSize(10).fontColor($r('app.color.primary')).width('100%')
-              }
-            }.padding({ left: 10, right: 10, top: 10, bottom: 10 }).width('100%')
-              .onClick(() => { void this.open(row); })
+              }.padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs }).width('100%')
+                .constraintSize({ minHeight: Sizes.formRowMin })
+                .onClick(() => { void this.open(row); })
+            }
+          }, (row: PullRequestRow) => row.provider + ':' + row.projectId + ':' + row.repository + ':' + row.number)
+          if (this.nextCursor && this.query === this.requestedQuery) {
+            ListItem() {
+              Column() {
+                AppButton({ label: '加载更多', kind: 'secondary', compact: true, fill: true, onTap: () => { void this.loadMore(); } })
+              }.padding(12).width('100%')
+            }
           }
-        }, (row: PullRequestRow) => row.provider + ':' + row.projectId + ':' + row.repository + ':' + row.number)
-        if (this.nextCursor && this.query === this.requestedQuery) {
-          ListItem() {
-            Button('加载更多').fontSize(12).onClick(() => { void this.loadMore(); })
-          }
+        }.width('100%').layoutWeight(1)
+          .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
+          .divider({ strokeWidth: Sizes.hairline, color: $r('app.color.separator') })
+          .contentEndOffset(this.embedded && !this.selected ? this.bottomInset : 0)
+      } else if (this.loading) {
+        GroupCard() {
+          Row({ space: Space.xs }) {
+            LoadingProgress().width(18).height(18).color($r('app.color.muted'))
+            Text('正在读取…').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+          }.width('100%').justifyContent(FlexAlign.Center).padding(Space.lg)
         }
-      }.width('100%').layoutWeight(1)
-        .contentEndOffset(this.embedded && !this.selected ? this.bottomInset : 0)
-    }.width('100%').layoutWeight(1).padding(10)
+      } else if (!this.error && this.errors.length === 0) {
+        GroupCard() {
+          Text('没有符合当前筛选条件的拉取请求').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+            .width('100%').textAlign(TextAlign.Center).padding(Space.lg)
+        }
+      }
+    }.width('100%').layoutWeight(1).padding({ left: Space.sm, right: Space.sm, top: Space.xxs, bottom: Space.sm })
   }
 
   private checkList(): PullRequestCheckView[] {
@@ -486,88 +540,135 @@ export struct PullRequestsPanel {
   overviewTab() {
     if (this.detail) {
       Scroll() {
-        Column({ space: 10 }) {
-          Text(this.detail.title).fontSize(19).fontWeight(FontWeight.Medium).width('100%')
-          Text(pullRequestStateLabel(this.detail.state, this.detail.draft) + ' · ' +
-            this.detail.headBranch + ' → ' + this.detail.baseBranch + ' · +' + this.detail.additions +
-            ' -' + this.detail.deletions + ' · ' + this.detail.changedFiles + ' 文件')
-            .fontSize(11).fontColor($r('app.color.muted')).width('100%')
+        Column({ space: Space.sm }) {
+          GroupCard() {
+            Column({ space: Space.xs }) {
+              Text(this.detail.title).fontSize(FontSize.headline).lineHeight(LineHeight.headline)
+                .fontWeight(Weight.semibold).fontColor($r('app.color.ink')).width('100%')
+              Text(pullRequestStateLabel(this.detail.state, this.detail.draft) + ' · ' +
+                this.detail.headBranch + ' → ' + this.detail.baseBranch + ' · +' + this.detail.additions +
+                ' -' + this.detail.deletions + ' · ' + this.detail.changedFiles + ' 文件')
+                .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted')).width('100%')
+              if (this.detail.labels.length) {
+                Flex({ wrap: FlexWrap.Wrap }) {
+                  ForEach(this.detail.labels, (label: string) => {
+                    Text(label).fontSize(FontSize.badge).fontColor($r('app.color.primary_text'))
+                      .padding({ left: 8, right: 8, top: 3, bottom: 3 }).margin({ right: 6, bottom: 4 })
+                      .backgroundColor($r('app.color.info_bg')).borderRadius(Radius.badge)
+                      .onClick(() => { void this.loadLabels(); })
+                  }, (label: string) => label)
+                }.width('100%')
+              }
+              if (this.detail.reviewers.length) {
+                Text('评审人：' + this.detail.reviewers.join('、')).fontSize(FontSize.caption).fontColor($r('app.color.muted'))
+                  .width('100%').onClick(() => { void this.loadReviewers(); })
+              }
+            }.width('100%').padding(14).alignItems(HorizontalAlign.Start)
+          }
+
           if (this.detail.body.trim()) {
-            MarkdownView({ markdown: this.detail.body, selectable: true, onCopy: this.onCopy,
-              onOpenLink: (url: string) => this.onCopy(url), onOpenImage: (url: string) => this.onCopy(url) })
+            GroupCard({ title: '描述' }) {
+              Column() {
+                MarkdownView({ markdown: this.detail.body, selectable: true, onCopy: this.onCopy,
+                  onOpenLink: (url: string) => this.onCopy(url), onOpenImage: (url: string) => this.onCopy(url) })
+              }.padding(14).width('100%').alignItems(HorizontalAlign.Start)
+            }
           }
-          if (this.detail.labels.length) {
-            Row({ space: 6 }) {
-              ForEach(this.detail.labels, (label: string) => {
-                Text(label).fontSize(10).padding({ left: 6, right: 6, top: 2, bottom: 2 })
-                  .backgroundColor($r('app.color.surface')).borderRadius(8)
-                  .onClick(() => { void this.loadLabels(); })
-              }, (label: string) => label)
-            }.width('100%')
-          }
-          if (this.detail.reviewers.length) {
-            Text('评审人：' + this.detail.reviewers.join('、')).fontSize(11).fontColor($r('app.color.muted'))
-              .width('100%').onClick(() => { void this.loadReviewers(); })
-          }
+
           if (this.checkList().length) {
-            Column({ space: 4 }) {
-              Text('Checks · ' + this.checksState()).fontSize(12).fontWeight(FontWeight.Medium).width('100%')
-              ForEach(this.checkList(), (check: PullRequestCheckView) => {
-                Row({ space: 6 }) {
-                  Text(check.status).fontSize(10).fontColor($r('app.color.muted')).width(78)
-                  Text(check.name).fontSize(12).layoutWeight(1).maxLines(1)
+            GroupCard({ title: 'Checks · ' + this.checksState() }) {
+              ForEach(this.checkList(), (check: PullRequestCheckView, index: number) => {
+                Row({ space: Space.xs }) {
+                  StatusBadge({
+                    text: check.status,
+                    tone: check.status.toLowerCase().includes('pass') || check.status === 'success' ? 'success'
+                      : check.status.toLowerCase().includes('fail') || check.status === 'failure' ? 'danger' : 'neutral'
+                  })
+                  Text(check.name).fontSize(FontSize.callout).fontColor($r('app.color.ink')).layoutWeight(1).maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                   if (check.url) {
-                    Button('打开').fontSize(10).backgroundColor(Color.Transparent).fontColor($r('app.color.primary'))
-                      .onClick(() => this.onCopy(check.url))
+                    AppButton({ label: '打开', kind: 'text', compact: true, onTap: () => this.onCopy(check.url) })
                   }
-                }.width('100%')
+                }.width('100%').padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                  .constraintSize({ minHeight: Sizes.formRowMin }).alignItems(VerticalAlign.Center)
+                  .border({ width: { top: index === 0 ? 0 : Sizes.hairline }, color: { top: $r('app.color.separator') } })
               }, (check: PullRequestCheckView, index: number) => check.name + index)
-            }.width('100%').padding(10).backgroundColor($r('app.color.surface')).borderRadius(8)
+            }
           }
-          Row({ space: 8 }) {
-            if (this.detail.draft && this.detail.actions.includes('ready')) {
-              Button('标记就绪').fontSize(12).onClick(() => { void this.runAction('ready'); })
-            }
-            if (!this.detail.draft && this.detail.actions.includes('draft')) {
-              Button('转草稿').fontSize(12).onClick(() => { void this.runAction('draft'); })
-            }
-            if (this.detail.actions.includes('close')) {
-              Button('关闭').fontSize(12).onClick(() => { void this.runAction('close'); })
-            }
-            if (this.detail.actions.includes('reopen')) {
-              Button('重新打开').fontSize(12).onClick(() => { void this.runAction('reopen'); })
-            }
-            Button('编辑').fontSize(12).onClick(() => { this.editing = true; })
-          }.width('100%')
-          if (this.detail.mergeMethods.length && this.detail.actions.includes('merge')) {
-            Text('合并方式').fontSize(12).fontColor($r('app.color.muted')).width('100%')
-            Row({ space: 8 }) {
-              ForEach(this.detail.mergeMethods, (method: string) => {
-                Button(method).fontSize(11).enabled(this.detail?.mergeable === 'mergeable' && !this.busy)
-                  .onClick(() => {
-                    AlertDialog.show({ title: '合并 PR？', message: '方式：' + method,
-                      primaryButton: { value: '取消', action: () => {} },
-                      secondaryButton: { value: '合并', action: () => { void this.runAction('merge', method); } } });
-                  })
-              }, (method: string) => method)
-            }.width('100%')
-          }
-          if (this.editing) {
-            Column({ space: 8 }) {
-              TextInput({ text: this.editTitle }).height(40).width('100%')
-                .onChange((value: string) => { this.editTitle = value; })
-              TextArea({ text: this.editBody }).height(120).width('100%')
-                .onChange((value: string) => { this.editBody = value; })
-              Row({ space: 8 }) {
-                Button('取消').fontSize(12).onClick(() => { this.editing = false; })
-                Button('保存').fontSize(12).enabled(!this.busy).onClick(() => { void this.saveEdit(); })
+
+          GroupCard({ title: 'PR 操作' }) {
+            Column({ space: Space.xs }) {
+              Flex({ wrap: FlexWrap.Wrap }) {
+                if (this.detail.draft && this.detail.actions.includes('ready')) {
+                  Button('标记就绪').fontSize(FontSize.callout).fontWeight(Weight.medium)
+                    .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink')).borderRadius(Radius.button)
+                    .constraintSize({ minHeight: 38 }).padding({ left: Space.sm, right: Space.sm }).margin({ right: 6, bottom: 6 })
+                    .onClick(() => { void this.runAction('ready'); })
+                }
+                if (!this.detail.draft && this.detail.actions.includes('draft')) {
+                  Button('转草稿').fontSize(FontSize.callout).fontWeight(Weight.medium)
+                    .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink')).borderRadius(Radius.button)
+                    .constraintSize({ minHeight: 38 }).padding({ left: Space.sm, right: Space.sm }).margin({ right: 6, bottom: 6 })
+                    .onClick(() => { void this.runAction('draft'); })
+                }
+                if (this.detail.actions.includes('close')) {
+                  Button('关闭').fontSize(FontSize.callout).fontWeight(Weight.medium)
+                    .backgroundColor($r('app.color.danger_bg')).fontColor($r('app.color.danger')).borderRadius(Radius.button)
+                    .constraintSize({ minHeight: 38 }).padding({ left: Space.sm, right: Space.sm }).margin({ right: 6, bottom: 6 })
+                    .onClick(() => { void this.runAction('close'); })
+                }
+                if (this.detail.actions.includes('reopen')) {
+                  Button('重新打开').fontSize(FontSize.callout).fontWeight(Weight.medium)
+                    .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink')).borderRadius(Radius.button)
+                    .constraintSize({ minHeight: 38 }).padding({ left: Space.sm, right: Space.sm }).margin({ right: 6, bottom: 6 })
+                    .onClick(() => { void this.runAction('reopen'); })
+                }
+                Button('编辑').fontSize(FontSize.callout).fontWeight(Weight.medium)
+                  .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink')).borderRadius(Radius.button)
+                  .constraintSize({ minHeight: 38 }).padding({ left: Space.sm, right: Space.sm }).margin({ right: 6, bottom: 6 })
+                  .onClick(() => { this.editing = true; })
               }.width('100%')
-            }.width('100%').padding(10).backgroundColor($r('app.color.surface')).borderRadius(8)
+              if (this.detail.mergeMethods.length && this.detail.actions.includes('merge')) {
+                Text('合并方式').fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
+                Flex({ wrap: FlexWrap.Wrap }) {
+                  ForEach(this.detail.mergeMethods, (method: string, index: number) => {
+                    Button(method)
+                      .fontSize(FontSize.callout).fontWeight(index === 0 ? Weight.semibold : Weight.medium)
+                      .backgroundColor(index === 0 ? $r('app.color.prominent') : $r('app.color.group'))
+                      .fontColor(index === 0 ? $r('app.color.on_prominent') : $r('app.color.ink'))
+                      .borderRadius(Radius.button).constraintSize({ minHeight: 38 })
+                      .padding({ left: Space.sm, right: Space.sm }).margin({ right: 6, bottom: 6 })
+                      .enabled(this.detail?.mergeable === 'mergeable' && !this.busy)
+                      .onClick(() => {
+                        AlertDialog.show({ title: '合并 PR？', message: '方式：' + method,
+                          primaryButton: { value: '取消', action: () => {} },
+                          secondaryButton: { value: '合并', action: () => { void this.runAction('merge', method); } } });
+                      })
+                  }, (method: string) => method)
+                }.width('100%')
+              }
+            }.padding(14).width('100%').alignItems(HorizontalAlign.Start)
           }
-          if (this.error) { Text(this.error).fontSize(12).fontColor($r('app.color.danger')).width('100%') }
-          if (this.notice) { Text(this.notice).fontSize(12).fontColor($r('app.color.muted')).width('100%') }
-        }.width('100%').padding(12).alignItems(HorizontalAlign.Start)
+
+          if (this.editing) {
+            GroupCard({ title: '编辑标题与描述' }) {
+              Column({ space: Space.xs }) {
+                TextInput({ text: this.editTitle }).height(40).width('100%').fontSize(FontSize.body).fontColor($r('app.color.ink'))
+                  .backgroundColor($r('app.color.group')).borderRadius(Radius.tool).padding({ left: 10, right: 10 })
+                  .onChange((value: string) => { this.editTitle = value; })
+                TextArea({ text: this.editBody }).constraintSize({ minHeight: 110 }).width('100%').fontSize(FontSize.body)
+                  .fontColor($r('app.color.ink')).backgroundColor($r('app.color.group')).borderRadius(Radius.tool).padding(Space.xs)
+                  .onChange((value: string) => { this.editBody = value; })
+                Row({ space: Space.xs }) {
+                  AppButton({ label: '取消', kind: 'secondary', compact: true, onTap: () => { this.editing = false; } })
+                  AppButton({ label: '保存', kind: 'primary', compact: true, disabled: this.busy, onTap: () => { void this.saveEdit(); } })
+                }.width('100%')
+              }.width('100%').padding(14)
+            }
+          }
+          if (this.error) { Text(this.error).fontSize(FontSize.callout).fontColor($r('app.color.danger')).width('100%') }
+          if (this.notice) { Text(this.notice).fontSize(FontSize.callout).fontColor($r('app.color.primary_text')).width('100%') }
+        }.width('100%').padding({ left: Space.sm, right: Space.sm, bottom: Space.lg }).alignItems(HorizontalAlign.Start)
       }.width('100%').layoutWeight(1)
     }
   }
@@ -575,23 +676,27 @@ export struct PullRequestsPanel {
   @Builder
   filesTab() {
     if (this.selectedFile) {
-      Column({ space: 6 }) {
-        Row({ space: 8 }) {
-          Button('‹ 文件').fontSize(12).constraintSize({ minHeight: 44 })
-            .backgroundColor(Color.Transparent).fontColor($r('app.color.ink')).accessibilityText('返回文件列表')
-            .onClick(() => { this.selectedFile = ''; this.lineStart = -1; this.lineEnd = -1; })
-          Text(this.drafts.length + ' 条审阅草稿').fontSize(11).fontColor($r('app.color.muted')).layoutWeight(1)
-        }.width('100%').padding({ left: 8, right: 8 })
-        List({ space: 2 }) {
+      Column({ space: Space.xs }) {
+        Row({ space: Space.xs }) {
+          AppButton({
+            label: '‹ 文件列表', kind: 'text', compact: true,
+            a11yLabel: '返回文件列表',
+            onTap: () => { this.selectedFile = ''; this.lineStart = -1; this.lineEnd = -1; }
+          })
+          Text(this.drafts.length + ' 条审阅草稿').fontSize(FontSize.caption).fontColor($r('app.color.muted'))
+            .layoutWeight(1).textAlign(TextAlign.End)
+        }.width('100%').padding({ left: Space.xs, right: Space.sm })
+        List({ space: Space.xs }) {
           ListItem() {
-            Text(this.selectedFile).fontSize(14).fontWeight(FontWeight.Medium).wordBreak(WordBreak.BREAK_ALL)
-              .width('100%').padding({ left: 10, right: 10, top: 6, bottom: 6 })
+            Text(this.selectedFile).fontSize(FontSize.body).fontWeight(Weight.medium).fontColor($r('app.color.ink'))
+              .wordBreak(WordBreak.BREAK_ALL).width('100%').padding({ left: 12, right: 12, top: Space.xs, bottom: Space.xs })
+              .backgroundColor($r('app.color.card')).borderRadius(Radius.card)
           }
           ForEach(this.currentFileHunks(), (hunk: DiffHunk) => {
             ListItem() {
               Column({ space: 0 }) {
                 Text(hunk.header).fontSize(Math.max(8, this.codeFontSize - 2)).fontFamily('monospace').fontColor($r('app.color.muted'))
-                  .width('100%').padding(4).backgroundColor($r('app.color.surface'))
+                  .width('100%').padding({ left: 10, right: 10, top: 6, bottom: 6 }).backgroundColor($r('app.color.surface'))
                 ForEach(hunk.rows, (row: DiffRow, index: number) => {
                   Row({ space: 0 }) {
                     if (hunk.lastOldLine) {
@@ -609,65 +714,78 @@ export struct PullRequestsPanel {
                     .alignItems(VerticalAlign.Top)
                     .backgroundColor(this.selectedHunk === hunk.header && this.lineStart >= 0 &&
                       index >= Math.min(this.lineStart, this.lineEnd) && index <= Math.max(this.lineStart, this.lineEnd) ?
-                      $r('app.color.selected') : row.kind === 'add' ? $r('app.color.diff_add') :
+                      $r('app.color.info_bg') : row.kind === 'add' ? $r('app.color.diff_add') :
                       row.kind === 'del' ? $r('app.color.diff_del') : Color.Transparent)
                     .onClick(() => {
                       if (this.selectedHunk !== hunk.header) { this.selectedHunk = hunk.header; this.lineStart = index; this.lineEnd = index; }
                       else { this.lineStart = index; this.lineEnd = index; }
                     })
                 }, (row: DiffRow, index: number) => hunk.header + ':' + index)
-              }
+              }.width('100%').backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
             }
           }, (hunk: DiffHunk) => this.selectedFile + ':' + hunk.header)
         }.width('100%').layoutWeight(1)
         if (this.lineStart >= 0) {
-          Row({ space: 8 }) {
-            Text('行 ' + (this.lineStart + 1)).fontSize(12).fontColor($r('app.color.muted')).layoutWeight(1)
-            Button('行评论').fontSize(12).onClick(() => { this.commenting = true; })
-          }.width('100%').padding(8)
+          Row({ space: Space.xs }) {
+            Text('行 ' + (this.lineStart + 1)).fontSize(FontSize.caption).fontColor($r('app.color.muted')).layoutWeight(1)
+            AppButton({ label: '行评论', kind: 'primary', compact: true, onTap: () => { this.commenting = true; } })
+          }.width('100%').padding({ left: 12, right: 12, top: Space.xs, bottom: Space.xs })
+            .backgroundColor($r('app.color.card')).borderRadius(Radius.card).alignItems(VerticalAlign.Center)
         }
         if (this.commenting) {
-          Column({ space: 8 }) {
-            TextArea({ placeholder: '行内评论', text: this.lineComment }).height(80).width('100%')
-              .onChange((value: string) => { this.lineComment = value; })
-            Row({ space: 8 }) {
-              Button('取消').fontSize(12).onClick(() => { this.commenting = false; })
-              Button('加入草稿').fontSize(12).enabled(!!this.lineComment.trim())
-                .onClick(() => {
-                  const hunk = this.currentFileHunks().find((item: DiffHunk) => item.header === this.selectedHunk);
-                  if (hunk) this.addLineDraft(hunk);
+          GroupCard({ title: '行内评论' }) {
+            Column({ space: Space.xs }) {
+              TextArea({ placeholder: '行内评论', text: this.lineComment }).constraintSize({ minHeight: 80 }).width('100%')
+                .fontSize(FontSize.body).fontColor($r('app.color.ink')).backgroundColor($r('app.color.group'))
+                .borderRadius(Radius.tool).padding(Space.xs).onChange((value: string) => { this.lineComment = value; })
+              Row({ space: Space.xs }) {
+                AppButton({ label: '取消', kind: 'secondary', compact: true, onTap: () => { this.commenting = false; } })
+                AppButton({
+                  label: '加入草稿', kind: 'primary', compact: true, disabled: !this.lineComment.trim(),
+                  onTap: () => {
+                    const hunk = this.currentFileHunks().find((item: DiffHunk) => item.header === this.selectedHunk);
+                    if (hunk) this.addLineDraft(hunk);
+                  }
                 })
-            }.width('100%')
-          }.width('100%').padding(10).backgroundColor($r('app.color.surface')).borderRadius(8)
-        }
-        if (this.error) { Text(this.error).fontSize(12).fontColor($r('app.color.danger')).width('100%') }
-        if (this.notice) { Text(this.notice).fontSize(12).fontColor($r('app.color.muted')).width('100%') }
-      }.width('100%').layoutWeight(1)
-    } else {
-      List({ space: 1 }) {
-        ForEach(this.patchFiles, (file: DiffFile) => {
-          ListItem() {
-            Row({ space: 8 }) {
-              Column({ space: 3 }) {
-                Text(file.path.slice(file.path.lastIndexOf('/') + 1)).fontSize(14).fontWeight(FontWeight.Medium)
-                  .width('100%').wordBreak(WordBreak.BREAK_ALL)
-                if (file.path.includes('/')) {
-                  Text(file.path.slice(0, file.path.lastIndexOf('/'))).fontSize(12).fontColor($r('app.color.muted'))
-                    .width('100%').wordBreak(WordBreak.BREAK_ALL).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
-                }
-              }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-              Text('+' + file.additions).fontSize(10).fontColor($r('app.color.diff_add_ink'))
-              Text('-' + file.deletions).fontSize(10).fontColor($r('app.color.diff_del_ink'))
-            }.constraintSize({ minHeight: 44 }).padding({ left: 10, right: 10, top: 8, bottom: 8 }).width('100%')
-              .accessibilityText(file.path + '，新增 ' + file.additions + ' 行，删除 ' + file.deletions + ' 行')
-              .onClick(() => { this.selectedFile = file.path; this.selectedHunk = ''; })
+              }.width('100%')
+            }.width('100%').padding(12)
           }
-        }, (file: DiffFile) => file.path)
-        if (!this.patchFiles.length) {
-          ListItem() { Text(this.diffError || (this.loading ? '正在读取文件差异…' : '没有可显示的文件差异')).fontSize(13)
-            .fontColor(this.diffError ? $r('app.color.danger') : $r('app.color.muted')).padding(20) }
         }
-      }.width('100%').layoutWeight(1)
+        if (this.error) { Text(this.error).fontSize(FontSize.callout).fontColor($r('app.color.danger')).width('100%') }
+        if (this.notice) { Text(this.notice).fontSize(FontSize.callout).fontColor($r('app.color.primary_text')).width('100%') }
+      }.width('100%').layoutWeight(1).padding({ left: Space.sm, right: Space.sm, bottom: Space.sm })
+    } else {
+      Column() {
+        List({ space: 0 }) {
+          ForEach(this.patchFiles, (file: DiffFile) => {
+            ListItem() {
+              Row({ space: Space.xs }) {
+                Column({ space: 3 }) {
+                  Text(file.path.slice(file.path.lastIndexOf('/') + 1)).fontSize(FontSize.body).fontWeight(Weight.medium)
+                    .fontColor($r('app.color.ink')).width('100%').wordBreak(WordBreak.BREAK_ALL)
+                  if (file.path.includes('/')) {
+                    Text(file.path.slice(0, file.path.lastIndexOf('/'))).fontSize(FontSize.caption).fontColor($r('app.color.muted'))
+                      .width('100%').wordBreak(WordBreak.BREAK_ALL).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
+                  }
+                }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+                Text('+' + file.additions).fontSize(FontSize.badge).fontColor($r('app.color.diff_add_ink'))
+                Text('-' + file.deletions).fontSize(FontSize.badge).fontColor($r('app.color.diff_del_ink'))
+              }.constraintSize({ minHeight: Sizes.formRowMin }).padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs }).width('100%')
+                .accessibilityText(file.path + '，新增 ' + file.additions + ' 行，删除 ' + file.deletions + ' 行')
+                .onClick(() => { this.selectedFile = file.path; this.selectedHunk = ''; })
+            }
+          }, (file: DiffFile) => file.path)
+          if (!this.patchFiles.length) {
+            ListItem() {
+              Text(this.diffError || (this.loading ? '正在读取文件差异…' : '没有可显示的文件差异')).fontSize(FontSize.callout)
+                .fontColor(this.diffError ? $r('app.color.danger') : $r('app.color.muted')).width('100%')
+                .textAlign(TextAlign.Center).padding(Space.lg)
+            }
+          }
+        }.width('100%').layoutWeight(1)
+          .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
+          .divider({ strokeWidth: Sizes.hairline, color: $r('app.color.separator') })
+      }.width('100%').layoutWeight(1).padding({ left: Space.sm, right: Space.sm, bottom: Space.sm })
     }
   }
 
@@ -679,67 +797,85 @@ export struct PullRequestsPanel {
   @Builder
   discussionTab() {
     Scroll() {
-      Column({ space: 10 }) {
+      Column({ space: Space.sm }) {
         if (this.activityError) {
-          Text('讨论读取失败：' + this.activityError).fontSize(12).fontColor($r('app.color.danger'))
-            .width('100%')
+          Text('讨论读取失败：' + this.activityError).fontSize(FontSize.callout).fontColor($r('app.color.danger')).width('100%')
         }
         if (this.activity) {
           ForEach(this.activity.comments,
             (comment: PullRequestCommentView) => {
-              Column({ space: 4 }) {
-                Text(comment.author + ' · ' + comment.createdAt)
-                  .fontSize(10).fontColor($r('app.color.muted')).width('100%')
-                MarkdownView({ markdown: comment.body, selectable: true, onCopy: this.onCopy,
-                  onOpenLink: (url: string) => this.onCopy(url), onOpenImage: (url: string) => this.onCopy(url) })
-                Row({ space: 10 }) {
-                  ForEach([['thumbs-up', '👍'], ['heart', '❤️'], ['laugh', '😄']], (entry: string[]) => {
-                    Button(entry[1]).fontSize(12).backgroundColor(Color.Transparent)
-                      .onClick(() => { void this.react(comment.id, entry[0]); })
-                  }, (entry: string[]) => entry[0])
-                }.width('100%')
-              }.width('100%').padding(10).backgroundColor($r('app.color.surface')).borderRadius(8)
+              GroupCard() {
+                Column({ space: Space.xs }) {
+                  Text(comment.author + ' · ' + comment.createdAt)
+                    .fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
+                  MarkdownView({ markdown: comment.body, selectable: true, onCopy: this.onCopy,
+                    onOpenLink: (url: string) => this.onCopy(url), onOpenImage: (url: string) => this.onCopy(url) })
+                  Row({ space: Space.xs }) {
+                    ForEach([['thumbs-up', '👍'], ['heart', '❤️'], ['laugh', '😄']], (entry: string[]) => {
+                      Button(entry[1]).fontSize(FontSize.callout).backgroundColor($r('app.color.group'))
+                        .borderRadius(Radius.badge).constraintSize({ minHeight: 32 }).padding({ left: 10, right: 10 })
+                        .onClick(() => { void this.react(comment.id, entry[0]); })
+                    }, (entry: string[]) => entry[0])
+                  }.width('100%')
+                }.width('100%').padding(14).alignItems(HorizontalAlign.Start)
+              }
             }, (comment: PullRequestCommentView) => comment.id)
           ForEach(this.activity.threads,
             (thread: PullRequestThreadView) => {
-              Column({ space: 4 }) {
-                Text(thread.path + (thread.resolved ? ' · 已解决' : ''))
-                  .fontSize(10).fontColor($r('app.color.primary')).width('100%')
-                ForEach(thread.comments, (comment: PullRequestThreadCommentView) => {
-                  Text(comment.author + ': ' + comment.body).fontSize(13)
-                    .width('100%')
-                }, (comment: PullRequestThreadCommentView) => comment.id)
-                if (this.replyThread === thread.id) {
-                  TextArea({ placeholder: '回复讨论', text: this.replyBody }).height(60).width('100%')
-                    .onChange((value: string) => { this.replyBody = value; })
-                  Row({ space: 8 }) {
-                    Button('取消').fontSize(11).onClick(() => { this.replyThread = ''; this.replyBody = ''; })
-                    Button('回复').fontSize(11).enabled(!!this.replyBody.trim())
-                      .onClick(() => { void this.reply(thread.id); })
-                  }.width('100%')
-                } else {
-                  Button('回复').fontSize(11).onClick(() => { this.replyThread = thread.id; })
-                }
-                Button(thread.resolved ? '重新打开讨论' : '标记已解决').fontSize(11)
-                  .enabled(!this.busy)
-                  .onClick(() => {
-                    void this.resolveThread(thread.id, !thread.resolved);
-                  })
-              }.width('100%').padding(10).border({ width: 1, color: $r('app.color.border') }).borderRadius(8)
+              GroupCard() {
+                Column({ space: Space.xs }) {
+                  Row({ space: Space.xs }) {
+                    Text(thread.path).fontSize(FontSize.caption).fontColor($r('app.color.primary_text'))
+                      .layoutWeight(1).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+                    StatusBadge({ text: thread.resolved ? '已解决' : '待处理', tone: thread.resolved ? 'success' : 'warning' })
+                  }.width('100%').alignItems(VerticalAlign.Center)
+                  ForEach(thread.comments, (comment: PullRequestThreadCommentView) => {
+                    Text(comment.author + ': ' + comment.body).fontSize(FontSize.callout).fontColor($r('app.color.ink')).width('100%')
+                  }, (comment: PullRequestThreadCommentView) => comment.id)
+                  if (this.replyThread === thread.id) {
+                    TextArea({ placeholder: '回复讨论', text: this.replyBody }).constraintSize({ minHeight: 68 }).width('100%')
+                      .fontSize(FontSize.body).fontColor($r('app.color.ink')).backgroundColor($r('app.color.group'))
+                      .borderRadius(Radius.tool).padding(Space.xs).onChange((value: string) => { this.replyBody = value; })
+                    Row({ space: Space.xs }) {
+                      AppButton({ label: '取消', kind: 'secondary', compact: true, onTap: () => { this.replyThread = ''; this.replyBody = ''; } })
+                      AppButton({ label: '回复', kind: 'primary', compact: true, disabled: !this.replyBody.trim(), onTap: () => { void this.reply(thread.id); } })
+                    }.width('100%')
+                  } else {
+                    Row({ space: Space.xs }) {
+                      AppButton({ label: '回复', kind: 'secondary', compact: true, onTap: () => { this.replyThread = thread.id; } })
+                      AppButton({
+                        label: thread.resolved ? '重新打开讨论' : '标记已解决',
+                        kind: 'secondary', compact: true, disabled: this.busy,
+                        onTap: () => { void this.resolveThread(thread.id, !thread.resolved); }
+                      })
+                    }.width('100%')
+                  }
+                }.width('100%').padding(14).alignItems(HorizontalAlign.Start)
+              }
             }, (thread: PullRequestThreadView) => thread.id)
         } else {
-          Text(this.activityError ? '讨论读取失败：' + this.activityError : '讨论暂不可读')
-            .fontSize(13).fontColor($r('app.color.muted')).width('100%')
+          GroupCard() {
+            Text(this.activityError ? '讨论读取失败：' + this.activityError : '讨论暂不可读')
+              .fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%').padding(14)
+          }
         }
         if (this.detail && this.detail.comment) {
-          TextArea({ placeholder: '添加讨论评论', text: this.commentBody }).height(80).width('100%')
-            .onChange((value: string) => { this.commentBody = value; })
-          Button('提交评论').fontSize(12).enabled(!!this.commentBody.trim() && !this.busy)
-            .onClick(() => { void this.submitComment(); })
+          GroupCard({ title: '添加讨论评论' }) {
+            Column({ space: Space.xs }) {
+              TextArea({ placeholder: '添加讨论评论', text: this.commentBody }).constraintSize({ minHeight: 80 }).width('100%')
+                .fontSize(FontSize.body).fontColor($r('app.color.ink')).backgroundColor($r('app.color.group'))
+                .borderRadius(Radius.tool).padding(Space.xs).onChange((value: string) => { this.commentBody = value; })
+              AppButton({
+                label: '提交评论', kind: 'primary', compact: true, fill: true,
+                disabled: !this.commentBody.trim() || this.busy,
+                onTap: () => { void this.submitComment(); }
+              })
+            }.width('100%').padding(14)
+          }
         }
-        if (this.error) { Text(this.error).fontSize(12).fontColor($r('app.color.danger')).width('100%') }
-        if (this.notice) { Text(this.notice).fontSize(12).fontColor($r('app.color.muted')).width('100%') }
-      }.width('100%').padding(12).alignItems(HorizontalAlign.Start)
+        if (this.error) { Text(this.error).fontSize(FontSize.callout).fontColor($r('app.color.danger')).width('100%') }
+        if (this.notice) { Text(this.notice).fontSize(FontSize.callout).fontColor($r('app.color.primary_text')).width('100%') }
+      }.width('100%').padding({ left: Space.sm, right: Space.sm, bottom: Space.lg }).alignItems(HorizontalAlign.Start)
     }.width('100%').layoutWeight(1)
   }
 
@@ -747,127 +883,154 @@ export struct PullRequestsPanel {
   reviewTab() {
     if (this.detail) {
       Scroll() {
-        Column({ space: 10 }) {
-          Text('行内草稿 ' + this.drafts.length + ' 条').fontSize(12).fontColor($r('app.color.muted')).width('100%')
-          TextArea({ placeholder: '审阅说明（可留空）', text: this.reviewBody }).height(100).width('100%')
-            .onChange((value: string) => { this.reviewBody = value; })
-          Row({ space: 8 }) {
-            ForEach(this.detail.reviewVerdicts, (verdict: string) => {
-              Button(verdict === 'approve' ? '批准' : verdict === 'request-changes' ? '请求修改' : '评论')
-                .fontSize(12).enabled(!this.busy)
-                .onClick(() => { void this.submitReview(verdict); })
-            }, (verdict: string) => verdict)
-          }.width('100%')
-          Button('打开标签').fontSize(12).onClick(() => { void this.loadLabels(); })
-          Button('请求评审人').fontSize(12).onClick(() => { void this.loadReviewers(); })
-          if (this.panelMode === 'labels') {
-            Column({ space: 2 }) {
-              ForEach(this.candidates, (candidate: Object) => {
-                Row({ space: 8 }) {
-                  Text(String(record(candidate).name)).fontSize(13).layoutWeight(1)
-                  Text(record(candidate).applied === true ? '已添加' : '添加').fontSize(11)
-                    .fontColor(record(candidate).applied === true ? $r('app.color.muted') : $r('app.color.primary'))
-                }.height(40).width('100%').onClick(() => {
-                  void this.toggleLabel(String(record(candidate).name), record(candidate).applied === true);
-                })
-              }, (candidate: Object) => String(record(candidate).name))
-            }.width('100%')
+        Column({ space: Space.sm }) {
+          GroupCard({ title: '提交评审' }) {
+            Column({ space: Space.xs }) {
+              Text('行内草稿 ' + this.drafts.length + ' 条').fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
+              TextArea({ placeholder: '审阅说明（可留空）', text: this.reviewBody }).constraintSize({ minHeight: 100 }).width('100%')
+                .fontSize(FontSize.body).fontColor($r('app.color.ink')).backgroundColor($r('app.color.group'))
+                .borderRadius(Radius.tool).padding(Space.xs).onChange((value: string) => { this.reviewBody = value; })
+              Flex({ wrap: FlexWrap.Wrap }) {
+                ForEach(this.detail.reviewVerdicts, (verdict: string) => {
+                  Button(verdict === 'approve' ? '批准' : verdict === 'request-changes' ? '请求修改' : '评论')
+                    .fontSize(FontSize.callout).fontWeight(Weight.medium)
+                    .backgroundColor(verdict === 'approve' ? $r('app.color.prominent') : $r('app.color.group'))
+                    .fontColor(verdict === 'approve' ? $r('app.color.on_prominent') : $r('app.color.ink'))
+                    .borderRadius(Radius.button).constraintSize({ minHeight: 38 })
+                    .padding({ left: Space.sm, right: Space.sm }).margin({ right: 6, bottom: 6 })
+                    .enabled(!this.busy).onClick(() => { void this.submitReview(verdict); })
+                }, (verdict: string) => verdict)
+              }.width('100%')
+            }.width('100%').padding(14).alignItems(HorizontalAlign.Start)
           }
-          if (this.panelMode === 'reviewers') {
-            Column({ space: 2 }) {
-              ForEach(this.reviewerCandidates, (candidate: Object) => {
-                Row({ space: 8 }) {
-                  Text(String(record(candidate).name)).fontSize(13).layoutWeight(1)
-                  Text(record(candidate).requested === true ? '已请求' : '请求').fontSize(11)
-                    .fontColor(record(candidate).requested === true ? $r('app.color.muted') : $r('app.color.primary'))
-                }.height(40).width('100%').onClick(() => {
-                  void this.toggleReviewer(String(record(candidate).id), String(record(candidate).kind),
-                    record(candidate).requested === true);
-                })
-              }, (candidate: Object) => String(record(candidate).id))
-            }.width('100%')
+
+          GroupCard({ title: '标签与评审人', footnote: '行内评论在“文件”页选择行后加入草稿，再在此提交。' }) {
+            Row({ space: Space.xs }) {
+              Column() {
+                AppButton({ label: '打开标签', kind: 'secondary', compact: true, fill: true, onTap: () => { void this.loadLabels(); } })
+              }.layoutWeight(1)
+              Column() {
+                AppButton({ label: '请求评审人', kind: 'secondary', compact: true, fill: true, onTap: () => { void this.loadReviewers(); } })
+              }.layoutWeight(1)
+            }.width('100%').padding(12)
+            if (this.panelMode === 'labels') {
+              Column({ space: 0 }) {
+                ForEach(this.candidates, (candidate: Object) => {
+                  Row({ space: Space.xs }) {
+                    Text(String(record(candidate).name)).fontSize(FontSize.body).fontColor($r('app.color.ink')).layoutWeight(1)
+                    Text(record(candidate).applied === true ? '✓ 已添加' : '添加').fontSize(FontSize.callout)
+                      .fontColor(record(candidate).applied === true ? $r('app.color.primary_text') : $r('app.color.muted'))
+                  }.constraintSize({ minHeight: Sizes.formRowMin }).padding({ left: 14, right: 14 }).width('100%')
+                    .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+                    .onClick(() => {
+                      void this.toggleLabel(String(record(candidate).name), record(candidate).applied === true);
+                    })
+                }, (candidate: Object) => String(record(candidate).name))
+              }.width('100%')
+            }
+            if (this.panelMode === 'reviewers') {
+              Column({ space: 0 }) {
+                ForEach(this.reviewerCandidates, (candidate: Object) => {
+                  Row({ space: Space.xs }) {
+                    Text(String(record(candidate).name)).fontSize(FontSize.body).fontColor($r('app.color.ink')).layoutWeight(1)
+                    Text(record(candidate).requested === true ? '✓ 已请求' : '请求').fontSize(FontSize.callout)
+                      .fontColor(record(candidate).requested === true ? $r('app.color.primary_text') : $r('app.color.muted'))
+                  }.constraintSize({ minHeight: Sizes.formRowMin }).padding({ left: 14, right: 14 }).width('100%')
+                    .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+                    .onClick(() => {
+                      void this.toggleReviewer(String(record(candidate).id), String(record(candidate).kind),
+                        record(candidate).requested === true);
+                    })
+                }, (candidate: Object) => String(record(candidate).id))
+              }.width('100%')
+            }
           }
-          Text('提示：行内评论在“文件”页选择行后加入草稿，再在此提交。').fontSize(11)
-            .fontColor($r('app.color.muted')).width('100%')
-          if (this.error) { Text(this.error).fontSize(12).fontColor($r('app.color.danger')).width('100%') }
-          if (this.notice) { Text(this.notice).fontSize(12).fontColor($r('app.color.muted')).width('100%') }
-        }.width('100%').padding(12).alignItems(HorizontalAlign.Start)
+          if (this.error) { Text(this.error).fontSize(FontSize.callout).fontColor($r('app.color.danger')).width('100%') }
+          if (this.notice) { Text(this.notice).fontSize(FontSize.callout).fontColor($r('app.color.primary_text')).width('100%') }
+        }.width('100%').padding({ left: Space.sm, right: Space.sm, bottom: Space.lg }).alignItems(HorizontalAlign.Start)
       }.width('100%').layoutWeight(1)
     }
   }
 
   @Builder
   guideTab() {
-    Column({ space: 8 }) {
-      Row({ space: 8 }) {
-        Text(this.guideBusy && !this.guide ? '正在加载评审向导…' :
-          this.guide === undefined || (this.guide.headSha === '' && this.guide.stops.length === 0) ?
-            '还没有保存的评审向导' :
-          this.guide.running ? 'Agent 正在生成评审向导…' :
-          this.guide.stale ? '有新提交，向导可能已过期' :
-          this.guide.runDetail ? '上次生成失败：' + this.guide.runDetail :
-          '向导基于 ' + this.guide.headSha.slice(0, 8))
-          .fontSize(12).fontColor($r('app.color.muted')).layoutWeight(1)
-        Button('刷新').fontSize(11).enabled(!this.guideBusy).onClick(() => { void this.loadGuide(); })
-        Button(this.guide && this.guide.stops.length > 0 ? '重新生成' : '生成')
-          .fontSize(11).enabled(!this.guideBusy).onClick(() => { void this.generateGuide(); })
-      }.width('100%')
-      if (this.guideError) { Text(this.guideError).fontSize(12).fontColor($r('app.color.danger')).width('100%') }
+    Column({ space: Space.xs }) {
+      GroupCard() {
+        Row({ space: Space.xs }) {
+          Text(this.guideBusy && !this.guide ? '正在加载评审向导…' :
+            this.guide === undefined || (this.guide.headSha === '' && this.guide.stops.length === 0) ?
+              '还没有保存的评审向导' :
+            this.guide.running ? 'Agent 正在生成评审向导…' :
+            this.guide.stale ? '有新提交，向导可能已过期' :
+            this.guide.runDetail ? '上次生成失败：' + this.guide.runDetail :
+            '向导基于 ' + this.guide.headSha.slice(0, 8))
+            .fontSize(FontSize.callout).fontColor($r('app.color.muted')).layoutWeight(1)
+          AppButton({ label: '刷新', kind: 'secondary', compact: true, disabled: this.guideBusy, onTap: () => { void this.loadGuide(); } })
+          AppButton({ label: this.guide && this.guide.stops.length > 0 ? '重新生成' : '生成', kind: 'primary', compact: true, disabled: this.guideBusy, onTap: () => { void this.generateGuide(); } })
+        }.width('100%').padding(12).alignItems(VerticalAlign.Center)
+      }
+      if (this.guideError) { Text(this.guideError).fontSize(FontSize.callout).fontColor($r('app.color.danger')).width('100%') }
       if (this.guide && this.guide.stops.length > 0) {
-        List({ space: 10 }) {
+        List({ space: Space.xs }) {
           ForEach(this.guide.stops, (stop: ReviewGuideStop, index: number) => {
             ListItem() {
               Column({ space: 4 }) {
-                Text((index + 1) + '. ' + stop.title).fontSize(14).fontWeight(FontWeight.Medium).width('100%')
-                if (stop.summary) { Text(stop.summary).fontSize(12).fontColor($r('app.color.muted')).width('100%') }
+                Text((index + 1) + '. ' + stop.title).fontSize(FontSize.body).fontWeight(Weight.semibold).fontColor($r('app.color.ink')).width('100%')
+                if (stop.summary) { Text(stop.summary).fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%') }
                 if (stop.attentionNote) {
-                  Text(stop.attentionKind + '：' + stop.attentionNote).fontSize(12)
+                  Text(stop.attentionKind + '：' + stop.attentionNote).fontSize(FontSize.callout)
                     .fontColor($r('app.color.danger')).width('100%')
                 }
                 ForEach(stop.files, (file: ReviewGuideFile) => {
                   Text('文件 ' + file.path + (file.note ? ' · ' + file.note : ''))
-                    .fontSize(11).fontColor($r('app.color.ink')).width('100%')
+                    .fontSize(FontSize.caption).fontColor($r('app.color.ink')).width('100%')
                 }, (file: ReviewGuideFile) => file.path)
                 ForEach(stop.excerpts, (excerpt: ReviewGuideExcerpt) => {
                   Text('摘录 ' + excerpt.path + ':' + excerpt.start + '–' + excerpt.end + ' (' + excerpt.side + ')' +
                     (excerpt.caption ? ' · ' + excerpt.caption : ''))
-                    .fontSize(11).fontColor($r('app.color.muted')).width('100%')
+                    .fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
                 }, (excerpt: ReviewGuideExcerpt, index: number) =>
                   excerpt.path + ':' + excerpt.start + ':' + index)
                 ForEach(stop.notes, (note: ReviewGuideNote) => {
                   Column({ space: 2 }) {
-                    Text(note.title + ' · ' + note.path + ':' + note.line).fontSize(12).width('100%')
-                    if (note.body) { Text(note.body).fontSize(11).fontColor($r('app.color.muted')).width('100%') }
+                    Text(note.title + ' · ' + note.path + ':' + note.line).fontSize(FontSize.callout).fontColor($r('app.color.ink')).width('100%')
+                    if (note.body) { Text(note.body).fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%') }
                   }.width('100%')
                 }, (note: ReviewGuideNote, index: number) =>
                   note.path + ':' + note.line + ':' + index)
                 ForEach(stop.questions, (question: string, index: number) => {
-                  Text('？ ' + question).fontSize(11).fontColor($r('app.color.primary')).width('100%')
+                  Text('？ ' + question).fontSize(FontSize.caption).fontColor($r('app.color.primary_text')).width('100%')
                 }, (question: string, index: number) => index + ':' + question)
-              }.width('100%').padding(10).backgroundColor($r('app.color.surface')).borderRadius(10)
+              }.width('100%').padding(14).backgroundColor($r('app.color.card')).borderRadius(Radius.card)
             }
           }, (stop: ReviewGuideStop, index: number) => index + ':' + stop.title)
         }.width('100%').layoutWeight(1)
       } else if (!this.guideBusy) {
-        Text('评审向导会由 Agent 读取这次改动，给出阅读顺序、代码摘录和需要重点关注的问题。')
-          .fontSize(12).fontColor($r('app.color.muted')).width('100%').padding(10)
+        GroupCard() {
+          Text('评审向导会由 Agent 读取这次改动，给出阅读顺序、代码摘录和需要重点关注的问题。')
+            .fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%').padding(14)
+        }
       }
-    }.width('100%').layoutWeight(1).padding(10)
+    }.width('100%').layoutWeight(1).padding({ left: Space.sm, right: Space.sm, bottom: Space.sm })
   }
 
   @Builder
   detailView() {
-    Column({ space: 6 }) {
-      Row({ space: 4 }) {
+    Column({ space: Space.xs }) {
+      Row({ space: Space.xxs }) {
         ForEach([['overview', '概览'], ['files', '文件'], ['discussion', '讨论'], ['review', '评审'], ['guide', '向导']],
           (entry: string[]) => {
-            Button(entry[1]).fontSize(12)
-              .backgroundColor(this.tab === entry[0] ? $r('app.color.primary') : Color.Transparent)
-              .fontColor(this.tab === entry[0] ? $r('app.color.on_primary') : $r('app.color.ink'))
+            Button(entry[1])
+              .fontSize(FontSize.caption)
+              .fontWeight(this.tab === entry[0] ? Weight.semibold : Weight.medium)
+              .layoutWeight(1).constraintSize({ minHeight: 34 }).borderRadius(Radius.tool)
+              .backgroundColor(this.tab === entry[0] ? $r('app.color.info_bg') : $r('app.color.card'))
+              .fontColor(this.tab === entry[0] ? $r('app.color.primary_text') : $r('app.color.ink'))
+              .border({ width: 1, color: this.tab === entry[0] ? $r('app.color.primary') : Color.Transparent })
               .onClick(() => { this.tab = entry[0]; })
           }, (entry: string[]) => entry[0])
-      }.width('100%').padding({ left: 8, right: 8 })
-      if (this.loading) { Text('正在读取 PR…').fontSize(12).fontColor($r('app.color.muted')).padding(10) }
+      }.width('100%').padding({ left: Space.sm, right: Space.sm })
+      if (this.loading) { Text('正在读取 PR…').fontSize(FontSize.callout).fontColor($r('app.color.muted')).padding({ left: Space.md, right: Space.md }) }
       if (this.tab === 'overview') { this.overviewTab() }
       else if (this.tab === 'files') { this.filesTab() }
       else if (this.tab === 'discussion') { this.discussionTab() }
@@ -877,10 +1040,9 @@ export struct PullRequestsPanel {
   }
 
   build() {
-    Column({ space: 4 }) {
+    Column({ space: 0 }) {
       this.header()
-      Divider().color($r('app.color.border'))
       if (this.selected) { this.detailView() } else { this.listView() }
-    }.width('100%').height('100%').backgroundColor($r('app.color.canvas'))
+    }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

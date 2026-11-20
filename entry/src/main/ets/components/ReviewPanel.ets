@@ -1,3 +1,8 @@
+import { TopBar } from './ui/TopBar';
+import { GroupCard } from './ui/GroupCard';
+import { AppButton } from './ui/AppButton';
+import { StatusBadge } from './ui/StatusBadge';
+import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { T3Client } from '../services/T3Client';
 import { CodeLine } from './CodeLine';
 import { DiffLineNumber } from './DiffLineNumber';
@@ -101,91 +106,117 @@ export struct ReviewPanel {
 
   @Builder
   header() {
-    Row({ space: 6 }) {
-      Button({ type: ButtonType.Circle }) {
-        Image($r('app.media.ui_back')).width(22).height(22)
-      }.backgroundColor(Color.Transparent).width(44).height(44).accessibilityText('返回').onClick(() => {
-          if (this.selectedPath) { this.selectedPath = ''; this.start = -1; this.end = -1; return; }
-          this.onBack();
-        })
-      Column({ space: 2 }) {
-        Text(this.selectedPath || '审阅').fontSize(17).fontWeight(FontWeight.Medium).width('100%')
-          .maxLines(2).wordBreak(WordBreak.BREAK_ALL).textOverflow({ overflow: TextOverflow.Ellipsis })
-        Text(this.selectedPath ? this.cwd : (this.sources.length ? this.sources[this.sourceIndex].title : this.cwd))
-          .fontSize(11).fontColor($r('app.color.muted')).width('100%').maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-      Button('刷新').constraintSize({ minHeight: 44 }).fontSize(12).backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
-        .onClick(() => { void this.load(); })
-    }.width('100%').padding({ left: 8, right: 8, top: 4, bottom: 4 })
+    TopBar({
+      title: this.selectedPath || '审阅',
+      subtitle: this.selectedPath ? this.cwd : (this.sources.length ? this.sources[this.sourceIndex].title : this.cwd),
+      showBack: true,
+      closeStyle: !this.selectedPath,
+      backLabel: this.selectedPath ? '返回文件列表' : '关闭审阅',
+      onBack: () => {
+        if (this.selectedPath) { this.selectedPath = ''; this.start = -1; this.end = -1; return; }
+        this.onBack();
+      }
+    }) {
+      AppButton({ label: '刷新', kind: 'text', onTap: () => { void this.load(); } })
+    }
   }
 
   @Builder
   controls() {
-    Column({ space: 8 }) {
-      Row({ space: 8 }) {
-        Button('工作区').fontSize(12)
-          .backgroundColor(this.mode === 'working-tree' ? $r('app.color.primary') : $r('app.color.surface'))
-          .fontColor(this.mode === 'working-tree' ? $r('app.color.on_primary') : $r('app.color.ink'))
+    Column({ space: Space.xs }) {
+      Row({ space: 2 }) {
+        Button('工作区')
+          .fontSize(FontSize.callout)
+          .fontWeight(this.mode === 'working-tree' ? Weight.medium : Weight.regular)
+          .fontColor(this.mode === 'working-tree' ? $r('app.color.ink') : $r('app.color.muted'))
+          .backgroundColor(this.mode === 'working-tree' ? $r('app.color.card') : Color.Transparent)
+          .borderRadius(7).layoutWeight(1).constraintSize({ minHeight: 34 })
           .onClick(() => { this.mode = 'working-tree'; void this.load(); })
-        Button('分支范围').fontSize(12)
-          .backgroundColor(this.mode === 'branch-range' ? $r('app.color.primary') : $r('app.color.surface'))
-          .fontColor(this.mode === 'branch-range' ? $r('app.color.on_primary') : $r('app.color.ink'))
+        Button('分支范围')
+          .fontSize(FontSize.callout)
+          .fontWeight(this.mode === 'branch-range' ? Weight.medium : Weight.regular)
+          .fontColor(this.mode === 'branch-range' ? $r('app.color.ink') : $r('app.color.muted'))
+          .backgroundColor(this.mode === 'branch-range' ? $r('app.color.card') : Color.Transparent)
+          .borderRadius(7).layoutWeight(1).constraintSize({ minHeight: 34 })
           .onClick(() => { this.mode = 'branch-range'; })
-      }.width('100%')
-        if (this.mode === 'branch-range') {
-          TextInput({ placeholder: '对比分支，如 main', text: this.baseRef }).width('100%').height(44).fontColor($r('app.color.ink')).backgroundColor($r('app.color.surface'))
+      }.width('100%').padding(2).backgroundColor($r('app.color.surface'))
+        .border({ width: Sizes.hairline, color: $r('app.color.border') }).borderRadius(9)
+
+      if (this.mode === 'branch-range') {
+        Row() {
+          TextInput({ placeholder: '对比分支，如 main', text: this.baseRef })
+            .width('100%').height(40).fontSize(FontSize.body).fontColor($r('app.color.ink'))
+            .placeholderColor($r('app.color.placeholder')).backgroundColor(Color.Transparent).padding(0)
             .onChange((value: string) => { this.baseRef = value; })
             .onSubmit(() => { void this.load(); })
-        }
+        }.width('100%').padding({ left: Space.sm, right: Space.sm })
+          .backgroundColor($r('app.color.card')).borderRadius(Radius.button)
+      }
       if (this.sources.length > 1) {
         Scroll() {
-          Row({ space: 6 }) {
+          Row({ space: Space.xs }) {
             ForEach(this.sources, (source: ReviewSource, index: number) => {
-              Button(source.title).fontSize(11)
-                .backgroundColor(index === this.sourceIndex ? $r('app.color.selected') : Color.Transparent)
-                .fontColor($r('app.color.ink'))
+              Button(source.title)
+                .fontSize(FontSize.caption)
+                .fontWeight(index === this.sourceIndex ? Weight.semibold : Weight.medium)
+                .constraintSize({ minHeight: 32 }).padding({ left: Space.sm, right: Space.sm }).borderRadius(Radius.tool)
+                .backgroundColor(index === this.sourceIndex ? $r('app.color.info_bg') : $r('app.color.card'))
+                .fontColor(index === this.sourceIndex ? $r('app.color.primary_text') : $r('app.color.ink'))
+                .border({ width: 1, color: index === this.sourceIndex ? $r('app.color.primary') : Color.Transparent })
                 .onClick(() => this.selectSource(index))
             }, (source: ReviewSource, index: number) => source.id)
           }
-        }.scrollable(ScrollDirection.Horizontal).width('100%')
+        }.scrollable(ScrollDirection.Horizontal).width('100%').align(Alignment.Start)
       }
-    }.width('100%').padding({ left: 12, right: 12 })
+    }.width('100%').padding({ left: Space.sm, right: Space.sm, top: Space.xxs, bottom: Space.xs })
   }
 
   @Builder
   fileList() {
-    Column({ space: 8 }) {
+    Column({ space: Space.xs }) {
       if (this.loading) {
-        Text('正在读取 Diff…').fontSize(13).fontColor($r('app.color.muted')).padding(20)
+        GroupCard() {
+          Text('正在读取 Diff…').fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%').padding(Space.md)
+        }
       } else if (this.error) {
-        Text(this.error).fontSize(13).fontColor($r('app.color.danger')).padding(20)
+        GroupCard() {
+          Text(this.error).fontSize(FontSize.callout).fontColor($r('app.color.danger')).width('100%').padding(Space.md)
+        }
       } else if (this.files.length === 0) {
-        Text(this.mode === 'working-tree' ? '工作区没有改动' : '没有可显示的差异')
-          .fontSize(14).fontColor($r('app.color.muted')).padding(24)
+        GroupCard() {
+          Text(this.mode === 'working-tree' ? '工作区没有改动' : '没有可显示的差异')
+            .fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%')
+            .textAlign(TextAlign.Center).padding(Space.lg)
+        }
+      } else {
+        List({ space: 0 }) {
+          ForEach(this.files, (file: DiffFile) => {
+            ListItem() {
+              Column({ space: 3 }) {
+                Row({ space: Space.xs }) {
+                  StatusBadge({
+                    text: file.changeType === 'new' ? 'A' : file.changeType === 'deleted' ? 'D' :
+                      file.changeType.startsWith('rename') ? 'R' : 'M',
+                    tone: file.changeType === 'new' ? 'success' : file.changeType === 'deleted' ? 'danger' : 'neutral'
+                  })
+                  Text(file.path || file.previousPath).fontSize(FontSize.body).fontColor($r('app.color.ink'))
+                    .layoutWeight(1).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+                  Text('+' + file.additions).fontSize(FontSize.badge).fontColor($r('app.color.diff_add_ink'))
+                  Text('-' + file.deletions).fontSize(FontSize.badge).fontColor($r('app.color.diff_del_ink'))
+                }.width('100%').alignItems(VerticalAlign.Center)
+                if (file.previousPath && file.previousPath !== file.path) {
+                  Text('原路径 ' + file.previousPath).fontSize(FontSize.badge).fontColor($r('app.color.muted')).width('100%')
+                }
+              }.padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs }).width('100%')
+                .constraintSize({ minHeight: Sizes.formRowMin }).justifyContent(FlexAlign.Center)
+                .onClick(() => { this.selectedPath = file.path || file.previousPath; this.start = -1; this.end = -1; })
+            }
+          }, (file: DiffFile) => file.path || file.previousPath)
+        }.width('100%').layoutWeight(1)
+          .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
+          .divider({ strokeWidth: Sizes.hairline, color: $r('app.color.separator') })
       }
-      List({ space: 1 }) {
-        ForEach(this.files, (file: DiffFile) => {
-          ListItem() {
-            Column({ space: 3 }) {
-              Row({ space: 6 }) {
-                Text(file.changeType === 'new' ? 'A' : file.changeType === 'deleted' ? 'D' :
-                  file.changeType.startsWith('rename') ? 'R' : 'M')
-                  .fontSize(11).fontColor($r('app.color.muted')).width(16)
-                Text(file.path || file.previousPath).fontSize(14).layoutWeight(1).maxLines(1)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
-                Text('+' + file.additions).fontSize(11).fontColor($r('app.color.diff_add_ink'))
-                Text('-' + file.deletions).fontSize(11).fontColor($r('app.color.diff_del_ink'))
-              }.width('100%')
-              if (file.previousPath && file.previousPath !== file.path) {
-                Text('原路径 ' + file.previousPath).fontSize(10).fontColor($r('app.color.muted')).width('100%')
-              }
-            }.padding({ left: 12, right: 12, top: 10, bottom: 10 }).width('100%')
-              .onClick(() => { this.selectedPath = file.path || file.previousPath; this.start = -1; this.end = -1; })
-          }
-        }, (file: DiffFile) => file.path || file.previousPath)
-      }.width('100%').layoutWeight(1)
-    }.width('100%').layoutWeight(1)
+    }.width('100%').layoutWeight(1).padding({ left: Space.sm, right: Space.sm, bottom: Space.sm })
   }
 
   @Builder
@@ -205,72 +236,91 @@ export struct ReviewPanel {
       CodeLine({ text: row.text, color: this.rowColor(row) }).layoutWeight(1).onClick(() => this.pickRow(hunk, index))
     }.width('100%').constraintSize({ minHeight: (this.codeFontSize + 15) + 'fp' }).alignItems(VerticalAlign.Top).backgroundColor(
       this.start >= 0 && this.end >= 0 && index >= Math.min(this.start, this.end) &&
-        index <= Math.max(this.start, this.end) ? $r('app.color.selected') : this.rowBackground(row))
+        index <= Math.max(this.start, this.end) ? $r('app.color.info_bg') : this.rowBackground(row))
       .onClick(() => this.pickRow(hunk, index))
   }
 
   @Builder
   diffDetail() {
     if (this.file()) {
-      Column({ space: 8 }) {
-        Row({ space: 8 }) {
-          Button('上一文件').fontSize(12).constraintSize({ minHeight: 44 }).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).enabled(this.fileIndex() > 0)
-            .onClick(() => this.stepFile(-1))
-          Button('下一文件').fontSize(12).constraintSize({ minHeight: 44 }).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-            .enabled(this.fileIndex() >= 0 && this.fileIndex() < this.files.length - 1)
-            .onClick(() => this.stepFile(1))
-          Text((this.fileIndex() + 1) + ' / ' + this.files.length).fontSize(11)
+      Column({ space: Space.xs }) {
+        Row({ space: Space.xs }) {
+          AppButton({
+            label: '上一文件', kind: 'secondary', compact: true,
+            disabled: this.fileIndex() <= 0,
+            onTap: () => this.stepFile(-1)
+          })
+          AppButton({
+            label: '下一文件', kind: 'secondary', compact: true,
+            disabled: !(this.fileIndex() >= 0 && this.fileIndex() < this.files.length - 1),
+            onTap: () => this.stepFile(1)
+          })
+          Text((this.fileIndex() + 1) + ' / ' + this.files.length).fontSize(FontSize.caption)
             .fontColor($r('app.color.muted')).layoutWeight(1).textAlign(TextAlign.End)
-        }.width('100%').padding({ left: 10, right: 10, top: 4 })
+        }.width('100%').alignItems(VerticalAlign.Center)
         if (this.start >= 0) {
-          Row({ space: 8 }) {
+          Row({ space: Space.xs }) {
             Text('已选 ' + (Math.min(this.start, this.end) + 1) + '–' + (Math.max(this.start, this.end) + 1) + ' 行')
-              .fontSize(12).fontColor($r('app.color.muted')).layoutWeight(1)
-            Button('复制').fontSize(12).backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
-              .onClick(() => {
+              .fontSize(FontSize.caption).fontColor($r('app.color.muted')).layoutWeight(1)
+            AppButton({
+              label: '复制', kind: 'secondary', compact: true,
+              onTap: () => {
                 const hunk = this.currentHunk();
                 const selected = hunk ? this.diffSelection(hunk) : undefined;
                 if (selected) this.onCopy(selected.text);
-              })
-            Button('评论').fontSize(12).backgroundColor($r('app.color.primary'))
-              .fontColor($r('app.color.on_primary')).onClick(() => { this.commenting = true; })
-          }.width('100%').padding({ left: 10, right: 10, top: 6, bottom: 6 })
-            .backgroundColor($r('app.color.surface')).borderRadius(8)
+              }
+            })
+            AppButton({
+              label: '评论', kind: 'primary', compact: true,
+              onTap: () => { this.commenting = true; }
+            })
+          }.width('100%').padding({ left: 12, right: 12, top: Space.xs, bottom: Space.xs })
+            .backgroundColor($r('app.color.card')).borderRadius(Radius.card).alignItems(VerticalAlign.Center)
         }
         if (this.hunks().length === 0) {
-          Text('该文件没有可显示的文本 Diff（可能是二进制或仅元数据）。')
-            .fontSize(13).fontColor($r('app.color.muted')).padding(20)
+          GroupCard() {
+            Text('该文件没有可显示的文本 Diff（可能是二进制或仅元数据）。')
+              .fontSize(FontSize.callout).fontColor($r('app.color.muted')).padding(Space.md)
+          }
         }
-        List({ space: 2 }) {
+        List({ space: Space.xs }) {
           ForEach(this.hunks(), (hunk: DiffHunk) => {
             ListItem() {
               Column({ space: 0 }) {
                 Text(hunk.header).fontSize(Math.max(8, this.codeFontSize - 2)).fontFamily('monospace').fontColor($r('app.color.muted'))
-                  .width('100%').padding({ left: 8, top: 4, bottom: 4 }).backgroundColor($r('app.color.surface'))
+                  .width('100%').padding({ left: 10, right: 10, top: 6, bottom: 6 }).backgroundColor($r('app.color.surface'))
                 ForEach(hunk.rows, (row: DiffRow, index: number) => {
                   this.diffRow(hunk, row, index)
                 }, (row: DiffRow, index: number) => hunk.header + ':' + index)
-              }.width('100%')
+              }.width('100%').backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
             }
           }, (hunk: DiffHunk) => this.selectedPath + ':' + hunk.header)
         }.width('100%').layoutWeight(1)
         if (this.commenting) {
-          Column({ space: 8 }) {
-            TextArea({ placeholder: '说明这段改动的问题或意图', text: this.comment })
-              .height(90).width('100%').onChange((value: string) => { this.comment = value; })
-            Row({ space: 8 }) {
-              Button('取消').fontSize(12).backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
-                .onClick(() => { this.commenting = false; this.comment = ''; })
-              Button('加入输入').fontSize(12).backgroundColor($r('app.color.primary'))
-                .fontColor($r('app.color.on_primary')).enabled(!!this.comment.trim())
-                .onClick(() => {
-                  const hunk = this.currentHunk();
-                  if (hunk) this.submitComment(hunk);
+          GroupCard({ title: '行内评论' }) {
+            Column({ space: Space.xs }) {
+              TextArea({ placeholder: '说明这段改动的问题或意图', text: this.comment })
+                .constraintSize({ minHeight: 88 }).width('100%').fontSize(FontSize.body).fontColor($r('app.color.ink'))
+                .placeholderColor($r('app.color.placeholder')).backgroundColor($r('app.color.group')).borderRadius(Radius.tool)
+                .padding(Space.xs).onChange((value: string) => { this.comment = value; })
+              Row({ space: Space.xs }) {
+                AppButton({
+                  label: '取消', kind: 'secondary', compact: true,
+                  onTap: () => { this.commenting = false; this.comment = ''; }
                 })
-            }.width('100%')
-          }.width('100%').padding(10).backgroundColor($r('app.color.surface')).borderRadius(10)
+                AppButton({
+                  label: '加入输入', kind: 'primary', compact: true,
+                  disabled: !this.comment.trim(),
+                  onTap: () => {
+                    const hunk = this.currentHunk();
+                    if (hunk) this.submitComment(hunk);
+                  }
+                })
+              }.width('100%')
+            }.width('100%').padding(12)
+          }
         }
-      }.width('100%').layoutWeight(1)
+      }.width('100%').layoutWeight(1).padding({ left: Space.sm, right: Space.sm, top: Space.xxs, bottom: Space.sm })
     }
   }
 
@@ -292,11 +342,10 @@ export struct ReviewPanel {
   }
 
   build() {
-    Column({ space: 6 }) {
+    Column({ space: 0 }) {
       this.header()
-      Divider().color($r('app.color.border'))
       if (!this.selectedPath) { this.controls() }
       if (this.selectedPath) { this.diffDetail() } else { this.fileList() }
-    }.width('100%').height('100%').backgroundColor($r('app.color.canvas')).foregroundColor($r('app.color.ink'))
+    }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

@@ -1,3 +1,8 @@
+import { TopBar } from './ui/TopBar';
+import { GroupCard } from './ui/GroupCard';
+import { AppButton } from './ui/AppButton';
+import { StatusBadge } from './ui/StatusBadge';
+import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { T3Client } from '../services/T3Client';
 import { RefView, VcsChange, VcsView, emptyVcs, pullRequestStateLabel } from '../protocol/R5';
 import { record, text } from '../protocol/Wire';
@@ -136,141 +141,191 @@ export struct GitPanel {
 
   @Builder
   header() {
-    Row({ space: 6 }) {
-      Button({ type: ButtonType.Circle }) {
-        Image($r('app.media.ui_back')).width(22).height(22)
-      }.backgroundColor(Color.Transparent).width(44).height(44).accessibilityText('返回').onClick(() => {
-          if (this.view !== 'overview') { this.view = 'overview'; return; }
-          this.onBack();
-        })
-      Column({ space: 2 }) {
-        Text(this.view === 'commit' ? '提交' : this.view === 'branches' ? '分支' : 'Git')
-          .fontSize(17).fontWeight(FontWeight.Medium).width('100%')
-        Text((this.status.refName || 'Detached HEAD') + ' · ' + this.cwd).fontSize(11)
-          .fontColor($r('app.color.muted')).width('100%').maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-      if (this.view === 'overview') {
-        Button('刷新').constraintSize({ minHeight: 44 }).fontSize(12).backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
-          .onClick(() => { void this.refreshStatus(); })
-        Button('分支').constraintSize({ minHeight: 44 }).fontSize(12).backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
-          .onClick(() => { this.view = 'branches'; void this.loadRefs(); })
+    TopBar({
+      title: this.view === 'commit' ? '提交' : this.view === 'branches' ? '分支' : 'Git',
+      subtitle: (this.status.refName || 'Detached HEAD') + ' · ' + this.cwd,
+      showBack: true,
+      closeStyle: this.view === 'overview',
+      backLabel: this.view === 'overview' ? '关闭 Git' : '返回 Git',
+      onBack: () => {
+        if (this.view !== 'overview') { this.view = 'overview'; return; }
+        this.onBack();
       }
-    }.width('100%').padding({ left: 8, right: 8, top: 4, bottom: 4 })
+    }) {
+      if (this.view === 'overview') {
+        AppButton({ label: '刷新', kind: 'text', onTap: () => { void this.refreshStatus(); } })
+        AppButton({ label: '分支', kind: 'text', onTap: () => { this.view = 'branches'; void this.loadRefs(); } })
+      }
+    }
   }
 
   @Builder
   statusCard() {
-    Column({ space: 6 }) {
-      Text(this.summary()).fontSize(14).fontWeight(FontWeight.Medium).width('100%')
-      if (this.status.files.length) {
-        Text('+' + this.status.insertions + ' / -' + this.status.deletions)
-          .fontSize(11).fontColor($r('app.color.muted')).width('100%')
-      }
-      if (this.status.prNumber > 0 && this.status.prTitle) {
-        Text('PR #' + this.status.prNumber + ' · ' + this.status.prTitle).fontSize(12)
-          .fontColor($r('app.color.primary')).width('100%').maxLines(2)
-      }
-    }.padding(12).width('100%').backgroundColor($r('app.color.surface')).borderRadius(10)
+    GroupCard({ title: '工作区状态' }) {
+      Column({ space: Space.xs }) {
+        Text(this.summary()).fontSize(FontSize.body).fontWeight(Weight.medium).fontColor($r('app.color.ink')).width('100%')
+        if (this.status.files.length) {
+          Row({ space: Space.xs }) {
+            Text('+' + this.status.insertions)
+              .fontSize(FontSize.badge).fontWeight(Weight.medium).fontColor($r('app.color.diff_add_ink'))
+              .backgroundColor($r('app.color.diff_add')).borderRadius(Radius.badge)
+              .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+            Text('-' + this.status.deletions)
+              .fontSize(FontSize.badge).fontWeight(Weight.medium).fontColor($r('app.color.diff_del_ink'))
+              .backgroundColor($r('app.color.diff_del')).borderRadius(Radius.badge)
+              .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+          }.width('100%')
+        }
+        if (this.status.prNumber > 0 && this.status.prTitle) {
+          StatusBadge({ text: 'PR #' + this.status.prNumber + ' · ' + this.status.prTitle, tone: 'info' })
+        }
+        Row({ space: Space.xs }) {
+          Column() {
+            AppButton({
+              label: '提交', kind: 'primary', compact: true, fill: true,
+              disabled: this.busy || !this.status.hasWorkingTreeChanges,
+              onTap: () => { this.view = 'commit'; }
+            })
+          }.layoutWeight(1)
+          Column() {
+            AppButton({
+              label: '推送', kind: 'secondary', compact: true, fill: true,
+              disabled: this.busy,
+              onTap: () => { void this.run('push'); }
+            })
+          }.layoutWeight(1)
+          Column() {
+            AppButton({
+              label: '拉取', kind: 'secondary', compact: true, fill: true,
+              disabled: this.busy || !this.status.hasPrimaryRemote,
+              onTap: () => { void this.pull(); }
+            })
+          }.layoutWeight(1)
+        }.width('100%').padding({ top: Space.xs })
+      }.padding({ left: 14, right: 14, top: Space.sm, bottom: Space.sm }).width('100%').alignItems(HorizontalAlign.Start)
+    }
   }
 
   @Builder
   overview() {
-    Column({ space: 12 }) {
+    Column({ space: Space.sm }) {
       this.statusCard()
-      Row({ space: 8 }) {
-        Button('提交').layoutWeight(1).constraintSize({ minHeight: 44 }).borderRadius(12)
-          .backgroundColor($r('app.color.primary')).fontColor($r('app.color.on_primary')).enabled(!this.busy && this.status.hasWorkingTreeChanges)
-          .onClick(() => { this.view = 'commit'; })
-        Button('推送').layoutWeight(1).constraintSize({ minHeight: 44 }).borderRadius(12)
-          .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).enabled(!this.busy)
-          .onClick(() => { void this.run('push'); })
-        Button('拉取').layoutWeight(1).constraintSize({ minHeight: 44 }).borderRadius(12)
-          .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).enabled(!this.busy && this.status.hasPrimaryRemote)
-          .onClick(() => { void this.pull(); })
-      }.width('100%')
       if (this.status.hasWorkingTreeChanges) {
-        Text('改动文件').fontSize(13).fontWeight(FontWeight.Medium).width('100%')
-        List({ space: 1 }) {
+        Text('改动文件')
+          .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted'))
+          .padding({ left: Space.xxs, right: Space.xxs, top: Space.xxs }).width('100%')
+        List({ space: 0 }) {
           ForEach(this.status.files, (file: VcsChange) => {
             ListItem() {
-              Row({ space: 8 }) {
-                Text(file.path).fontSize(13).layoutWeight(1).maxLines(2)
+              Row({ space: Space.xs }) {
+                Text(file.path).fontSize(FontSize.callout).fontColor($r('app.color.ink')).layoutWeight(1).maxLines(2)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
-                Text('+' + file.insertions).fontSize(11).fontColor($r('app.color.diff_add_ink'))
-                Text('-' + file.deletions).fontSize(11).fontColor($r('app.color.diff_del_ink'))
-              }.constraintSize({ minHeight: 48 }).padding({ left: 10, right: 10, top: 8, bottom: 8 }).width('100%')
+                Text('+' + file.insertions).fontSize(FontSize.badge).fontColor($r('app.color.diff_add_ink'))
+                Text('-' + file.deletions).fontSize(FontSize.badge).fontColor($r('app.color.diff_del_ink'))
+              }.constraintSize({ minHeight: Sizes.formRowMin }).padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs }).width('100%')
             }
           }, (file: VcsChange) => file.path)
-        }.width('100%').height(220)
+        }.width('100%').constraintSize({ maxHeight: 320 })
+          .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
+          .divider({ strokeWidth: Sizes.hairline, color: $r('app.color.separator') })
       } else {
-        Text('没有未提交改动').fontSize(13).fontColor($r('app.color.muted')).width('100%')
+        GroupCard() {
+          Text('没有未提交改动').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+            .width('100%').padding(14)
+        }
       }
-      if (this.error) { Text(this.error).fontSize(12).fontColor($r('app.color.danger')).width('100%') }
-      if (this.notice) { Text(this.notice).fontSize(12).fontColor($r('app.color.muted')).width('100%') }
-    }.width('100%').padding(12)
+      if (this.error) { Text(this.error).fontSize(FontSize.callout).fontColor($r('app.color.danger')).width('100%') }
+      if (this.notice) { Text(this.notice).fontSize(FontSize.callout).fontColor($r('app.color.primary_text')).width('100%') }
+    }.width('100%').padding({ left: Space.sm, right: Space.sm, bottom: Space.lg }).alignItems(HorizontalAlign.Start)
   }
 
   @Builder
   commitView() {
-    Column({ space: 12 }) {
-      TextArea({ placeholder: '提交信息', text: this.commitMessage })
-        .height(110).width('100%').enabled(!this.busy)
-        .onChange((value: string) => { this.commitMessage = value; })
-      Row({ space: 8 }) {
-        Toggle({ type: ToggleType.Checkbox, isOn: this.featureBranch })
-          .onChange((value: boolean) => { this.featureBranch = value; })
-        Text('创建新功能分支').fontSize(13).layoutWeight(1)
-      }.width('100%')
-      Button('提交').width('100%').constraintSize({ minHeight: 44 }).borderRadius(12)
-        .backgroundColor($r('app.color.primary')).fontColor($r('app.color.on_primary')).enabled(!this.busy && !!this.commitMessage.trim())
-        .onClick(() => { void this.run('commit'); })
-      Button('提交并推送').width('100%').constraintSize({ minHeight: 44 }).borderRadius(12)
-        .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).enabled(!this.busy && !!this.commitMessage.trim() && this.status.hasPrimaryRemote)
-        .onClick(() => { void this.run('commit_push'); })
-      Button('提交、推送并创建 PR').width('100%').constraintSize({ minHeight: 44 }).borderRadius(12)
-        .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).enabled(!this.busy && !!this.commitMessage.trim())
-        .onClick(() => { void this.run('commit_push_pr'); })
-      if (this.error) { Text(this.error).fontSize(12).fontColor($r('app.color.danger')).width('100%') }
-      if (this.notice) { Text(this.notice).fontSize(12).fontColor($r('app.color.muted')).width('100%') }
-    }.width('100%').padding(12)
+    Column({ space: Space.sm }) {
+      GroupCard({ title: '提交说明' }) {
+        Column({ space: Space.xs }) {
+          TextArea({ placeholder: '提交信息', text: this.commitMessage })
+            .constraintSize({ minHeight: 110 }).width('100%').enabled(!this.busy)
+            .fontSize(FontSize.body).fontColor($r('app.color.ink')).placeholderColor($r('app.color.placeholder'))
+            .backgroundColor(Color.Transparent).padding(0)
+            .onChange((value: string) => { this.commitMessage = value; })
+        }.width('100%').padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+        Row({ space: Space.sm }) {
+          Text('创建新功能分支').fontSize(FontSize.body).fontColor($r('app.color.ink')).layoutWeight(1)
+          Toggle({ type: ToggleType.Switch, isOn: this.featureBranch })
+            .selectedColor($r('app.color.primary')).switchPointColor(Color.White)
+            .onChange((value: boolean) => { this.featureBranch = value; })
+        }.width('100%').padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+          .constraintSize({ minHeight: Sizes.formRowMin })
+          .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+      }
+      AppButton({
+        label: '提交', kind: 'primary', fill: true,
+        disabled: this.busy || !this.commitMessage.trim(),
+        onTap: () => { void this.run('commit'); }
+      })
+      AppButton({
+        label: '提交并推送', kind: 'secondary', fill: true,
+        disabled: this.busy || !this.commitMessage.trim() || !this.status.hasPrimaryRemote,
+        onTap: () => { void this.run('commit_push'); }
+      })
+      AppButton({
+        label: '提交、推送并创建 PR', kind: 'secondary', fill: true,
+        disabled: this.busy || !this.commitMessage.trim(),
+        onTap: () => { void this.run('commit_push_pr'); }
+      })
+      if (this.error) { Text(this.error).fontSize(FontSize.callout).fontColor($r('app.color.danger')).width('100%') }
+      if (this.notice) { Text(this.notice).fontSize(FontSize.callout).fontColor($r('app.color.primary_text')).width('100%') }
+    }.width('100%').padding({ left: Space.sm, right: Space.sm, bottom: Space.lg }).alignItems(HorizontalAlign.Start)
   }
 
   @Builder
   branchesView() {
-    Column({ space: 8 }) {
-      TextInput({ placeholder: '搜索分支', text: this.branchQuery }).height(40).width('100%')
-        .onChange((value: string) => { this.branchQuery = value; })
-        .onSubmit(() => { void this.loadRefs(); })
-      List({ space: 1 }) {
+    Column({ space: Space.xs }) {
+      Row({ space: Space.xs }) {
+        Image($r('app.media.ui_search')).width(16).height(16).opacity(0.6).accessibilityLevel('no')
+        TextInput({ placeholder: '搜索分支', text: this.branchQuery })
+          .layoutWeight(1).height(40).fontSize(FontSize.body).fontColor($r('app.color.ink'))
+          .placeholderColor($r('app.color.placeholder')).backgroundColor(Color.Transparent).padding(0)
+          .onChange((value: string) => { this.branchQuery = value; })
+          .onSubmit(() => { void this.loadRefs(); })
+      }.width('100%').padding({ left: Space.sm, right: Space.sm }).backgroundColor($r('app.color.card'))
+        .borderRadius(Radius.button).alignItems(VerticalAlign.Center)
+
+      List({ space: 0 }) {
         ForEach(this.refs, (ref: RefView) => {
           ListItem() {
-            Row({ space: 8 }) {
-              Text(ref.current ? '当前' : '分支').fontSize(11)
-                .fontColor(ref.current ? $r('app.color.primary') : $r('app.color.muted'))
-              Text(ref.name).fontSize(13).layoutWeight(1).maxLines(1)
+            Row({ space: Space.xs }) {
+              StatusBadge({
+                text: ref.current ? '当前' : ref.isRemote ? '远端' : '分支',
+                tone: ref.current ? 'info' : 'neutral'
+              })
+              Text(ref.name).fontSize(FontSize.body).fontColor($r('app.color.ink')).layoutWeight(1).maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
-              if (ref.worktreePath && !ref.current) { Text('工作树占用').fontSize(10).fontColor($r('app.color.muted')) }
-              if (ref.isRemote) { Text('远端').fontSize(10).fontColor($r('app.color.muted')) }
-            }.constraintSize({ minHeight: 48 }).padding({ left: 10, right: 10 }).width('100%')
+              if (ref.worktreePath && !ref.current) {
+                StatusBadge({ text: '工作树占用', tone: 'warning' })
+              }
+            }.constraintSize({ minHeight: Sizes.formRowMin }).padding({ left: 14, right: 14 }).width('100%')
               .onClick(() => {
                 if (ref.current || this.busy) return;
                 AlertDialog.show({ title: '切换分支？', message: ref.name + (ref.worktreePath ? '\n该分支已在其他工作树占用' : ''),
                   primaryButton: { value: '取消', action: () => {} },
-                  secondaryButton: { value: '切换', action: () => this.confirmCheckout(ref) } });
+                  secondaryButton: { value: '切换', action: () => { this.confirmCheckout(ref); } } });
               })
           }
         }, (ref: RefView) => ref.name)
       }.width('100%').layoutWeight(1)
-      if (this.error) { Text(this.error).fontSize(12).fontColor($r('app.color.danger')).width('100%') }
-      if (this.notice) { Text(this.notice).fontSize(12).fontColor($r('app.color.muted')).width('100%') }
-    }.width('100%').padding(12).layoutWeight(1)
+        .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
+        .divider({ strokeWidth: Sizes.hairline, color: $r('app.color.separator') })
+
+      if (this.error) { Text(this.error).fontSize(FontSize.callout).fontColor($r('app.color.danger')).width('100%') }
+      if (this.notice) { Text(this.notice).fontSize(FontSize.callout).fontColor($r('app.color.primary_text')).width('100%') }
+    }.width('100%').padding({ left: Space.sm, right: Space.sm, top: Space.xxs, bottom: Space.sm }).layoutWeight(1)
   }
 
   build() {
-    Column({ space: 6 }) {
+    Column({ space: 0 }) {
       this.header()
-      Divider().color($r('app.color.border'))
       if (this.view === 'commit') {
         Scroll() { this.commitView() }.width('100%').layoutWeight(1).align(Alignment.TopStart)
       }
@@ -278,7 +333,7 @@ export struct GitPanel {
       else {
         Scroll() { this.overview() }.width('100%').layoutWeight(1).align(Alignment.TopStart)
       }
-      if (this.busy) { LoadingProgress().width(28).height(28) }
-    }.width('100%').height('100%').backgroundColor($r('app.color.canvas')).foregroundColor($r('app.color.ink'))
+      if (this.busy) { LoadingProgress().width(24).height(24).margin({ bottom: Space.xs }) }
+    }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

@@ -1,6 +1,10 @@
+import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { T3Client } from '../services/T3Client';
 import { record, objects } from '../protocol/Wire';
 import { DevicePreviewChoice, deviceChoices, safeDeviceHubBase } from '../protocol/DevicePreview';
+import { AppButton } from './ui/AppButton';
+import { StatusBadge } from './ui/StatusBadge';
+import { TopBar } from './ui/TopBar';
 
 interface DeviceConfigureInput { enabled: boolean; onboardingCompleted: boolean; }
 interface DeviceInspectInput { inspectOnly: boolean; }
@@ -78,52 +82,84 @@ export struct DevicePickerPanel {
     finally { if (generation === this.generation) { this.busy = false; this.openingDevice = false; } }
   }
   build() {
-    Column({ space: 12 }) {
-      Row({ space: 8 }) {
-        Button('返回', { type: ButtonType.Normal }).height(44).backgroundColor(Color.Transparent)
-          .fontColor($r('app.color.ink')).onClick(() => this.onBack())
-        Text('选择设备').fontSize(20).fontWeight(FontWeight.Medium).fontColor($r('app.color.ink')).layoutWeight(1)
-        Button('刷新', { type: ButtonType.Normal }).height(44).backgroundColor($r('app.color.surface'))
-          .fontColor($r('app.color.ink')).enabled(!this.busy).onClick(() => { void this.refresh(); })
-      }.width('100%')
-      Text('普通 iOS Simulator 支持 MJPEG 操作；Android Emulator 支持原生 H.264 预览，开启控制后可操作。WebRTC 宿主与真机暂不可用。')
-        .fontSize(13).fontColor($r('app.color.muted')).width('100%')
-      if (this.supportDisabled) {
-        Text('当前环境尚未启用设备支持。').fontSize(14).fontColor($r('app.color.muted')).width('100%')
-        Button('启用设备支持').constraintSize({ minHeight: 44 }).backgroundColor($r('app.color.primary'))
-          .fontColor($r('app.color.on_primary')).enabled(!this.busy && this.connection?.canScope('settings:write') !== false)
-          .onClick(() => AlertDialog.show({ title: '启用设备支持？',
-            message: '将在当前环境启动设备服务，保留现有 Agent 访问设置。',
-            primaryButton: { value: '取消', action: () => {} },
-            secondaryButton: { value: '启用', action: () => { void this.enableSupport(); } } }))
+    Column() {
+      TopBar({ title: '选择设备', showBack: true, onBack: () => this.onBack() }) {
+        AppButton({ label: '刷新', kind: 'text', compact: true, disabled: this.busy, onTap: () => { void this.refresh(); } })
       }
-      if (this.error) Text(this.error).fontSize(13).fontColor($r('app.color.danger')).width('100%')
-      if (this.busy) Text(this.openingDevice ? '正在打开设备…' : '正在检查远端主机和设备…').fontSize(13).fontColor($r('app.color.muted'))
-      Scroll() {
-        Column({ space: 12 }) {
-          ForEach(this.hostNotes, (note: string) => {
-            Text(note).fontSize(12).fontColor($r('app.color.muted')).width('100%').padding(12)
-              .backgroundColor($r('app.color.surface')).borderRadius(12)
-          }, (note: string) => note)
-          if (!this.busy && !this.devices.length && !this.error) {
-            Text('未发现设备。请在远端主机准备模拟器，再刷新。').fontSize(14).fontColor($r('app.color.muted')).padding(24)
-          }
-          ForEach(this.devices, (device: DevicePreviewChoice) => {
-            Button({ type: ButtonType.Normal }) {
-              Row({ space: 12 }) {
-                Column({ space: 5 }) {
-                  Text(device.name).fontSize(16).fontWeight(FontWeight.Medium).fontColor($r('app.color.ink')).width('100%')
-                  Text(device.hostLabel + ' · ' + device.platform + ' ' + device.version + (device.booted ? ' · 已启动' : ' · 未启动'))
-                    .fontSize(12).fontColor($r('app.color.muted')).width('100%')
-                  Text(device.reason).fontSize(12).fontColor($r('app.color.muted')).width('100%')
-                }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-                Text(device.supported ? '打开' : '暂不可用').fontSize(12).fontColor($r('app.color.muted'))
-              }.width('100%').padding(14)
-            }.width('100%').constraintSize({ minHeight: 72 }).backgroundColor($r('app.color.surface')).borderRadius(12)
-              .enabled(device.supported && !this.busy).onClick(() => { void this.openDevice(device); })
-          }, (device: DevicePreviewChoice) => JSON.stringify([device.hostId, device.id]))
-        }.width('100%')
-      }.layoutWeight(1).width('100%').align(Alignment.TopStart)
-    }.padding(16).width('100%').height('100%').backgroundColor($r('app.color.canvas'))
+      Column({ space: Space.sm }) {
+        Text('普通 iOS Simulator 支持 MJPEG 操作；Android Emulator 支持原生 H.264 预览，开启控制后可操作。WebRTC 宿主与真机暂不可用。')
+          .fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.muted')).width('100%')
+        if (this.supportDisabled) {
+          Column({ space: Space.sm }) {
+            Text('当前环境尚未启用设备支持。').fontSize(FontSize.body).fontColor($r('app.color.ink')).width('100%')
+            AppButton({
+              label: '启用设备支持',
+              kind: 'primary',
+              fill: true,
+              disabled: this.busy || this.connection?.canScope('settings:write') === false,
+              onTap: () => {
+                AlertDialog.show({
+                  title: '启用设备支持？',
+                  message: '将在当前环境启动设备服务，保留现有 Agent 访问设置。',
+                  primaryButton: { value: '取消', action: () => {} },
+                  secondaryButton: { value: '启用', action: () => { void this.enableSupport(); } }
+                });
+              }
+            })
+          }.width('100%').padding(Space.md).backgroundColor($r('app.color.card')).borderRadius(Radius.card)
+        }
+        if (this.error) {
+          Text(this.error).fontSize(FontSize.callout).fontColor($r('app.color.danger')).width('100%')
+        }
+        if (this.busy) {
+          Text(this.openingDevice ? '正在打开设备…' : '正在检查远端主机和设备…')
+            .fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%')
+        }
+        Scroll() {
+          Column({ space: Space.xs }) {
+            ForEach(this.hostNotes, (note: string) => {
+              Text(note).fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted')).width('100%')
+                .padding(Space.md).backgroundColor($r('app.color.card')).borderRadius(Radius.card)
+            }, (note: string) => note)
+            if (!this.busy && !this.devices.length && !this.error) {
+              Column() {
+                Text('未发现设备。请在远端主机准备模拟器，再刷新。')
+                  .fontSize(FontSize.body).fontColor($r('app.color.muted')).width('100%')
+              }.width('100%').padding(Space.md).backgroundColor($r('app.color.card')).borderRadius(Radius.card)
+            }
+            ForEach(this.devices, (device: DevicePreviewChoice) => {
+              Button({ type: ButtonType.Normal }) {
+                Row({ space: Space.sm }) {
+                  Column({ space: Space.xxs }) {
+                    Row({ space: Space.xs }) {
+                      Text(device.name)
+                        .fontSize(FontSize.body).lineHeight(LineHeight.body).fontWeight(Weight.medium)
+                        .fontColor($r('app.color.ink')).layoutWeight(1).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+                      StatusBadge({
+                        text: device.booted ? '已启动' : '未启动',
+                        tone: device.booted ? 'success' : 'neutral'
+                      })
+                    }.width('100%').alignItems(VerticalAlign.Center)
+                    Text(device.hostLabel + ' · ' + device.platform + ' ' + device.version)
+                      .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted')).width('100%')
+                    if (device.reason) {
+                      Text(device.reason)
+                        .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted')).width('100%')
+                    }
+                  }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+                  if (device.supported) {
+                    Image($r('app.media.ui_chevron_right')).width(Sizes.chevron).height(Sizes.chevron).opacity(0.45).accessibilityLevel('no')
+                  } else {
+                    StatusBadge({ text: '暂不可用', tone: 'neutral' })
+                  }
+                }.width('100%').padding(Space.md)
+              }.width('100%').padding(0).constraintSize({ minHeight: 72 })
+                .backgroundColor($r('app.color.card')).borderRadius(Radius.card)
+                .enabled(device.supported && !this.busy).onClick(() => { void this.openDevice(device); })
+            }, (device: DevicePreviewChoice) => JSON.stringify([device.hostId, device.id]))
+          }.width('100%').alignItems(HorizontalAlign.Start)
+        }.layoutWeight(1).width('100%').align(Alignment.TopStart)
+      }.layoutWeight(1).width('100%').padding({ left: Space.page, right: Space.page, top: Space.xs, bottom: Space.md })
+    }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

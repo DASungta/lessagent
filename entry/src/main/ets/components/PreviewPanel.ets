@@ -469,49 +469,76 @@ export struct PreviewPanel {
       (this.tabId ? this.controlling : !!this.address.trim());
   }
   build() {
-    Column({ space: 8 }) {
-      Row({ space: 8 }) {
-        Button('返回', { type: ButtonType.Normal }).constraintSize({ minWidth: 44, minHeight: 44 }).backgroundColor(Color.Transparent)
-          .fontColor($r('app.color.ink')).onClick(() => { this.cancelFirstFrameRetry(); this.onBack(); })
-        Text('浏览器预览').fontSize(20).fontColor($r('app.color.ink')).layoutWeight(1)
+    Column({ space: 10 }) {
+      Row({ space: 6 }) {
+        Button({ type: ButtonType.Circle }) {
+          Image($r('app.media.ui_back')).width(22).height(22)
+        }
+          .width(40).height(40).backgroundColor(Color.Transparent)
+          .accessibilityText('返回').onClick(() => { this.cancelFirstFrameRetry(); this.onBack(); })
+        Text('浏览器预览').fontSize(17).fontWeight(FontWeight.Medium).fontColor($r('app.color.ink')).layoutWeight(1)
         Button(this.waitingForFrame || this.frame || this.error ? '重新连接' : '连接')
-          .constraintSize({ minWidth: 44, minHeight: 44 }).backgroundColor($r('app.color.primary')).fontColor($r('app.color.on_primary'))
-          .enabled(this.foreground && !this.busy && !!this.tabId).onClick(() => { void this.connect(); })
-      }.width('100%')
+          .constraintSize({ minWidth: 64, minHeight: 38 })
+          .padding({ left: 14, right: 14 })
+          .fontSize(13)
+          .fontWeight(FontWeight.Medium)
+          .borderRadius(12)
+          .backgroundColor($r('app.color.prominent'))
+          .fontColor($r('app.color.on_prominent'))
+          .enabled(this.foreground && !this.busy && !!this.tabId)
+          .onClick(() => { void this.connect(); })
+      }.width('100%').constraintSize({ minHeight: 52 }).alignItems(VerticalAlign.Center)
+
       Row({ space: 8 }) {
         Select(this.tabs.map((tab: PreviewTab): SelectOption => ({ value: tab.title })))
           .value(this.tabs.find((tab: PreviewTab): boolean => tab.tabId === this.tabId)?.title || '选择页面')
-          .layoutWeight(1).constraintSize({ minHeight: 44 }).enabled(!this.busy && this.foreground && this.tabs.length > 0)
+          .layoutWeight(1).constraintSize({ minHeight: 40 }).enabled(!this.busy && this.foreground && this.tabs.length > 0)
           .onSelect((index: number) => { if (this.tabs[index]) this.selectTab(this.tabs[index].tabId); })
-        Button('更多', { type: ButtonType.Normal }).constraintSize({ minWidth: 44, minHeight: 44 })
-          .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).accessibilityText('更多页面操作')
+        Button('更多', { type: ButtonType.Normal }).constraintSize({ minWidth: 56, minHeight: 40 })
+          .padding({ left: 14, right: 14 })
+          .fontSize(13)
+          .borderRadius(12)
+          .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink')).accessibilityText('更多页面操作')
           .bindMenu([
             { value: '更新标签列表', enabled: !this.busy && this.foreground, action: () => { void this.refreshTabs(); } },
             { value: '新建标签', enabled: !this.busy && this.foreground, action: () => this.newTab() },
             { value: '关闭远端页面', enabled: !!this.tabId && !this.busy, action: () => this.confirmCloseTab() }
           ])
-      }.width('100%')
+      }.width('100%').alignItems(VerticalAlign.Center)
+
       Row({ space: 8 }) {
         TextInput({ placeholder: '远端网页地址，例如 http://localhost:3000', text: this.address })
-          .layoutWeight(1).constraintSize({ minHeight: 44 })
+          .layoutWeight(1).constraintSize({ minHeight: 40 })
+          .fontSize(14).fontColor($r('app.color.ink')).placeholderColor($r('app.color.placeholder'))
+          .backgroundColor(Color.Transparent).padding({ left: 8, right: 4 })
           .onChange((value: string) => { if (value !== this.address) { this.address = value; this.addressDirty = true; } })
           .onFocus(() => { this.addressEditing = true; })
           .onBlur(() => { this.addressEditing = false; this.syncAddress(); })
-        Button('前往', { type: ButtonType.Normal }).constraintSize({ minWidth: 44, minHeight: 44 }).backgroundColor($r('app.color.surface'))
-          .fontColor($r('app.color.ink')).enabled(this.canNavigate()).onClick(() => this.navigate())
-      }.width('100%')
+        Button('前往', { type: ButtonType.Normal }).constraintSize({ minWidth: 56, minHeight: 36 })
+          .padding({ left: 12, right: 12 })
+          .fontSize(13)
+          .borderRadius(10)
+          .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink'))
+          .enabled(this.canNavigate()).onClick(() => this.navigate())
+      }
+      .width('100%')
+      .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+      .backgroundColor($r('app.color.card'))
+      .borderRadius(14)
+      .alignItems(VerticalAlign.Center)
+
       Text((this.pendingAdjustment ? '等待' + this.pendingAdjustment + '后的画面' : this.status) +
         (this.controller ? ' · ' + this.controlStatus() : '') +
         (this.viewportLabel ? ' · ' + this.viewportLabel : '') + (this.frameCount ? ' · ' + this.frameCount + ' 帧' : '')).fontSize(12)
         .fontColor($r('app.color.muted')).width('100%')
-      if (this.error) Text(this.error).fontSize(13).fontColor($r('app.color.danger'))
+      if (this.error) Text(this.error).fontSize(13).fontColor($r('app.color.danger')).width('100%')
       if (this.frameSkipped) {
         Text((this.frame ? '已跳过超限画面，当前显示上一帧。' : '已跳过超限画面。') +
           (this.canZoom() ? '可换一个缩放比例。' : '等待可用画面。'))
           .fontSize(13).fontColor($r('app.color.muted')).width('100%')
       }
       if (this.repairBlocked() && !this.busy && !this.pendingAdjustment && !this.error) {
-        Text('恢复未确认，请选择不同的固定尺寸并应用。').fontSize(13).fontColor($r('app.color.danger'))
+        Text('恢复未确认，请选择不同的固定尺寸并应用。').fontSize(13).fontColor($r('app.color.danger')).width('100%')
       }
       Stack() {
         if (this.frame) Image(this.frame).objectFit(ImageFit.Contain).width('100%').height('100%')
@@ -519,26 +546,32 @@ export struct PreviewPanel {
           this.waitingForFrame ? '正在等待远端页面的首帧…' :
           this.tabId ? '连接后显示所选页面' : '输入地址并前往，打开远端页面')
           .fontSize(14).fontColor($r('app.color.muted')).padding(24)
-      }.width('100%').layoutWeight(1).backgroundColor($r('app.color.surface')).borderRadius(12)
+      }.width('100%').layoutWeight(1).backgroundColor($r('app.color.card')).borderRadius(14).clip(true)
         .onAreaChange((_, area: Area) => { this.displayWidth = Number(area.width); this.displayHeight = Number(area.height); })
         .onTouch((event: TouchEvent) => { void this.touch(event); })
       Flex({ wrap: FlexWrap.Wrap }) {
-        Button(this.controller === 'another-viewer' ? '等待释放' : this.controlling ? '释放控制' : '取得控制').constraintSize({ minWidth: 44, minHeight: 44 }).flexGrow(1)
+        Button(this.controller === 'another-viewer' ? '等待释放' : this.controlling ? '释放控制' : '取得控制')
+          .constraintSize({ minWidth: 44, minHeight: 40 }).flexGrow(1).fontSize(13).borderRadius(12)
           .margin({ right: 6, bottom: 4 })
-          .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).enabled(this.canOperate && this.controller !== 'another-viewer' && !this.busy && !this.pendingAdjustment)
+          .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink'))
+          .enabled(this.canOperate && this.controller !== 'another-viewer' && !this.busy && !this.pendingAdjustment)
           .onClick(() => { void this.send({ type: this.controlling ? 'releaseControl' : 'takeControl' }); })
-        Button('后退').constraintSize({ minWidth: 44, minHeight: 44 }).flexGrow(1).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
+        Button('后退').constraintSize({ minWidth: 44, minHeight: 40 }).flexGrow(1).fontSize(13).borderRadius(12)
+          .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink'))
           .margin({ right: 6, bottom: 4 })
           .enabled(this.controlling && !this.busy && !this.inputSuspended()).onClick(() => { void this.send(previewHistory(-1) as PreviewAction); })
-        Button('前进').constraintSize({ minWidth: 44, minHeight: 44 }).flexGrow(1).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
+        Button('前进').constraintSize({ minWidth: 44, minHeight: 40 }).flexGrow(1).fontSize(13).borderRadius(12)
+          .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink'))
           .margin({ right: 6, bottom: 4 })
           .enabled(this.controlling && !this.busy && !this.inputSuspended()).onClick(() => { void this.send(previewHistory(1) as PreviewAction); })
-        Button('刷新').constraintSize({ minWidth: 44, minHeight: 44 }).flexGrow(1).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
+        Button('刷新').constraintSize({ minWidth: 44, minHeight: 40 }).flexGrow(1).fontSize(13).borderRadius(12)
+          .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink'))
           .margin({ bottom: 4 })
           .enabled(this.controlling && !this.busy && !this.inputSuspended()).onClick(() => { void this.send({ type: 'reload' }); })
       }.width('100%')
       Button(this.toolsOpen ? '收起工具' : '工具 · 尺寸、缩放与文字输入', { type: ButtonType.Normal }).width('100%')
-        .constraintSize({ minHeight: 44 }).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
+        .constraintSize({ minHeight: 40 }).fontSize(13).borderRadius(12)
+        .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink'))
         .onClick(() => { this.toolsOpen = !this.toolsOpen; })
       if (this.toolsOpen) {
         Scroll() {
@@ -546,30 +579,37 @@ export struct PreviewPanel {
             Column({ space: 8 }) {
               Select(PREVIEW_RESIZE_CHOICES.map((choice: PreviewResizeChoice): SelectOption => ({ value: choice.label })))
                 .selected(this.resizeChoice).value(PREVIEW_RESIZE_CHOICES[this.resizeChoice].label)
-                .width('100%').constraintSize({ minHeight: 44 }).enabled(this.canResize()).accessibilityText('浏览器尺寸')
+                .width('100%').constraintSize({ minHeight: 42 }).enabled(this.canResize()).accessibilityText('浏览器尺寸')
                 .onSelect((index: number) => { if (PREVIEW_RESIZE_CHOICES[index]) this.resizeChoice = index; })
               Flex({ wrap: FlexWrap.Wrap }) {
-                Button('应用尺寸', { type: ButtonType.Normal }).flexGrow(1).constraintSize({ minWidth: 44, minHeight: 44 })
-                  .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).enabled(this.canResize())
+                Button('应用尺寸', { type: ButtonType.Normal }).flexGrow(1).constraintSize({ minWidth: 44, minHeight: 40 })
+                  .fontSize(13).borderRadius(12).margin({ right: 6 })
+                  .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink')).enabled(this.canResize())
                   .onClick(() => { void this.applyResize(); })
-                Button(this.zoomLabel(), { type: ButtonType.Normal }).flexGrow(1).constraintSize({ minWidth: 44, minHeight: 44 })
-                  .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).enabled(this.canZoom())
+                Button(this.zoomLabel(), { type: ButtonType.Normal }).flexGrow(1).constraintSize({ minWidth: 44, minHeight: 40 })
+                  .fontSize(13).borderRadius(12)
+                  .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink')).enabled(this.canZoom())
                   .bindMenu(this.zoomMenu(this.tabId, this.generation, this.controlRevision))
               }.width('100%')
             }.width('100%')
             TextInput({ placeholder: '点选网页输入框后输入文字', text: this.input }).width('100%')
-              .constraintSize({ minHeight: 44 }).onChange((value: string) => { this.input = value; })
+              .fontSize(14).fontColor($r('app.color.ink')).placeholderColor($r('app.color.placeholder'))
+              .backgroundColor($r('app.color.group')).borderRadius(12).padding({ left: 12, right: 12 })
+              .constraintSize({ minHeight: 40 }).onChange((value: string) => { this.input = value; })
             Row({ space: 8 }) {
-              Button('输入文字').constraintSize({ minWidth: 44, minHeight: 44 }).layoutWeight(1)
-                .backgroundColor($r('app.color.primary')).fontColor($r('app.color.on_primary'))
+              Button('输入文字').constraintSize({ minWidth: 44, minHeight: 40 }).layoutWeight(1)
+                .fontSize(13).fontWeight(FontWeight.Medium).borderRadius(12)
+                .backgroundColor($r('app.color.prominent')).fontColor($r('app.color.on_prominent'))
                 .enabled(this.controlling && !this.busy && !this.inputSuspended()).onClick(() => { void this.typeText(); })
-              Button('回车').constraintSize({ minWidth: 44, minHeight: 44 }).layoutWeight(1)
-                .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
+              Button('回车').constraintSize({ minWidth: 44, minHeight: 40 }).layoutWeight(1)
+                .fontSize(13).borderRadius(12)
+                .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink'))
                 .enabled(this.controlling && !this.busy && !this.inputSuspended()).onClick(() => { void this.sendKey('Enter'); })
             }.width('100%')
-          }.width('100%')
-        }.width('100%').constraintSize({ maxHeight: 160 })
+          }.width('100%').padding(12).backgroundColor($r('app.color.card')).borderRadius(14)
+        }.width('100%').constraintSize({ maxHeight: 190 })
       }
-    }.padding(16).width('100%').height('100%').backgroundColor($r('app.color.canvas'))
+    }.padding({ left: 16, right: 16, top: 4, bottom: 16 }).width('100%').height('100%')
+      .backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

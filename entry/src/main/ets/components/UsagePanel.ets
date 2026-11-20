@@ -1,7 +1,10 @@
 import { i18n } from '@kit.LocalizationKit';
+import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { T3Client } from '../services/T3Client';
 import { UsageDayView, UsageAccount, UsageWindow, UsageBucketView, UsageSummaryView, usageAccounts, usageInput,
   readUsageSummary, filterUsage, usageTotal, usageDays, usageDayScale, compactUsageTokens, usagePricingLabel } from '../protocol/Usage';
+import { AppButton } from './ui/AppButton';
+import { TopBar } from './ui/TopBar';
 
 @Component
 export struct UsagePanel {
@@ -83,24 +86,50 @@ export struct UsagePanel {
   }
   @Builder
   dailyTrend() {
-    Column({ space: 10 }) {
-      Text('每日趋势').fontSize(16).fontWeight(FontWeight.Medium).width('100%')
-      Row({ space: 8 }) {
-        Button('费用').fontSize(14).backgroundColor(this.metric === 'cost' ? $r('app.color.primary') : $r('app.color.surface'))
-          .fontColor(this.metric === 'cost' ? Color.White : $r('app.color.ink')).onClick(() => { this.metric = 'cost'; })
-        Button('Tokens').fontSize(14).backgroundColor(this.metric === 'tokens' ? $r('app.color.primary') : $r('app.color.surface'))
-          .fontColor(this.metric === 'tokens' ? Color.White : $r('app.color.ink')).onClick(() => { this.metric = 'tokens'; })
-      }
+    Column({ space: Space.sm }) {
+      Row({ space: Space.sm }) {
+        Text('每日趋势')
+          .fontSize(FontSize.headline)
+          .lineHeight(LineHeight.headline)
+          .fontWeight(Weight.semibold)
+          .fontColor($r('app.color.ink'))
+          .layoutWeight(1)
+        Row({ space: 2 }) {
+          Button('费用')
+            .fontSize(FontSize.caption)
+            .fontWeight(this.metric === 'cost' ? Weight.semibold : Weight.regular)
+            .fontColor(this.metric === 'cost' ? $r('app.color.ink') : $r('app.color.muted'))
+            .backgroundColor(this.metric === 'cost' ? $r('app.color.card') : Color.Transparent)
+            .borderRadius(7)
+            .padding({ left: Space.sm, right: Space.sm })
+            .constraintSize({ minHeight: 30 })
+            .onClick(() => { this.metric = 'cost'; })
+          Button('Tokens')
+            .fontSize(FontSize.caption)
+            .fontWeight(this.metric === 'tokens' ? Weight.semibold : Weight.regular)
+            .fontColor(this.metric === 'tokens' ? $r('app.color.ink') : $r('app.color.muted'))
+            .backgroundColor(this.metric === 'tokens' ? $r('app.color.card') : Color.Transparent)
+            .borderRadius(7)
+            .padding({ left: Space.sm, right: Space.sm })
+            .constraintSize({ minHeight: 30 })
+            .onClick(() => { this.metric = 'tokens'; })
+        }
+        .padding(2)
+        .backgroundColor($r('app.color.group'))
+        .border({ width: Sizes.hairline, color: $r('app.color.border') })
+        .borderRadius(9)
+      }.width('100%').alignItems(VerticalAlign.Center)
       Text('按当前筛选汇总；只显示有返回记录的日期。条长相对本范围最大值。')
-        .fontSize(12).fontColor($r('app.color.muted')).width('100%')
+        .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted')).width('100%')
       ForEach(this.daily(), (day: UsageDayView) => {
         Column({ space: 5 }) {
-          Text(day.day + ' · ' + this.dayLabel(day)).fontSize(13).width('100%')
+          Text(day.day + ' · ' + this.dayLabel(day))
+            .fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.ink')).width('100%')
           Progress({ value: Math.max(0, this.dayValue(day)), total: this.trendScale(), type: ProgressType.Linear })
             .width('100%').color($r('app.color.primary')).accessibilityText(day.day + '，' + this.dayLabel(day))
         }.width('100%')
       }, (day: UsageDayView) => day.day)
-    }.width('100%').alignItems(HorizontalAlign.Start).padding(12).backgroundColor($r('app.color.surface')).borderRadius(12)
+    }.width('100%').alignItems(HorizontalAlign.Start).padding(Space.md).backgroundColor($r('app.color.card')).borderRadius(Radius.card)
   }
   private money(): string { return '$' + usageTotal(this.rows()).costUsd.toFixed(2); }
   private resetLabel(value: string): string {
@@ -109,90 +138,194 @@ export struct UsagePanel {
   }
   @Builder
   accountCard(account: UsageAccount) {
-    Column({ space: 8 }) {
-      Text(account.label).fontSize(16).fontWeight(FontWeight.Medium).width('100%')
+    Column({ space: Space.xs }) {
+      Text(account.label)
+        .fontSize(FontSize.headline).lineHeight(LineHeight.headline).fontWeight(Weight.semibold).fontColor($r('app.color.ink')).width('100%')
       Text(account.driver + ' · 检查时间 ' + this.resetLabel(account.checkedAt))
-        .fontSize(12).fontColor($r('app.color.muted')).width('100%')
-      if (account.notice) { Text(account.notice).fontSize(13).width('100%') }
-      if (!account.windows.length) { Text('未提供可显示的限额窗口').fontSize(13) }
+        .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted')).width('100%')
+      if (account.notice) {
+        Text(account.notice).fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.ink')).width('100%')
+      }
+      if (!account.windows.length) {
+        Text('未提供可显示的限额窗口').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+      }
       ForEach(account.windows, (window: UsageWindow) => {
         Column({ space: 4 }) {
-          Text(window.label + ' · 剩余 ' + window.remaining + '%').fontSize(14).width('100%')
+          Text(window.label + ' · 剩余 ' + window.remaining + '%')
+            .fontSize(FontSize.body).lineHeight(LineHeight.body).fontColor($r('app.color.ink')).width('100%')
           Progress({ value: window.remaining, total: 100, type: ProgressType.Linear }).width('100%')
             .color($r('app.color.primary')).accessibilityText(window.label + ' 剩余百分之' + window.remaining)
-          Text('重置：' + this.resetLabel(window.resetsAt)).fontSize(12).fontColor($r('app.color.muted')).width('100%')
-        }.width('100%')
+          Text('重置：' + this.resetLabel(window.resetsAt))
+            .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted')).width('100%')
+        }.width('100%').padding({ top: Space.xxs })
       })
-    }.width('100%').alignItems(HorizontalAlign.Start).padding(14).backgroundColor($r('app.color.surface')).borderRadius(12)
+    }.width('100%').alignItems(HorizontalAlign.Start).padding(Space.md).backgroundColor($r('app.color.card')).borderRadius(Radius.card)
   }
   build() {
     Column() {
-      Row({ space: 8 }) {
-        if (!this.embedded || this.selectedAccount.length > 0) {
-          Button({ type: ButtonType.Normal }) { Image($r('app.media.ui_back')).width(22).height(22) }
-            .width(44).height(44).backgroundColor(Color.Transparent).accessibilityText('返回')
-            .onClick(() => { if (this.selectedAccount) this.selectedAccount = ''; else this.onBack(); })
+      if (!this.embedded || this.selectedAccount.length > 0) {
+        TopBar({
+          title: this.selectedAccount ? '账号用量限额' : '用量',
+          showBack: true,
+          closeStyle: !this.embedded && this.selectedAccount.length === 0,
+          onBack: () => { if (this.selectedAccount) this.selectedAccount = ''; else this.onBack(); }
+        }) {
+          AppButton({
+            label: '刷新',
+            kind: 'text',
+            compact: true,
+            disabled: this.busy || !this.connection?.ready,
+            onTap: () => { void this.refresh(); }
+          })
         }
-        Text(this.selectedAccount ? '账号用量限额' : '用量').fontSize(20).fontWeight(FontWeight.Medium).layoutWeight(1)
-        Button('刷新').fontSize(14).backgroundColor(Color.Transparent).fontColor($r('app.color.primary'))
-          .enabled(!this.busy && !!this.connection?.ready).onClick(() => { void this.refresh(); })
-      }.padding({ left: !this.embedded || this.selectedAccount.length > 0 ? 8 : 16, right: 8, top: 4, bottom: 4 })
-        .constraintSize({ minHeight: 52 }).width('100%')
+      } else {
+        Row({ space: Space.xs }) {
+          Text('用量')
+            .fontSize(FontSize.title)
+            .lineHeight(LineHeight.title)
+            .fontWeight(Weight.semibold)
+            .fontColor($r('app.color.ink'))
+            .layoutWeight(1)
+          AppButton({
+            label: '刷新',
+            kind: 'text',
+            compact: true,
+            disabled: this.busy || !this.connection?.ready,
+            onTap: () => { void this.refresh(); }
+          })
+        }
+        .padding({ left: Space.page, right: Space.xs, top: Space.xxs, bottom: Space.xxs })
+        .constraintSize({ minHeight: Sizes.topBar })
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+      }
       Scroll() {
-        Column({ space: 12 }) {
-          if (!this.connection?.ready) { Text('请先连接一个环境').fontSize(15) }
-          if (this.busy) { Text('正在读取…').fontSize(14) }
+        Column({ space: Space.sm }) {
+          if (!this.connection?.ready) {
+            Text('请先连接一个环境')
+              .fontSize(FontSize.body).lineHeight(LineHeight.body).fontColor($r('app.color.muted')).width('100%')
+          }
+          if (this.busy) {
+            Text('正在读取…').fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%')
+          }
           if (this.selectedAccount) {
             ForEach(this.accounts.filter((account: UsageAccount) => account.id === this.selectedAccount), (account: UsageAccount) => {
               this.accountCard(account)
             })
             if (!this.accounts.some((account: UsageAccount) => account.id === this.selectedAccount)) {
-              Text('账号已不在当前快照中，请返回并刷新').fontSize(14)
+              Text('账号已不在当前快照中，请返回并刷新')
+                .fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%')
             }
           } else {
-            Text('当前环境 · 历史用量').fontSize(16).fontWeight(FontWeight.Medium).width('100%')
-            Row({ space: 8 }) {
+            Text('当前环境 · 历史用量')
+              .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xxs }).width('100%')
+            Row({ space: 2 }) {
               ForEach([1, 7, 30], (days: number) => {
-                Button(days === 1 ? '今天' : days + '天').fontSize(14)
-                  .backgroundColor(this.days === days ? $r('app.color.primary') : $r('app.color.surface'))
-                  .fontColor(this.days === days ? Color.White : $r('app.color.ink')).enabled(!this.busy)
+                Button(days === 1 ? '今天' : days + '天')
+                  .fontSize(FontSize.callout)
+                  .fontWeight(this.days === days ? Weight.semibold : Weight.regular)
+                  .backgroundColor(this.days === days ? $r('app.color.card') : Color.Transparent)
+                  .fontColor(this.days === days ? $r('app.color.ink') : $r('app.color.muted'))
+                  .borderRadius(7)
+                  .layoutWeight(1)
+                  .constraintSize({ minHeight: 34 })
+                  .enabled(!this.busy)
                   .onClick(() => { this.days = days; void this.refresh(); })
               })
             }
-            if (this.error) { Text(this.error).fontSize(14).width('100%') }
-            if (this.summary) {
-              Select(this.providerOptions())
-                .value(this.provider || '全部提供商').onSelect((index: number) => { this.provider = index === 0 ? '' : this.providers()[index - 1]; })
-              TextInput({ text: this.model, placeholder: '筛选模型' }).onChange((value: string) => { this.model = value; })
-                .accessibilityText('筛选模型')
-              Text(this.money() + ' USD · ' + compactUsageTokens(usageTotal(this.rows()).tokens) + ' tokens').fontSize(21).fontWeight(FontWeight.Medium).width('100%')
-                .accessibilityText(this.money() + ' USD，' + usageTotal(this.rows()).tokens + ' tokens')
-              Text('服务端报告或按模型价格估算，并非账单。推理 token 已包含在输出中。').fontSize(12).fontColor($r('app.color.muted')).width('100%')
-              Text('读取：' + this.resetLabel(this.summary.readAt) + ' · ' + usagePricingLabel(this.summary.pricing)).fontSize(12).width('100%')
-              if (usageTotal(this.rows()).unpricedRecords > 0) { Text('含未定价记录，金额不完整').fontSize(14) }
-              ForEach(this.summary.notices, (notice: string) => { Text(notice).fontSize(13).width('100%') })
-              if (!this.rows().length) { Text('此范围没有用量记录').fontSize(14) }
-              if (this.rows().length > 0) { this.dailyTrend() }
-              ForEach(this.rows(), (row: UsageBucketView) => {
-                Column({ space: 4 }) {
-                  Text(row.day + ' · ' + row.provider + ' / ' + row.model).fontSize(14).width('100%')
-                  Text('$' + row.costUsd.toFixed(2) + ' USD · ' + row.tokens + ' tokens').fontSize(13).width('100%')
-                }.padding(12).width('100%').backgroundColor($r('app.color.surface')).borderRadius(10)
-              })
+            .width('100%')
+            .padding(2)
+            .backgroundColor($r('app.color.surface'))
+            .border({ width: Sizes.hairline, color: $r('app.color.border') })
+            .borderRadius(9)
+            if (this.error) {
+              Text(this.error).fontSize(FontSize.callout).fontColor($r('app.color.danger')).width('100%')
             }
-            Text('账号限额').fontSize(16).fontWeight(FontWeight.Medium).width('100%')
+            if (this.summary) {
+              Column({ space: Space.sm }) {
+                Row({ space: Space.xs }) {
+                  Select(this.providerOptions())
+                    .value(this.provider || '全部提供商')
+                    .onSelect((index: number) => { this.provider = index === 0 ? '' : this.providers()[index - 1]; })
+                  TextInput({ text: this.model, placeholder: '筛选模型' })
+                    .layoutWeight(1)
+                    .height(40)
+                    .fontSize(FontSize.body)
+                    .fontColor($r('app.color.ink'))
+                    .placeholderColor($r('app.color.placeholder'))
+                    .backgroundColor($r('app.color.group'))
+                    .borderRadius(Radius.button)
+                    .padding({ left: Space.sm, right: Space.sm })
+                    .onChange((value: string) => { this.model = value; })
+                    .accessibilityText('筛选模型')
+                }.width('100%').alignItems(VerticalAlign.Center)
+                Text(this.money() + ' USD · ' + compactUsageTokens(usageTotal(this.rows()).tokens) + ' tokens')
+                  .fontSize(FontSize.title).lineHeight(LineHeight.title).fontWeight(Weight.semibold).fontColor($r('app.color.ink')).width('100%')
+                  .accessibilityText(this.money() + ' USD，' + usageTotal(this.rows()).tokens + ' tokens')
+                Text('服务端报告或按模型价格估算，并非账单。推理 token 已包含在输出中。')
+                  .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted')).width('100%')
+                Text('读取：' + this.resetLabel(this.summary.readAt) + ' · ' + usagePricingLabel(this.summary.pricing))
+                  .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted')).width('100%')
+                if (usageTotal(this.rows()).unpricedRecords > 0) {
+                  Text('含未定价记录，金额不完整').fontSize(FontSize.callout).fontColor($r('app.color.warning')).width('100%')
+                }
+                ForEach(this.summary.notices, (notice: string) => {
+                  Text(notice).fontSize(FontSize.callout).fontColor($r('app.color.ink')).width('100%')
+                })
+                if (!this.rows().length) {
+                  Text('此范围没有用量记录').fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%')
+                }
+              }
+              .width('100%')
+              .alignItems(HorizontalAlign.Start)
+              .padding(Space.md)
+              .backgroundColor($r('app.color.card'))
+              .borderRadius(Radius.card)
+              if (this.rows().length > 0) { this.dailyTrend() }
+              if (this.rows().length > 0) {
+                Column() {
+                  ForEach(this.rows(), (row: UsageBucketView, index: number) => {
+                    Column({ space: 4 }) {
+                      if (index > 0) {
+                        Divider().color($r('app.color.separator')).strokeWidth(Sizes.hairline).margin({ bottom: Space.xs })
+                      }
+                      Text(row.day + ' · ' + row.provider + ' / ' + row.model)
+                        .fontSize(FontSize.body).lineHeight(LineHeight.body).fontColor($r('app.color.ink')).width('100%')
+                      Text('$' + row.costUsd.toFixed(2) + ' USD · ' + row.tokens + ' tokens')
+                        .fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.muted')).width('100%')
+                    }.padding({ left: Space.md, right: Space.md, top: index === 0 ? Space.md : 0, bottom: Space.sm }).width('100%')
+                  })
+                }
+                .width('100%')
+                .backgroundColor($r('app.color.card'))
+                .borderRadius(Radius.card)
+                .clip(true)
+              }
+            }
+            Text('账号限额')
+              .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
             Text('分别显示各账号最近快照；跨环境池汇总尚未提供。重置时间不是执行重置操作。')
-              .fontSize(12).fontColor($r('app.color.muted')).width('100%')
-            if (this.limitsError) { Text(this.limitsError).fontSize(14) }
-            if (!this.accounts.length && !this.busy) { Text('当前环境未提供账号限额').fontSize(14) }
+              .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted'))
+              .padding({ left: Space.xxs, right: Space.xxs }).width('100%')
+            if (this.limitsError) {
+              Text(this.limitsError).fontSize(FontSize.callout).fontColor($r('app.color.danger')).width('100%')
+            }
+            if (!this.accounts.length && !this.busy) {
+              Column() {
+                Text('当前环境未提供账号限额').fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%')
+              }.width('100%').padding(Space.md).backgroundColor($r('app.color.card')).borderRadius(Radius.card)
+            }
             ForEach(this.accounts, (account: UsageAccount) => {
               Button({ type: ButtonType.Normal }) { this.accountCard(account) }
-                .width('100%').backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
+                .width('100%').padding(0).backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
+                .borderRadius(Radius.card)
                 .accessibilityText(account.label + '，查看限额详情').onClick(() => { this.selectedAccount = account.id; })
             })
           }
-        }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: 16, right: 16, bottom: 28 + (this.embedded && !this.selectedAccount ? this.bottomInset : 0) })
+        }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: Space.page, right: Space.page, bottom: 28 + (this.embedded && !this.selectedAccount ? this.bottomInset : 0) })
       }.layoutWeight(1).width('100%').align(Alignment.TopStart)
-    }.width('100%').height('100%').backgroundColor($r('app.color.canvas')).foregroundColor($r('app.color.ink'))
+    }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

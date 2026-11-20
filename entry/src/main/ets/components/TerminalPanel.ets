@@ -1,4 +1,8 @@
 import { util } from '@kit.ArkTS';
+import { TopBar } from './ui/TopBar';
+import { AppButton } from './ui/AppButton';
+import { StatusBadge } from './ui/StatusBadge';
+import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { TerminalGrid, TerminalSize, TerminalSessions, TerminalSessionSummary, terminalSessions, newTerminalId, terminalSnapshot,
   DEFAULT_TERMINAL_FONT_SIZE, MIN_TERMINAL_FONT_SIZE, MAX_TERMINAL_FONT_SIZE, terminalCanvasSize, terminalFitSize } from '../protocol/Terminal';
 import { record, text } from '../protocol/Wire';
@@ -415,126 +419,219 @@ export struct TerminalPanel {
   }
 
   build() {
-    Column({ space: 12 }) {
-      Row() {
-        Button('返回', { type: ButtonType.Normal }).height(44).constraintSize({ minWidth: 44 })
-          .backgroundColor(Color.Transparent).fontColor($r('app.color.ink')).borderRadius(12).onClick(() => this.onBack())
-        Text('终端').fontSize(20).fontWeight(FontWeight.Medium).layoutWeight(1).margin({ left: 12 })
-        Button(this.active ? '重新连接' : '连接').height(44)
-          .backgroundColor(this.active ? $r('app.color.surface') : $r('app.color.primary')).fontColor(this.active ? $r('app.color.ink') : $r('app.color.on_primary')).enabled(!this.busy && this.foreground && this.sessions.loaded && !!this.terminalId).onClick(() => this.connect())
-      }.width('100%')
-      Row({ space: 8 }) {
-        Select(this.sessions.terminals.map((item: TerminalSessionSummary): SelectOption => ({ value: this.sessionLabel(item) })))
-          .value(this.selectedLabel()).height(44).layoutWeight(1)
-          .enabled(this.foreground && this.sessions.loaded && !this.busy && this.sessions.terminals.length > 0)
-          .onSelect((index: number) => { if (this.sessions.terminals[index]) this.selectSession(this.sessions.terminals[index].terminalId); })
-        Button('更新', { type: ButtonType.Normal }).height(44).backgroundColor($r('app.color.surface'))
-          .fontColor($r('app.color.ink')).enabled(this.foreground && !this.busy).onClick(() => this.loadSessions())
-        Button('新建', { type: ButtonType.Normal }).height(44).backgroundColor($r('app.color.surface'))
-          .fontColor($r('app.color.ink')).enabled(this.foreground && this.sessions.loaded && !this.busy && this.canOperate())
-          .onClick(() => this.createSession())
-      }.width('100%')
-      if (this.listError) Text(this.listError).fontSize(13).fontColor($r('app.color.danger'))
-      if (!this.canOperate()) Text('只读查看 · 无法新建、输入或结束终端').fontSize(12).fontColor($r('app.color.muted'))
-      if (this.restartable() && this.canOperate()) {
-        Button('重新启动所选终端', { type: ButtonType.Normal }).height(44).backgroundColor(Color.Transparent)
-          .fontColor($r('app.color.ink')).enabled(this.sessions.loaded && !this.busy && this.foreground).onClick(() => this.restart())
+    Column({ space: 0 }) {
+      TopBar({
+        title: '终端',
+        subtitle: this.sessions.loaded ? (this.sessions.terminals.length + ' 个会话 · 字号 ' + this.fontSize) : '未加载',
+        showBack: true,
+        closeStyle: true,
+        backLabel: '关闭终端',
+        onBack: () => this.onBack()
+      }) {
+        AppButton({
+          label: this.active ? '重连' : '连接',
+          kind: this.active ? 'secondary' : 'primary',
+          compact: true,
+          disabled: !(!this.busy && this.foreground && this.sessions.loaded && !!this.terminalId),
+          onTap: () => this.connect()
+        })
       }
-      Row({ space: 6 }) {
-        Text(this.status + ' · 字号 ' + this.fontSize).fontSize(12).layoutWeight(1)
-          .fontColor($r('app.color.muted')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
-        Button('A−').constraintSize({ minWidth: 44, minHeight: 44 }).accessibilityText('缩小终端字号')
-          .enabled(this.foreground && !this.busy && !this.fontSaving && this.fontSize > MIN_TERMINAL_FONT_SIZE)
-          .onClick(() => { void this.changeFontSize(-1); })
-        Button('A+').constraintSize({ minWidth: 44, minHeight: 44 }).accessibilityText('放大终端字号')
-          .enabled(this.foreground && !this.busy && !this.fontSaving && this.fontSize < MAX_TERMINAL_FONT_SIZE)
-          .onClick(() => { void this.changeFontSize(1); })
-      }.width('100%')
-      Text('切换只断开查看，终端任务继续运行').fontSize(12).fontColor($r('app.color.muted'))
-      if (this.error) Text(this.error).fontSize(13).fontColor($r('app.color.danger'))
-      if (this.limited) Text('输出包含未支持的控制序列，画面可能不完整。').fontSize(12).fontColor($r('app.color.muted'))
-      Stack() {
-        Canvas(this.context).width('100%').height('100%').backgroundColor('#16181d')
-          .onReady(() => { this.canvasReady = true; this.measureCells(); this.draw(); })
-          .onAreaChange((_, area: Area) => { this.canvasWidth = Number(area.width); this.canvasHeight = Number(area.height); this.draw(); })
-          .accessibilityLevel(this.selectionText ? 'no' : 'auto')
-          .accessibilityText('终端输出；可打开文字工具选择本页文字')
-        if (this.selectionText) {
-          Scroll() {
-            Text(this.selectionText).copyOption(CopyOptions.LocalDevice).width('100%')
-              .fontFamily('monospace').fontSize(this.fontSize + 'vp').fontColor($r('app.color.ink'))
-          }.padding(8).width('100%').height('100%').align(Alignment.TopStart).backgroundColor($r('app.color.surface'))
+
+      Column({ space: Space.xs }) {
+        Column({ space: Space.xs }) {
+          Row({ space: Space.xs }) {
+            Select(this.sessions.terminals.map((item: TerminalSessionSummary): SelectOption => ({ value: this.sessionLabel(item) })))
+              .value(this.selectedLabel()).height(38).layoutWeight(1)
+              .backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
+              .enabled(this.foreground && this.sessions.loaded && !this.busy && this.sessions.terminals.length > 0)
+              .onSelect((index: number) => { if (this.sessions.terminals[index]) this.selectSession(this.sessions.terminals[index].terminalId); })
+            AppButton({
+              label: '更新', kind: 'secondary', compact: true,
+              disabled: !(this.foreground && !this.busy),
+              onTap: () => this.loadSessions()
+            })
+            AppButton({
+              label: '新建', kind: 'secondary', compact: true,
+              disabled: !(this.foreground && this.sessions.loaded && !this.busy && this.canOperate()),
+              onTap: () => this.createSession()
+            })
+          }.width('100%').alignItems(VerticalAlign.Center)
+
+          Row({ space: Space.xs }) {
+            StatusBadge({
+              text: this.active ? '已连接' : '未连接',
+              tone: this.active ? 'success' : 'neutral'
+            })
+            Text(this.status)
+              .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted'))
+              .layoutWeight(1).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+            if (this.restartable() && this.canOperate()) {
+              AppButton({
+                label: '重启', kind: 'text', compact: true,
+                disabled: !(this.sessions.loaded && !this.busy && this.foreground),
+                onTap: () => this.restart()
+              })
+            }
+            Row({ space: 2 }) {
+              Button('A−')
+                .fontSize(FontSize.callout).fontWeight(Weight.medium)
+                .fontColor($r('app.color.ink')).backgroundColor($r('app.color.card'))
+                .borderRadius(7).constraintSize({ minWidth: 38, minHeight: 32 }).padding({ left: 6, right: 6 })
+                .accessibilityText('缩小终端字号')
+                .enabled(this.foreground && !this.busy && !this.fontSaving && this.fontSize > MIN_TERMINAL_FONT_SIZE)
+                .onClick(() => { void this.changeFontSize(-1); })
+              Button('A+')
+                .fontSize(FontSize.callout).fontWeight(Weight.medium)
+                .fontColor($r('app.color.ink')).backgroundColor($r('app.color.card'))
+                .borderRadius(7).constraintSize({ minWidth: 38, minHeight: 32 }).padding({ left: 6, right: 6 })
+                .accessibilityText('放大终端字号')
+                .enabled(this.foreground && !this.busy && !this.fontSaving && this.fontSize < MAX_TERMINAL_FONT_SIZE)
+                .onClick(() => { void this.changeFontSize(1); })
+            }.padding(2).backgroundColor($r('app.color.group')).borderRadius(9)
+          }.width('100%').alignItems(VerticalAlign.Center)
         }
-      }.width('100%').layoutWeight(1).borderRadius(12).clip(true)
-      if (this.selectionText) {
-        Row({ space: 6 }) {
-          Button('关闭选字', { type: ButtonType.Normal }).constraintSize({ minWidth: 44, minHeight: 44 }).fontSize(14)
-            .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).borderRadius(10)
-            .onClick(() => this.closeTextSelection())
-          Blank()
-          Button('复制全部', { type: ButtonType.Normal }).constraintSize({ minWidth: 44, minHeight: 44 }).fontSize(14)
-            .backgroundColor($r('app.color.primary')).fontColor($r('app.color.on_primary')).borderRadius(10)
-            .enabled(!this.copying).onClick(() => { void this.copyVisible(true); })
-        }.width('100%')
-      } else {
-        Row({ space: 6 }) {
-          Button('上页', { type: ButtonType.Normal }).height(44).layoutWeight(1).fontSize(14).padding({ left: 4, right: 4 })
-            .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-            .enabled(this.foreground && this.readingOffset < this.maxReadingOffset).onClick(() => this.readPage(1))
-          Button('下页', { type: ButtonType.Normal }).height(44).layoutWeight(1).fontSize(14).padding({ left: 4, right: 4 })
-            .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-            .enabled(this.foreground && this.readingOffset > 0).onClick(() => this.readPage(-1))
-          Button('回到底部', { type: ButtonType.Normal }).height(44).layoutWeight(1).fontSize(14).padding({ left: 4, right: 4 })
-            .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-            .enabled(this.foreground && this.readingOffset > 0).onClick(() => this.readLatest())
-          Button('文字工具', { type: ButtonType.Normal }).height(44).layoutWeight(1).fontSize(14).padding({ left: 4, right: 4 })
-            .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-            .enabled(this.foreground && !!this.terminalId && !this.copying && !this.selectionText)
-            .bindMenu([
-              { value: '选择文字', action: () => this.selectVisibleText() },
-              { value: '复制本页', action: () => { void this.copyVisible(); } }
-            ])
-        }.width('100%')
-      }
-      Text(this.readingNotice())
-          .fontSize(12).fontColor($r('app.color.muted')).width('100%')
-      Row({ space: 8 }) {
-        Button('Ctrl C', { type: ButtonType.Normal }).height(44).layoutWeight(1)
-          .constraintSize({ minWidth: 44 }).padding({ left: 4, right: 4 }).fontSize(13)
-          .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).borderRadius(10).enabled(this.active && !this.busy && this.foreground && this.canOperate()).onClick(() => { void this.send('\x03'); })
-        Button('按键', { type: ButtonType.Normal }).height(44).layoutWeight(1)
-          .constraintSize({ minWidth: 44 }).padding({ left: 4, right: 4 }).fontSize(13)
-          .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).borderRadius(10).enabled(this.active && !this.busy && this.foreground && this.canOperate()).accessibilityText('发送终端按键').bindMenu(this.keyMenu(this.terminalId, this.generation))
-        Button('↑', { type: ButtonType.Normal }).height(44).layoutWeight(1)
-          .constraintSize({ minWidth: 44 }).padding({ left: 4, right: 4 }).fontSize(13)
-          .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).borderRadius(10).enabled(this.active && !this.busy && this.foreground && this.canOperate()).onClick(() => { void this.send(this.grid.cursorKey('A')); })
-        Button('适配', { type: ButtonType.Normal }).height(44).layoutWeight(1)
-          .constraintSize({ minWidth: 44 }).padding({ left: 4, right: 4 }).fontSize(13)
-          .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).borderRadius(10).enabled(this.active && !this.busy && this.foreground && this.canOperate()).onClick(() => { void this.fit(); })
-        Button('结束', { type: ButtonType.Normal }).height(44).layoutWeight(1)
-          .constraintSize({ minWidth: 44 }).padding({ left: 4, right: 4 }).fontSize(13)
-          .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).borderRadius(10).enabled(!!this.terminalId && !this.busy && this.foreground && this.canOperate()).onClick(() => this.stop())
-      }.width('100%')
-      Row({ space: 8 }) {
-        Button('Esc', { type: ButtonType.Normal }).height(44).layoutWeight(1)
-          .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).borderRadius(10)
-          .onClick(() => { void this.send('\x1b'); })
-        Button('↓', { type: ButtonType.Normal }).height(44).layoutWeight(1)
-          .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).borderRadius(10)
-          .onClick(() => { void this.send(this.grid.cursorKey('B')); })
-        Button('↵', { type: ButtonType.Normal }).height(44).layoutWeight(1)
-          .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).borderRadius(10)
-          .onClick(() => { void this.send('\r'); })
-        Button(this.appendEnter ? '附带回车：开' : '附带回车：关', { type: ButtonType.Normal }).height(44).layoutWeight(2)
-          .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).borderRadius(10)
-          .onClick(() => { this.appendEnter = !this.appendEnter; })
-      }.width('100%').enabled(this.active && !this.busy && this.foreground && this.canOperate())
-      Row({ space: 8 }) {
-        TextInput({ placeholder: '输入文字，确认后发送', text: this.input }).layoutWeight(1)
-          .onChange((value: string) => { this.input = value; }).onSubmit(() => { void this.submit(); })
-        Button('发送').height(44).backgroundColor($r('app.color.primary'))
-          .fontColor($r('app.color.on_primary')).enabled(this.active && !this.busy && this.foreground && this.canOperate() && this.input.length > 0).onClick(() => { void this.submit(); })
-      }
-    }.padding(16).width('100%').height('100%').backgroundColor($r('app.color.canvas'))
+        .width('100%')
+        .padding({ left: 12, right: 12, top: Space.xs, bottom: Space.xs })
+        .backgroundColor($r('app.color.card'))
+        .borderRadius(Radius.card)
+
+        if (this.listError) {
+          Text(this.listError).fontSize(FontSize.callout).fontColor($r('app.color.danger')).width('100%')
+            .padding({ left: Space.xxs, right: Space.xxs })
+        }
+        if (!this.canOperate()) {
+          Text('只读查看 · 无法新建、输入或结束终端').fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
+            .padding({ left: Space.xxs, right: Space.xxs })
+        }
+        if (this.error) {
+          Text(this.error).fontSize(FontSize.callout).fontColor($r('app.color.danger')).width('100%')
+            .padding({ left: Space.xxs, right: Space.xxs })
+        }
+        if (this.limited) {
+          Text('输出包含未支持的控制序列，画面可能不完整。').fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
+            .padding({ left: Space.xxs, right: Space.xxs })
+        }
+
+        Stack() {
+          Canvas(this.context).width('100%').height('100%').backgroundColor('#16181d')
+            .onReady(() => { this.canvasReady = true; this.measureCells(); this.draw(); })
+            .onAreaChange((_, area: Area) => { this.canvasWidth = Number(area.width); this.canvasHeight = Number(area.height); this.draw(); })
+            .accessibilityLevel(this.selectionText ? 'no' : 'auto')
+            .accessibilityText('终端输出；可打开文字工具选择本页文字')
+          if (this.selectionText) {
+            Scroll() {
+              Text(this.selectionText).copyOption(CopyOptions.LocalDevice).width('100%')
+                .fontFamily('monospace').fontSize(this.fontSize + 'vp').fontColor($r('app.color.ink'))
+            }.padding(Space.sm).width('100%').height('100%').align(Alignment.TopStart).backgroundColor($r('app.color.card'))
+          }
+        }.width('100%').layoutWeight(1).borderRadius(Radius.card).clip(true)
+
+        Column({ space: Space.xs }) {
+          if (this.selectionText) {
+            Row({ space: Space.xs }) {
+              AppButton({
+                label: '关闭选字', kind: 'secondary', compact: true,
+                onTap: () => this.closeTextSelection()
+              })
+              Blank()
+              AppButton({
+                label: '复制全部', kind: 'primary', compact: true,
+                disabled: this.copying,
+                onTap: () => { void this.copyVisible(true); }
+              })
+            }.width('100%')
+          } else {
+            Row({ space: 6 }) {
+              Button('上页', { type: ButtonType.Normal }).height(36).layoutWeight(1).fontSize(FontSize.callout)
+                .fontWeight(Weight.medium).padding({ left: 4, right: 4 }).borderRadius(Radius.tool)
+                .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink'))
+                .enabled(this.foreground && this.readingOffset < this.maxReadingOffset).onClick(() => this.readPage(1))
+              Button('下页', { type: ButtonType.Normal }).height(36).layoutWeight(1).fontSize(FontSize.callout)
+                .fontWeight(Weight.medium).padding({ left: 4, right: 4 }).borderRadius(Radius.tool)
+                .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink'))
+                .enabled(this.foreground && this.readingOffset > 0).onClick(() => this.readPage(-1))
+              Button('回到底部', { type: ButtonType.Normal }).height(36).layoutWeight(1).fontSize(FontSize.callout)
+                .fontWeight(Weight.medium).padding({ left: 4, right: 4 }).borderRadius(Radius.tool)
+                .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink'))
+                .enabled(this.foreground && this.readingOffset > 0).onClick(() => this.readLatest())
+              Button('文字工具', { type: ButtonType.Normal }).height(36).layoutWeight(1).fontSize(FontSize.callout)
+                .fontWeight(Weight.medium).padding({ left: 4, right: 4 }).borderRadius(Radius.tool)
+                .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink'))
+                .enabled(this.foreground && !!this.terminalId && !this.copying && !this.selectionText)
+                .bindMenu([
+                  { value: '选择文字', action: () => this.selectVisibleText() },
+                  { value: '复制本页', action: () => { void this.copyVisible(); } }
+                ])
+            }.width('100%')
+          }
+
+          Text(this.readingNotice() + ' · 切换只断开查看，终端任务继续运行')
+            .fontSize(FontSize.badge).lineHeight(LineHeight.badge).fontColor($r('app.color.muted'))
+            .width('100%').maxLines(2)
+
+          Row({ space: 6 }) {
+            Button('Ctrl C', { type: ButtonType.Normal }).height(38).layoutWeight(1)
+              .constraintSize({ minWidth: 44 }).padding({ left: 4, right: 4 }).fontSize(FontSize.callout)
+              .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink')).borderRadius(Radius.tool)
+              .enabled(this.active && !this.busy && this.foreground && this.canOperate()).onClick(() => { void this.send('\x03'); })
+            Button('按键', { type: ButtonType.Normal }).height(38).layoutWeight(1)
+              .constraintSize({ minWidth: 44 }).padding({ left: 4, right: 4 }).fontSize(FontSize.callout)
+              .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink')).borderRadius(Radius.tool)
+              .enabled(this.active && !this.busy && this.foreground && this.canOperate())
+              .accessibilityText('发送终端按键').bindMenu(this.keyMenu(this.terminalId, this.generation))
+            Button('↑', { type: ButtonType.Normal }).height(38).layoutWeight(1)
+              .constraintSize({ minWidth: 44 }).padding({ left: 4, right: 4 }).fontSize(FontSize.callout)
+              .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink')).borderRadius(Radius.tool)
+              .enabled(this.active && !this.busy && this.foreground && this.canOperate()).onClick(() => { void this.send(this.grid.cursorKey('A')); })
+            Button('适配', { type: ButtonType.Normal }).height(38).layoutWeight(1)
+              .constraintSize({ minWidth: 44 }).padding({ left: 4, right: 4 }).fontSize(FontSize.callout)
+              .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink')).borderRadius(Radius.tool)
+              .enabled(this.active && !this.busy && this.foreground && this.canOperate()).onClick(() => { void this.fit(); })
+            Button('结束', { type: ButtonType.Normal }).height(38).layoutWeight(1)
+              .constraintSize({ minWidth: 44 }).padding({ left: 4, right: 4 }).fontSize(FontSize.callout)
+              .backgroundColor($r('app.color.danger_bg')).fontColor($r('app.color.danger')).borderRadius(Radius.tool)
+              .enabled(!!this.terminalId && !this.busy && this.foreground && this.canOperate()).onClick(() => this.stop())
+          }.width('100%')
+
+          Row({ space: 6 }) {
+            Button('Esc', { type: ButtonType.Normal }).height(38).layoutWeight(1).fontSize(FontSize.callout)
+              .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink')).borderRadius(Radius.tool)
+              .onClick(() => { void this.send('\x1b'); })
+            Button('↓', { type: ButtonType.Normal }).height(38).layoutWeight(1).fontSize(FontSize.callout)
+              .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink')).borderRadius(Radius.tool)
+              .onClick(() => { void this.send(this.grid.cursorKey('B')); })
+            Button('↵', { type: ButtonType.Normal }).height(38).layoutWeight(1).fontSize(FontSize.callout)
+              .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink')).borderRadius(Radius.tool)
+              .onClick(() => { void this.send('\r'); })
+            Button(this.appendEnter ? '附带回车：开' : '附带回车：关', { type: ButtonType.Normal }).height(38).layoutWeight(2)
+              .fontSize(FontSize.callout).fontWeight(this.appendEnter ? Weight.semibold : Weight.medium)
+              .backgroundColor(this.appendEnter ? $r('app.color.info_bg') : $r('app.color.group'))
+              .fontColor(this.appendEnter ? $r('app.color.primary_text') : $r('app.color.ink'))
+              .border({ width: 1, color: this.appendEnter ? $r('app.color.primary') : Color.Transparent })
+              .borderRadius(Radius.tool)
+              .onClick(() => { this.appendEnter = !this.appendEnter; })
+          }.width('100%').enabled(this.active && !this.busy && this.foreground && this.canOperate())
+
+          Row({ space: Space.xs }) {
+            TextInput({ placeholder: '输入文字，确认后发送', text: this.input })
+              .layoutWeight(1).height(40).fontSize(FontSize.body).fontColor($r('app.color.ink'))
+              .placeholderColor($r('app.color.placeholder')).backgroundColor($r('app.color.group'))
+              .borderRadius(Radius.tool).padding({ left: 10, right: 10 })
+              .onChange((value: string) => { this.input = value; }).onSubmit(() => { void this.submit(); })
+            AppButton({
+              label: '发送',
+              kind: this.active ? 'primary' : 'secondary',
+              compact: true,
+              disabled: !(this.active && !this.busy && this.foreground && this.canOperate() && this.input.length > 0),
+              onTap: () => { void this.submit(); }
+            })
+          }.width('100%').alignItems(VerticalAlign.Center)
+        }
+        .width('100%')
+        .padding(Space.xs)
+        .backgroundColor($r('app.color.card'))
+        .borderRadius(Radius.card)
+      }.width('100%').layoutWeight(1).padding({ left: Space.sm, right: Space.sm, top: Space.xxs, bottom: Space.sm })
+    }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }
