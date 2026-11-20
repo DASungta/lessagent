@@ -10,6 +10,7 @@ const code = source.split('  build() {')[0] + '}';
 const { ShareImportPanel } = await import(data(compile(code
   .replace("'../protocol/IncomingShare'", JSON.stringify(shareUrl))
   .replace("import { image } from '@kit.ImageKit';", '')
+  .replace(/^import\s+[^\n]*?from\s+['"](?:\.\/ui\/|\.\.\/common\/Theme)[^'"]*['"];\n/gm, '')
   .replace('@Component\nexport struct', 'export class')
   .replace(/@(?:Prop|State)\s+|@(?:Watch|StorageLink)\([^)]*\)\s*/g, ''))));
 

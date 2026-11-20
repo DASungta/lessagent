@@ -217,7 +217,7 @@ export struct ThreadList {
           .padding({ left: Sizes.monogram + Space.xs })
       }
     }.width('100%').padding({ left: Space.sm, right: Space.sm, top: 10, bottom: 10 }).borderRadius(20)
-      .backgroundColor(this.isSelected(thread) ? $r('app.color.selected') : Color.Transparent)
+      .backgroundColor(this.isSelected(thread) ? $r('app.color.card') : Color.Transparent)
       .accessibilityGroup(true).accessibilityText(this.rowA11y(thread))
       .onClick(() => this.onSelect(thread))
       .bindContextMenu(this.rowMenu(thread), ResponseType.LongPress)

@@ -38,7 +38,7 @@ export struct ClassDiagramView {
               }.width('100%').alignItems(HorizontalAlign.Start)
             }.width(item.width).height(item.height).padding(6)
               .justifyContent(FlexAlign.Start)
-              .backgroundColor($r('app.color.surface'))
+              .backgroundColor($r('app.color.group'))
               .border({ width: 1, color: $r('app.color.border') }).borderRadius(8)
               .position({ x: item.x, y: item.y })
           }, (item: MermaidClass) => item.id)

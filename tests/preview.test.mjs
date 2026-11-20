@@ -120,6 +120,7 @@ test('reconnecting a preview ignores all old socket messages and does not replay
 const panelSource = (await readFile(new URL('../entry/src/main/ets/components/PreviewPanel.ets',import.meta.url),'utf8'))
  .split('  build() {')[0] + '}';
 const panelJs = panelSource.replace("import { image } from '@kit.ImageKit';", '')
+ .replace(/^import\s+[^\n]*?from\s+['"](?:\.\/ui\/|\.\.\/common\/Theme)[^'"]*['"];\n/gm, '')
  .replace("'../services/PreviewStream'", JSON.stringify(data(compile(source))))
  .replace("'../protocol/Preview'", JSON.stringify(protocolUrl)).replace(/@(?:Prop|State)\s+/g,'').replace(/@(?:StorageLink|Watch)\([^)]*\)\s*/g,'')
  .replace('@Component\nexport struct PreviewPanel','export class PreviewPanel');

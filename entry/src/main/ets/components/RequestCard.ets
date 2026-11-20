@@ -3,7 +3,7 @@ import { ActionCard, ApprovalChoice, Question, answerSelected, inputAnswers } fr
 import { AttachmentPicker } from '../services/AttachmentPicker';
 import { DraftAttachment } from '../protocol/R4';
 import { common } from '@kit.AbilityKit';
-import { FontSize, LineHeight, Radius, Space, Weight } from '../common/Theme';
+import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { AppButton } from './ui/AppButton';
 
 @Component
@@ -196,12 +196,13 @@ export struct RequestCard {
               Text('来源').fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
               Flex({ wrap: FlexWrap.Wrap }) {
                 ForEach(this.secretProviders(), (name: string) => {
-                  Button(name).constraintSize({ minHeight: 38 }).fontSize(FontSize.callout)
+                  Button(name, { type: ButtonType.Normal }).constraintSize({ minHeight: 38 }).fontSize(FontSize.callout)
                     .fontWeight(this.referenceProvider === name ? Weight.semibold : Weight.medium)
-                    .borderRadius(Radius.button).margin({ right: Space.xs, bottom: Space.xs })
+                    .margin({ right: Space.xs, bottom: Space.xs })
                     .backgroundColor(this.referenceProvider === name ? $r('app.color.info_bg') : $r('app.color.group'))
                     .fontColor(this.referenceProvider === name ? $r('app.color.primary_text') : $r('app.color.ink'))
-                    .border({ width: 1, color: this.referenceProvider === name ? $r('app.color.primary') : Color.Transparent })
+                    .border({ width: Sizes.hairline, color: this.referenceProvider === name ? $r('app.color.primary') : Color.Transparent, radius: Radius.button })
+                    .borderRadius(Radius.button)
                     .onClick(() => this.referenceProvider = name)
                 })
               }.width('100%')
@@ -264,12 +265,13 @@ export struct RequestCard {
         ForEach(this.card.questions, (q: Question) => {
           Text(q.label + (q.required ? '（必填）' : '（可选）')).fontSize(FontSize.body).fontWeight(Weight.medium).width('100%')
           ForEach(q.options, (option: string, index: number) => {
-            Button((this.selected(q, q.values[index]) ? '✓ ' : '') + option)
-              .width('100%').fontSize(FontSize.callout).constraintSize({ minHeight: 40 }).borderRadius(Radius.button)
+            Button((this.selected(q, q.values[index]) ? '✓ ' : '') + option, { type: ButtonType.Normal })
+              .width('100%').fontSize(FontSize.callout).constraintSize({ minHeight: 40 })
               .fontWeight(this.selected(q, q.values[index]) ? Weight.semibold : Weight.medium)
               .backgroundColor(this.selected(q, q.values[index]) ? $r('app.color.info_bg') : $r('app.color.group'))
               .fontColor(this.selected(q, q.values[index]) ? $r('app.color.primary_text') : $r('app.color.ink'))
-              .border({ width: 1, color: this.selected(q, q.values[index]) ? $r('app.color.primary') : Color.Transparent })
+              .border({ width: Sizes.hairline, color: this.selected(q, q.values[index]) ? $r('app.color.primary') : Color.Transparent, radius: Radius.button })
+              .borderRadius(Radius.button)
               .accessibilityText(option + (this.selected(q, q.values[index]) ? '，已选中' : '，未选中'))
               .onClick(() => this.choose(q, q.values[index])).enabled(!this.busy && !this.submitted)
           })

@@ -139,7 +139,7 @@ export struct ReviewPanel {
           .backgroundColor(this.mode === 'branch-range' ? $r('app.color.card') : Color.Transparent)
           .borderRadius(7).layoutWeight(1).constraintSize({ minHeight: 34 })
           .onClick(() => { this.mode = 'branch-range'; })
-      }.width('100%').padding(2).backgroundColor($r('app.color.surface'))
+      }.width('100%').padding(2).backgroundColor($r('app.color.group'))
         .border({ width: Sizes.hairline, color: $r('app.color.border') }).borderRadius(9)
 
       if (this.mode === 'branch-range') {
@@ -156,13 +156,14 @@ export struct ReviewPanel {
         Scroll() {
           Row({ space: Space.xs }) {
             ForEach(this.sources, (source: ReviewSource, index: number) => {
-              Button(source.title)
+              Button(source.title, { type: ButtonType.Normal })
                 .fontSize(FontSize.caption)
                 .fontWeight(index === this.sourceIndex ? Weight.semibold : Weight.medium)
-                .constraintSize({ minHeight: 32 }).padding({ left: Space.sm, right: Space.sm }).borderRadius(Radius.tool)
+                .constraintSize({ minHeight: 32 }).padding({ left: Space.sm, right: Space.sm })
                 .backgroundColor(index === this.sourceIndex ? $r('app.color.info_bg') : $r('app.color.card'))
                 .fontColor(index === this.sourceIndex ? $r('app.color.primary_text') : $r('app.color.ink'))
-                .border({ width: 1, color: index === this.sourceIndex ? $r('app.color.primary') : Color.Transparent })
+                .border({ width: Sizes.hairline, color: index === this.sourceIndex ? $r('app.color.primary') : Color.Transparent, radius: Radius.tool })
+                .borderRadius(Radius.tool)
                 .onClick(() => this.selectSource(index))
             }, (source: ReviewSource, index: number) => source.id)
           }
@@ -288,7 +289,7 @@ export struct ReviewPanel {
             ListItem() {
               Column({ space: 0 }) {
                 Text(hunk.header).fontSize(Math.max(8, this.codeFontSize - 2)).fontFamily('monospace').fontColor($r('app.color.muted'))
-                  .width('100%').padding({ left: 10, right: 10, top: 6, bottom: 6 }).backgroundColor($r('app.color.surface'))
+                  .width('100%').padding({ left: 10, right: 10, top: 6, bottom: 6 }).backgroundColor($r('app.color.group'))
                 ForEach(hunk.rows, (row: DiffRow, index: number) => {
                   this.diffRow(hunk, row, index)
                 }, (row: DiffRow, index: number) => hunk.header + ':' + index)

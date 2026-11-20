@@ -1,3 +1,7 @@
+import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
+import { AppButton } from './ui/AppButton';
+import { GroupCard } from './ui/GroupCard';
+import { TopBar } from './ui/TopBar';
 import { EnvironmentEntry } from '../protocol/Environment';
 import { ScopedProject } from '../protocol/Projects';
 import { ProjectWorktreeSettings, ProjectWorktreeField, projectWorktreeField,
@@ -147,148 +151,163 @@ export struct ProjectWorktreeSettingsPanel {
   @Builder
   setting(title: string, key: string, values: string[], labels: string[], isFirst: boolean = false) {
     Column({ space: 6 }) {
-      Text(title).fontSize(15).lineHeight('22fp').fontColor($r('app.color.ink')).width('100%')
+      Text(title).fontSize(FontSize.body).lineHeight(LineHeight.body).fontColor($r('app.color.ink')).width('100%')
       if (!this.canEdit(key) || (!values.length && this.editingKey !== key)) {
-        Text(this.displayValue(key, values, labels)).fontSize(13).lineHeight('18fp')
+        Text(this.displayValue(key, values, labels)).fontSize(FontSize.callout).lineHeight(LineHeight.callout)
           .fontColor($r('app.color.muted')).width('100%').wordBreak(WordBreak.BREAK_ALL)
       }
       if (this.field(key)?.value !== undefined) {
         Text(this.field(key)?.source === 'project' ? '项目覆盖' : '继承环境默认值')
-          .fontSize(12).lineHeight('16fp').fontColor($r('app.color.muted')).width('100%')
+          .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted')).width('100%')
       }
       if (this.field(key)?.locked) {
         Text((this.snapshot?.managedBy || '组织策略') + '管理此设置')
-          .fontSize(12).lineHeight('16fp').fontColor($r('app.color.muted')).width('100%')
+          .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted')).width('100%')
       }
       if (this.canEdit(key)) {
         if (values.length) {
           Select(labels.map((label: string): SelectOption => ({ value: label })))
             .value(this.displayValue(key, values, labels)).accessibilityDescription(title)
-            .width('100%').constraintSize({ minHeight: 38 })
+            .width('100%').constraintSize({ minHeight: Sizes.buttonHeightCompact })
             .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink'))
             .onSelect((index: number) => { if (values[index] !== undefined) void this.save(key, values[index]); })
         } else if (this.editingKey === key) {
           TextArea({ text: this.draft, placeholder: title }).width('100%').constraintSize({ minHeight: 44 })
             .maxLines(4, { overflowMode: MaxLinesMode.SCROLL })
-            .backgroundColor($r('app.color.group')).borderRadius(10).padding(10)
+            .fontSize(FontSize.body).fontColor($r('app.color.ink')).placeholderColor($r('app.color.placeholder'))
+            .backgroundColor($r('app.color.group')).borderRadius(Radius.tool).padding(10)
             .accessibilityText(title).onChange((value: string) => { this.draft = value; })
-          Row({ space: 8 }) {
-            Button('取消').constraintSize({ minHeight: 38 }).borderRadius(12)
-              .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink'))
-              .onClick(() => { this.editingKey = ''; this.draft = ''; })
-            Button('保存覆盖').constraintSize({ minHeight: 38 }).borderRadius(12)
-              .backgroundColor($r('app.color.prominent')).fontColor($r('app.color.on_prominent'))
-              .onClick(() => { void this.save(key, this.draft); })
+          Row({ space: Space.xs }) {
+            AppButton({
+              label: '取消',
+              kind: 'secondary',
+              compact: true,
+              onTap: () => { this.editingKey = ''; this.draft = ''; }
+            })
+            AppButton({
+              label: '保存覆盖',
+              kind: 'primary',
+              compact: true,
+              onTap: () => { void this.save(key, this.draft); }
+            })
           }.width('100%')
         } else {
-          Row({ space: 8 }) {
-            Button('编辑').constraintSize({ minHeight: 38 }).borderRadius(12)
-              .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink'))
-              .accessibilityText('编辑' + title)
-              .onClick(() => { this.draft = this.field(key)?.value || ''; this.editingKey = key; })
+          Row({ space: Space.xs }) {
+            AppButton({
+              label: '编辑',
+              kind: 'secondary',
+              compact: true,
+              a11yLabel: '编辑' + title,
+              onTap: () => { this.draft = this.field(key)?.value || ''; this.editingKey = key; }
+            })
             if (this.field(key)?.source === 'project') {
-              Button('恢复继承').constraintSize({ minHeight: 38 }).borderRadius(12)
-                .backgroundColor(Color.Transparent).fontColor($r('app.color.primary_text'))
-                .accessibilityText(title + '恢复继承')
-                .onClick(() => { void this.save(key, null); })
+              AppButton({
+                label: '恢复继承',
+                kind: 'text',
+                compact: true,
+                a11yLabel: title + '恢复继承',
+                onTap: () => { void this.save(key, null); }
+              })
             }
           }.width('100%')
         }
         if (values.length && this.field(key)?.source === 'project') {
-          Button('恢复继承').constraintSize({ minHeight: 36 })
-            .backgroundColor(Color.Transparent).fontColor($r('app.color.primary_text'))
-            .accessibilityText(title + '恢复继承')
-            .onClick(() => { void this.save(key, null); })
+          AppButton({
+            label: '恢复继承',
+            kind: 'text',
+            compact: true,
+            a11yLabel: title + '恢复继承',
+            onTap: () => { void this.save(key, null); }
+          })
         }
       }
     }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: 14, right: 14, top: 10, bottom: 10 })
-      .border({ width: { top: isFirst ? 0 : 1 }, color: { top: $r('app.color.separator') } })
+      .border({ width: { top: isFirst ? 0 : Sizes.hairline }, color: { top: $r('app.color.separator') } })
   }
 
   build() {
     Column({ space: 0 }) {
-      Row({ space: 4 }) {
-        Button({ type: ButtonType.Circle, stateEffect: true }) {
-          Image($r('app.media.ui_back')).width(22).height(22).accessibilityLevel('no')
-        }.width(40).height(40).backgroundColor(Color.Transparent).accessibilityText('返回工作树默认设置').onClick(this.onBack)
-        Text('项目工作树设置').fontSize(17).lineHeight('22fp').fontWeight(600).fontColor($r('app.color.ink'))
-          .layoutWeight(1).padding({ left: 4 })
-        Button('刷新').constraintSize({ minHeight: 40 }).padding({ left: 12, right: 12 })
-          .enabled(!this.busy && !!this.selectedProject())
-          .fontSize(15).fontWeight(500).backgroundColor(Color.Transparent).fontColor($r('app.color.primary_text'))
-          .onClick(() => { void this.refresh(); })
-      }.width('100%').constraintSize({ minHeight: 52 }).padding({ left: 8, right: 8 }).alignItems(VerticalAlign.Center)
+      TopBar({
+        title: '项目工作树设置',
+        showBack: true,
+        backLabel: '返回工作树默认设置',
+        onBack: this.onBack
+      }) {
+        AppButton({
+          label: '刷新',
+          kind: 'text',
+          compact: true,
+          disabled: this.busy || !this.selectedProject(),
+          onTap: () => { void this.refresh(); }
+        })
+      }
       Scroll() {
-        Column({ space: 0 }) {
-          Text('选择工作区').fontSize(12).lineHeight('16fp').fontColor($r('app.color.muted'))
-            .padding({ left: 4, right: 4, top: 12, bottom: 5 }).width('100%')
-          Column() {
+        Column({ space: Space.xs }) {
+          GroupCard({
+            title: '选择工作区',
+            footnote: this.selectedProject() ? (this.selectedProject()?.workspaceRoot || '') :
+              this.localId ? '请选择已连接环境中的项目工作区' : ''
+          }) {
             if (!this.connectedEnvironments().length) {
               Row() {
-                Text('请先连接一个工作环境').fontSize(15).fontColor($r('app.color.muted'))
-              }.width('100%').constraintSize({ minHeight: 50 }).padding({ left: 14, right: 14 })
+                Text('请先连接一个工作环境').fontSize(FontSize.body).fontColor($r('app.color.muted'))
+              }.width('100%').constraintSize({ minHeight: Sizes.formRowMin }).padding({ left: 14, right: 14 })
             } else {
               Row({ space: 10 }) {
-                Text('环境').fontSize(15).fontColor($r('app.color.ink')).flexShrink(0)
+                Text('环境').fontSize(FontSize.body).fontColor($r('app.color.ink')).flexShrink(0)
                 Select(this.connectedEnvironments().map((entry: EnvironmentEntry): SelectOption => ({ value: entry.label })))
                   .value(this.connectedEnvironments().find((entry: EnvironmentEntry) => entry.localId === this.localId)?.label || '选择已连接环境')
-                  .layoutWeight(1).constraintSize({ minHeight: 38 }).accessibilityDescription('选择已连接环境')
+                  .layoutWeight(1).constraintSize({ minHeight: Sizes.buttonHeightCompact }).accessibilityDescription('选择已连接环境')
                   .backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
                   .onSelect((index: number) => this.selectEnvironment(index))
-              }.width('100%').constraintSize({ minHeight: 50 }).padding({ left: 14, right: 14 })
+              }.width('100%').constraintSize({ minHeight: Sizes.formRowMin }).padding({ left: 14, right: 14 })
               if (this.localId) {
                 Row({ space: 10 }) {
-                  Text('项目').fontSize(15).fontColor($r('app.color.ink')).flexShrink(0)
+                  Text('项目').fontSize(FontSize.body).fontColor($r('app.color.ink')).flexShrink(0)
                   Select(this.projectChoices().map((project: ScopedProject): SelectOption =>
                     ({ value: project.label + ' · ' + project.workspaceRoot })))
                     .value(this.selectedProject()?.label || '选择项目工作区')
-                    .layoutWeight(1).constraintSize({ minHeight: 38 }).accessibilityDescription('选择项目工作区')
+                    .layoutWeight(1).constraintSize({ minHeight: Sizes.buttonHeightCompact }).accessibilityDescription('选择项目工作区')
                     .backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
                     .enabled(this.projectChoices().length > 0).onSelect((index: number) => this.selectProject(index))
-                }.width('100%').constraintSize({ minHeight: 50 }).padding({ left: 14, right: 14 })
-                  .border({ width: { top: 1 }, color: { top: $r('app.color.separator') } })
+                }.width('100%').constraintSize({ minHeight: Sizes.formRowMin }).padding({ left: 14, right: 14 })
+                  .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
               }
             }
-          }.width('100%').backgroundColor($r('app.color.card')).borderRadius(14).clip(true)
-
-          if (this.selectedProject()) {
-            Text(this.selectedProject()?.workspaceRoot || '').fontSize(12).lineHeight('16fp')
-              .fontColor($r('app.color.muted')).padding({ left: 6, right: 6, top: 6 }).width('100%').wordBreak(WordBreak.BREAK_ALL)
-          } else if (this.localId) {
-            Text('请选择已连接环境中的项目工作区').fontSize(12).lineHeight('16fp')
-              .fontColor($r('app.color.muted')).padding({ left: 6, right: 6, top: 6 }).width('100%')
           }
+
           if (this.busy) {
-            Text('正在同步…').fontSize(13).fontColor($r('app.color.muted')).padding({ left: 4, right: 4, top: 8 }).width('100%')
+            Text('正在同步…').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
           }
           if (this.notice) {
-            Text(this.notice).fontSize(13).fontColor($r('app.color.primary_text')).padding({ left: 4, right: 4, top: 8 }).width('100%')
+            Text(this.notice).fontSize(FontSize.callout).fontColor($r('app.color.primary_text'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
           }
           if (this.snapshot && this.selectedProject()) {
             if (!this.snapshot.supported) {
-              Text('当前服务暂不支持项目级覆盖，可查看环境默认值。').fontSize(13).fontColor($r('app.color.muted'))
-                .padding({ left: 4, right: 4, top: 8 }).width('100%')
+              Text('当前服务暂不支持项目级覆盖，可查看环境默认值。').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+                .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
             } else if (!this.busy && !this.canWrite()) {
-              Text('当前连接仅可查看。').fontSize(13).fontColor($r('app.color.muted'))
-                .padding({ left: 4, right: 4, top: 8 }).width('100%')
+              Text('当前连接仅可查看。').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+                .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
             }
-            Text('项目覆盖项').fontSize(12).lineHeight('16fp').fontColor($r('app.color.muted'))
-              .padding({ left: 4, right: 4, top: 12, bottom: 5 }).width('100%')
-            Column() {
+            GroupCard({ title: '项目覆盖项' }) {
               this.setting('从远程分支开始', 'newWorktreesStartFromOrigin', ['true', 'false'], ['开启', '关闭'], true)
               this.setting('子模块', 'worktreeSubmodules', ['recursive', 'top-level', 'none'], ['递归初始化', '仅顶层', '跳过'])
               this.setting('分支命名模式', 'branchNamingMode', ['static', 'semantic', 'custom'], ['固定前缀', '语义前缀', '自定义说明'])
               this.setting('固定分支前缀', 'branchNamePrefix', [], [])
               this.setting('分支命名说明', 'branchNameInstructions', [], [])
-            }.width('100%').backgroundColor($r('app.color.card')).borderRadius(14).clip(true)
+            }
 
             if (this.canRestoreAll()) {
-              Button('全部恢复继承').width('100%').constraintSize({ minHeight: 46 }).margin({ top: 16 })
-                .borderRadius(12).backgroundColor($r('app.color.card')).fontColor($r('app.color.ink'))
+              Button('全部恢复继承').width('100%').constraintSize({ minHeight: Sizes.buttonHeight }).margin({ top: Space.sm })
+                .fontSize(FontSize.body).fontWeight(Weight.medium)
+                .borderRadius(Radius.button).backgroundColor($r('app.color.card')).fontColor($r('app.color.ink'))
                 .onClick(() => this.confirmRestoreAll())
             }
           }
-        }.width('100%').padding({ left: 12, right: 12, bottom: 24 })
+        }.width('100%').padding({ left: Space.page, right: Space.page, bottom: Space.lg })
       }.width('100%').layoutWeight(1).align(Alignment.TopStart)
     }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }

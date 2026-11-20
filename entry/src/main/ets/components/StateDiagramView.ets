@@ -35,7 +35,7 @@ export struct StateDiagramView {
                   .textOverflow({ overflow: TextOverflow.Ellipsis }).textAlign(TextAlign.Center)
               }.width(node.width).height(node.height).padding(6)
                 .justifyContent(FlexAlign.Center)
-                .backgroundColor($r('app.color.surface'))
+                .backgroundColor($r('app.color.group'))
                 .border({ width: 1, color: $r('app.color.border') }).borderRadius(10)
                 .position({ x: node.x, y: node.y })
             }

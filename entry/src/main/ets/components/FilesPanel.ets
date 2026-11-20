@@ -350,7 +350,7 @@ export struct FilesPanel {
         }
         AppButton({
           label: '搜索',
-          kind: 'secondary',
+          kind: 'text',
           compact: true,
           disabled: !this.query.trim() || this.loading,
           onTap: () => { void this.runSearch(); }
@@ -373,7 +373,7 @@ export struct FilesPanel {
           .backgroundColor(this.searchMode === 'contents' ? $r('app.color.card') : Color.Transparent)
           .borderRadius(7).layoutWeight(1).constraintSize({ minHeight: 34 })
           .onClick(() => this.setSearchMode('contents'))
-      }.width('100%').padding(2).backgroundColor($r('app.color.surface')).border({ width: Sizes.hairline, color: $r('app.color.border') }).borderRadius(9)
+      }.width('100%').padding(2).backgroundColor($r('app.color.group')).border({ width: Sizes.hairline, color: $r('app.color.border') }).borderRadius(9)
 
       if (this.loading) {
         Text('正在读取…').fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%')
@@ -400,14 +400,16 @@ export struct FilesPanel {
             ForEach(this.entries, (entry: WorkspaceEntry) => {
               ListItem() {
                 Row({ space: Space.xs }) {
-                  if (entry.kind === 'directory') {
-                    Image($r('app.media.ui_folder')).width(18).height(18).accessibilityLevel('no')
-                  } else {
-                    StatusBadge({
-                      text: isImage(entry.path) ? '图片' : isVideo(entry.path) ? '视频' : isAudio(entry.path) ? '音频' : isPdf(entry.path) ? 'PDF' : isMarkdown(entry.path) ? 'MD' : '文件',
-                      tone: 'neutral'
-                    })
-                  }
+                  Row() {
+                    if (entry.kind === 'directory') {
+                      Image($r('app.media.ui_folder')).width(18).height(18).accessibilityLevel('no')
+                    } else {
+                      StatusBadge({
+                        text: isImage(entry.path) ? '图片' : isVideo(entry.path) ? '视频' : isAudio(entry.path) ? '音频' : isPdf(entry.path) ? 'PDF' : isMarkdown(entry.path) ? 'MD' : '文件',
+                        tone: 'neutral'
+                      })
+                    }
+                  }.width(42).justifyContent(FlexAlign.Center).flexShrink(0)
                   Text(entry.name).fontSize(FontSize.body).fontColor($r('app.color.ink')).layoutWeight(1).maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                   if (entry.ignored) { StatusBadge({ text: '忽略', tone: 'neutral' }) }
@@ -435,14 +437,16 @@ export struct FilesPanel {
             ForEach(this.searchEntries, (entry: WorkspaceEntry) => {
               ListItem() {
                 Row({ space: Space.xs }) {
-                  if (entry.kind === 'directory') {
-                    Image($r('app.media.ui_folder')).width(18).height(18).accessibilityLevel('no')
-                  } else {
-                    StatusBadge({
-                      text: isImage(entry.path) ? '图片' : isVideo(entry.path) ? '视频' : isAudio(entry.path) ? '音频' : isPdf(entry.path) ? 'PDF' : isMarkdown(entry.path) ? 'MD' : '文件',
-                      tone: 'neutral'
-                    })
-                  }
+                  Row() {
+                    if (entry.kind === 'directory') {
+                      Image($r('app.media.ui_folder')).width(18).height(18).accessibilityLevel('no')
+                    } else {
+                      StatusBadge({
+                        text: isImage(entry.path) ? '图片' : isVideo(entry.path) ? '视频' : isAudio(entry.path) ? '音频' : isPdf(entry.path) ? 'PDF' : isMarkdown(entry.path) ? 'MD' : '文件',
+                        tone: 'neutral'
+                      })
+                    }
+                  }.width(42).justifyContent(FlexAlign.Center).flexShrink(0)
                   Text(entry.path).fontSize(FontSize.callout).fontColor($r('app.color.ink')).layoutWeight(1).maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                 }.constraintSize({ minHeight: Sizes.formRowMin }).padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs }).width('100%')

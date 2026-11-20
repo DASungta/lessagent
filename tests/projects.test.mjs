@@ -9,6 +9,7 @@ test('clone destination browses its existing base until edited and ignores a sta
   const source = await readFile(new URL('../entry/src/main/ets/components/AddProjectPanel.ets', import.meta.url), 'utf8');
   const code = (source.split('  @Builder')[0] + '}')
     .replace(/^import .*? from '\.\.\/services\/Workspace';\n/m, '')
+    .replace(/^import\s+[^\n]*?from\s+['"](?:\.\/ui\/|\.\.\/common\/Theme)[^'"]*['"];\n/gm, '')
     .replace("'../protocol/Projects'", JSON.stringify(projectsUrl))
     .replace(/@(?:Prop|State)\s+|@Watch\([^)]*\)\s*/g, '')
     .replace('@Component\nexport struct', 'export class');

@@ -107,13 +107,6 @@ interface ShareUploadPlan {
   uploaded: Map<string, DraftAttachment>;
 }
 
-@Extend(Button)
-function quietButton() {
-    .backgroundColor(Color.Transparent).fontColor($r('app.color.ink')).borderRadius(10)
-    .fontSize(14).constraintSize({ minHeight: 44 }).padding({ left: 12, right: 12 })
-  }
-
-
 @Entry
 @Component
 struct Index {
@@ -2824,7 +2817,10 @@ struct Index {
     Row() {
       Column({ space: Space.xs }) {
         ForEach(message.attachmentNames || [], (name: string) => {
-          Button('附件 · ' + name).quietButton().fontSize(FontSize.callout)
+          Button('附件 · ' + name, { type: ButtonType.Normal })
+            .fontSize(FontSize.callout).fontColor($r('app.color.ink'))
+            .backgroundColor($r('app.color.card')).border({ width: Sizes.hairline, color: $r('app.color.border') })
+            .borderRadius(Radius.tool).constraintSize({ minHeight: 36 }).padding({ left: Space.sm, right: Space.sm })
             .onClick(() => { void this.openAttachment(name); })
         })
         if (isPlainUserText(message.text)) {
@@ -2854,7 +2850,10 @@ struct Index {
         Text('正在回复…').fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
       }
       ForEach(message.attachmentNames || [], (name: string) => {
-        Button('附件 · ' + name).quietButton().fontSize(FontSize.callout).width('100%')
+        Button('附件 · ' + name, { type: ButtonType.Normal }).width('100%')
+          .fontSize(FontSize.callout).fontColor($r('app.color.ink'))
+          .backgroundColor($r('app.color.card')).border({ width: Sizes.hairline, color: $r('app.color.border') })
+          .borderRadius(Radius.tool).constraintSize({ minHeight: 36 }).padding({ left: Space.sm, right: Space.sm })
           .onClick(() => { void this.openAttachment(name); })
       })
       MarkdownView({ markdown: message.text, selectable: true,
@@ -3334,9 +3333,16 @@ struct Index {
     Stack({ alignContent: Alignment.Bottom }) {
       Column() {
         if (this.shareId && this.page !== 'share' && !this.choosingShare) {
-          Button('收到分享 · 审阅并保存草稿').quietButton().width('100%')
-            .margin({ left: this.isRootTab() ? Space.md : 0, right: this.isRootTab() ? Space.md : 0 })
-            .enabled(!this.busy && !this.unknown).onClick(() => { this.panelOpen = false; this.page = 'share'; })
+          Column() {
+            AppButton({
+              label: '收到分享 · 审阅并保存草稿',
+              kind: 'secondary',
+              compact: true,
+              fill: true,
+              disabled: this.busy || this.unknown,
+              onTap: () => { this.panelOpen = false; this.page = 'share'; }
+            })
+          }.width('100%').padding({ left: Space.page, right: Space.page, top: Space.xs, bottom: Space.xxs })
         }
         if (this.page === 'voice') {
           VoiceInputPanel({ onBack: () => this.page = 'chat', onInsert: (value: string) => this.insertVoice(value) })
@@ -3667,19 +3673,9 @@ struct Index {
           }
         }.width('100%').hitTestBehavior(HitTestMode.Transparent)
       }
-    }.width('100%').height('100%').padding({
-      left: (this.isRootTab() || this.page === 'chat' || this.page === 'choose-project' ||
-        this.page === 'add-project' || this.page === 'project-overview' || this.page === 'archive') ? 0 : 8,
-      right: (this.isRootTab() || this.page === 'chat' || this.page === 'choose-project' ||
-        this.page === 'add-project' || this.page === 'project-overview' || this.page === 'archive') ? 0 : 8
-    })
+    }.width('100%').height('100%')
       .focusable(true).onKeyEvent((event: KeyEvent) => { this.keyboardEvent(event, false); })
-      .backgroundColor(
-        (this.page === 'sessions' || this.page === 'settings' || this.page === 'choose-project' ||
-          this.page === 'add-project' || this.page === 'project-overview' || this.page === 'archive')
-          ? $r('app.color.group')
-          : this.page === 'chat' ? $r('app.color.screen') : $r('app.color.canvas')
-      )
+      .backgroundColor(this.page === 'chat' ? $r('app.color.screen') : $r('app.color.group'))
       .foregroundColor($r('app.color.ink'))
       .bindSheet($$this.panelOpen, this.panelContent(), { height: this.panel === 'thread' ? '66%' :
         this.panel === 'attachment' ? '80%' :

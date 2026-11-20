@@ -164,16 +164,20 @@ export struct GitPanel {
     GroupCard({ title: '工作区状态' }) {
       Column({ space: Space.xs }) {
         Text(this.summary()).fontSize(FontSize.body).fontWeight(Weight.medium).fontColor($r('app.color.ink')).width('100%')
-        if (this.status.files.length) {
+        if (this.status.insertions > 0 || this.status.deletions > 0) {
           Row({ space: Space.xs }) {
-            Text('+' + this.status.insertions)
-              .fontSize(FontSize.badge).fontWeight(Weight.medium).fontColor($r('app.color.diff_add_ink'))
-              .backgroundColor($r('app.color.diff_add')).borderRadius(Radius.badge)
-              .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-            Text('-' + this.status.deletions)
-              .fontSize(FontSize.badge).fontWeight(Weight.medium).fontColor($r('app.color.diff_del_ink'))
-              .backgroundColor($r('app.color.diff_del')).borderRadius(Radius.badge)
-              .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+            if (this.status.insertions > 0) {
+              Text('+' + this.status.insertions)
+                .fontSize(FontSize.badge).fontWeight(Weight.medium).fontColor($r('app.color.diff_add_ink'))
+                .backgroundColor($r('app.color.diff_add')).borderRadius(Radius.badge)
+                .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+            }
+            if (this.status.deletions > 0) {
+              Text('-' + this.status.deletions)
+                .fontSize(FontSize.badge).fontWeight(Weight.medium).fontColor($r('app.color.diff_del_ink'))
+                .backgroundColor($r('app.color.diff_del')).borderRadius(Radius.badge)
+                .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+            }
           }.width('100%')
         }
         if (this.status.prNumber > 0 && this.status.prTitle) {
@@ -220,8 +224,12 @@ export struct GitPanel {
               Row({ space: Space.xs }) {
                 Text(file.path).fontSize(FontSize.callout).fontColor($r('app.color.ink')).layoutWeight(1).maxLines(2)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
-                Text('+' + file.insertions).fontSize(FontSize.badge).fontColor($r('app.color.diff_add_ink'))
-                Text('-' + file.deletions).fontSize(FontSize.badge).fontColor($r('app.color.diff_del_ink'))
+                if (file.insertions > 0) {
+                  Text('+' + file.insertions).fontSize(FontSize.badge).fontColor($r('app.color.diff_add_ink'))
+                }
+                if (file.deletions > 0) {
+                  Text('-' + file.deletions).fontSize(FontSize.badge).fontColor($r('app.color.diff_del_ink'))
+                }
               }.constraintSize({ minHeight: Sizes.formRowMin }).padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs }).width('100%')
             }
           }, (file: VcsChange) => file.path)

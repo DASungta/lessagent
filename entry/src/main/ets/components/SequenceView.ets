@@ -23,7 +23,7 @@ export struct SequenceView {
               Text(participant.label).fontSize(12).fontColor($r('app.color.ink')).maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis }).textAlign(TextAlign.Center)
             }.width(participant.width).height(44).padding(6).justifyContent(FlexAlign.Center)
-              .backgroundColor($r('app.color.surface'))
+              .backgroundColor($r('app.color.group'))
               .border({ width: 1, color: $r('app.color.border') }).borderRadius(8)
               .position({ x: participant.x, y: 20 })
           }, (participant: MermaidParticipant) => participant.id)

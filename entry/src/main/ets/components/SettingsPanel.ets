@@ -487,23 +487,15 @@ export struct SettingsPanel {
               this.sectionLabel('会话与工作区')
               Column() {
                 if (settingsMatch(this.query, '工作中 Working 会话 分组 排序')) {
-                  Button({ type: ButtonType.Normal }) {
-                    Row({ space: 10 }) {
-                      Column({ space: 2 }) {
-                        Text('工作中分组').fontSize(FontSize.body).lineHeight(LineHeight.body).fontWeight(Weight.regular).width('100%')
-                        Text('开启后将运行中的会话单独分组，活跃会话按返回时间排序。')
-                          .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted')).width('100%')
-                      }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-                      Text(this.workingShelfEnabled ? '已开启' : '已关闭')
-                        .fontSize(FontSize.callout)
-                        .fontWeight(Weight.medium)
-                        .fontColor(this.workingShelfEnabled ? $r('app.color.primary_text') : $r('app.color.muted'))
-                    }.width('100%').padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs }).constraintSize({ minHeight: Sizes.formRowMin })
-                  }.width('100%').backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
-                    .border({ width: { top: this.isFirstVisible(this.workspaceSectionKeywords(), 0) ? 0 : Sizes.hairline }, color: { top: $r('app.color.separator') } })
-                    .enabled(!this.savingWorkingShelf)
-                    .accessibilityText(this.workingShelfEnabled ? '工作中分组，已开启' : '工作中分组，已关闭')
-                    .onClick(() => { void this.changeWorkingShelf(); })
+                  FormRow({
+                    label: '工作中分组',
+                    subtitle: '开启后将运行中的会话单独分组，活跃会话按返回时间排序。',
+                    kind: 'switch',
+                    isFirst: this.isFirstVisible(this.workspaceSectionKeywords(), 0),
+                    checked: this.workingShelfEnabled,
+                    disabled: this.savingWorkingShelf,
+                    onToggle: () => { void this.changeWorkingShelf(); }
+                  })
                 }
                 if (settingsMatch(this.query, WORKTREE_STORAGE_SEARCH)) {
                   this.row('工作树存储', '目录位置与自动清理规则', '', this.isFirstVisible(this.workspaceSectionKeywords(), 1), () => this.section = 'worktree-storage')
@@ -524,23 +516,15 @@ export struct SettingsPanel {
                   this.row('新任务默认设置', '当前环境的权限、工作区与响应行为', '', this.isFirstVisible(this.workspaceSectionKeywords(), 6), () => this.section = 'thread-defaults')
                 }
                 if (settingsMatch(this.query, '最近项目 上次 使用项目 新任务 默认 last project')) {
-                  Button({ type: ButtonType.Normal }) {
-                    Row({ space: 10 }) {
-                      Column({ space: 2 }) {
-                        Text('使用最近项目').fontSize(FontSize.body).lineHeight(LineHeight.body).fontWeight(Weight.regular).width('100%')
-                        Text('开启后优先使用当前或筛选的项目，其次使用最近项目。')
-                          .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted')).width('100%')
-                      }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-                      Text(this.useLastProject ? '已开启' : '已关闭')
-                        .fontSize(FontSize.callout)
-                        .fontWeight(Weight.medium)
-                        .fontColor(this.useLastProject ? $r('app.color.primary_text') : $r('app.color.muted'))
-                    }.width('100%').padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs }).constraintSize({ minHeight: Sizes.formRowMin })
-                  }.width('100%').backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
-                    .border({ width: { top: this.isFirstVisible(this.workspaceSectionKeywords(), 7) ? 0 : Sizes.hairline }, color: { top: $r('app.color.separator') } })
-                    .enabled(!this.savingLastProject)
-                    .accessibilityText(this.useLastProject ? '使用最近项目，已开启' : '使用最近项目，已关闭')
-                    .onClick(() => { void this.changeUseLastProject(); })
+                  FormRow({
+                    label: '使用最近项目',
+                    subtitle: '开启后优先使用当前或筛选的项目，其次使用最近项目。',
+                    kind: 'switch',
+                    isFirst: this.isFirstVisible(this.workspaceSectionKeywords(), 7),
+                    checked: this.useLastProject,
+                    disabled: this.savingLastProject,
+                    onToggle: () => { void this.changeUseLastProject(); }
+                  })
                 }
               }.width('100%').backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
             }
@@ -615,23 +599,13 @@ export struct SettingsPanel {
                   }
                 }.width('100%').padding({ left: 14, right: 14, top: Space.sm, bottom: Space.sm }).alignItems(HorizontalAlign.Start)
 
-                Row({ space: 10 }) {
-                  Text('代码自动换行').fontSize(FontSize.body).lineHeight(LineHeight.body).fontColor($r('app.color.ink')).layoutWeight(1)
-                  Button(this.codeWordBreak ? '已开启' : '已关闭')
-                    .backgroundColor(this.codeWordBreak ? $r('app.color.info_bg') : $r('app.color.group'))
-                    .fontColor(this.codeWordBreak ? $r('app.color.primary_text') : $r('app.color.ink'))
-                    .border({ width: 1, color: this.codeWordBreak ? $r('app.color.primary') : Color.Transparent })
-                    .fontSize(FontSize.callout).fontWeight(this.codeWordBreak ? Weight.semibold : Weight.medium).borderRadius(Radius.badge)
-                    .constraintSize({ minHeight: 34 }).padding({ left: Space.sm, right: Space.sm })
-                    .enabled(!this.savingCodeAppearance)
-                    .accessibilityText(this.codeWordBreak ? '代码自动换行，已开启' : '代码自动换行，已关闭')
-                    .onClick(() => { void this.changeCodeWordBreak(); })
-                }
-                .width('100%')
-                .constraintSize({ minHeight: Sizes.formRowMin })
-                .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
-                .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
-                .alignItems(VerticalAlign.Center)
+                FormRow({
+                  label: '代码自动换行',
+                  kind: 'switch',
+                  checked: this.codeWordBreak,
+                  disabled: this.savingCodeAppearance,
+                  onToggle: () => { void this.changeCodeWordBreak(); }
+                })
               }
               .width('100%')
               .backgroundColor($r('app.color.card'))

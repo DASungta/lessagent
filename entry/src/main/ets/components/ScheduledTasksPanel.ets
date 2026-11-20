@@ -931,15 +931,15 @@ export struct ScheduledTasksPanel {
                       .fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%')
                     Flex({ wrap: FlexWrap.Wrap }) {
                       ForEach([1, 2, 3, 4, 5, 6, 0], (day: number) => {
-                        Button(this.weekdayLabel(day))
+                        Button(this.weekdayLabel(day), { type: ButtonType.Normal })
                           .fontSize(FontSize.callout)
                           .fontWeight(this.weekdays.split(',').includes(String(day)) ? Weight.semibold : Weight.regular)
                           .padding({ left: 10, right: 10, top: 6, bottom: 6 })
                           .constraintSize({ minWidth: 42, minHeight: 36 }).margin({ right: 6, bottom: 6 })
-                          .borderRadius(Radius.tool)
                           .backgroundColor(this.weekdays.split(',').includes(String(day)) ? $r('app.color.info_bg') : $r('app.color.group'))
                           .fontColor(this.weekdays.split(',').includes(String(day)) ? $r('app.color.primary_text') : $r('app.color.ink'))
-                          .border({ width: 1, color: this.weekdays.split(',').includes(String(day)) ? $r('app.color.primary') : Color.Transparent })
+                          .border({ width: Sizes.hairline, color: this.weekdays.split(',').includes(String(day)) ? $r('app.color.primary') : Color.Transparent, radius: Radius.tool })
+                          .borderRadius(Radius.tool)
                           .accessibilityText(this.weekdayLabel(day) + (this.weekdays.split(',').includes(String(day)) ? '，已选择' : '，未选择'))
                           .onClick(() => { this.weekdays = scheduleWeekdaySelection(this.weekdays, day); })
                       }, (day: number) => String(day))

@@ -134,7 +134,10 @@ export struct UsagePanel {
   private money(): string { return '$' + usageTotal(this.rows()).costUsd.toFixed(2); }
   private resetLabel(value: string): string {
     const date = new Date(value);
-    return value && !Number.isNaN(date.getTime()) ? date.toLocaleString() : '未提供';
+    if (!value || Number.isNaN(date.getTime())) return '未提供';
+    const pad = (n: number): string => String(n).padStart(2, '0');
+    return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) +
+      ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes());
   }
   @Builder
   accountCard(account: UsageAccount) {
@@ -236,7 +239,7 @@ export struct UsagePanel {
             }
             .width('100%')
             .padding(2)
-            .backgroundColor($r('app.color.surface'))
+            .backgroundColor($r('app.color.group'))
             .border({ width: Sizes.hairline, color: $r('app.color.border') })
             .borderRadius(9)
             if (this.error) {

@@ -89,7 +89,7 @@ export struct MarkdownView {
             Text(cell).fontColor($r('app.color.ink')).fontSize(13).fontWeight(FontWeight.Medium).padding(8)
               .width(160).textAlign(this.cellAlign(block, index))
           }, (cell: string, index: number) => 'h' + index)
-        }.backgroundColor($r('app.color.surface'))
+        }.backgroundColor($r('app.color.group'))
         ForEach(block.rows, (row: string[], rowIndex: number) => {
           Row() {
             ForEach(row, (cell: string, index: number) => {
@@ -274,9 +274,9 @@ export struct MarkdownView {
       } else {
         Row({ space: 8 }) {
           Text('图片').fontSize(12).fontColor($r('app.color.muted'))
-          Text(block.alt || block.url).fontSize(13).fontColor($r('app.color.primary'))
+          Text(block.alt || block.url).fontSize(13).fontColor($r('app.color.primary_text'))
             .layoutWeight(1).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
-        }.padding(10).width('100%').backgroundColor($r('app.color.surface')).borderRadius(10)
+        }.padding(10).width('100%').backgroundColor($r('app.color.group')).borderRadius(10)
           .onClick(() => this.onOpenImage(block.url))
       }
     }

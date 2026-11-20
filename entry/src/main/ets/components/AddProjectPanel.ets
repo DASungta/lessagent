@@ -1,3 +1,7 @@
+import { FontSize, LineHeight, Opacity, Radius, Sizes, Space, Weight } from '../common/Theme';
+import { AppButton } from './ui/AppButton';
+import { GroupCard } from './ui/GroupCard';
+import { TopBar } from './ui/TopBar';
 import { AddProjectEnvironment, CloneView, WorkspaceActions } from '../services/Workspace';
 import {
   ProjectView, ScopedProject, cloneDestination, cloneDirectoryName, cloneDirectoryPath,
@@ -329,45 +333,46 @@ export struct AddProjectPanel {
     Button({ type: ButtonType.Normal }) {
       Row({ space: 10 }) {
         Column({ space: 2 }) {
-          Text(title).fontSize(15).lineHeight('22fp').fontWeight(FontWeight.Regular).fontColor($r('app.color.ink')).width('100%')
-          Text(subtitle).fontSize(12).lineHeight('16fp').fontColor($r('app.color.muted')).maxLines(2).width('100%')
+          Text(title).fontSize(FontSize.body).lineHeight(LineHeight.body).fontWeight(Weight.regular).fontColor($r('app.color.ink')).width('100%')
+          Text(subtitle).fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted')).maxLines(2).width('100%')
         }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-        Image($r('app.media.ui_chevron_right')).width(16).height(16).opacity(0.6).accessibilityLevel('no')
-      }.width('100%').padding({ left: 14, right: 14, top: 8, bottom: 8 }).constraintSize({ minHeight: 50 })
+        Image($r('app.media.ui_chevron_right')).width(Sizes.chevron).height(Sizes.chevron).opacity(0.6).accessibilityLevel('no')
+      }.width('100%').padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs }).constraintSize({ minHeight: Sizes.formRowMin })
     }.width('100%').backgroundColor(Color.Transparent)
-      .border({ width: { top: isFirst ? 0 : 1 }, color: { top: $r('app.color.separator') } })
-      .enabled(enabled && !this.busy).opacity(enabled && !this.busy ? 1 : 0.38).onClick(action)
+      .border({ width: { top: isFirst ? 0 : Sizes.hairline }, color: { top: $r('app.color.separator') } })
+      .enabled(enabled && !this.busy).opacity(enabled && !this.busy ? 1 : Opacity.disabled).onClick(action)
   }
 
   @Builder
   browseList() {
-    Column() {
+    GroupCard() {
       if (this.browseParent) {
         this.sourceRow('..', this.browseParent, true, true, () => this.setPath(this.browseParent))
       }
       ForEach(this.browse, (entry: BrowseRow, index: number) => {
         this.sourceRow(entry.name, entry.fullPath, true, !this.browseParent && index === 0, () => this.openPath(entry.fullPath))
       }, (entry: BrowseRow) => entry.fullPath)
-    }.width('100%').backgroundColor($r('app.color.card')).borderRadius(14).clip(true)
+    }
   }
 
   @Builder
   sourcePage() {
-    Column({ space: 12 }) {
+    Column({ space: Space.sm }) {
       if (this.environments.length > 1) {
-        Column() {
+        GroupCard() {
           Row({ space: 10 }) {
-            Text('环境').fontSize(15).fontColor($r('app.color.ink')).flexShrink(0)
+            Text('环境').fontSize(FontSize.body).fontColor($r('app.color.ink')).flexShrink(0)
             Select(this.environments.map((environment: AddProjectEnvironment) => {
               return { value: environment.label + (environment.ready ? '' : '（未连接）') } as SelectOption;
             })).value(this.environments.find((environment: AddProjectEnvironment) => environment.environmentId === this.environmentId)?.label || '选择环境')
               .onSelect((index: number) => this.chooseEnvironment(this.environments[index]?.environmentId || ''))
-              .layoutWeight(1).constraintSize({ minHeight: 38 }).font({ size: 14 }).backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
-          }.width('100%').constraintSize({ minHeight: 50 }).padding({ left: 14, right: 14 })
-        }.width('100%').backgroundColor($r('app.color.card')).borderRadius(14).clip(true)
+              .layoutWeight(1).constraintSize({ minHeight: Sizes.buttonHeightCompact }).font({ size: FontSize.body })
+              .backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
+          }.width('100%').constraintSize({ minHeight: Sizes.formRowMin }).padding({ left: 14, right: 14 })
+        }
       }
 
-      Column() {
+      GroupCard() {
         if (this.environment()?.newProjectsRoot) {
           this.sourceRow('新建项目', '从名称创建新的 Git 仓库', !!this.environment()?.ready, true, () => this.startSource('new'))
         }
@@ -381,187 +386,237 @@ export struct AddProjectPanel {
             !!this.environment()?.ready && provider.ready && !!this.environment()?.client.canWriteSourceControl(),
             false, () => this.startSource(provider.kind, provider.kind))
         }, (provider: ProviderRow) => provider.kind)
-      }.width('100%').backgroundColor($r('app.color.card')).borderRadius(14).clip(true)
+      }
 
-      Button(this.providers.length ? '刷新代码托管来源' : '检测代码托管来源').constraintSize({ minHeight: 40 }).width('100%')
-        .backgroundColor(Color.Transparent).fontColor($r('app.color.primary_text')).enabled(!this.busy)
-        .onClick(() => this.loadProviders())
+      AppButton({
+        label: this.providers.length ? '刷新代码托管来源' : '检测代码托管来源',
+        kind: 'text',
+        fill: true,
+        disabled: this.busy,
+        onTap: () => this.loadProviders()
+      })
 
       if (!this.environment()?.ready) {
-        Text('环境未连接，添加项目暂不可用。').fontSize(13).fontColor($r('app.color.muted')).width('100%')
-        Button('管理环境与连接').constraintSize({ minHeight: 46 }).width('100%').borderRadius(12)
-          .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink')).onClick(this.onEnvironments)
+        Text('环境未连接，添加项目暂不可用。').fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.muted')).width('100%')
+        AppButton({
+          label: '管理环境与连接',
+          kind: 'secondary',
+          fill: true,
+          onTap: this.onEnvironments
+        })
       }
     }.width('100%').alignItems(HorizontalAlign.Start)
   }
 
   @Builder
   newPage() {
-    Column({ space: 12 }) {
-      Column() {
+    Column({ space: Space.sm }) {
+      GroupCard({
+        footnote: this.environment()?.newProjectsRoot
+          ? (this.name.trim() ? '将创建 ' + newProjectPathPreview(this.environment()?.newProjectsRoot || '', this.name) :
+              '位于 ' + this.environment()?.newProjectsRoot)
+          : ''
+      }) {
         Row({ space: 10 }) {
-          Text('名称').fontSize(15).fontColor($r('app.color.ink')).width(56).flexShrink(0)
-          TextInput({ placeholder: '项目名称', text: this.name }).layoutWeight(1).height(44).fontSize(15)
+          Text('名称').fontSize(FontSize.body).fontColor($r('app.color.ink')).width(56).flexShrink(0)
+          TextInput({ placeholder: '项目名称', text: this.name }).layoutWeight(1).height(44).fontSize(FontSize.body)
+            .fontColor($r('app.color.ink')).placeholderColor($r('app.color.placeholder'))
             .backgroundColor(Color.Transparent).padding(0)
             .onChange((value: string) => this.name = value).accessibilityText('项目名称')
-        }.width('100%').constraintSize({ minHeight: 50 }).padding({ left: 14, right: 14 })
+        }.width('100%').constraintSize({ minHeight: Sizes.formRowMin }).padding({ left: 14, right: 14 })
         if (this.providers.some((provider: ProviderRow) => provider.ready)) {
           Row() {
             Column({ space: 2 }) {
-              Text('创建私有远程仓库').fontSize(15).fontColor($r('app.color.ink')).width('100%')
+              Text('创建私有远程仓库').fontSize(FontSize.body).lineHeight(LineHeight.body).fontColor($r('app.color.ink')).width('100%')
               Text(this.publishKind || this.providers.find((provider: ProviderRow) => provider.ready)?.label || '')
-                .fontSize(12).fontColor($r('app.color.muted')).width('100%')
+                .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted')).width('100%')
             }.layoutWeight(1).alignItems(HorizontalAlign.Start)
             Toggle({ type: ToggleType.Switch, isOn: this.publishing })
               .selectedColor($r('app.color.primary')).switchPointColor(Color.White)
               .onChange((value: boolean) => this.publishing = value)
-          }.width('100%').constraintSize({ minHeight: 50 }).padding({ left: 14, right: 14, top: 8, bottom: 8 })
-            .border({ width: { top: 1 }, color: { top: $r('app.color.separator') } })
+          }.width('100%').constraintSize({ minHeight: Sizes.formRowMin }).padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+            .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
           if (this.publishing) {
             Row({ space: 10 }) {
-              Text('托管来源').fontSize(15).fontColor($r('app.color.ink')).flexShrink(0)
+              Text('托管来源').fontSize(FontSize.body).fontColor($r('app.color.ink')).flexShrink(0)
               Select(this.providers.filter((provider: ProviderRow) => provider.ready)
                 .map((provider: ProviderRow) => { return { value: provider.label } as SelectOption; }))
                 .value(this.publishKind || this.providers.find((provider: ProviderRow) => provider.ready)?.label || '')
                 .onSelect((index: number) => {
                   const ready = this.providers.filter((provider: ProviderRow) => provider.ready);
                   this.publishKind = ready[index]?.kind || '';
-                }).layoutWeight(1).height(38).font({ size: 14 }).backgroundColor(Color.Transparent)
-            }.width('100%').constraintSize({ minHeight: 50 }).padding({ left: 14, right: 14 })
-              .border({ width: { top: 1 }, color: { top: $r('app.color.separator') } })
+                }).layoutWeight(1).height(Sizes.buttonHeightCompact).font({ size: FontSize.body }).backgroundColor(Color.Transparent)
+            }.width('100%').constraintSize({ minHeight: Sizes.formRowMin }).padding({ left: 14, right: 14 })
+              .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
           }
         }
-      }.width('100%').backgroundColor($r('app.color.card')).borderRadius(14).clip(true)
-
-      if (this.environment()?.newProjectsRoot) {
-        Text(this.name.trim() ? '将创建 ' + newProjectPathPreview(this.environment()?.newProjectsRoot || '', this.name) :
-          '位于 ' + this.environment()?.newProjectsRoot)
-          .fontSize(12).lineHeight('16fp').fontColor($r('app.color.muted')).padding({ left: 6, right: 6 }).width('100%')
       }
 
-      Button(this.busy ? '创建中…' : '创建项目').constraintSize({ minHeight: 46 }).width('100%').borderRadius(12)
-        .fontSize(15).fontWeight(FontWeight.Medium)
-        .backgroundColor($r('app.color.prominent')).fontColor($r('app.color.on_prominent'))
-        .enabled(!this.busy && !!this.name.trim()).opacity(!this.busy && !!this.name.trim() ? 1 : 0.38)
-        .onClick(() => void this.createNew())
+      AppButton({
+        label: this.busy ? '创建中…' : '创建项目',
+        kind: 'primary',
+        fill: true,
+        loading: this.busy,
+        disabled: this.busy || !this.name.trim(),
+        onTap: () => void this.createNew()
+      })
     }.width('100%').alignItems(HorizontalAlign.Start)
   }
 
   @Builder
   localPage() {
-    Column({ space: 10 }) {
-      Column() {
+    Column({ space: Space.sm }) {
+      GroupCard() {
         Row({ space: 10 }) {
-          Text('目录').fontSize(15).fontColor($r('app.color.ink')).width(48).flexShrink(0)
-          TextInput({ placeholder: '~/projects/my-app', text: this.pathInput }).layoutWeight(1).height(44).fontSize(15)
+          Text('目录').fontSize(FontSize.body).fontColor($r('app.color.ink')).width(48).flexShrink(0)
+          TextInput({ placeholder: '~/projects/my-app', text: this.pathInput }).layoutWeight(1).height(44).fontSize(FontSize.body)
+            .fontColor($r('app.color.ink')).placeholderColor($r('app.color.placeholder'))
             .backgroundColor(Color.Transparent).padding(0)
             .onChange((value: string) => this.pathInput = value).accessibilityText('项目目录')
-        }.width('100%').constraintSize({ minHeight: 50 }).padding({ left: 14, right: 14 })
-      }.width('100%').backgroundColor($r('app.color.card')).borderRadius(14).clip(true)
-      Row({ space: 8 }) {
-        Button(this.busy ? '添加中…' : '添加项目').constraintSize({ minHeight: 46 }).layoutWeight(1).borderRadius(12)
-          .backgroundColor($r('app.color.prominent')).fontColor($r('app.color.on_prominent'))
-          .enabled(!this.busy && !!this.environment()?.ready).onClick(() => void this.createLocal())
-        Button('刷新目录').constraintSize({ minHeight: 46 }).layoutWeight(1).borderRadius(12)
-          .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink')).onClick(() => void this.loadBrowse())
+        }.width('100%').constraintSize({ minHeight: Sizes.formRowMin }).padding({ left: 14, right: 14 })
+      }
+      Row({ space: Space.xs }) {
+        Column() {
+          AppButton({
+            label: this.busy ? '添加中…' : '添加项目',
+            kind: 'primary',
+            fill: true,
+            loading: this.busy,
+            disabled: this.busy || !this.environment()?.ready,
+            onTap: () => void this.createLocal()
+          })
+        }.layoutWeight(1)
+        Column() {
+          Button('刷新目录').constraintSize({ minHeight: Sizes.buttonHeight }).width('100%').borderRadius(Radius.button)
+            .fontSize(FontSize.body).fontWeight(Weight.medium)
+            .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink')).onClick(() => void this.loadBrowse())
+        }.layoutWeight(1)
       }.width('100%')
-      Text('浏览文件夹').fontSize(12).fontColor($r('app.color.muted')).padding({ left: 4, top: 6 }).width('100%')
+      Text('浏览文件夹').fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted'))
+        .padding({ left: Space.xxs, top: Space.xxs }).width('100%')
       this.browseList()
     }.width('100%').alignItems(HorizontalAlign.Start)
   }
 
   @Builder
   repositoryPage() {
-    Column({ space: 12 }) {
-      Column() {
+    Column({ space: Space.sm }) {
+      GroupCard({
+        footnote: this.source === 'url' ? '支持 owner/repo 简写和 GitHub 页面 URL；不会自动读取凭据。' : ''
+      }) {
         TextInput({
           placeholder: this.source === 'url' ? 'https://example.com/org/repo.git' : this.provider + ' owner/repository',
           text: this.repositoryInput
-        }).height(50).fontSize(15).backgroundColor(Color.Transparent).padding({ left: 14, right: 14 })
+        }).height(Sizes.formRowMin).fontSize(FontSize.body).fontColor($r('app.color.ink'))
+          .placeholderColor($r('app.color.placeholder')).backgroundColor(Color.Transparent).padding({ left: 14, right: 14 })
           .onChange((value: string) => this.repositoryInput = value).accessibilityText('仓库地址')
-      }.width('100%').backgroundColor($r('app.color.card')).borderRadius(14).clip(true)
-      if (this.source === 'url') {
-        Text('支持 owner/repo 简写和 GitHub 页面 URL；不会自动读取凭据。')
-          .fontSize(12).lineHeight('16fp').fontColor($r('app.color.muted')).padding({ left: 6, right: 6 }).width('100%')
       }
-      Button(this.busy ? '查询中…' : this.source === 'url' ? '继续' : '查询仓库').constraintSize({ minHeight: 46 }).width('100%')
-        .borderRadius(12).backgroundColor($r('app.color.prominent')).fontColor($r('app.color.on_prominent'))
-        .enabled(!this.busy && !!this.repositoryInput.trim()).onClick(() => void this.continueRepository())
+      AppButton({
+        label: this.busy ? '查询中…' : this.source === 'url' ? '继续' : '查询仓库',
+        kind: 'primary',
+        fill: true,
+        loading: this.busy,
+        disabled: this.busy || !this.repositoryInput.trim(),
+        onTap: () => void this.continueRepository()
+      })
     }.width('100%').alignItems(HorizontalAlign.Start)
   }
 
   @Builder
   destinationPage() {
-    Column({ space: 10 }) {
+    Column({ space: Space.sm }) {
       if (this.repositoryTitle) {
-        Column({ space: 2 }) {
-          Text(this.repositoryTitle).fontSize(15).fontWeight(FontWeight.Medium).fontColor($r('app.color.ink')).width('100%')
-          Text(this.remoteUrl).fontSize(12).fontColor($r('app.color.muted')).maxLines(2).width('100%')
-        }.width('100%').padding(14).backgroundColor($r('app.color.card')).borderRadius(14).alignItems(HorizontalAlign.Start)
+        GroupCard() {
+          Column({ space: 2 }) {
+            Text(this.repositoryTitle).fontSize(FontSize.body).fontWeight(Weight.medium).fontColor($r('app.color.ink')).width('100%')
+            Text(this.remoteUrl).fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted')).maxLines(2).width('100%')
+          }.width('100%').padding(14).alignItems(HorizontalAlign.Start)
+        }
       }
-      Column() {
-        TextInput({ placeholder: '克隆目标目录', text: this.pathInput }).height(50).fontSize(15)
+      GroupCard() {
+        TextInput({ placeholder: '克隆目标目录', text: this.pathInput }).height(Sizes.formRowMin).fontSize(FontSize.body)
+          .fontColor($r('app.color.ink')).placeholderColor($r('app.color.placeholder'))
           .backgroundColor(Color.Transparent).padding({ left: 14, right: 14 })
           .onChange((value: string) => this.pathInput = value).accessibilityText('克隆目标目录')
-      }.width('100%').backgroundColor($r('app.color.card')).borderRadius(14).clip(true)
-      Row({ space: 8 }) {
-        Button(this.busy ? '克隆中…' : '克隆项目').constraintSize({ minHeight: 46 }).layoutWeight(1).borderRadius(12)
-          .backgroundColor($r('app.color.prominent')).fontColor($r('app.color.on_prominent'))
-          .enabled(!this.busy && !!this.remoteUrl && !!this.environment()?.ready).onClick(() => void this.cloneProject())
-        Button('刷新目录').constraintSize({ minHeight: 46 }).layoutWeight(1).borderRadius(12)
-          .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink')).onClick(() => void this.loadBrowse())
+      }
+      Row({ space: Space.xs }) {
+        Column() {
+          AppButton({
+            label: this.busy ? '克隆中…' : '克隆项目',
+            kind: 'primary',
+            fill: true,
+            loading: this.busy,
+            disabled: this.busy || !this.remoteUrl || !this.environment()?.ready,
+            onTap: () => void this.cloneProject()
+          })
+        }.layoutWeight(1)
+        Column() {
+          Button('刷新目录').constraintSize({ minHeight: Sizes.buttonHeight }).width('100%').borderRadius(Radius.button)
+            .fontSize(FontSize.body).fontWeight(Weight.medium)
+            .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink')).onClick(() => void this.loadBrowse())
+        }.layoutWeight(1)
       }.width('100%')
       if (this.cloneStatus) {
-        Text(this.cloneStatus).fontSize(13).fontColor(this.clone?.error ? $r('app.color.danger') : $r('app.color.muted'))
-          .padding({ left: 4, right: 4 }).width('100%')
+        Text(this.cloneStatus).fontSize(FontSize.callout).lineHeight(LineHeight.callout)
+          .fontColor(this.clone?.error ? $r('app.color.danger') : $r('app.color.muted'))
+          .padding({ left: Space.xxs, right: Space.xxs }).width('100%')
       }
       if (this.clone && (this.clone.phase === 'running' || this.clone.phase === 'failed' || !!this.clone.error)) {
-        Row({ space: 8 }) {
+        Row({ space: Space.xs }) {
           if (this.clone.phase === 'running') {
-            Button('取消克隆').constraintSize({ minHeight: 38 }).layoutWeight(1).borderRadius(12)
-              .backgroundColor($r('app.color.danger_bg')).fontColor($r('app.color.danger')).onClick(() => {
-                const environment = this.environment();
-                if (environment) void environment.client.cancelProjectClone(this.cloneProjectId).then(() => this.cloneStatus = '已请求取消').catch((error: Error) => this.error = error.message);
+            Column() {
+              AppButton({
+                label: '取消克隆',
+                kind: 'danger',
+                compact: true,
+                fill: true,
+                onTap: () => {
+                  const environment = this.environment();
+                  if (environment) void environment.client.cancelProjectClone(this.cloneProjectId).then(() => this.cloneStatus = '已请求取消').catch((error: Error) => this.error = error.message);
+                }
               })
+            }.layoutWeight(1)
           }
           if (this.clone.phase === 'failed' || !!this.clone.error) {
-            Button('重试克隆').constraintSize({ minHeight: 38 }).layoutWeight(1).borderRadius(12)
-              .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink')).onClick(() => {
-                const environment = this.environment();
-                if (environment) void environment.client.retryProjectClone(this.cloneProjectId).then(() => this.cloneStatus = '已请求重试').catch((error: Error) => this.error = error.message);
-              })
+            Column() {
+              Button('重试克隆').constraintSize({ minHeight: Sizes.buttonHeightCompact }).width('100%').borderRadius(Radius.button)
+                .fontSize(FontSize.callout).fontWeight(Weight.medium)
+                .backgroundColor($r('app.color.card')).fontColor($r('app.color.ink')).onClick(() => {
+                  const environment = this.environment();
+                  if (environment) void environment.client.retryProjectClone(this.cloneProjectId).then(() => this.cloneStatus = '已请求重试').catch((error: Error) => this.error = error.message);
+                })
+            }.layoutWeight(1)
           }
         }.width('100%')
       }
-      Text('浏览目标文件夹').fontSize(12).fontColor($r('app.color.muted')).padding({ left: 4, top: 6 }).width('100%')
+      Text('浏览目标文件夹').fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted'))
+        .padding({ left: Space.xxs, top: Space.xxs }).width('100%')
       this.browseList()
     }.width('100%').alignItems(HorizontalAlign.Start)
   }
 
   build() {
     Column({ space: 0 }) {
-      Row({ space: 4 }) {
-        Button({ type: ButtonType.Circle, stateEffect: true }) {
-          Image($r('app.media.ui_back')).width(22).height(22).accessibilityLevel('no')
-        }.width(40).height(40).backgroundColor(Color.Transparent).accessibilityText('返回').onClick(() => this.back())
-        Text(this.step === 'source' ? '添加项目' : this.step === 'new' ? '新建项目' :
+      TopBar({
+        title: this.step === 'source' ? '添加项目' : this.step === 'new' ? '新建项目' :
           this.step === 'local' ? '本地文件夹' : this.step === 'repository' ?
-            (this.source === 'url' ? 'Git URL' : this.provider + ' 仓库') : '克隆目标')
-          .fontSize(17).lineHeight('22fp').fontWeight(600).fontColor($r('app.color.ink')).layoutWeight(1).padding({ left: 4 })
-      }.width('100%').constraintSize({ minHeight: 52 }).padding({ left: 8, right: 8 }).alignItems(VerticalAlign.Center)
+            (this.source === 'url' ? 'Git URL' : this.provider + ' 仓库') : '克隆目标',
+        showBack: true,
+        onBack: () => this.back()
+      })
       Scroll() {
-        Column({ space: 12 }) {
+        Column({ space: Space.sm }) {
           if (this.error) {
-            Text(this.error).fontSize(13).fontColor($r('app.color.danger')).width('100%')
-              .padding(12).backgroundColor($r('app.color.danger_bg')).borderRadius(12)
-              .border({ width: 1, color: $r('app.color.danger_border') })
+            Text(this.error).fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.danger')).width('100%')
+              .padding(Space.sm).backgroundColor($r('app.color.danger_bg')).borderRadius(Radius.button)
+              .border({ width: Sizes.hairline, color: $r('app.color.danger_border') })
           }
           if (this.step === 'source') this.sourcePage()
           else if (this.step === 'new') this.newPage()
           else if (this.step === 'local') this.localPage()
           else if (this.step === 'repository') this.repositoryPage()
           else this.destinationPage()
-        }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: 12, right: 12, bottom: 24 })
+        }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: Space.page, right: Space.page, bottom: Space.lg })
       }.width('100%').layoutWeight(1).align(Alignment.TopStart)
     }.width('100%').height('100%').foregroundColor($r('app.color.ink')).backgroundColor($r('app.color.group'))
   }

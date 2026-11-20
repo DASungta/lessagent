@@ -52,12 +52,11 @@ test('follow-up preference only changes automatic delivery while running',()=>{
  assert.throws(()=>settings.followUpDelivery('auto',true,'invalid'));
 });
 
-test('Working settings button reads the reactive prop and binds its mutation directly', async () => {
+test('Working settings switch reads the reactive prop and binds its mutation directly', async () => {
   const panel = await readFile(new URL('../entry/src/main/ets/components/SettingsPanel.ets', import.meta.url), 'utf8');
   const branch = panel.split("if (settingsMatch(this.query, '工作中 Working 会话 分组 排序')) {")[1]
-    .split("if (settingsMatch(this.query, '自动归整")[0];
-  assert.match(branch, /Button\(\{ type: ButtonType.Normal \}\)[\s\S]*Text\(this.workingShelfEnabled \? '已开启' : '已关闭'\)/);
-  assert.match(branch, /\.enabled\(!this.savingWorkingShelf\)[\s\S]*\.onClick\(\(\) => \{ void this.changeWorkingShelf\(\); \}\)/);
+    .split("if (settingsMatch(this.query, '工作树存储")[0];
+  assert.match(branch, /FormRow\(\{[\s\S]*label:\s*'工作中分组'[\s\S]*kind:\s*'switch'[\s\S]*checked:\s*this\.workingShelfEnabled[\s\S]*disabled:\s*this\.savingWorkingShelf[\s\S]*onToggle:\s*\(\) => \{ void this\.changeWorkingShelf\(\); \}/);
   assert.match(panel, /await this.onWorkingShelf\(!this.workingShelfEnabled\)/);
 });
 
@@ -77,8 +76,7 @@ test('settings navigation buttons read their current count props directly', asyn
 
 test('recent-project settings are reactive and share destination selection keeps its explicit picker', async () => {
   const panel = await readFile(new URL('../entry/src/main/ets/components/SettingsPanel.ets', import.meta.url), 'utf8');
-  assert.match(panel, /Text\(this.useLastProject \? '已开启' : '已关闭'\)/);
-  assert.match(panel, /\.onClick\(\(\) => \{ void this.changeUseLastProject\(\); \}\)/);
+  assert.match(panel, /FormRow\(\{[\s\S]*label:\s*'使用最近项目'[\s\S]*kind:\s*'switch'[\s\S]*checked:\s*this\.useLastProject[\s\S]*onToggle:\s*\(\) => \{ void this\.changeUseLastProject\(\); \}/);
   const index = await readFile(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url), 'utf8');
   assert.match(index, /onChooseDestination: \(\) => \{[\s\S]*?this.openProjectPicker\(true\);/);
   const picker = index.slice(index.indexOf('  private openProjectPicker('), index.indexOf('  private pickerGroups('));

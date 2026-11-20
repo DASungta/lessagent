@@ -414,7 +414,7 @@ export struct PullRequestsPanel {
       Row() {
         Column({ space: 2 }) {
           Text('拉取请求')
-            .fontSize(FontSize.title).lineHeight(LineHeight.title).fontWeight(Weight.bold)
+            .fontSize(FontSize.title).lineHeight(LineHeight.title).fontWeight(Weight.semibold)
             .fontColor($r('app.color.ink')).width('100%')
           Text(this.projectLabel || (this.projectId ? '当前项目' : '所有项目'))
             .fontSize(FontSize.caption).lineHeight(LineHeight.caption)
@@ -423,7 +423,7 @@ export struct PullRequestsPanel {
       }
       .width('100%')
       .constraintSize({ minHeight: Sizes.topBar })
-      .padding({ left: Space.md, right: Space.md, top: Space.xxs, bottom: Space.xxs })
+      .padding({ left: Space.page, right: Space.page, top: Space.xs, bottom: Space.xs })
       .alignItems(VerticalAlign.Center)
     }
   }
@@ -441,7 +441,7 @@ export struct PullRequestsPanel {
             .borderRadius(7).layoutWeight(1).constraintSize({ minHeight: 34 })
             .onClick(() => { this.filter = state; void this.loadList(); })
         }, (state: string) => state)
-      }.width('100%').padding(2).backgroundColor($r('app.color.surface'))
+      }.width('100%').padding(2).backgroundColor($r('app.color.group'))
         .border({ width: Sizes.hairline, color: $r('app.color.border') }).borderRadius(9)
 
       Row({ space: Space.xs }) {
@@ -452,7 +452,7 @@ export struct PullRequestsPanel {
           .onChange((value: string) => { this.query = value; })
           .onSubmit(() => { void this.loadList(); })
         AppButton({
-          label: '搜索', kind: 'secondary', compact: true,
+          label: '搜索', kind: 'text', compact: true,
           disabled: this.loading && this.query === this.requestedQuery,
           onTap: () => { void this.loadList(); }
         })
@@ -696,7 +696,7 @@ export struct PullRequestsPanel {
             ListItem() {
               Column({ space: 0 }) {
                 Text(hunk.header).fontSize(Math.max(8, this.codeFontSize - 2)).fontFamily('monospace').fontColor($r('app.color.muted'))
-                  .width('100%').padding({ left: 10, right: 10, top: 6, bottom: 6 }).backgroundColor($r('app.color.surface'))
+                  .width('100%').padding({ left: 10, right: 10, top: 6, bottom: 6 }).backgroundColor($r('app.color.group'))
                 ForEach(hunk.rows, (row: DiffRow, index: number) => {
                   Row({ space: 0 }) {
                     if (hunk.lastOldLine) {
@@ -1020,13 +1020,14 @@ export struct PullRequestsPanel {
       Row({ space: Space.xxs }) {
         ForEach([['overview', '概览'], ['files', '文件'], ['discussion', '讨论'], ['review', '评审'], ['guide', '向导']],
           (entry: string[]) => {
-            Button(entry[1])
+            Button(entry[1], { type: ButtonType.Normal })
               .fontSize(FontSize.caption)
               .fontWeight(this.tab === entry[0] ? Weight.semibold : Weight.medium)
-              .layoutWeight(1).constraintSize({ minHeight: 34 }).borderRadius(Radius.tool)
+              .layoutWeight(1).constraintSize({ minHeight: 34 })
               .backgroundColor(this.tab === entry[0] ? $r('app.color.info_bg') : $r('app.color.card'))
               .fontColor(this.tab === entry[0] ? $r('app.color.primary_text') : $r('app.color.ink'))
-              .border({ width: 1, color: this.tab === entry[0] ? $r('app.color.primary') : Color.Transparent })
+              .border({ width: Sizes.hairline, color: this.tab === entry[0] ? $r('app.color.primary') : Color.Transparent, radius: Radius.tool })
+              .borderRadius(Radius.tool)
               .onClick(() => { this.tab = entry[0]; })
           }, (entry: string[]) => entry[0])
       }.width('100%').padding({ left: Space.sm, right: Space.sm })
