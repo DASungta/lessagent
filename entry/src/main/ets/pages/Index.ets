@@ -3656,7 +3656,7 @@ struct Index {
           if (this.undoNotice) {
             Row({ space: 10 }) {
               Text(this.undoNotice.label).fontSize(FontSize.callout).fontColor($r('app.color.ink')).layoutWeight(1)
-              Button('撤销').height(34).backgroundColor(Color.Transparent).fontColor($r('app.color.primary_text'))
+              Button('撤销').height(34).backgroundColor(Color.Transparent).fontColor($r('app.color.ink')).fontWeight(Weight.medium)
                 .onClick(() => { void this.executeUndo(); })
               Button('×').height(34).width(34).backgroundColor(Color.Transparent).fontColor($r('app.color.muted'))
                 .onClick(() => { this.undoNotice = undefined; })

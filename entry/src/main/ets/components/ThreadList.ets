@@ -119,7 +119,7 @@ export struct ThreadList {
             .onChange((value: string) => this.onSearch(value)).accessibilityText('搜索会话').id('thread-search')
             .onFocus(() => this.onSearchFocus(true)).onBlur(() => this.onSearchFocus(false))
           Button({ type: ButtonType.Normal }) {
-            Text(this.query ? '清除' : '取消').fontSize(FontSize.callout).fontColor($r('app.color.primary_text'))
+            Text(this.query ? '清除' : '取消').fontSize(FontSize.callout).fontWeight(Weight.medium).fontColor($r('app.color.ink'))
           }.constraintSize({ minHeight: 40 }).padding({ left: Space.sm, right: Space.sm }).backgroundColor(Color.Transparent)
             .accessibilityText(this.query ? '清除搜索' : '关闭搜索')
             .onClick(() => { if (this.query) this.onSearch(''); else this.onCloseSearch(); })
@@ -131,7 +131,7 @@ export struct ThreadList {
           Text(this.filterLabel()).fontSize(FontSize.callout).fontColor($r('app.color.ink')).layoutWeight(1)
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           Button({ type: ButtonType.Normal }) {
-            Text('清除').fontSize(FontSize.callout).fontColor($r('app.color.primary_text'))
+            Text('清除').fontSize(FontSize.callout).fontWeight(Weight.medium).fontColor($r('app.color.ink'))
           }.constraintSize({ minHeight: 32 }).padding({ left: Space.xs, right: Space.xs }).backgroundColor(Color.Transparent)
             .accessibilityText('清除筛选').onClick(this.onClearFilters)
         }.width('100%').padding({ left: Space.sm, right: Space.xxs }).constraintSize({ minHeight: 40 })

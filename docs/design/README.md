@@ -22,7 +22,7 @@
 | `chevron` | `#6B71717B` | `#6B818181` | `--color-chevron` | › 箭头 |
 | `dot_separator` | `#5971717B` | `#59818181` | `--color-dot-separator` | 副标题里的 · 分隔点 |
 | `primary` | `#1b4ed8` | `#346bf1` | `--color-primary`（与 `#ffffff` 文字对比度 4.65:1） | 开关、选中态边框、审批「允许」底色 |
-| `primary_text` | `#1b4ed8` | `#5585f5` | 浅色 `--color-primary-text`；深色由 `#4b7cf3` 微亮至 `#5585f5` 以满足 `info_bg` 对比度 ≥ 4.5:1（4.92:1） | 链接、文字按钮、选中蓝字 |
+| `primary_text` | `#1b4ed8` | `#5585f5` | 浅色 `--color-primary-text`；深色由 `#4b7cf3` 微亮至 `#5585f5` 以满足 `info_bg` 对比度 ≥ 4.5:1（4.92:1） | 链接、状态提示、选中蓝字 |
 | `on_primary_fill` | `#ffffff` | `#ffffff` | `--color-primary-foreground` | 蓝色实心按钮上的文字 |
 | `prominent` | `#27272a` | `#f5f5f5` | `--color-prominent-action` | 主按钮底色（ink 近黑 / 深色近白） |
 | `on_prominent` | `#fcfcfc` | `#0a0a0a` | `--color-prominent-action-foreground` | 主按钮文字 |
@@ -117,7 +117,7 @@ TopBar({ title: this.thread.title, subtitle: 'r5-round2 · iMac', showBack: true
 
 - `primary`：`prominent` 底 + `on_prominent` 字，高 46，一屏最多一个。
 - `secondary`：`group` 底 + `ink` 字。
-- `text`：无底色，`primary_text` 字，高 40，用于标题栏右侧文字动作。
+- `text`：无底色，`ink` 字（medium），高 40，用于标题栏右侧与搜索框内等常规文字动作。
 - `danger`：`danger_bg` 底 + `danger` 字。
 - `confirm`：`primary` 底 + `on_primary_fill` 字，**只用于审批「允许」**。
 

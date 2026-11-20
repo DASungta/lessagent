@@ -3,7 +3,7 @@ import { FontSize, LineHeight, Opacity, Radius, Sizes, Space, Weight } from '../
 /**
  * primary   ink 实心（原版 prominent-action），一屏最多一个
  * secondary group 底 + ink 字
- * text      无底色，primary_text 字
+ * text      无底色，ink 字（中性文字动作）
  * danger    danger_bg 底 + danger 字
  * confirm   蓝色实心，只用于审批「允许」这类明确确认
  */
@@ -39,7 +39,7 @@ export struct AppButton {
     if (this.kind === 'secondary') return $r('app.color.ink');
     if (this.kind === 'danger') return $r('app.color.danger');
     if (this.kind === 'confirm') return $r('app.color.on_primary_fill');
-    return $r('app.color.primary_text');
+    return $r('app.color.ink');
   }
 
   private minHeightOf(): number {
