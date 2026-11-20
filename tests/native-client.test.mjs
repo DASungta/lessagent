@@ -81,8 +81,12 @@ async function setup(options = {}) {
               if (value.tag === 'orchestration.subscribeShell') {
                 socket.emit({ _tag: 'Chunk', requestId: value.id, values: [{ kind: 'snapshot', snapshot: { snapshotSequence: 9, projects: [], threads: [] } }] });
               } else if (value.tag === 'orchestration.subscribeThread') {
-                socket.emit({ _tag: 'Chunk', requestId: value.id, values: [{ kind: 'snapshot', snapshotSequence: 10,
-                  projection: { thread: { id: value.payload.threadId }, messages: options.messages ?? [] } }] });
+                if (options.rejectThread) {
+                  socket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Failure', cause: { _tag: 'Fail', error: { message: 'not found' } } } });
+                } else {
+                  socket.emit({ _tag: 'Chunk', requestId: value.id, values: [{ kind: 'snapshot', snapshotSequence: 10,
+                    projection: { thread: { id: value.payload.threadId }, messages: options.messages ?? [] } }] });
+                }
               } else if (value.tag === 'git.runStackedAction') {
                 socket.emit({ _tag: 'Chunk', requestId: value.id, values: [
                   { kind: 'phase_started', phase: 'commit', label: 'Committing...' },
@@ -872,4 +876,27 @@ test('late upload to a thread cannot replace the next thread attachment', async 
   assert.deepEqual(client.attachments.map(item=>item.name),['current-thread.txt']);
   assert.equal(client.attachmentThread,'b');
  } finally {finish();client.disconnect();}
+});
+
+test('stale non-pending recovery is cleared on known subscribe rejection while pending recovery stays protected', async () => {
+ const nonPendingStore=memoryRecovery({base:'https://test',environmentId:'env',threadId:'stale-thread',pendingId:'',pendingKind:''});
+ const first=await setup({recoveryStore:nonPendingStore,rejectThread:true});
+ try {
+  await first.client.connect('https://test','synthetic');
+  await new Promise(setImmediate);
+  assert.equal(first.client.ready,true);
+  assert.equal(first.client.status,'已连接');
+  assert.equal(first.client.thread,undefined);
+  assert.equal(await nonPendingStore.load(),undefined);
+ } finally {first.client.disconnect();}
+
+ const pendingRecord={base:'https://test',environmentId:'env',threadId:'pending-thread',pendingId:'msg-1',pendingKind:'message'};
+ const pendingStore=memoryRecovery(pendingRecord);
+ const second=await setup({recoveryStore:pendingStore,rejectThread:true});
+ try {
+  await second.client.connect('https://test','synthetic');
+  await new Promise(setImmediate);
+  assert.equal(second.client.ready,false);
+  assert.deepEqual(await pendingStore.load(),pendingRecord);
+ } finally {second.client.disconnect();}
 });

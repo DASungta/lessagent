@@ -1,3 +1,9 @@
+import { TopBar } from './ui/TopBar';
+import { GroupCard } from './ui/GroupCard';
+import { FormRow } from './ui/FormRow';
+import { AppButton } from './ui/AppButton';
+import { StatusBadge } from './ui/StatusBadge';
+import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { T3Client } from '../services/T3Client';
 import { record } from '../protocol/Wire';
 import { ProjectView, ScopedProject, ThreadView, isListedThread } from '../protocol/Projects';
@@ -470,239 +476,621 @@ export struct ScheduledTasksPanel {
     return 'Webhook / 其他调度（仅查看）';
   }
   build() {
-    Column() {
-      Row({ space: 8 }) {
-        Button('返回').constraintSize({ minWidth: 44, minHeight: 44 }).backgroundColor(Color.Transparent).fontColor($r('app.color.primary')).fontSize(15).onClick(() => {
+    Column({ space: 0 }) {
+      TopBar({
+        title: this.confirmation ? '确认操作' : this.editor ? (this.selected ? '编辑定时任务' : '新建定时任务') :
+          this.selected ? (this.selected.title || '任务详情') : '定时任务',
+        showBack: true,
+        backLabel: this.confirmation || this.editor || this.selected ? '返回' : '返回设置',
+        onBack: () => {
           if (this.busy) return;
-          if (this.editor || this.selected) {
+          if (this.confirmation) {
+            this.confirmation = '';
+          } else if (this.editor || this.selected) {
             this.invalidateWorkspaceOptions(); this.editor = false; this.selected = undefined; this.confirmation = '';
           } else this.onBack();
-        })
-        Text(this.editor ? (this.selected ? '编辑定时任务' : '新建定时任务') : '定时任务').fontSize(20).fontWeight(FontWeight.Medium).layoutWeight(1)
-        Button('刷新').constraintSize({ minWidth: 44, minHeight: 44 }).backgroundColor(Color.Transparent).fontColor($r('app.color.primary')).fontSize(15).enabled(!this.busy).onClick(() => this.requestRefresh())
-      }.width('100%').padding(12)
-      Scroll() {
-        Column({ space: 14 }) {
-          if (this.editor && this.scheduleType === 'fixed_time') {
-            Text('服务端时区 · ' + (this.timeZone || '未知')).fontSize(13).fontColor($r('app.color.muted'))
-          }
-          if (this.busy) { Text('正在同步…').fontSize(14) }
-          if (this.error && (!this.editor || this.confirmation)) { Text(this.error).fontSize(14).fontColor($r('app.color.danger')) }
-          if (this.notice) { Text(this.notice).fontSize(14) }
-          if (this.confirmation) {
-            Text(this.confirmation === 'upsert' ? this.titleInput.trim() : this.selected?.title || '定时任务')
-              .fontSize(19).fontWeight(FontWeight.Medium).width('100%')
-            Text(this.confirmation === 'delete' ? '确认永久删除此任务？不会停止已经开始的运行。' : this.confirmation === 'setEnabled' ? (this.selected?.enabled ? '确认停用？已经开始的运行不会停止。' : '确认启用？服务端将按计划自动运行任务。') : (this.selected?.enabled ? '确认保存？此任务已启用，新计划将自动执行。' : '确认保存？任务保持停用，启用需要另行确认。')).fontSize(16)
-            if (this.confirmation === 'upsert') {
-              Text(this.targetConfirmation).fontSize(14).width('100%').wordBreak(WordBreak.BREAK_ALL)
-              Text(this.modelConfirmation).fontSize(14).width('100%').wordBreak(WordBreak.BREAK_ALL)
-            }
-            Button(this.confirmation === 'upsert' ? (this.selected ? '保存修改' : '创建任务') :
-              this.confirmation === 'delete' ? '永久删除' : this.selected?.enabled ? '确认停用' : '确认启用').width('100%').constraintSize({ minHeight: 44 })
-              .backgroundColor(this.confirmation === 'delete' ? $r('app.color.danger') : $r('app.color.primary')).fontColor($r('app.color.on_primary')).enabled(this.writable()).onClick(() => { void this.commit(); })
-            Button('取消').constraintSize({ minHeight: 44 }).backgroundColor(Color.Transparent).fontColor($r('app.color.primary')).enabled(!this.busy).onClick(() => { this.confirmation = ''; })
-          } else if (this.editor) {
-            Text('标题').fontSize(14)
-            TextInput({ text: this.titleInput, placeholder: '任务标题' }).onChange((v: string) => { this.titleInput = v; })
-            Text('提示词').fontSize(14)
-            TextArea({ text: this.prompt, placeholder: '任务执行内容' }).constraintSize({ minHeight: 120 }).onChange((v: string) => { this.prompt = v; })
-            if (!this.selected) {
-              Text('项目').fontSize(14).fontColor($r('app.color.muted'))
-              Select(this.projectOptions()).width('100%').constraintSize({ minHeight: 44 })
-                .selected(this.projects.findIndex((p: ProjectView) => p.id === this.projectId) + 1)
-                .value(this.currentProjects().find((p: ScopedProject) => p.id === this.projectId)?.label ||
-                  (this.projectId ? '所选项目不可用' : '请选择项目'))
-                .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-                .onSelect((index: number) => this.selectProject(index))
-              if (!this.currentProjects().length) {
-                Text('当前没有可用项目。项目同步后将自动显示。').fontSize(13)
-                  .fontColor($r('app.color.muted')).width('100%')
-              }
-              if (this.supportsThreadModes()) {
-                Text('运行方式').fontSize(14).fontColor($r('app.color.muted')).width('100%')
-                Select([{ value: '每次新建会话' }, { value: '继续同一会话' }, { value: '同一会话内每次使用新上下文' }])
-                  .width('100%').constraintSize({ minHeight: 44 }).enabled(!!this.projectId && this.writable())
-                  .selected(['new_thread', 'continue', 'fresh_session'].indexOf(this.draftThreadMode))
-                  .value(this.runModeLabel(this.draftThreadMode)).onSelect((index: number) => this.selectThreadMode(index))
-              }
-              if (!this.supportsThreadModes() || this.draftThreadMode !== 'new_thread') {
-                Text('目标会话').fontSize(14).fontColor($r('app.color.muted')).width('100%')
-                Select(this.threadOptions()).width('100%').constraintSize({ minHeight: 44 })
-                  .enabled(!!this.projectId && (this.threadCandidates.length > 0 || !!this.draftThreadId) && this.writable())
-                  .selected(this.threadCandidates.findIndex((thread: ThreadView) => thread.id === this.draftThreadId) + 1)
-                  .value(this.draftTarget()?.label || (this.draftThreadId ? '所选会话不可用' :
-                    this.supportsThreadModes() ? '首次运行时创建会话' : '每次新建会话'))
-                  .onSelect((index: number) => this.selectThread(index))
-                if (this.projectId && !this.threadCandidates.length) {
-                  Text('该项目没有可绑定的会话。').fontSize(13).fontColor($r('app.color.muted')).width('100%')
-                }
-              }
-              if (this.draftTarget()) {
-                Text('运行时使用绑定会话的当前模型：' + this.draftTargetModel())
-                  .fontSize(13).fontColor($r('app.color.muted')).width('100%').wordBreak(WordBreak.BREAK_ALL)
-              } else if (!this.draftThreadId) {
-                Text('新会话采用需要审批的权限模式。').fontSize(13).fontColor($r('app.color.muted'))
-              }
-            } else {
-              Text('当前模型：' + this.shownModel(this.selected)).fontSize(14).width('100%').wordBreak(WordBreak.BREAK_ALL)
-              if (this.selected.threadId) {
-                Text('任务绑定会话，运行时使用该会话的当前模型。').fontSize(13).fontColor($r('app.color.muted')).width('100%')
-              } else {
-                Button(this.editingModel ? '保留原模型' : '更改模型').constraintSize({ minHeight: 44 })
-                  .enabled(this.writable()).onClick(() => { this.resetModelChoice(); this.editingModel = !this.editingModel; })
-              }
-            }
-            if (this.editingModel && !this.selected?.threadId && !this.draftThreadId) {
-              Text('Provider').fontSize(14).fontColor($r('app.color.muted'))
-              Select(this.providerOptions()).width('100%').constraintSize({ minHeight: 44 }).enabled(this.writable())
-                .selected(this.providers.findIndex((p: ProviderView) => p.id === this.instanceId) + 1)
-                .value(this.providers.find((p: ProviderView) => p.id === this.instanceId)?.name || '请选择 Provider')
-                .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-                .onSelect((index: number) => {
-                  const id = this.providers[index - 1]?.id || '';
-                  if (id !== this.instanceId) { this.instanceId = id; this.model = ''; }
-                })
-              Text('模型').fontSize(14).fontColor($r('app.color.muted'))
-              Select(this.modelOptions()).width('100%').constraintSize({ minHeight: 44 }).enabled(this.writable() && !!this.instanceId)
-                .selected(this.modelRows().findIndex((m: ProviderModelView) => m.id === this.model) + 1)
-                .value(this.modelRows().find((m: ProviderModelView) => m.id === this.model)?.name || '请选择模型')
-                .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-                .onSelect((index: number) => { this.model = this.modelRows()[index - 1]?.id || ''; })
-            }
-            if (this.selected?.threadId || this.draftThreadId) {
-              Text('工作区：绑定会话的工作区').fontSize(14).width('100%')
-            } else {
-              Text('工作区').fontSize(14).fontColor($r('app.color.muted')).width('100%')
-              Select([{ value: '项目根工作区' }, { value: '新工作树' }, { value: '已有工作树' }])
-                .width('100%').constraintSize({ minHeight: 44 }).enabled(!!this.projectId && this.writable())
-                .selected(['root', 'worktree', 'existing_worktree'].indexOf(this.workspaceType))
-                .value(this.workspaceType === 'root' ? '项目根工作区' : this.workspaceType === 'worktree' ? '新工作树' :
-                  this.workspaceType === 'existing_worktree' ? '已有工作树' : '服务端工作区策略')
-                .onSelect((index: number) => this.selectWorkspace(index))
-              if (this.workspaceType === 'worktree' || this.workspaceType === 'existing_worktree') {
-                if (this.workspaceFilterAvailable || this.workspaceQuery) {
-                  TextInput({ text: this.workspaceQuery, placeholder: '按分支名筛选' }).width('100%')
-                    .constraintSize({ minHeight: 44 }).maxLength(256).accessibilityText('按分支名筛选')
-                    .onChange((query: string) => { this.workspaceQuery = query; })
-                    .onSubmit(() => { void this.loadWorkspaceOptions(); })
-                  Button(this.workspaceQuery.trim() ? '筛选分支' : '读取未筛选候选').constraintSize({ minHeight: 44 })
-                    .enabled(this.writable()).onClick(() => { void this.loadWorkspaceOptions(); })
-                }
-                if (this.workspaceLoading) Text('正在读取项目分支与工作树…').fontSize(13).width('100%')
-                else if (this.workspaceError) {
-                  Text(this.workspaceError).fontSize(13).width('100%')
-                  Button('重新读取').constraintSize({ minHeight: 44 }).enabled(this.writable())
-                    .onClick(() => { void this.loadWorkspaceOptions(); })
-                } else if (this.workspaceOptions?.isRepo === false) {
-                  Text('当前项目不是 Git 仓库，请选择项目根工作区。').fontSize(13).width('100%')
-                }
-                if (this.workspaceOptions?.truncated) {
-                  Text('只显示部分候选，请按分支名缩小范围。').fontSize(13).width('100%')
-                } else if (this.workspaceOptions && this.workspaceAppliedQuery) {
-                  Text('分支筛选 · ' + this.workspaceAppliedQuery).fontSize(13).width('100%').wordBreak(WordBreak.BREAK_ALL)
-                }
-                if (this.workspaceType === 'worktree') {
-                  Text('基准分支').fontSize(13).width('100%')
-                  Select([{ value: '请选择基准分支' } as SelectOption].concat((this.workspaceOptions?.refs || [])
-                    .map((ref: BranchView): SelectOption => ({ value: ref.name }))))
-                    .width('100%').constraintSize({ minHeight: 44 }).value(this.workspaceBaseRef || '请选择基准分支')
-                    .enabled(!!this.workspaceOptions?.refs.length && this.writable())
-                    .onSelect((index: number) => this.selectWorkspaceBranch(index))
-                  Button(this.workspaceOrigin ? '从远端更新起点：开' : '从远端更新起点：关')
-                    .constraintSize({ minHeight: 44 }).enabled(this.writable() &&
-                      (this.workspaceOptions?.refs.some((ref: BranchView) => ref.name === this.workspaceBaseRef && !ref.isRemote) === true ||
-                        (!!this.workspaceBaseRef && this.workspaceVerifiedBaseRef === this.workspaceBaseRef)))
-                    .onClick(() => { this.workspaceOrigin = !this.workspaceOrigin; })
-                  if (this.workspaceOptions?.isRepo && !this.workspaceOptions.refs.length) {
-                    Text(this.workspaceAppliedQuery ? '未找到匹配的分支。' : '当前项目没有可选分支。').fontSize(13).width('100%')
-                  }
-                } else {
-                  Text('选择现有工作树').fontSize(13).width('100%')
-                  Select([{ value: '请选择工作树' } as SelectOption].concat((this.workspaceOptions?.checkoutPaths || [])
-                    .map((path: string): SelectOption => ({ value: path }))))
-                    .width('100%').constraintSize({ minHeight: 44 }).value(this.workspacePath || '请选择工作树')
-                    .enabled(!!this.workspaceOptions?.checkoutPaths.length && this.writable())
-                    .onSelect((index: number) => this.selectWorkspacePath(index))
-                  if (this.workspacePath) Text(this.workspacePath).fontSize(13).width('100%').wordBreak(WordBreak.BREAK_ALL)
-                  if (this.workspaceOptions?.isRepo && !this.workspaceOptions.checkoutPaths.length) {
-                    Text(this.workspaceAppliedQuery ? '匹配的分支没有已有工作树。' : '当前项目没有可选的已有工作树。')
-                      .fontSize(13).width('100%')
-                  }
-                }
-              }
-            }
-            Text('调度方式').fontSize(14).fontColor($r('app.color.muted'))
-            Select([{ value: '固定时间' }, { value: '间隔' }, { value: '单次时间' }])
-              .width('100%').backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-              .selected(this.scheduleType === 'interval' ? 1 : this.scheduleType === 'once' ? 2 : 0)
-              .value(this.scheduleType === 'interval' ? '间隔' : this.scheduleType === 'once' ? '单次时间' : '固定时间')
-              .onSelect((index: number) => { this.scheduleType = ['fixed_time', 'interval', 'once'][index]; this.time = index === 2 ? '' : '09:00'; })
-            if (this.scheduleType === 'interval') {
-              TextInput({ text: this.minutes, placeholder: '分钟，至少 1' }).onChange((v: string) => { this.minutes = v; })
-            } else {
-              Text(this.scheduleType === 'once' ? '日期时间及偏移，例如 2027-01-20T09:00:00+08:00' : '本地时间 HH:MM').fontSize(14)
-              TextInput({ text: this.time }).onChange((v: string) => { this.time = v; })
-              if (this.scheduleType === 'fixed_time') {
-                Text('重复日期 · 至少选择一天').fontSize(14).fontColor($r('app.color.muted'))
-                Flex({ wrap: FlexWrap.Wrap }) {
-                  ForEach([1, 2, 3, 4, 5, 6, 0], (day: number) => {
-                    Button((this.weekdays.split(',').includes(String(day)) ? '✓ ' : '') + this.weekdayLabel(day))
-                      .fontSize(15).padding({ left: 14, right: 14, top: 10, bottom: 10 })
-                      .constraintSize({ minWidth: 44, minHeight: 44 }).margin({ right: 8, bottom: 8 }).borderRadius(10)
-                      .backgroundColor(this.weekdays.split(',').includes(String(day)) ? $r('app.color.selected') : $r('app.color.surface'))
-                      .fontColor(this.weekdays.split(',').includes(String(day)) ? $r('app.color.primary') : $r('app.color.ink'))
-                      .accessibilityText(this.weekdayLabel(day) + (this.weekdays.split(',').includes(String(day)) ? '，已选择' : '，未选择'))
-                      .onClick(() => { this.weekdays = scheduleWeekdaySelection(this.weekdays, day); })
-                  }, (day: number) => String(day))
-                }.width('100%')
-              }
-            }
-          } else if (this.selected) {
-            Text(this.selected.title).fontSize(20).fontWeight(FontWeight.Medium).width('100%')
-            Text((this.selected.enabled ? '已启用' : '已停用') + ' · ' + this.scheduleLabel(this.selected.schedule) +
-              (record(this.selected.schedule).type === 'fixed_time' && this.timeZone ? ' · ' + this.timeZone : ''))
-              .fontSize(14).fontColor($r('app.color.muted')).width('100%')
-            Text(this.selected.prompt).fontSize(16).width('100%').copyOption(CopyOptions.InApp)
-            Column({ space: 6 }) {
-              Text('项目 · ' + this.projectName(this.selected)).fontSize(14).width('100%')
-              Text('模型 · ' + this.shownModel(this.selected)).fontSize(14).width('100%')
-              Text(this.targetLabel(this.selected.threadId, this.selected.threadMode || (this.selected.threadId ? 'continue' : 'new_thread')) +
-                ' · ' + this.workspaceLabel(this.selected))
-                .fontSize(13).fontColor($r('app.color.muted')).width('100%').wordBreak(WordBreak.BREAK_ALL)
-            }.padding(12).width('100%').backgroundColor($r('app.color.surface')).borderRadius(12)
-            if (this.selected.nextRunAt) { Text('下次运行 · ' + this.selected.nextRunAt).fontSize(14) }
-            Text('最近运行 · ' + this.runLabel(this.selected.lastRunStatus)).fontSize(13).fontColor($r('app.color.muted'))
-            if (this.selected.blocked) { Text('组织策略阻止此任务运行').fontSize(14) }
-            Button('编辑').width('100%').constraintSize({ minHeight: 44 }).backgroundColor($r('app.color.primary')).fontColor($r('app.color.on_primary')).enabled(this.writable() && ['fixed_time', 'interval', 'once'].includes(String(record(this.selected.schedule).type))).onClick(() => { this.edit(this.selected); })
-            Button(this.selected.enabled ? '停用' : '启用').width('100%').constraintSize({ minHeight: 44 }).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).enabled(this.writable() && (!this.selected.blocked || this.selected.enabled)).onClick(() => { this.prepareAction('setEnabled'); })
-            Button('删除').width('100%').constraintSize({ minHeight: 44 }).backgroundColor(Color.Transparent).fontColor($r('app.color.danger')).enabled(this.writable()).onClick(() => { this.prepareAction('delete'); })
-          } else {
-            Button('新建任务').width('100%').constraintSize({ minHeight: 44 }).backgroundColor($r('app.color.primary')).fontColor($r('app.color.on_primary')).enabled(this.writable()).onClick(() => { this.edit(); })
-            if (!this.tasks.length && !this.needsRefresh) { Text('暂无定时任务').width('100%').textAlign(TextAlign.Center).padding({ top: 24, bottom: 24 }).fontSize(16).fontColor($r('app.color.muted')) }
-            ForEach(this.tasks, (task: ScheduledTaskView) => {
-              Button({ type: ButtonType.Normal }) {
-                Column({ space: 6 }) {
-                  Text(task.title).fontSize(17).fontWeight(FontWeight.Medium).width('100%')
-                  Text(this.projectName(task) + ' · ' + this.targetLabel(task.threadId, task.threadMode || (task.threadId ? 'continue' : 'new_thread')))
-                    .fontSize(13).fontColor($r('app.color.muted')).width('100%')
-                  Text((task.enabled ? '启用' : '停用') + ' · ' + this.scheduleLabel(task.schedule)).fontSize(14).fontColor($r('app.color.muted')).width('100%')
-                }.padding(14).width('100%')
-              }.width('100%').borderRadius(12).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).onClick(() => {
-                this.selected = this.tasks.find((item: ScheduledTaskView) => item.id === task.id); this.notice = '';
-              })
-            }, (task: ScheduledTaskView) => task.id + ':' + task.updatedAt)
-          }
-        }.width('100%').alignItems(HorizontalAlign.Start).padding(16)
-      }.width('100%').layoutWeight(1).align(Alignment.TopStart)
-      if (this.editor && !this.confirmation) {
-        Divider().color($r('app.color.border'))
-        Column({ space: 6 }) {
-          if (this.error) { Text(this.error).fontSize(13).fontColor($r('app.color.danger')).width('100%') }
-          Button('检查并保存').width('100%').constraintSize({ minHeight: 44 })
-            .backgroundColor($r('app.color.primary')).fontColor($r('app.color.on_primary'))
-            .enabled(this.writable()).onClick(() => { this.prepareSave(); })
-        }.width('100%').padding({ left: 16, right: 16, top: 8, bottom: 8 })
+        }
+      }) {
+        if (!this.confirmation && !this.editor) {
+          AppButton({
+            label: '刷新',
+            kind: 'text',
+            disabled: this.busy,
+            onTap: () => this.requestRefresh()
+          })
+        }
       }
-    }.width('100%').height('100%').backgroundColor($r('app.color.canvas')).foregroundColor($r('app.color.ink'))
+
+      Scroll() {
+        Column({ space: 0 }) {
+          if (this.busy) {
+            Text('正在同步…')
+              .fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.muted'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+          }
+          if (this.error && (!this.editor || this.confirmation)) {
+            Column({ space: 4 }) {
+              Text(this.error)
+                .fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.danger')).width('100%')
+            }
+            .width('100%').padding(Space.sm).margin({ top: Space.xs })
+            .backgroundColor($r('app.color.danger_bg')).borderRadius(Radius.button)
+            .border({ width: Sizes.hairline, color: $r('app.color.danger_border') })
+          }
+          if (this.notice) {
+            Text(this.notice)
+              .fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.primary_text'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+          }
+
+          if (this.confirmation) {
+            GroupCard({
+              title: '确认变更',
+              footnote: this.confirmation === 'delete'
+                ? '不会停止已经开始的运行。'
+                : this.confirmation === 'setEnabled'
+                  ? (this.selected?.enabled ? '停用后已开始的运行不会停止。' : '启用后服务端将按计划自动运行任务。')
+                  : (this.selected?.enabled ? '此任务已启用，新计划将自动执行。' : '任务保持停用，启用需要另行确认。')
+            }) {
+              Column({ space: Space.xs }) {
+                Text(this.confirmation === 'upsert' ? this.titleInput.trim() : this.selected?.title || '定时任务')
+                  .fontSize(FontSize.headline).lineHeight(LineHeight.headline).fontWeight(Weight.semibold)
+                  .fontColor($r('app.color.ink')).width('100%')
+                Text(this.confirmation === 'delete' ? '确认永久删除此任务？'
+                  : this.confirmation === 'setEnabled' ? (this.selected?.enabled ? '确认停用此定时任务？' : '确认启用此定时任务？')
+                  : '确认保存此定时任务配置？')
+                  .fontSize(FontSize.body).lineHeight(LineHeight.body).fontColor($r('app.color.ink')).width('100%')
+                if (this.confirmation === 'upsert') {
+                  Text(this.targetConfirmation)
+                    .fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.muted'))
+                    .width('100%').wordBreak(WordBreak.BREAK_ALL)
+                  Text(this.modelConfirmation)
+                    .fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.muted'))
+                    .width('100%').wordBreak(WordBreak.BREAK_ALL)
+                }
+              }
+              .width('100%')
+              .alignItems(HorizontalAlign.Start)
+              .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+              .constraintSize({ minHeight: Sizes.formRowMin })
+              .justifyContent(FlexAlign.Center)
+            }
+            Column({ space: Space.xs }) {
+              AppButton({
+                label: this.confirmation === 'upsert' ? (this.selected ? '保存修改' : '创建任务') :
+                  this.confirmation === 'delete' ? '永久删除' : this.selected?.enabled ? '确认停用' : '确认启用',
+                kind: this.confirmation === 'delete' ? 'danger' : 'primary',
+                fill: true,
+                disabled: !this.writable(),
+                onTap: () => { void this.commit(); }
+              })
+              AppButton({
+                label: '取消',
+                kind: 'secondary',
+                fill: true,
+                disabled: this.busy,
+                onTap: () => { this.confirmation = ''; }
+              })
+            }.width('100%').padding({ top: Space.md })
+
+          } else if (this.editor) {
+            GroupCard({ title: '内容' }) {
+              Row({ space: 10 }) {
+                Text('标题').fontSize(FontSize.body).fontColor($r('app.color.ink')).width(64).flexShrink(0)
+                TextInput({ text: this.titleInput, placeholder: '任务标题' })
+                  .layoutWeight(1).height(40).fontSize(FontSize.body).fontColor($r('app.color.ink'))
+                  .placeholderColor($r('app.color.placeholder')).backgroundColor(Color.Transparent).padding(0)
+                  .accessibilityText('标题')
+                  .onChange((v: string) => { this.titleInput = v; })
+              }
+              .width('100%')
+              .alignItems(VerticalAlign.Center)
+              .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+              .constraintSize({ minHeight: Sizes.formRowMin })
+              Column() {
+                TextArea({ text: this.prompt, placeholder: '任务执行内容' })
+                  .width('100%').constraintSize({ minHeight: 96 }).fontSize(FontSize.body).lineHeight(LineHeight.body)
+                  .fontColor($r('app.color.ink')).placeholderColor($r('app.color.placeholder'))
+                  .backgroundColor(Color.Transparent).padding(0)
+                  .accessibilityText('任务执行内容')
+                  .onChange((v: string) => { this.prompt = v; })
+              }
+              .width('100%')
+              .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+              .constraintSize({ minHeight: Sizes.formRowMin })
+              .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+            }
+
+            GroupCard({
+              title: '运行位置',
+              footnote: !this.selected && !this.currentProjects().length
+                ? '当前没有可用项目。项目同步后将自动显示。'
+                : this.draftTarget()
+                  ? '运行时使用绑定会话的当前模型：' + this.draftTargetModel()
+                  : (!this.selected && !this.draftThreadId)
+                    ? '每次新建会话默认采用需要审批的权限模式。'
+                    : ''
+            }) {
+              if (!this.selected) {
+                Row({ space: 10 }) {
+                  Text('项目').fontSize(FontSize.body).fontColor($r('app.color.ink')).flexShrink(0)
+                  Select(this.projectOptions()).layoutWeight(1).constraintSize({ minHeight: 38 })
+                    .selected(this.projects.findIndex((p: ProjectView) => p.id === this.projectId) + 1)
+                    .value(this.currentProjects().find((p: ScopedProject) => p.id === this.projectId)?.label ||
+                      (this.projectId ? '所选项目不可用' : '请选择项目'))
+                    .backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
+                    .onSelect((index: number) => this.selectProject(index))
+                }
+                .width('100%')
+                .alignItems(VerticalAlign.Center)
+                .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                .constraintSize({ minHeight: Sizes.formRowMin })
+                if (this.supportsThreadModes()) {
+                  Row({ space: 10 }) {
+                    Text('运行方式').fontSize(FontSize.body).fontColor($r('app.color.ink')).flexShrink(0)
+                    Select([{ value: '每次新建会话' }, { value: '继续同一会话' }, { value: '同一会话内每次使用新上下文' }])
+                      .layoutWeight(1).constraintSize({ minHeight: 38 }).enabled(!!this.projectId && this.writable())
+                      .selected(['new_thread', 'continue', 'fresh_session'].indexOf(this.draftThreadMode))
+                      .value(this.runModeLabel(this.draftThreadMode))
+                      .backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
+                      .onSelect((index: number) => this.selectThreadMode(index))
+                  }
+                  .width('100%')
+                  .alignItems(VerticalAlign.Center)
+                  .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                  .constraintSize({ minHeight: Sizes.formRowMin })
+                  .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+                }
+                if (!this.supportsThreadModes() || this.draftThreadMode !== 'new_thread') {
+                  Column({ space: 4 }) {
+                    Row({ space: 10 }) {
+                      Text('目标会话').fontSize(FontSize.body).fontColor($r('app.color.ink')).flexShrink(0)
+                      Select(this.threadOptions()).layoutWeight(1).constraintSize({ minHeight: 38 })
+                        .enabled(!!this.projectId && (this.threadCandidates.length > 0 || !!this.draftThreadId) && this.writable())
+                        .selected(this.threadCandidates.findIndex((thread: ThreadView) => thread.id === this.draftThreadId) + 1)
+                        .value(this.draftTarget()?.label || (this.draftThreadId ? '所选会话不可用' :
+                          this.supportsThreadModes() ? '首次运行时创建会话' : '每次新建会话'))
+                        .backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
+                        .onSelect((index: number) => this.selectThread(index))
+                    }.width('100%').alignItems(VerticalAlign.Center)
+                    if (this.projectId && !this.threadCandidates.length) {
+                      Text('该项目没有可绑定的会话。').fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
+                    }
+                  }
+                  .width('100%')
+                  .alignItems(HorizontalAlign.Start)
+                  .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                  .constraintSize({ minHeight: Sizes.formRowMin })
+                  .justifyContent(FlexAlign.Center)
+                  .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+                }
+              } else {
+                FormRow({
+                  kind: 'value',
+                  label: '当前模型',
+                  value: this.shownModel(this.selected),
+                  subtitle: this.selected.threadId ? '任务绑定会话，运行时使用该会话的当前模型。' : '',
+                  chevron: !this.selected.threadId,
+                  disabled: !!this.selected.threadId || !this.writable(),
+                  isFirst: true,
+                  onTap: () => {
+                    if (!this.selected?.threadId && this.writable()) {
+                      this.resetModelChoice();
+                      this.editingModel = !this.editingModel;
+                    }
+                  }
+                })
+              }
+
+              if (this.editingModel && !this.selected?.threadId && !this.draftThreadId) {
+                Row({ space: 10 }) {
+                  Text('Provider').fontSize(FontSize.body).fontColor($r('app.color.ink')).flexShrink(0)
+                  Select(this.providerOptions()).layoutWeight(1).constraintSize({ minHeight: 38 }).enabled(this.writable())
+                    .selected(this.providers.findIndex((p: ProviderView) => p.id === this.instanceId) + 1)
+                    .value(this.providers.find((p: ProviderView) => p.id === this.instanceId)?.name || '请选择 Provider')
+                    .backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
+                    .onSelect((index: number) => {
+                      const id = this.providers[index - 1]?.id || '';
+                      if (id !== this.instanceId) { this.instanceId = id; this.model = ''; }
+                    })
+                }
+                .width('100%')
+                .alignItems(VerticalAlign.Center)
+                .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                .constraintSize({ minHeight: Sizes.formRowMin })
+                .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+                Row({ space: 10 }) {
+                  Text('模型').fontSize(FontSize.body).fontColor($r('app.color.ink')).flexShrink(0)
+                  Select(this.modelOptions()).layoutWeight(1).constraintSize({ minHeight: 38 }).enabled(this.writable() && !!this.instanceId)
+                    .selected(this.modelRows().findIndex((m: ProviderModelView) => m.id === this.model) + 1)
+                    .value(this.modelRows().find((m: ProviderModelView) => m.id === this.model)?.name || '请选择模型')
+                    .backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
+                    .onSelect((index: number) => { this.model = this.modelRows()[index - 1]?.id || ''; })
+                }
+                .width('100%')
+                .alignItems(VerticalAlign.Center)
+                .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                .constraintSize({ minHeight: Sizes.formRowMin })
+                .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+              }
+
+              if (this.selected?.threadId || this.draftThreadId) {
+                FormRow({
+                  kind: 'value',
+                  label: '工作区',
+                  value: '绑定会话的工作区',
+                  valueMuted: true,
+                  chevron: false,
+                  isFirst: false
+                })
+              } else {
+                Row({ space: 10 }) {
+                  Text('工作区').fontSize(FontSize.body).fontColor($r('app.color.ink')).flexShrink(0)
+                  Select([{ value: '项目根工作区' }, { value: '新工作树' }, { value: '已有工作树' }])
+                    .layoutWeight(1).constraintSize({ minHeight: 38 }).enabled(!!this.projectId && this.writable())
+                    .selected(['root', 'worktree', 'existing_worktree'].indexOf(this.workspaceType))
+                    .value(this.workspaceType === 'root' ? '项目根工作区' : this.workspaceType === 'worktree' ? '新工作树' :
+                      this.workspaceType === 'existing_worktree' ? '已有工作树' : '服务端工作区策略')
+                    .backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
+                    .onSelect((index: number) => this.selectWorkspace(index))
+                }
+                .width('100%')
+                .alignItems(VerticalAlign.Center)
+                .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                .constraintSize({ minHeight: Sizes.formRowMin })
+                .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+                if (this.workspaceType === 'worktree' || this.workspaceType === 'existing_worktree') {
+                  if (this.workspaceFilterAvailable || this.workspaceQuery) {
+                    Row({ space: Space.xs }) {
+                      TextInput({ text: this.workspaceQuery, placeholder: '按分支名筛选' })
+                        .layoutWeight(1).height(40).fontSize(FontSize.body).fontColor($r('app.color.ink'))
+                        .placeholderColor($r('app.color.placeholder')).backgroundColor(Color.Transparent).padding(0)
+                        .maxLength(256).accessibilityText('按分支名筛选')
+                        .onChange((query: string) => { this.workspaceQuery = query; })
+                        .onSubmit(() => { void this.loadWorkspaceOptions(); })
+                      AppButton({
+                        label: this.workspaceQuery.trim() ? '筛选' : '读取候选',
+                        kind: 'secondary',
+                        compact: true,
+                        disabled: !this.writable(),
+                        onTap: () => { void this.loadWorkspaceOptions(); }
+                      })
+                    }
+                    .width('100%')
+                    .alignItems(VerticalAlign.Center)
+                    .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                    .constraintSize({ minHeight: Sizes.formRowMin })
+                    .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+                  }
+                  if (this.workspaceLoading || this.workspaceError || this.workspaceOptions?.isRepo === false ||
+                    this.workspaceOptions?.truncated || (this.workspaceOptions && this.workspaceAppliedQuery)) {
+                    Column({ space: 4 }) {
+                      if (this.workspaceLoading) {
+                        Text('正在读取项目分支与工作树…').fontSize(FontSize.caption).fontColor($r('app.color.muted'))
+                      } else if (this.workspaceError) {
+                        Row({ space: Space.xs }) {
+                          Text(this.workspaceError).fontSize(FontSize.caption).fontColor($r('app.color.danger')).layoutWeight(1)
+                          AppButton({
+                            label: '重新读取', kind: 'text', disabled: !this.writable(),
+                            onTap: () => { void this.loadWorkspaceOptions(); }
+                          })
+                        }.width('100%').alignItems(VerticalAlign.Center)
+                      } else if (this.workspaceOptions?.isRepo === false) {
+                        Text('当前项目不是 Git 仓库，请选择项目根工作区。').fontSize(FontSize.caption).fontColor($r('app.color.muted'))
+                      }
+                      if (this.workspaceOptions?.truncated) {
+                        Text('只显示部分候选，请按分支名缩小范围。').fontSize(FontSize.caption).fontColor($r('app.color.muted'))
+                      } else if (this.workspaceOptions && this.workspaceAppliedQuery) {
+                        Text('分支筛选 · ' + this.workspaceAppliedQuery).fontSize(FontSize.caption).fontColor($r('app.color.muted'))
+                          .wordBreak(WordBreak.BREAK_ALL)
+                      }
+                    }
+                    .width('100%')
+                    .alignItems(HorizontalAlign.Start)
+                    .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                    .constraintSize({ minHeight: Sizes.formRowMin })
+                    .justifyContent(FlexAlign.Center)
+                    .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+                  }
+                  if (this.workspaceType === 'worktree') {
+                    Column({ space: 4 }) {
+                      Row({ space: 10 }) {
+                        Text('基准分支').fontSize(FontSize.body).fontColor($r('app.color.ink')).flexShrink(0)
+                        Select([{ value: '请选择基准分支' } as SelectOption].concat((this.workspaceOptions?.refs || [])
+                          .map((ref: BranchView): SelectOption => ({ value: ref.name }))))
+                          .layoutWeight(1).constraintSize({ minHeight: 38 }).value(this.workspaceBaseRef || '请选择基准分支')
+                          .enabled(!!this.workspaceOptions?.refs.length && this.writable())
+                          .backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
+                          .onSelect((index: number) => this.selectWorkspaceBranch(index))
+                      }.width('100%').alignItems(VerticalAlign.Center)
+                      if (this.workspaceOptions?.isRepo && !this.workspaceOptions.refs.length) {
+                        Text(this.workspaceAppliedQuery ? '未找到匹配的分支。' : '当前项目没有可选分支。')
+                          .fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
+                      }
+                    }
+                    .width('100%')
+                    .alignItems(HorizontalAlign.Start)
+                    .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                    .constraintSize({ minHeight: Sizes.formRowMin })
+                    .justifyContent(FlexAlign.Center)
+                    .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+                    FormRow({
+                      kind: 'switch',
+                      label: '从远端更新起点',
+                      checked: this.workspaceOrigin,
+                      disabled: !(this.writable() &&
+                        (this.workspaceOptions?.refs.some((ref: BranchView) => ref.name === this.workspaceBaseRef && !ref.isRemote) === true ||
+                          (!!this.workspaceBaseRef && this.workspaceVerifiedBaseRef === this.workspaceBaseRef))),
+                      isFirst: false,
+                      onToggle: (on: boolean) => { this.workspaceOrigin = on; }
+                    })
+                  } else {
+                    Column({ space: 4 }) {
+                      Row({ space: 10 }) {
+                        Text('现有工作树').fontSize(FontSize.body).fontColor($r('app.color.ink')).flexShrink(0)
+                        Select([{ value: '请选择工作树' } as SelectOption].concat((this.workspaceOptions?.checkoutPaths || [])
+                          .map((path: string): SelectOption => ({ value: path }))))
+                          .layoutWeight(1).constraintSize({ minHeight: 38 }).value(this.workspacePath || '请选择工作树')
+                          .enabled(!!this.workspaceOptions?.checkoutPaths.length && this.writable())
+                          .backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
+                          .onSelect((index: number) => this.selectWorkspacePath(index))
+                      }.width('100%').alignItems(VerticalAlign.Center)
+                      if (this.workspacePath) {
+                        Text(this.workspacePath).fontSize(FontSize.caption).fontColor($r('app.color.muted'))
+                          .width('100%').wordBreak(WordBreak.BREAK_ALL)
+                      }
+                      if (this.workspaceOptions?.isRepo && !this.workspaceOptions.checkoutPaths.length) {
+                        Text(this.workspaceAppliedQuery ? '匹配的分支没有已有工作树。' : '当前项目没有可选的已有工作树。')
+                          .fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
+                      }
+                    }
+                    .width('100%')
+                    .alignItems(HorizontalAlign.Start)
+                    .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                    .constraintSize({ minHeight: Sizes.formRowMin })
+                    .justifyContent(FlexAlign.Center)
+                    .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+                  }
+                }
+              }
+            }
+
+            GroupCard({
+              title: '调度' + (this.scheduleType === 'fixed_time' ? ' · ' + (this.timeZone || '服务端时区') : '')
+            }) {
+              Row({ space: 8 }) {
+                Text('方式').fontSize(FontSize.body).fontColor($r('app.color.ink')).flexShrink(0)
+                Blank()
+                Row({ space: 2 }) {
+                  Button('固定时间')
+                    .fontSize(FontSize.callout)
+                    .fontWeight(this.scheduleType === 'fixed_time' ? Weight.medium : Weight.regular)
+                    .fontColor(this.scheduleType === 'fixed_time' ? $r('app.color.ink') : $r('app.color.muted'))
+                    .backgroundColor(this.scheduleType === 'fixed_time' ? $r('app.color.card') : Color.Transparent)
+                    .borderRadius(7).constraintSize({ minHeight: 30 }).padding({ left: 10, right: 10 })
+                    .onClick(() => { this.scheduleType = 'fixed_time'; this.time = '09:00'; })
+                  Button('间隔')
+                    .fontSize(FontSize.callout)
+                    .fontWeight(this.scheduleType === 'interval' ? Weight.medium : Weight.regular)
+                    .fontColor(this.scheduleType === 'interval' ? $r('app.color.ink') : $r('app.color.muted'))
+                    .backgroundColor(this.scheduleType === 'interval' ? $r('app.color.card') : Color.Transparent)
+                    .borderRadius(7).constraintSize({ minHeight: 30 }).padding({ left: 10, right: 10 })
+                    .onClick(() => { this.scheduleType = 'interval'; this.time = '09:00'; })
+                  Button('单次')
+                    .fontSize(FontSize.callout)
+                    .fontWeight(this.scheduleType === 'once' ? Weight.medium : Weight.regular)
+                    .fontColor(this.scheduleType === 'once' ? $r('app.color.ink') : $r('app.color.muted'))
+                    .backgroundColor(this.scheduleType === 'once' ? $r('app.color.card') : Color.Transparent)
+                    .borderRadius(7).constraintSize({ minHeight: 30 }).padding({ left: 10, right: 10 })
+                    .onClick(() => { this.scheduleType = 'once'; this.time = ''; })
+                }.padding(2).backgroundColor($r('app.color.group')).borderRadius(9)
+              }
+              .width('100%')
+              .alignItems(VerticalAlign.Center)
+              .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+              .constraintSize({ minHeight: Sizes.formRowMin })
+
+              if (this.scheduleType === 'interval') {
+                Row({ space: 10 }) {
+                  Text('间隔分钟').fontSize(FontSize.body).fontColor($r('app.color.ink')).flexShrink(0)
+                  TextInput({ text: this.minutes, placeholder: '至少 1 分钟' })
+                    .layoutWeight(1).height(40).fontSize(FontSize.body).textAlign(TextAlign.End)
+                    .fontColor($r('app.color.ink')).placeholderColor($r('app.color.placeholder'))
+                    .backgroundColor(Color.Transparent).padding(0)
+                    .type(InputType.Number)
+                    .accessibilityText('间隔分钟')
+                    .onChange((v: string) => { this.minutes = v; })
+                }
+                .width('100%')
+                .alignItems(VerticalAlign.Center)
+                .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                .constraintSize({ minHeight: Sizes.formRowMin })
+                .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+              } else {
+                Row({ space: 10 }) {
+                  Text(this.scheduleType === 'once' ? '执行时间' : '本地时间')
+                    .fontSize(FontSize.body).fontColor($r('app.color.ink')).flexShrink(0)
+                  TextInput({
+                    text: this.time,
+                    placeholder: this.scheduleType === 'once' ? '2027-01-20T09:00:00+08:00' : 'HH:MM'
+                  })
+                    .layoutWeight(1).height(40).fontSize(FontSize.body).textAlign(TextAlign.End)
+                    .fontColor($r('app.color.ink')).placeholderColor($r('app.color.placeholder'))
+                    .backgroundColor(Color.Transparent).padding(0)
+                    .accessibilityText(this.scheduleType === 'once' ? '单次执行时间' : '本地时间 HH:MM')
+                    .onChange((v: string) => { this.time = v; })
+                }
+                .width('100%')
+                .alignItems(VerticalAlign.Center)
+                .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                .constraintSize({ minHeight: Sizes.formRowMin })
+                .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+                if (this.scheduleType === 'fixed_time') {
+                  Column({ space: Space.xs }) {
+                    Text('重复日期 · 至少选择一天')
+                      .fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%')
+                    Flex({ wrap: FlexWrap.Wrap }) {
+                      ForEach([1, 2, 3, 4, 5, 6, 0], (day: number) => {
+                        Button(this.weekdayLabel(day))
+                          .fontSize(FontSize.callout)
+                          .fontWeight(this.weekdays.split(',').includes(String(day)) ? Weight.semibold : Weight.regular)
+                          .padding({ left: 10, right: 10, top: 6, bottom: 6 })
+                          .constraintSize({ minWidth: 42, minHeight: 36 }).margin({ right: 6, bottom: 6 })
+                          .borderRadius(Radius.badge)
+                          .backgroundColor(this.weekdays.split(',').includes(String(day)) ? $r('app.color.prominent') : $r('app.color.group'))
+                          .fontColor(this.weekdays.split(',').includes(String(day)) ? $r('app.color.on_prominent') : $r('app.color.ink'))
+                          .accessibilityText(this.weekdayLabel(day) + (this.weekdays.split(',').includes(String(day)) ? '，已选择' : '，未选择'))
+                          .onClick(() => { this.weekdays = scheduleWeekdaySelection(this.weekdays, day); })
+                      }, (day: number) => String(day))
+                    }.width('100%')
+                  }
+                  .width('100%')
+                  .alignItems(HorizontalAlign.Start)
+                  .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                  .constraintSize({ minHeight: Sizes.formRowMin })
+                  .justifyContent(FlexAlign.Center)
+                  .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+                }
+              }
+            }
+
+          } else if (this.selected) {
+            GroupCard() {
+              Column({ space: Space.xs }) {
+                Row({ space: Space.xs }) {
+                  Text(this.selected.title)
+                    .fontSize(FontSize.headline).lineHeight(LineHeight.headline).fontWeight(Weight.semibold)
+                    .fontColor($r('app.color.ink')).layoutWeight(1)
+                  StatusBadge({
+                    text: this.selected.enabled ? '已启用' : '已停用',
+                    tone: this.selected.enabled ? 'success' : 'neutral'
+                  })
+                }.width('100%').alignItems(VerticalAlign.Center)
+                Text(this.scheduleLabel(this.selected.schedule) +
+                  (record(this.selected.schedule).type === 'fixed_time' && this.timeZone ? ' · ' + this.timeZone : ''))
+                  .fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.muted')).width('100%')
+                Text(this.selected.prompt)
+                  .fontSize(FontSize.body).lineHeight(LineHeight.body).fontColor($r('app.color.ink'))
+                  .padding({ top: Space.xxs }).width('100%').copyOption(CopyOptions.InApp)
+              }
+              .width('100%')
+              .alignItems(HorizontalAlign.Start)
+              .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+              .constraintSize({ minHeight: Sizes.formRowMin })
+              .justifyContent(FlexAlign.Center)
+            }
+
+            GroupCard({ title: '运行配置' }) {
+              FormRow({ kind: 'value', label: '项目', value: this.projectName(this.selected), valueMuted: true, chevron: false, isFirst: true })
+              FormRow({ kind: 'value', label: '模型', value: this.shownModel(this.selected), valueMuted: true, chevron: false })
+              FormRow({
+                kind: 'multiline',
+                label: '会话与工作区',
+                value: this.targetLabel(this.selected.threadId, this.selected.threadMode || (this.selected.threadId ? 'continue' : 'new_thread')) +
+                  ' · ' + this.workspaceLabel(this.selected)
+              })
+              if (this.selected.nextRunAt) {
+                FormRow({ kind: 'value', label: '下次运行', value: this.selected.nextRunAt, valueMuted: true, chevron: false })
+              }
+              FormRow({ kind: 'value', label: '最近运行', value: this.runLabel(this.selected.lastRunStatus), valueMuted: true, chevron: false })
+            }
+
+            if (this.selected.blocked) {
+              Text('组织策略阻止此任务运行')
+                .fontSize(FontSize.callout).fontColor($r('app.color.danger'))
+                .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+            }
+
+            Column({ space: Space.xs }) {
+              AppButton({
+                label: '编辑',
+                kind: 'primary',
+                fill: true,
+                disabled: !(this.writable() && ['fixed_time', 'interval', 'once'].includes(String(record(this.selected.schedule).type))),
+                onTap: () => { this.edit(this.selected); }
+              })
+              AppButton({
+                label: this.selected.enabled ? '停用' : '启用',
+                kind: 'secondary',
+                fill: true,
+                disabled: !(this.writable() && (!this.selected.blocked || this.selected.enabled)),
+                onTap: () => { this.prepareAction('setEnabled'); }
+              })
+              AppButton({
+                label: '删除',
+                kind: 'danger',
+                fill: true,
+                disabled: !this.writable(),
+                onTap: () => { this.prepareAction('delete'); }
+              })
+            }.width('100%').padding({ top: Space.md })
+
+          } else {
+            if (!this.tasks.length && !this.needsRefresh) {
+              GroupCard() {
+                Text('暂无定时任务')
+                  .width('100%').textAlign(TextAlign.Center).padding({ top: Space.lg, bottom: Space.lg })
+                  .fontSize(FontSize.body).fontColor($r('app.color.muted'))
+              }
+            } else if (this.tasks.length > 0) {
+              GroupCard({ title: '已配置计划' }) {
+                ForEach(this.tasks, (task: ScheduledTaskView, index: number) => {
+                  Row({ space: 10 }) {
+                    Column({ space: 3 }) {
+                      Text(task.title)
+                        .fontSize(FontSize.body).lineHeight(LineHeight.body).fontWeight(Weight.medium)
+                        .fontColor($r('app.color.ink')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%')
+                      Text(this.projectName(task) + ' · ' + this.scheduleLabel(task.schedule))
+                        .fontSize(FontSize.caption).lineHeight(LineHeight.caption)
+                        .fontColor($r('app.color.muted')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%')
+                    }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+                    StatusBadge({
+                      text: task.enabled ? '启用' : '停用',
+                      tone: task.enabled ? 'success' : 'neutral'
+                    })
+                    Image($r('app.media.ui_chevron_right')).width(Sizes.chevron).height(Sizes.chevron).opacity(0.6).accessibilityLevel('no')
+                  }
+                  .width('100%')
+                  .alignItems(VerticalAlign.Center)
+                  .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                  .constraintSize({ minHeight: Sizes.formRowMin })
+                  .border({ width: { top: index === 0 ? 0 : Sizes.hairline }, color: { top: $r('app.color.separator') } })
+                  .onClick(() => {
+                    this.selected = this.tasks.find((item: ScheduledTaskView) => item.id === task.id);
+                    this.notice = '';
+                  })
+                }, (task: ScheduledTaskView) => task.id + ':' + task.updatedAt)
+              }
+            }
+          }
+        }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: Space.sm, right: Space.sm, bottom: Space.lg })
+      }.width('100%').layoutWeight(1).align(Alignment.TopStart)
+
+      if (this.editor && !this.confirmation) {
+        Divider().strokeWidth(Sizes.hairline).color($r('app.color.separator'))
+        Column({ space: Space.xs }) {
+          if (this.error) {
+            Text(this.error).fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.danger')).width('100%')
+          }
+          AppButton({
+            label: '检查并保存',
+            kind: 'primary',
+            fill: true,
+            disabled: !this.writable(),
+            onTap: () => { this.prepareSave(); }
+          })
+        }.width('100%').padding({ left: Space.sm, right: Space.sm, top: Space.xs, bottom: Space.sm })
+      } else if (!this.confirmation && !this.selected && !this.editor) {
+        Column() {
+          AppButton({
+            label: '新建任务',
+            kind: 'primary',
+            fill: true,
+            disabled: !this.writable(),
+            onTap: () => { this.edit(); }
+          })
+        }.width('100%').padding({ left: Space.sm, right: Space.sm, top: Space.xs, bottom: Space.sm })
+      }
+    }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

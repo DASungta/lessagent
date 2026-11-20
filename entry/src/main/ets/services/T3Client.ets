@@ -989,7 +989,20 @@ export class T3Client {
     void rpc.request('orchestration.subscribeThread', { threadId: state.threadId }, chunk).then(() => {
       if (this.threadChunk === chunk) this.disconnect('会话订阅已结束，请重新连接');
     }).catch((error: Error) => {
-      if (this.rpc === rpc && this.threadChunk === chunk) this.disconnect(error.message, true);
+      if (this.rpc !== rpc || this.threadChunk !== chunk) return;
+      if (error instanceof RpcFailure && error.known && state.cursor < 0 &&
+        (!this.recovery?.pendingId || this.recovery.threadId !== state.threadId)) {
+        this.threadChunk = undefined;
+        if (this.thread === state) this.thread = undefined;
+        if (this.recovery && !this.recovery.pendingId && this.recovery.threadId === state.threadId) {
+          this.recovery = undefined;
+          if (this.recoveryStore) void this.recoveryStore.clear().catch(() => {});
+        }
+        this.status = '已连接';
+        this.onUpdate();
+        return;
+      }
+      this.disconnect(error.message, true);
     });
   }
 

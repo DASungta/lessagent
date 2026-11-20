@@ -1,3 +1,8 @@
+import { TopBar } from './ui/TopBar';
+import { GroupCard } from './ui/GroupCard';
+import { FormRow } from './ui/FormRow';
+import { AppButton } from './ui/AppButton';
+import { FontSize, LineHeight, Sizes, Space } from '../common/Theme';
 import { T3Client } from '../services/T3Client';
 import { record } from '../protocol/Wire';
 import {
@@ -117,86 +122,129 @@ export struct WorktreeStoragePanel {
   }
   @Builder
   caption(title: string, detail: string, key: string) {
-    Text(title).fontSize(15).fontWeight(FontWeight.Medium).width('100%')
-    Text(detail).fontSize(13).fontColor($r('app.color.muted')).width('100%')
+    Text(title).fontSize(FontSize.body).lineHeight(LineHeight.body).fontColor($r('app.color.ink')).width('100%')
+    Text(detail).fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted')).width('100%')
     if (this.locked(key)) {
-      Text(this.snapshot?.managedBy + ' 管理此设置').fontSize(13).fontColor($r('app.color.muted')).width('100%')
+      Text(this.snapshot?.managedBy + ' 管理此设置')
+        .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted')).width('100%')
     }
   }
+
   @Builder
-  editText(title: string, detail: string, key: string, placeholder: string) {
-    Column({ space: 6 }) {
+  editText(title: string, detail: string, key: string, placeholder: string, isFirst: boolean = false) {
+    Column({ space: Space.xxs }) {
       this.caption(title, detail, key)
       if (this.editingKey === key) {
-        TextInput({ text: this.draft, placeholder }).constraintSize({ minHeight: 44 })
+        TextInput({ text: this.draft, placeholder }).constraintSize({ minHeight: 40 })
+          .backgroundColor($r('app.color.group')).borderRadius(10).padding({ left: 10, right: 10 })
+          .fontSize(FontSize.body).fontColor($r('app.color.ink'))
           .accessibilityText(title).enabled(this.canEdit(key))
           .onChange((value: string) => { this.draft = value; })
-        Row({ space: 8 }) {
-          Button('取消').constraintSize({ minHeight: 44 }).enabled(!this.busy).onClick(() => { this.editingKey = ''; })
-          Button('保存').constraintSize({ minHeight: 44 }).enabled(this.canEdit(key))
-            .onClick(() => this.submit(key, this.draft))
-        }.width('100%')
+        Row({ space: Space.xs }) {
+          AppButton({
+            label: '取消', kind: 'secondary', compact: true, disabled: this.busy,
+            onTap: () => { this.editingKey = ''; }
+          })
+          AppButton({
+            label: '保存', kind: 'primary', compact: true, disabled: !this.canEdit(key),
+            onTap: () => this.submit(key, this.draft)
+          })
+        }.width('100%').padding({ top: Space.xxs })
       } else {
-        Text(this.label(key)).fontSize(14).width('100%').wordBreak(WordBreak.BREAK_ALL)
-        Button('编辑').constraintSize({ minHeight: 44 }).enabled(this.canEdit(key))
-          .accessibilityText('编辑' + title).onClick(() => { this.draft = this.textValue(key); this.editingKey = key; })
+        Row({ space: Space.xs }) {
+          Text(this.label(key))
+            .fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.muted'))
+            .layoutWeight(1).wordBreak(WordBreak.BREAK_ALL)
+          if (this.canEdit(key)) {
+            AppButton({
+              label: '编辑', kind: 'secondary', compact: true, a11yLabel: '编辑' + title,
+              onTap: () => { this.draft = this.textValue(key); this.editingKey = key; }
+            })
+          }
+        }.width('100%').alignItems(VerticalAlign.Center).padding({ top: Space.xxs })
       }
-    }.width('100%').alignItems(HorizontalAlign.Start).padding(12).backgroundColor($r('app.color.surface')).borderRadius(12)
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+    .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+    .constraintSize({ minHeight: Sizes.formRowMin })
+    .justifyContent(FlexAlign.Center)
+    .border({ width: { top: isFirst ? 0 : Sizes.hairline }, color: { top: $r('app.color.separator') } })
   }
+
   @Builder
-  switchRule(title: string, detail: string, key: string) {
-    Column({ space: 6 }) {
-      this.caption(title, detail, key)
-      Button(this.label(key)).constraintSize({ minHeight: 44 }).enabled(this.canEdit(key))
-        .backgroundColor(this.textValue(key) === 'true' ? $r('app.color.primary') : $r('app.color.canvas'))
-        .fontColor(this.textValue(key) === 'true' ? Color.White : $r('app.color.ink'))
-        .accessibilityText(title + '，' + this.label(key)).onClick(() =>
-          this.submit(key, this.textValue(key) === 'true' ? 'false' : 'true'))
-    }.width('100%').alignItems(HorizontalAlign.Start).padding(12).backgroundColor($r('app.color.surface')).borderRadius(12)
+  switchRule(title: string, detail: string, key: string, isFirst: boolean = false) {
+    FormRow({
+      kind: 'switch',
+      label: title,
+      subtitle: this.locked(key) ? (detail + ' · ' + (this.snapshot?.managedBy || '') + ' 管理') : detail,
+      checked: this.textValue(key) === 'true',
+      disabled: !this.canEdit(key),
+      isFirst,
+      onToggle: (on: boolean) => { this.submit(key, on ? 'true' : 'false'); }
+    })
   }
 
   build() {
     Column({ space: 0 }) {
-      Row({ space: 8 }) {
-        Button({ type: ButtonType.Normal }) { Image($r('app.media.ui_back')).width(22).height(22) }
-          .width(44).height(44).backgroundColor(Color.Transparent).accessibilityText('返回设置').onClick(this.onBack)
-        Text('工作树存储').fontSize(20).fontWeight(FontWeight.Medium).layoutWeight(1)
-        Button('刷新').constraintSize({ minWidth: 44, minHeight: 44 })
-          .fontSize(14).backgroundColor(Color.Transparent).fontColor($r('app.color.primary'))
-          .enabled(!this.busy).onClick(() => { void this.refresh(); })
-      }.width('100%').padding(8)
+      TopBar({ title: '工作树存储', showBack: true, backLabel: '返回设置', onBack: () => this.onBack() }) {
+        AppButton({ label: '刷新', kind: 'text', disabled: this.busy, onTap: () => { void this.refresh(); } })
+      }
       Scroll() {
-        Column({ space: 12 }) {
-          if (this.busy) { Text('正在同步…').fontSize(13).width('100%') }
-          if (this.message) { Text(this.message).fontSize(14).width('100%') }
+        Column({ space: 0 }) {
+          if (this.busy) {
+            Text('正在同步…').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+          }
+          if (this.message) {
+            Text(this.message).fontSize(FontSize.callout).fontColor($r('app.color.primary_text'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+          }
           if (this.snapshot) {
             if (this.settingsWriteAllowed !== true) {
-              Text('当前连接仅可查看').fontSize(13).width('100%')
+              Text('当前连接仅可查看').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+                .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
             }
-            this.editText('工作树目录', '新工作树使用宿主机上的目录。既有工作树保留原位置。', 'worktreesDirectory', '留空使用默认目录')
-            Text('自动清理').fontSize(16).fontWeight(FontWeight.Medium).width('100%')
-            Text('保存后，服务会按这些默认规则自动清理符合条件的工作树。项目的自定义规则或关闭设置优先。')
-              .fontSize(13).fontColor($r('app.color.muted')).width('100%')
+            GroupCard({ title: '目录位置' }) {
+              this.editText('工作树目录', '新工作树使用宿主机上的目录。既有工作树保留原位置。', 'worktreesDirectory', '留空使用默认目录', true)
+            }
             if (this.snapshot.cleanupOverride) {
-              Text('当前服务的工作树清理模式覆盖这些默认规则。').fontSize(14).width('100%')
+              GroupCard({
+                title: '自动清理',
+                footnote: '保存后，服务会按这些默认规则自动清理符合条件的工作树。项目的自定义规则或关闭设置优先。'
+              }) {
+                FormRow({ kind: 'value', label: '当前服务的工作树清理模式覆盖这些默认规则。', value: '', valueMuted: true, chevron: false, isFirst: true })
+              }
             } else {
-              this.editText('闲置工作树', '会话连续闲置指定天数后，工作树可被自动清理。', 'worktreeAfterDays', '1–3650 天，留空关闭')
-              this.editText('已归整工作树', '归整达到指定天数后可清理；0 天表示下次清理时检查。', 'worktreeSettledAfterDays', '0–3650 天，留空关闭')
-              this.switchRule('删除会话后清理', '清理已删除会话不再使用的工作树。', 'worktreeOnDelete')
-              this.switchRule('合并后清理', '清理 PR 已合并且提交已进入默认分支的工作树。', 'worktreeOnMerge')
-              this.switchRule('清理未更改的工作树', '清理已归整或归档，且没有超出默认分支提交的工作树。', 'worktreeUnchanged')
-              Column({ space: 6 }) {
-                this.caption('本地文件保护', '保护所有本地文件时，也保护忽略文件，node_modules 目录除外。只保护已追踪改动时，未跟踪和忽略文件都可能被删除。', 'worktreeKeepWhen')
-                Select(KEEP_LABELS.map((label: string): SelectOption => ({ value: label })))
-                  .width('100%').constraintSize({ minHeight: 44 })
-                  .value(this.label('worktreeKeepWhen')).enabled(this.canEdit('worktreeKeepWhen'))
-                  .accessibilityText('本地文件保护')
-                  .onSelect((index: number) => { if (WORKTREE_KEEP_VALUES[index]) this.submit('worktreeKeepWhen', WORKTREE_KEEP_VALUES[index]); })
-              }.width('100%').alignItems(HorizontalAlign.Start).padding(12).backgroundColor($r('app.color.surface')).borderRadius(12)
+              GroupCard({
+                title: '自动清理',
+                footnote: '保存后，服务会按这些默认规则自动清理符合条件的工作树。项目的自定义规则或关闭设置优先。'
+              }) {
+                this.editText('闲置工作树', '会话连续闲置指定天数后，工作树可被自动清理。', 'worktreeAfterDays', '1–3650 天，留空关闭', true)
+                this.editText('已归整工作树', '归整达到指定天数后可清理；0 天表示下次清理时检查。', 'worktreeSettledAfterDays', '0–3650 天，留空关闭', false)
+                this.switchRule('删除会话后清理', '清理已删除会话不再使用的工作树。', 'worktreeOnDelete', false)
+                this.switchRule('合并后清理', '清理 PR 已合并且提交已进入默认分支的工作树。', 'worktreeOnMerge', false)
+                this.switchRule('清理未更改的工作树', '清理已归整或归档，且没有超出默认分支提交的工作树。', 'worktreeUnchanged', false)
+                Column({ space: Space.xxs }) {
+                  this.caption('本地文件保护', '保护所有本地文件时，也保护忽略文件，node_modules 目录除外。只保护已追踪改动时，未跟踪和忽略文件都可能被删除。', 'worktreeKeepWhen')
+                  Select(KEEP_LABELS.map((label: string): SelectOption => ({ value: label })))
+                    .width('100%').constraintSize({ minHeight: 38 })
+                    .backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
+                    .value(this.label('worktreeKeepWhen')).enabled(this.canEdit('worktreeKeepWhen'))
+                    .accessibilityText('本地文件保护')
+                    .onSelect((index: number) => { if (WORKTREE_KEEP_VALUES[index]) this.submit('worktreeKeepWhen', WORKTREE_KEEP_VALUES[index]); })
+                }
+                .width('100%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                .constraintSize({ minHeight: Sizes.formRowMin })
+                .justifyContent(FlexAlign.Center)
+                .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+              }
             }
           }
-        }.width('100%').padding({ left: 16, right: 16, bottom: 28 })
+        }.width('100%').padding({ left: Space.sm, right: Space.sm, bottom: Space.lg })
       }.width('100%').layoutWeight(1).align(Alignment.TopStart)
-    }.width('100%').height('100%').backgroundColor($r('app.color.canvas')).foregroundColor($r('app.color.ink'))
+    }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

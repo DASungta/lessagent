@@ -85,6 +85,9 @@ import { UsagePanel } from '../components/UsagePanel';
 import { SnoozePanel } from '../components/SnoozePanel';
 import { ThreadRenamePanel } from '../components/ThreadRenamePanel';
 import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
+import { TopBar } from '../components/ui/TopBar';
+import { GroupCard } from '../components/ui/GroupCard';
+import { FormRow } from '../components/ui/FormRow';
 import { IconButton } from '../components/ui/IconButton';
 import { AppButton } from '../components/ui/AppButton';
 import { HomeBottomBar, HomeTab } from '../components/ui/HomeBottomBar';
@@ -2411,47 +2414,74 @@ struct Index {
         onClose: () => { this.panelOpen = false; this.renameThread = undefined; },
         onRename: (thread: ScopedThread, title: string) => this.renameSelected(thread, title) })
     } else if (this.panel === 'filter') {
-      Column({ space: 8 }) {
-        Row() {
-          Button('×').width(44).height(44).backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
-            .accessibilityText('关闭筛选').onClick(() => { this.panelOpen = false; })
-          Text('筛选与排序').fontColor($r('app.color.ink')).fontSize(20).fontWeight(FontWeight.Medium).layoutWeight(1)
-        }.width('100%').padding({ left: 12, right: 20 })
+      Column({ space: 0 }) {
+        TopBar({
+          title: '筛选与排序',
+          showBack: true,
+          closeStyle: true,
+          backLabel: '关闭筛选',
+          onBack: () => { this.panelOpen = false; }
+        })
         Scroll() {
-          Column({ space: 14 }) {
-            Text('环境').fontSize(12).fontColor($r('app.color.muted')).width('100%')
-            Select(this.environmentOptions()).value(this.environmentEntries.find((entry: EnvironmentEntry) =>
-              entry.localId === this.environmentFilter && !entry.deleting)?.label ||
-              (this.environmentFilter ? '已选环境暂不可用' : '所有环境'))
-              .onSelect((index: number) => void this.filterEnvironment(index)).width('100%').constraintSize({ minHeight: 44 })
-            Text('项目').fontSize(12).fontColor($r('app.color.muted')).width('100%')
-            Select([{ value: '所有项目' } as SelectOption].concat(
-              pickableProjectGroups(this.projectGroups).map((group: ProjectGroup) => {
-                return { value: group.label } as SelectOption;
-              }))).value(this.projectFilterLabel)
-              .onSelect((index: number) => this.filterProjectKey(index === 0 ? '' : pickableProjectGroups(this.projectGroups)[index - 1]?.key || ''))
-              .width('100%').constraintSize({ minHeight: 44 })
-            Text('会话排序').fontSize(12).fontColor($r('app.color.muted')).width('100%')
-            Column({ space: 8 }) {
-              Button(this.threadSortOrder === 'updated_at' ? '✓ 最近用户消息' : '最近用户消息')
-                .width('100%').constraintSize({ minHeight: 44 })
-                .backgroundColor(this.threadSortOrder === 'updated_at' ? $r('app.color.primary') : $r('app.color.surface'))
-                .fontColor(this.threadSortOrder === 'updated_at' ? $r('app.color.on_primary') : $r('app.color.ink'))
-                .accessibilityText(this.threadSortOrder === 'updated_at' ? '最近用户消息，已选择' : '最近用户消息')
-                .onClick(() => this.setThreadSortOrder('updated_at'))
-              Button(this.threadSortOrder === 'created_at' ? '✓ 创建时间' : '创建时间')
-                .width('100%').constraintSize({ minHeight: 44 })
-                .backgroundColor(this.threadSortOrder === 'created_at' ? $r('app.color.primary') : $r('app.color.surface'))
-                .fontColor(this.threadSortOrder === 'created_at' ? $r('app.color.on_primary') : $r('app.color.ink'))
-                .accessibilityText(this.threadSortOrder === 'created_at' ? '创建时间，已选择' : '创建时间')
-                .onClick(() => this.setThreadSortOrder('created_at'))
-            }.width('100%')
-            Text('清理筛选').fontSize(12).fontColor($r('app.color.muted')).width('100%')
-            Button('清除环境与项目筛选').width('100%').constraintSize({ minHeight: 44 }).backgroundColor($r('app.color.surface'))
-              .fontColor($r('app.color.ink')).onClick(() => { void this.filterEnvironment(0); })
-          }.width('100%').padding({ left: 20, right: 20, bottom: 24 })
+          Column({ space: 0 }) {
+            GroupCard({ title: '筛选范围' }) {
+              Row({ space: 10 }) {
+                Text('环境').fontSize(FontSize.body).fontColor($r('app.color.ink')).flexShrink(0)
+                Select(this.environmentOptions()).value(this.environmentEntries.find((entry: EnvironmentEntry) =>
+                  entry.localId === this.environmentFilter && !entry.deleting)?.label ||
+                  (this.environmentFilter ? '已选环境暂不可用' : '所有环境'))
+                  .onSelect((index: number) => void this.filterEnvironment(index))
+                  .layoutWeight(1).constraintSize({ minHeight: 38 })
+                  .backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
+              }
+              .width('100%')
+              .alignItems(VerticalAlign.Center)
+              .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+              .constraintSize({ minHeight: Sizes.formRowMin })
+              Row({ space: 10 }) {
+                Text('项目').fontSize(FontSize.body).fontColor($r('app.color.ink')).flexShrink(0)
+                Select([{ value: '所有项目' } as SelectOption].concat(
+                  pickableProjectGroups(this.projectGroups).map((group: ProjectGroup) => {
+                    return { value: group.label } as SelectOption;
+                  }))).value(this.projectFilterLabel)
+                  .onSelect((index: number) => this.filterProjectKey(index === 0 ? '' : pickableProjectGroups(this.projectGroups)[index - 1]?.key || ''))
+                  .layoutWeight(1).constraintSize({ minHeight: 38 })
+                  .backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
+              }
+              .width('100%')
+              .alignItems(VerticalAlign.Center)
+              .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+              .constraintSize({ minHeight: Sizes.formRowMin })
+              .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+            }
+
+            GroupCard({ title: '会话排序' }) {
+              FormRow({
+                kind: 'choice',
+                label: '最近用户消息',
+                checked: this.threadSortOrder === 'updated_at',
+                isFirst: true,
+                onTap: () => this.setThreadSortOrder('updated_at')
+              })
+              FormRow({
+                kind: 'choice',
+                label: '创建时间',
+                checked: this.threadSortOrder === 'created_at',
+                onTap: () => this.setThreadSortOrder('created_at')
+              })
+            }
+
+            Column() {
+              AppButton({
+                label: '清除环境与项目筛选',
+                kind: 'secondary',
+                fill: true,
+                onTap: () => { void this.filterEnvironment(0); }
+              })
+            }.width('100%').padding({ top: Space.md })
+          }.width('100%').padding({ left: Space.sm, right: Space.sm, bottom: Space.lg }).alignItems(HorizontalAlign.Start)
         }.width('100%').layoutWeight(1).align(Alignment.TopStart)
-      }.padding({ top: 12 }).width('100%').height('100%')
+      }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
     } else if (this.panel === 'cloud') {
       CloudAccountPanel({ configured: this.cloudConfigured, signInReady: this.cloudSignInReady,
         signedIn: this.cloudSignedIn, accountId: this.cloudAccountId, status: this.cloudStatus,
@@ -2486,55 +2516,77 @@ struct Index {
             onApproveDevice: (id: string) => this.approveDevice(id),
             onDenyDevice: (id: string) => this.denyDevice(id),
             onRevokeDevice: (id: string) => this.revokeDevice(id) })
-        .padding(24).width('100%').height('100%').foregroundColor($r('app.color.ink'))
     } else if (this.panel === 'connection-new') {
-      Column({ space: 16 }) {
-
-          Row() {
-            this.iconButton($r('app.media.ui_back'), '返回环境', () => { this.panel = 'server'; this.credential = ''; this.routeFor = ''; })
-            Text(this.routeFor ? '添加路径' : '添加环境').fontSize(20).fontWeight(FontWeight.Medium).layoutWeight(1)
-            Button(this.busy ? '…' : '✓').quietButton().fontSize(20).width(44).accessibilityText(this.routeFor ? '确认添加路径' : '确认添加环境')
-              .enabled(this.loaded && !this.busy && !!this.address.trim()).onClick(() => this.connect())
-          }.width('100%')
+      Column({ space: 0 }) {
+        TopBar({
+          title: this.routeFor ? '添加路径' : '添加环境',
+          showBack: true,
+          backLabel: '返回环境',
+          onBack: () => { this.panel = 'server'; this.credential = ''; this.routeFor = ''; }
+        }) {
+          AppButton({
+            label: this.busy ? '连接中' : '确认',
+            kind: 'text',
+            a11yLabel: this.routeFor ? '确认添加路径' : '确认添加环境',
+            disabled: !this.loaded || this.busy || !this.address.trim(),
+            onTap: () => this.connect()
+          })
+        }
         Scroll() {
-          Column({ space: 20 }) {
-          PairingScanCard({ active: this.panelOpen && this.panel === 'connection-new' && !this.busy,
-            onTarget: (target: PairingTarget) => { this.address = target.base; this.credential = target.code; this.pairingStatus = this.routeFor ? '请确认目标后添加连接路径' : '请确认目标后添加环境'; } })
-          Text('或在这里输入').fontSize(14).fontColor($r('app.color.muted')).width('100%')
           Column({ space: 0 }) {
-            Row({ space: 12 }) {
-              Text('地址').fontSize(15).fontColor($r('app.color.muted')).width(84)
-              TextInput({ placeholder: '192.168.1.100:3773', text: this.address }).layoutWeight(1).height(52)
-                .backgroundColor(Color.Transparent).borderRadius(0).padding(0)
-                .accessibilityText('服务器地址').enabled(!this.busy).onChange((value: string) => this.address = value)
-            }.width('100%').padding({ left: 16, right: 8 })
-            Divider().color($r('app.color.border')).margin({ left: 16 })
-            Row({ space: 12 }) {
-              Text('配对码').fontSize(15).fontColor($r('app.color.muted')).width(84)
-              TextInput({ placeholder: 'Code', text: this.credential }).layoutWeight(1).height(52)
-                .backgroundColor(Color.Transparent).borderRadius(0).padding(0)
-                .type(InputType.Password).enableAutoFill(false).enabled(!this.busy).onChange((value: string) => this.credential = value)
-            }.width('100%').padding({ left: 16, right: 8 })
-          }.width('100%').backgroundColor($r('app.color.surface')).borderRadius(16)
-          Text('适用于局域网或 tailnet 中的机器。凭据由目标机器保管。')
-            .fontSize(13).lineHeight('19fp').fontColor($r('app.color.muted')).width('100%')
-          Text(this.pairingStatus).fontSize(13).fontColor($r('app.color.muted')).width('100%')
-          if (this.cloudConfigured) {
-            Button({ type: ButtonType.Normal }) {
-              Row({ space: 8 }) {
-                Column({ space: 3 }) {
-                  Text(this.cloudSignedIn ? 'T3 Connect 已登录' : '使用 T3 Connect').fontSize(15).fontWeight(FontWeight.Medium).width('100%')
-                  Text(this.cloudSignedIn ? (this.cloudStatus || '使用托管中继') : '通过中继访问已链接的机器')
-                    .fontSize(12).fontColor($r('app.color.muted')).width('100%')
-                }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-                Text('›').fontSize(18).fontColor($r('app.color.muted'))
-              }.width('100%')
-            }.width('100%').padding(12).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).borderRadius(12)
-              .enabled(!this.busy).onClick(() => this.openCloudPanel('connection-new'))
-          }
-          }.width('100%').alignItems(HorizontalAlign.Start)
-        }.width('100%').layoutWeight(1)
-      }.padding(24).width('100%').height('100%').foregroundColor($r('app.color.ink'))
+            PairingScanCard({ active: this.panelOpen && this.panel === 'connection-new' && !this.busy,
+              onTarget: (target: PairingTarget) => { this.address = target.base; this.credential = target.code; this.pairingStatus = this.routeFor ? '请确认目标后添加连接路径' : '请确认目标后添加环境'; } })
+
+            GroupCard({
+              title: '或在这里输入',
+              footnote: '适用于局域网或 tailnet 中的机器。凭据由目标机器保管。'
+            }) {
+              Row({ space: 12 }) {
+                Text('地址').fontSize(FontSize.body).fontColor($r('app.color.ink')).width(64).flexShrink(0)
+                TextInput({ placeholder: '192.168.1.100:3773', text: this.address }).layoutWeight(1).height(42)
+                  .fontSize(FontSize.body).fontColor($r('app.color.ink')).placeholderColor($r('app.color.placeholder'))
+                  .backgroundColor(Color.Transparent).padding(0)
+                  .accessibilityText('服务器地址').enabled(!this.busy).onChange((value: string) => this.address = value)
+              }
+              .width('100%')
+              .alignItems(VerticalAlign.Center)
+              .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+              .constraintSize({ minHeight: Sizes.formRowMin })
+              Row({ space: 12 }) {
+                Text('配对码').fontSize(FontSize.body).fontColor($r('app.color.ink')).width(64).flexShrink(0)
+                TextInput({ placeholder: 'Code', text: this.credential }).layoutWeight(1).height(42)
+                  .fontSize(FontSize.body).fontColor($r('app.color.ink')).placeholderColor($r('app.color.placeholder'))
+                  .backgroundColor(Color.Transparent).padding(0)
+                  .type(InputType.Password).enableAutoFill(false).enabled(!this.busy).onChange((value: string) => this.credential = value)
+              }
+              .width('100%')
+              .alignItems(VerticalAlign.Center)
+              .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+              .constraintSize({ minHeight: Sizes.formRowMin })
+              .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+            }
+
+            if (this.pairingStatus) {
+              Text(this.pairingStatus).fontSize(FontSize.caption).lineHeight(LineHeight.caption)
+                .fontColor($r('app.color.muted')).padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+            }
+
+            if (this.cloudConfigured) {
+              GroupCard({ title: '云托管' }) {
+                FormRow({
+                  kind: 'value',
+                  label: this.cloudSignedIn ? 'T3 Connect 已登录' : '使用 T3 Connect',
+                  subtitle: this.cloudSignedIn ? (this.cloudStatus || '使用托管中继') : '通过中继访问已链接的机器',
+                  value: '',
+                  disabled: this.busy,
+                  isFirst: true,
+                  onTap: () => this.openCloudPanel('connection-new')
+                })
+              }
+            }
+          }.width('100%').padding({ left: Space.sm, right: Space.sm, top: Space.xs, bottom: Space.lg }).alignItems(HorizontalAlign.Start)
+        }.width('100%').layoutWeight(1).align(Alignment.TopStart)
+      }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
     } else {
       Scroll() {
         Column({ space: 8 }) {
@@ -3513,9 +3565,19 @@ struct Index {
           }
         }.width('100%').hitTestBehavior(HitTestMode.Transparent)
       }
-    }.width('100%').height('100%').padding({ left: (this.isRootTab() || this.page === 'chat') ? 0 : 8, right: (this.isRootTab() || this.page === 'chat') ? 0 : 8 })
+    }.width('100%').height('100%').padding({
+      left: (this.isRootTab() || this.page === 'chat' || this.page === 'choose-project' ||
+        this.page === 'add-project' || this.page === 'project-overview' || this.page === 'archive') ? 0 : 8,
+      right: (this.isRootTab() || this.page === 'chat' || this.page === 'choose-project' ||
+        this.page === 'add-project' || this.page === 'project-overview' || this.page === 'archive') ? 0 : 8
+    })
       .focusable(true).onKeyEvent((event: KeyEvent) => { this.keyboardEvent(event, false); })
-      .backgroundColor(this.page === 'sessions' ? $r('app.color.group') : this.page === 'chat' ? $r('app.color.screen') : $r('app.color.canvas'))
+      .backgroundColor(
+        (this.page === 'sessions' || this.page === 'settings' || this.page === 'choose-project' ||
+          this.page === 'add-project' || this.page === 'project-overview' || this.page === 'archive')
+          ? $r('app.color.group')
+          : this.page === 'chat' ? $r('app.color.screen') : $r('app.color.canvas')
+      )
       .foregroundColor($r('app.color.ink'))
       .bindSheet($$this.panelOpen, this.panelContent(), { height: this.panel === 'thread' ? '66%' :
         this.panel === 'attachment' ? '80%' :
@@ -3527,6 +3589,9 @@ struct Index {
           this.panel !== 'cloud' && this.panel !== 'snooze' && this.panel !== 'rename' && this.panel !== 'filter' &&
           this.panel !== 'composer-command' && this.panel !== 'extras' && this.panel !== 'attachment' &&
           this.panel !== 'paste-context' && this.panel !== 'task-settings' && this.panel !== 'queue',
-        onWillDismiss: (action: DismissSheetAction) => { if (this.panel !== 'peer-link' || !this.busy) action.dismiss(); }, backgroundColor: $r('app.color.canvas') })
+        onWillDismiss: (action: DismissSheetAction) => { if (this.panel !== 'peer-link' || !this.busy) action.dismiss(); },
+        backgroundColor: (this.panel === 'server' || this.panel === 'connection-new' || this.panel === 'peer-link' ||
+          this.panel === 'cloud' || this.panel === 'snooze' || this.panel === 'rename' || this.panel === 'filter' ||
+          this.panel === 'task-settings') ? $r('app.color.group') : $r('app.color.canvas') })
   }
 }

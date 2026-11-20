@@ -1,3 +1,9 @@
+import { TopBar } from './ui/TopBar';
+import { GroupCard } from './ui/GroupCard';
+import { FormRow } from './ui/FormRow';
+import { AppButton } from './ui/AppButton';
+import { StatusBadge } from './ui/StatusBadge';
+import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { common } from '@kit.AbilityKit';
 import { T3Client } from '../services/T3Client';
 import { record } from '../protocol/Wire';
@@ -139,84 +145,176 @@ export struct ProviderSettingsPanel {
   }
   build() {
     Column({ space: 0 }) {
-      Row({ space: 8 }) {
-        Button({ type: ButtonType.Normal }) { Image($r('app.media.ui_back')).width(22).height(22) }
-          .width(44).height(44).backgroundColor(Color.Transparent).accessibilityText('返回')
-          .enabled(!this.busy).onClick(this.onBack)
-        Text('Provider 与模型').fontSize(20).fontWeight(FontWeight.Medium).layoutWeight(1)
-        Button('刷新').backgroundColor(Color.Transparent).fontColor($r('app.color.primary')).enabled(!this.busy)
-          .onClick(() => { void this.load(true); })
-      }.width('100%').padding(8)
-      Scroll() {
-        Column({ space: 14 }) {
-          if (this.error) { Text(this.error).fontSize(14).width('100%') }
-          if (this.notice) { Text(this.notice).fontSize(13).fontColor($r('app.color.muted')).width('100%') }
-          if (this.busy) { Text('正在同步…').fontSize(14).width('100%') }
-          if (this.connection?.canScope('providers:manage') === false) {
-            Text('当前连接仅可查看 Provider，不能修改登录状态。').fontSize(13).fontColor($r('app.color.muted')).width('100%')
-          }
+      TopBar({
+        title: this.selected() ? (this.selected()?.name || 'Provider') : 'Provider 与模型',
+        showBack: true,
+        backLabel: this.selected() ? '全部 Provider' : '返回设置',
+        onBack: () => {
+          if (this.busy) return;
           if (this.selected()) {
-            Button('全部 Provider').backgroundColor(Color.Transparent).fontColor($r('app.color.primary'))
-              .enabled(!this.busy).onClick(() => { this.stopWatch(); this.selectedId = ''; this.query = ''; this.auth = undefined; })
-            Text(this.selected()?.name || '').fontSize(20).fontWeight(FontWeight.Medium).width('100%')
-            Text(providerStatus(this.selected() as ProviderView)).fontSize(15).width('100%')
-            if (this.auth) {
-              Text(providerAuthLabel(this.auth)).fontSize(14).width('100%')
-              if (this.auth.code && providerAuthActive(this.auth)) {
-                Text('设备验证码：' + this.auth.code).fontSize(18).fontWeight(FontWeight.Medium).width('100%')
+            this.stopWatch(); this.selectedId = ''; this.query = ''; this.auth = undefined;
+          } else {
+            this.onBack();
+          }
+        }
+      }) {
+        AppButton({
+          label: '刷新',
+          kind: 'text',
+          disabled: this.busy,
+          onTap: () => { void this.load(true); }
+        })
+      }
+      Scroll() {
+        Column({ space: 0 }) {
+          if (this.error) {
+            Text(this.error).fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.danger'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+          }
+          if (this.notice) {
+            Text(this.notice).fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.primary_text'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+          }
+          if (this.busy) {
+            Text('正在同步…').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+          }
+          if (this.connection?.canScope('providers:manage') === false) {
+            Text('当前连接仅可查看 Provider，不能修改登录状态。')
+              .fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+          }
+
+          if (this.selected()) {
+            GroupCard({
+              title: '状态与认证',
+              footnote: !this.auth && !this.selected()?.canAuthenticate ? '此 Provider 的登录由服务端管理。' : ''
+            }) {
+              Row({ space: Space.sm }) {
+                Text('当前状态')
+                  .fontSize(FontSize.body).lineHeight(LineHeight.body).fontWeight(Weight.regular)
+                  .fontColor($r('app.color.ink')).layoutWeight(1)
+                StatusBadge({
+                  text: providerStatus(this.selected() as ProviderView),
+                  tone: this.selected()?.authStatus === 'authenticated' ? 'success' : 'neutral'
+                })
               }
-              if (this.auth.type && !['browser', 'deviceCode'].includes(this.auth.type)) {
-                Text('此登录方式需要终端或凭据输入，请在服务端或桌面客户端完成；此处仍可查看状态或取消流程。')
-                  .fontSize(13).lineHeight('20fp').fontColor($r('app.color.muted')).width('100%')
-              }
-              if (providerAuthActive(this.auth)) {
-                if (this.auth.requiresConsent) {
-                  Button('同意继续登录').width('100%').fontColor(Color.White).backgroundColor($r('app.color.primary'))
-                    .enabled(this.manageable()).onClick(() => { void this.authAction('consent'); })
-                } else if (this.auth.url) {
-                  Button('打开登录页面').width('100%').fontColor(Color.White).backgroundColor($r('app.color.primary'))
-                    .enabled(this.manageable()).onClick(() => { void this.openLogin(); })
+              .width('100%')
+              .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+              .constraintSize({ minHeight: Sizes.formRowMin })
+              .alignItems(VerticalAlign.Center)
+              if (this.auth) {
+                FormRow({ kind: 'multiline', label: '认证进度', value: providerAuthLabel(this.auth), valueMuted: true })
+                if (this.auth.code && providerAuthActive(this.auth)) {
+                  Column({ space: 2 }) {
+                    Text('设备验证码').fontSize(FontSize.caption).fontColor($r('app.color.muted'))
+                    Text(this.auth?.code || '').fontSize(FontSize.headline).fontWeight(Weight.semibold).fontFamily('monospace')
+                      .fontColor($r('app.color.ink')).copyOption(CopyOptions.InApp)
+                  }
+                  .width('100%')
+                  .alignItems(HorizontalAlign.Start)
+                  .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                  .constraintSize({ minHeight: Sizes.formRowMin })
+                  .justifyContent(FlexAlign.Center)
+                  .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
                 }
-              } else if (this.auth.phase !== 'succeeded' && this.selected()?.canAuthenticate && this.selected()?.authStatus !== 'authenticated') {
-                Button('登录').width('100%').fontColor(Color.White).backgroundColor($r('app.color.primary'))
-                  .enabled(this.manageable()).onClick(() => this.confirmLogin())
+                if (this.auth.type && !['browser', 'deviceCode'].includes(this.auth.type)) {
+                  FormRow({
+                    kind: 'multiline',
+                    label: '操作说明',
+                    value: '此登录方式需要终端或凭据输入，请在服务端或桌面客户端完成；此处仍可查看状态或取消流程。',
+                    valueMuted: true
+                  })
+                }
               }
-              if (this.auth.flowId && ['starting', 'waiting', 'verifying'].includes(this.auth.phase)) {
-                Button('取消登录流程').width('100%').fontColor($r('app.color.ink')).backgroundColor($r('app.color.surface'))
-                  .enabled(this.manageable()).onClick(() => { void this.authAction('cancel'); })
-              }
-            } else if (!this.selected()?.canAuthenticate) {
-              Text('此 Provider 的登录由服务端管理。').fontSize(13).fontColor($r('app.color.muted')).width('100%')
             }
-            Text('模型目录 · ' + String(this.selected()?.models.length || 0)).fontSize(15).width('100%')
-            TextInput({ text: this.query, placeholder: '搜索模型' }).onChange(value => this.query = value)
-              .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).height(44)
-            ForEach(this.visibleModels(), (model: ProviderModelView) => {
-              Column({ space: 3 }) {
-                Text(model.name).fontSize(15).width('100%')
-                Text(model.id).fontSize(12).fontColor($r('app.color.muted')).width('100%')
-              }.width('100%').padding(14).backgroundColor($r('app.color.surface')).borderRadius(12)
-            }, (model: ProviderModelView) => model.id)
-            if (!this.visibleModels().length) { Text('没有匹配的模型').fontSize(14).fontColor($r('app.color.muted')) }
+
+            if (this.auth) {
+              Column({ space: Space.xs }) {
+                if (providerAuthActive(this.auth)) {
+                  if (this.auth.requiresConsent) {
+                    AppButton({
+                      label: '同意继续登录', kind: 'primary', fill: true, disabled: !this.manageable(),
+                      onTap: () => { void this.authAction('consent'); }
+                    })
+                  } else if (this.auth.url) {
+                    AppButton({
+                      label: '打开登录页面', kind: 'primary', fill: true, disabled: !this.manageable(),
+                      onTap: () => { void this.openLogin(); }
+                    })
+                  }
+                } else if (this.auth.phase !== 'succeeded' && this.selected()?.canAuthenticate && this.selected()?.authStatus !== 'authenticated') {
+                  AppButton({
+                    label: '登录', kind: 'primary', fill: true, disabled: !this.manageable(),
+                    onTap: () => this.confirmLogin()
+                  })
+                }
+                if (this.auth.flowId && ['starting', 'waiting', 'verifying'].includes(this.auth.phase)) {
+                  AppButton({
+                    label: '取消登录流程', kind: 'secondary', fill: true, disabled: !this.manageable(),
+                    onTap: () => { void this.authAction('cancel'); }
+                  })
+                }
+              }.width('100%').padding({ top: Space.sm })
+            }
+
+            Row({ space: Space.xs }) {
+              Image($r('app.media.ui_search')).width(16).height(16).opacity(0.6).accessibilityLevel('no')
+              TextInput({ text: this.query, placeholder: '搜索模型' })
+                .layoutWeight(1).height(40).fontSize(FontSize.body).fontColor($r('app.color.ink'))
+                .placeholderColor($r('app.color.placeholder')).backgroundColor(Color.Transparent).padding(0)
+                .onChange(value => this.query = value)
+            }
+            .width('100%').padding({ left: Space.sm, right: Space.sm }).backgroundColor($r('app.color.card'))
+            .borderRadius(Radius.button).margin({ top: Space.md, bottom: Space.xxs }).alignItems(VerticalAlign.Center)
+
+            if (!this.visibleModels().length) {
+              GroupCard({ title: '模型目录 · ' + String(this.selected()?.models.length || 0) }) {
+                FormRow({ kind: 'value', label: '没有匹配的模型', value: '', valueMuted: true, chevron: false, isFirst: true })
+              }
+            } else {
+              GroupCard({ title: '模型目录 · ' + String(this.selected()?.models.length || 0) }) {
+                ForEach(this.visibleModels(), (model: ProviderModelView, index: number) => {
+                  FormRow({ kind: 'value', label: model.name, subtitle: model.id, value: '', chevron: false, isFirst: index === 0 })
+                }, (model: ProviderModelView) => model.id)
+              }
+            }
           } else {
             Text('当前环境的模型与账号状态。模型选择仍在新任务或会话的模型面板中进行。')
-              .fontSize(13).lineHeight('20fp').fontColor($r('app.color.muted')).width('100%')
-            TextInput({ text: this.query, placeholder: '搜索 Provider' }).onChange(value => this.query = value)
-              .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).height(44)
-            ForEach(this.visibleProviders(), (provider: ProviderView) => {
-              Button({ type: ButtonType.Normal }) {
-                Column({ space: 5 }) {
-                  Text(provider.name).fontSize(16).fontWeight(FontWeight.Medium).width('100%')
-                  Text(providerStatus(provider) + ' · ' + String(provider.models.length) + ' 个模型')
-                    .fontSize(13).fontColor($r('app.color.muted')).width('100%')
-                }.width('100%').padding(16)
-              }.width('100%').backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).borderRadius(14)
-                .enabled(!this.busy).onClick(() => this.choose(provider.id))
-            }, (provider: ProviderView) => provider.id)
-            if (!this.visibleProviders().length) { Text('没有匹配的 Provider').fontSize(14).fontColor($r('app.color.muted')) }
+              .fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.muted'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs, bottom: Space.xs }).width('100%')
+            Row({ space: Space.xs }) {
+              Image($r('app.media.ui_search')).width(16).height(16).opacity(0.6).accessibilityLevel('no')
+              TextInput({ text: this.query, placeholder: '搜索 Provider' })
+                .layoutWeight(1).height(40).fontSize(FontSize.body).fontColor($r('app.color.ink'))
+                .placeholderColor($r('app.color.placeholder')).backgroundColor(Color.Transparent).padding(0)
+                .onChange(value => this.query = value)
+            }
+            .width('100%').padding({ left: Space.sm, right: Space.sm }).backgroundColor($r('app.color.card'))
+            .borderRadius(Radius.button).margin({ bottom: Space.xxs }).alignItems(VerticalAlign.Center)
+
+            if (!this.visibleProviders().length) {
+              GroupCard() {
+                FormRow({ kind: 'value', label: '没有匹配的 Provider', value: '', valueMuted: true, chevron: false, isFirst: true })
+              }
+            } else {
+              GroupCard({ title: 'Providers' }) {
+                ForEach(this.visibleProviders(), (provider: ProviderView, index: number) => {
+                  FormRow({
+                    kind: 'value',
+                    label: provider.name,
+                    subtitle: providerStatus(provider) + ' · ' + String(provider.models.length) + ' 个模型',
+                    value: '',
+                    disabled: this.busy,
+                    isFirst: index === 0,
+                    onTap: () => this.choose(provider.id)
+                  })
+                }, (provider: ProviderView) => provider.id)
+              }
+            }
           }
-        }.width('100%').padding(16).alignItems(HorizontalAlign.Start)
+        }.width('100%').padding({ left: Space.sm, right: Space.sm, bottom: Space.lg }).alignItems(HorizontalAlign.Start)
       }.width('100%').layoutWeight(1).align(Alignment.TopStart)
-    }.width('100%').height('100%').backgroundColor($r('app.color.canvas')).foregroundColor($r('app.color.ink'))
+    }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

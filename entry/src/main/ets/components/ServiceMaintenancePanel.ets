@@ -1,3 +1,8 @@
+import { TopBar } from './ui/TopBar';
+import { GroupCard } from './ui/GroupCard';
+import { FormRow } from './ui/FormRow';
+import { AppButton } from './ui/AppButton';
+import { FontSize, LineHeight, Sizes, Space } from '../common/Theme';
 import { T3Client } from '../services/T3Client';
 import { record } from '../protocol/Wire';
 import {
@@ -162,62 +167,98 @@ export struct ServiceMaintenancePanel {
 
   build() {
     Column({ space: 0 }) {
-      Row({ space: 8 }) {
-        Button({ type: ButtonType.Normal }) { Image($r('app.media.ui_back')).width(22).height(22) }
-          .width(44).height(44).backgroundColor(Color.Transparent).accessibilityText('返回设置').onClick(this.onBack)
-        Text('服务维护').fontSize(20).fontWeight(FontWeight.Medium).layoutWeight(1)
-        Button('刷新').fontSize(14).backgroundColor(Color.Transparent).fontColor($r('app.color.primary'))
-          .enabled(!this.busy).onClick(() => { void this.refresh(); })
-      }.width('100%').padding(8)
+      TopBar({ title: '服务维护', showBack: true, backLabel: '返回设置', onBack: () => this.onBack() }) {
+        AppButton({ label: '刷新', kind: 'text', disabled: this.busy, onTap: () => { void this.refresh(); } })
+      }
       Scroll() {
-        Column({ space: 12 }) {
-          if (this.busy && !this.info && !this.message) { Text('正在读取维护信息…').fontSize(14).width('100%') }
-          if (this.message) { Text(this.message).fontSize(14).width('100%') }
+        Column({ space: 0 }) {
+          if (this.busy && !this.info && !this.message) {
+            Text('正在读取维护信息…').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+          }
+          if (this.message) {
+            Text(this.message).fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.primary_text'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+          }
           if (this.info) {
-            Column({ space: 6 }) {
-              Text('服务版本：' + (this.info.version || '服务未提供')).fontSize(15).width('100%')
-              Text('安装方式：' + (this.info.installation || '服务未提供')).fontSize(14).width('100%')
-              Text('更新方式：' + this.updateMethod()).fontSize(14).width('100%')
-              Text('重启后继续会话：' + (this.info.restartContinuation === undefined ? '服务未提供' :
-                this.info.restartContinuation ? '已开启' : '已关闭')).fontSize(14).width('100%')
-            }.width('100%').padding(12).backgroundColor($r('app.color.surface')).borderRadius(12)
-            Column({ space: 6 }) {
-              Text('数据库存储').fontSize(15).fontWeight(FontWeight.Medium).width('100%')
+            GroupCard({ title: '服务信息' }) {
+              FormRow({ kind: 'value', label: '服务版本', value: this.info.version || '服务未提供', valueMuted: true, chevron: false, isFirst: true })
+              FormRow({ kind: 'value', label: '安装方式', value: this.info.installation || '服务未提供', valueMuted: true, chevron: false })
+              FormRow({ kind: 'value', label: '更新方式', value: this.updateMethod(), valueMuted: true, chevron: false })
+              FormRow({
+                kind: 'value',
+                label: '重启后继续会话',
+                value: this.info.restartContinuation === undefined ? '服务未提供' : this.info.restartContinuation ? '已开启' : '已关闭',
+                valueMuted: true,
+                chevron: false
+              })
+            }
+
+            GroupCard({
+              title: '数据库存储',
+              footnote: this.database
+                ? (this.database.incrementalVacuumEnabled ? '已启用自动回收，无需手动整理。'
+                  : canRequestDatabaseReclaim(this.database)
+                    ? (this.connection?.canScope('environment:maintain') === true ? '' : '当前连接没有维护权限。')
+                    : (this.database.reclaimableBytes > 0 ? '当前服务不支持手动整理。' : '当前没有可回收空间。'))
+                : ''
+            }) {
               if (this.database) {
-                Text('数据库大小：' + String(this.database.databaseBytes) + ' 字节').fontSize(14).width('100%')
-                Text('可回收：' + String(this.database.reclaimableBytes) + ' 字节').fontSize(14).width('100%')
-                Text('增量回收：' + (this.database.incrementalVacuumEnabled ? '已开启' : '已关闭')).fontSize(14).width('100%')
-                if (this.database.incrementalVacuumEnabled) {
-                  Text('已启用自动回收，无需手动整理').fontSize(13).width('100%')
-                } else if (canRequestDatabaseReclaim(this.database)) {
-                  if (this.connection?.canScope('environment:maintain') === true) {
-                    Button('回收数据库空间').constraintSize({ minHeight: 44 }).enabled(this.canReclaim())
-                      .onClick(() => this.confirmReclaim())
-                  } else {
-                    Text('当前连接没有维护权限').fontSize(13).width('100%')
+                FormRow({ kind: 'value', label: '数据库大小', value: String(this.database.databaseBytes) + ' 字节', valueMuted: true, chevron: false, isFirst: true })
+                FormRow({ kind: 'value', label: '可回收空间', value: String(this.database.reclaimableBytes) + ' 字节', valueMuted: true, chevron: false })
+                FormRow({ kind: 'value', label: '增量回收', value: this.database.incrementalVacuumEnabled ? '已开启' : '已关闭', valueMuted: true, chevron: false })
+                if (!this.database.incrementalVacuumEnabled && canRequestDatabaseReclaim(this.database) &&
+                  this.connection?.canScope('environment:maintain') === true) {
+                  Column() {
+                    AppButton({
+                      label: '回收数据库空间',
+                      kind: 'secondary',
+                      fill: true,
+                      compact: true,
+                      disabled: !this.canReclaim(),
+                      onTap: () => this.confirmReclaim()
+                    })
                   }
-                } else {
-                  Text(this.database.reclaimableBytes > 0 ? '当前服务不支持手动整理' : '当前没有可回收空间')
-                    .fontSize(13).width('100%')
+                  .width('100%')
+                  .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                  .constraintSize({ minHeight: Sizes.formRowMin })
+                  .justifyContent(FlexAlign.Center)
+                  .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
                 }
               } else if (this.databaseStatus) {
-                Text(this.databaseStatus).fontSize(14).width('100%')
+                FormRow({ kind: 'value', label: this.databaseStatus, value: '', valueMuted: true, chevron: false, isFirst: true })
               }
-            }.width('100%').padding(12).backgroundColor($r('app.color.surface')).borderRadius(12)
-            if (this.info.updatesManagedBy) {
-              Text(this.info.updatesManagedBy + ' 管理服务更新').fontSize(14).width('100%')
-            } else if (!this.info.registrySpec) {
-              Text('此服务或发布轨道不支持检查更新').fontSize(14).width('100%')
-            } else if (this.connection?.canScope('environment:maintain') !== true) {
-              Text('当前连接没有维护权限').fontSize(14).width('100%')
-            } else {
-              Button('检查更新').constraintSize({ minHeight: 44 }).enabled(this.canCheck())
-                .onClick(() => { void this.check(); })
             }
-            if (this.release) { Text(this.releaseSummary()).fontSize(14).width('100%') }
+
+            GroupCard({
+              title: '更新检查',
+              footnote: this.release ? this.releaseSummary() : ''
+            }) {
+              if (this.info.updatesManagedBy) {
+                FormRow({ kind: 'value', label: this.info.updatesManagedBy + ' 管理服务更新', value: '', valueMuted: true, chevron: false, isFirst: true })
+              } else if (!this.info.registrySpec) {
+                FormRow({ kind: 'value', label: '此服务或发布轨道不支持检查更新', value: '', valueMuted: true, chevron: false, isFirst: true })
+              } else if (this.connection?.canScope('environment:maintain') !== true) {
+                FormRow({ kind: 'value', label: '当前连接没有维护权限', value: '', valueMuted: true, chevron: false, isFirst: true })
+              } else {
+                Column() {
+                  AppButton({
+                    label: '检查更新',
+                    kind: 'secondary',
+                    fill: true,
+                    disabled: !this.canCheck(),
+                    onTap: () => { void this.check(); }
+                  })
+                }
+                .width('100%')
+                .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                .constraintSize({ minHeight: Sizes.formRowMin })
+                .justifyContent(FlexAlign.Center)
+              }
+            }
           }
-        }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: 16, right: 16, bottom: 28 })
+        }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: Space.sm, right: Space.sm, bottom: Space.lg })
       }.width('100%').layoutWeight(1).align(Alignment.TopStart)
-    }.width('100%').height('100%').backgroundColor($r('app.color.canvas')).foregroundColor($r('app.color.ink'))
+    }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

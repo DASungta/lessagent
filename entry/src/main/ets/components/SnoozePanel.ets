@@ -1,3 +1,8 @@
+import { TopBar } from './ui/TopBar';
+import { GroupCard } from './ui/GroupCard';
+import { FormRow } from './ui/FormRow';
+import { AppButton } from './ui/AppButton';
+import { FontSize, LineHeight, Radius, Sizes, Space } from '../common/Theme';
 import {
   ScopedThread, SnoozePreset, SnoozePresetSetting, resolveCustomSnooze, resolveSnoozePresets
 } from '../protocol/Projects';
@@ -53,53 +58,86 @@ export struct SnoozePanel {
   }
 
   build() {
-    Column({ space: 14 }) {
-      Row() {
-        Button('×').width(44).height(44).backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
-          .accessibilityText('关闭暂缓').onClick(this.onClose)
-        Text('暂缓会话').fontSize(20).fontWeight(FontWeight.Medium).layoutWeight(1)
-      }.width('100%')
-      if (this.thread) {
-        Text(this.thread.label).fontSize(13).fontColor($r('app.color.muted')).maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%')
-      }
+    Column({ space: 0 }) {
+      TopBar({
+        title: '暂缓会话',
+        subtitle: this.thread ? this.thread.label : '',
+        showBack: true,
+        closeStyle: true,
+        backLabel: '关闭暂缓',
+        onBack: () => this.onClose()
+      })
       Scroll() {
-        Column({ space: 10 }) {
-          Text('快捷时间').fontSize(12).fontColor($r('app.color.muted')).width('100%')
-          ForEach(this.presets, (preset: SnoozePreset) => {
-            Button({ type: ButtonType.Normal }) {
-              Row() {
-                Text(preset.label).fontSize(15).fontColor($r('app.color.ink'))
-                Blank()
-                Text(preset.whenLabel).fontSize(12).fontColor($r('app.color.muted'))
-              }.width('100%').padding({ left: 4, right: 4 })
-            }.width('100%').height(48).backgroundColor($r('app.color.surface')).borderRadius(12)
-              .enabled(!this.busy).onClick(() => void this.submit(preset.snoozedUntil))
-          }, (preset: SnoozePreset) => preset.id)
-          Divider().color($r('app.color.border'))
-          Text('自定义时间').fontSize(12).fontColor($r('app.color.muted')).width('100%')
-          Row({ space: 8 }) {
-            TextInput({ placeholder: 'YYYY-MM-DD', text: this.date }).layoutWeight(3).height(44)
-              .fontSize(14).onChange((value: string) => this.date = value).accessibilityText('暂缓日期')
-            TextInput({ placeholder: 'HH:mm', text: this.time }).layoutWeight(2).height(44)
-              .fontSize(14).onChange((value: string) => this.time = value).accessibilityText('暂缓时间')
-          }.width('100%')
-          Button('按日期暂缓').height(44).backgroundColor($r('app.color.primary')).fontColor($r('app.color.on_primary'))
-            .borderRadius(12).enabled(!this.busy).onClick(() => this.submitCustom())
-          Text('或按时长').fontSize(12).fontColor($r('app.color.muted')).width('100%')
-          Row({ space: 8 }) {
-            TextInput({ placeholder: '2', text: this.amount }).layoutWeight(1).height(44).fontSize(14)
-              .type(InputType.Number).onChange((value: string) => this.amount = value).accessibilityText('暂缓时长')
-            Select([{ value: '分钟' }, { value: '小时' }, { value: '天' }])
-              .value(this.unit === 'minutes' ? '分钟' : this.unit === 'days' ? '天' : '小时')
-              .onSelect((index: number) => this.unit = index === 0 ? 'minutes' : index === 2 ? 'days' : 'hours')
-              .height(44).layoutWeight(1)
-          }.width('100%')
-          Button('按时长暂缓').height(44).backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink'))
-            .borderRadius(12).enabled(!this.busy).onClick(() => this.submitDuration())
-          if (this.error) { Text(this.error).fontSize(13).fontColor($r('app.color.danger')).width('100%') }
-        }.width('100%').alignItems(HorizontalAlign.Start)
-      }.width('100%').layoutWeight(1)
-    }.width('100%').height('100%').padding(20).foregroundColor($r('app.color.ink'))
+        Column({ space: 0 }) {
+          GroupCard({ title: '快捷时间' }) {
+            ForEach(this.presets, (preset: SnoozePreset, index: number) => {
+              FormRow({
+                kind: 'value',
+                label: preset.label,
+                value: preset.whenLabel,
+                valueMuted: true,
+                disabled: this.busy,
+                isFirst: index === 0,
+                onTap: () => { void this.submit(preset.snoozedUntil); }
+              })
+            }, (preset: SnoozePreset) => preset.id)
+          }
+
+          GroupCard({ title: '自定义时间' }) {
+            Column() {
+              Column({ space: Space.xs }) {
+                Row({ space: Space.xs }) {
+                  TextInput({ placeholder: 'YYYY-MM-DD', text: this.date }).layoutWeight(3).height(40)
+                    .fontSize(FontSize.body).fontColor($r('app.color.ink'))
+                    .backgroundColor($r('app.color.group')).borderRadius(Radius.tool).padding({ left: 10, right: 10 })
+                    .onChange((value: string) => this.date = value).accessibilityText('暂缓日期')
+                  TextInput({ placeholder: 'HH:mm', text: this.time }).layoutWeight(2).height(40)
+                    .fontSize(FontSize.body).fontColor($r('app.color.ink'))
+                    .backgroundColor($r('app.color.group')).borderRadius(Radius.tool).padding({ left: 10, right: 10 })
+                    .onChange((value: string) => this.time = value).accessibilityText('暂缓时间')
+                }.width('100%')
+                AppButton({
+                  label: '按日期暂缓', kind: 'primary', fill: true, compact: true,
+                  disabled: this.busy, onTap: () => this.submitCustom()
+                })
+              }.width('100%')
+            }
+            .width('100%')
+            .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+            .constraintSize({ minHeight: Sizes.formRowMin })
+            .justifyContent(FlexAlign.Center)
+            Column() {
+              Column({ space: Space.xs }) {
+                Row({ space: Space.xs }) {
+                  TextInput({ placeholder: '2', text: this.amount }).layoutWeight(1).height(40)
+                    .fontSize(FontSize.body).fontColor($r('app.color.ink'))
+                    .backgroundColor($r('app.color.group')).borderRadius(Radius.tool).padding({ left: 10, right: 10 })
+                    .type(InputType.Number).onChange((value: string) => this.amount = value).accessibilityText('暂缓时长')
+                  Select([{ value: '分钟' }, { value: '小时' }, { value: '天' }])
+                    .value(this.unit === 'minutes' ? '分钟' : this.unit === 'days' ? '天' : '小时')
+                    .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink'))
+                    .onSelect((index: number) => this.unit = index === 0 ? 'minutes' : index === 2 ? 'days' : 'hours')
+                    .height(40).layoutWeight(1)
+                }.width('100%')
+                AppButton({
+                  label: '按时长暂缓', kind: 'secondary', fill: true, compact: true,
+                  disabled: this.busy, onTap: () => this.submitDuration()
+                })
+              }.width('100%')
+            }
+            .width('100%')
+            .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+            .constraintSize({ minHeight: Sizes.formRowMin })
+            .justifyContent(FlexAlign.Center)
+            .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+          }
+
+          if (this.error) {
+            Text(this.error).fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.danger'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.sm }).width('100%')
+          }
+        }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: Space.sm, right: Space.sm, bottom: Space.lg })
+      }.width('100%').layoutWeight(1).align(Alignment.TopStart)
+    }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

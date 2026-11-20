@@ -1,3 +1,6 @@
+import { GroupCard } from './ui/GroupCard';
+import { FormRow } from './ui/FormRow';
+import { FontSize, LineHeight, Sizes, Space, Weight } from '../common/Theme';
 import { EnvironmentEntry } from '../protocol/Environment';
 interface RoutingOption { value: string; label: string; description: string; }
 
@@ -23,44 +26,50 @@ export struct PullRequestRoutingSettings {
   }
   build() {
     if (this.entries.length) {
-      Column({ space: 12 }) {
-        Text('PR 路由').fontSize(14).fontWeight(FontWeight.Medium).width('100%')
-        ForEach(this.entries.filter((entry: EnvironmentEntry) => !entry.deleting), (entry: EnvironmentEntry) => {
+      GroupCard({
+        title: 'PR 路由',
+        footnote: this.error ? this.error : '选择信任的环境以共享 PR 数据和使用彼此的源码控制权限。双方都需启用，此设置仅影响本客户端。'
+      }) {
+        ForEach(this.entries.filter((entry: EnvironmentEntry) => !entry.deleting), (entry: EnvironmentEntry, index: number) => {
           Column({ space: 0 }) {
-            Button({ type: ButtonType.Normal }) {
-              Row({ space: 8 }) {
-                Column({ space: 4 }) {
-                  Text(entry.label).fontSize(16).fontWeight(FontWeight.Medium).maxLines(1).width('100%')
-                  Text(entry.base).fontSize(12).fontColor($r('app.color.muted')).maxLines(1).width('100%')
-                }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+            Row({ space: Space.sm }) {
+              Column({ space: 2 }) {
+                Text(entry.label).fontSize(FontSize.body).lineHeight(LineHeight.body).fontWeight(Weight.regular)
+                  .fontColor($r('app.color.ink')).width('100%')
+                Text(entry.base).fontSize(FontSize.caption).lineHeight(LineHeight.caption)
+                  .fontColor($r('app.color.muted')).width('100%')
+              }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+              Row({ space: 6 }) {
                 Text(this.options.find((option: RoutingOption) => option.value === (entry.prRouting || 'off'))?.label || '关闭')
-                  .fontSize(13).fontColor($r('app.color.muted'))
-                Text(this.expanded === entry.localId ? '⌃' : '⌄').fontSize(14)
-              }.padding(16).width('100%')
-            }.width('100%').backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
-              .accessibilityText(entry.label + ' PR 路由').onClick(() => this.expanded = this.expanded === entry.localId ? '' : entry.localId)
-            if (this.expanded === entry.localId) {
-              ForEach(this.options, (option: RoutingOption) => {
-                Button({ type: ButtonType.Normal }) {
-                  Row({ space: 12 }) {
-                    Column({ space: 4 }) {
-                      Text(option.label).fontSize(15).width('100%')
-                      Text(option.description).fontSize(13).fontColor($r('app.color.muted')).width('100%')
-                    }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-                    if ((entry.prRouting || 'off') === option.value) { Text('✓').accessibilityText('已选择') }
-                  }.padding(16).width('100%')
-                }.width('100%').backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
-                  .enabled(this.initialized && !this.saving && !entry.pendingBase)
-                  .accessibilityText(option.label + ((entry.prRouting || 'off') === option.value ? '，已选择' : ''))
-                  .onClick(() => this.select(entry.localId, option.value))
-              }, (option: RoutingOption) => option.value)
+                  .fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+                Image($r('app.media.ui_chevron_down')).width(Sizes.chevron).height(Sizes.chevron)
+                  .opacity(0.6).rotate({ angle: this.expanded === entry.localId ? 180 : 0 }).accessibilityLevel('no')
+              }
             }
-          }.width('100%').backgroundColor($r('app.color.surface')).borderRadius(12)
+            .width('100%')
+            .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+            .constraintSize({ minHeight: Sizes.formRowMin })
+            .alignItems(VerticalAlign.Center)
+            .border({ width: { top: index === 0 ? 0 : Sizes.hairline }, color: { top: $r('app.color.separator') } })
+            .onClick(() => { this.expanded = this.expanded === entry.localId ? '' : entry.localId; })
+            if (this.expanded === entry.localId) {
+              Column() {
+                ForEach(this.options, (option: RoutingOption) => {
+                  FormRow({
+                    kind: 'choice',
+                    label: option.label,
+                    subtitle: option.description,
+                    checked: (entry.prRouting || 'off') === option.value,
+                    disabled: !(this.initialized && !this.saving && !entry.pendingBase),
+                    isFirst: false,
+                    onTap: () => { void this.select(entry.localId, option.value); }
+                  })
+                }, (option: RoutingOption) => option.value)
+              }.width('100%').backgroundColor($r('app.color.group')).padding({ left: Space.xs })
+            }
+          }.width('100%')
         }, (entry: EnvironmentEntry) => entry.localId)
-        Text('选择信任的环境以共享 PR 数据和使用彼此的源码控制权限。双方都需启用，此设置仅影响本客户端。')
-          .fontSize(13).fontColor($r('app.color.muted')).width('100%')
-        if (this.error) { Text(this.error).fontSize(13).fontColor($r('app.color.danger')).width('100%') }
-      }.width('100%').alignItems(HorizontalAlign.Start)
+      }
     }
   }
 }

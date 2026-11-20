@@ -14,6 +14,7 @@ export struct TopBar {
   @Prop title: string = '';
   @Prop subtitle: string = '';
   @Prop showBack: boolean = false;
+  @Prop closeStyle: boolean = false;
   @Prop backLabel: string = '返回';
   onBack: () => void = () => {};
   @BuilderParam actions: () => void = this.noActions;
@@ -23,7 +24,11 @@ export struct TopBar {
   build() {
     Row({ space: Space.xxs }) {
       if (this.showBack) {
-        IconButton({ icon: $r('app.media.ui_back'), label: this.backLabel, onTap: () => this.onBack() })
+        if (this.closeStyle) {
+          IconButton({ icon: $r('app.media.ui_close'), label: this.backLabel, onTap: () => this.onBack() })
+        } else {
+          IconButton({ icon: $r('app.media.ui_back'), label: this.backLabel, onTap: () => this.onBack() })
+        }
       }
       Column() {
         Text(this.title)

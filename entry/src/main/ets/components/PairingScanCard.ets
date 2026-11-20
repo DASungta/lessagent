@@ -1,3 +1,5 @@
+import { AppButton } from './ui/AppButton';
+import { FontSize, LineHeight, Radius, Space } from '../common/Theme';
 import { abilityAccessCtrl, common } from '@kit.AbilityKit';
 import { PairingTarget } from '../protocol/Pairing';
 import { PairingScanner } from '../services/PairingScanner';
@@ -56,10 +58,10 @@ export struct PairingScanCard {
   }
 
   build() {
-    Column({ space: 12 }) {
+    Column({ space: Space.sm }) {
       if (this.permitted && !this.complete && this.active && this.foreground) {
         XComponent({ id: 't3-pairing-camera', type: XComponentType.SURFACE, controller: this.controller })
-          .width('100%').height(220).borderRadius(16).clip(true)
+          .width('100%').height(220).borderRadius(Radius.card).clip(true)
           .onLoad(() => { this.surface = true; void this.start(); })
           .onDestroy(() => { this.surface = false; void this.stop(); })
           .onAreaChange((_, area: Area) => {
@@ -67,16 +69,26 @@ export struct PairingScanCard {
             if (width !== this.viewWidth || height !== this.viewHeight) { this.viewWidth = width; this.viewHeight = height; void this.start(); }
           })
       } else {
-        Text(this.complete && !this.error ? '已识别配对地址' : '扫描 T3 Code 配对二维码').fontSize(15)
-          .width('100%').height(100).textAlign(TextAlign.Center)
+        Text(this.complete && !this.error ? '已识别配对地址' : '扫描 T3 Code 配对二维码')
+          .fontSize(FontSize.body).lineHeight(LineHeight.body).fontColor($r('app.color.muted'))
+          .width('100%').height(88).textAlign(TextAlign.Center)
       }
       if (!this.permitted) {
-        Button('允许相机扫码').onClick(() => this.permission()).enabled(this.active)
-        if (this.settingsNeeded) { Button('打开权限设置').onClick(() => this.permission(true)).enabled(this.active) }
+        Row({ space: Space.xs }) {
+          AppButton({ label: '允许相机扫码', kind: 'secondary', compact: true, disabled: !this.active, onTap: () => { void this.permission(); } })
+          if (this.settingsNeeded) {
+            AppButton({ label: '打开权限设置', kind: 'secondary', compact: true, disabled: !this.active, onTap: () => { void this.permission(true); } })
+          }
+        }
       } else if (this.complete) {
-        Button('重新扫描').enabled(this.active).onClick(() => { this.complete = false; this.error = ''; })
+        AppButton({
+          label: '重新扫描', kind: 'secondary', compact: true, disabled: !this.active,
+          onTap: () => { this.complete = false; this.error = ''; }
+        })
       }
-      if (this.error) { Text(this.error).fontSize(13).fontColor($r('app.color.danger')).width('100%') }
-    }.padding(12).width('100%').backgroundColor($r('app.color.surface')).borderRadius(16)
+      if (this.error) {
+        Text(this.error).fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.danger')).width('100%')
+      }
+    }.padding(Space.sm).width('100%').backgroundColor($r('app.color.card')).borderRadius(Radius.card)
   }
 }

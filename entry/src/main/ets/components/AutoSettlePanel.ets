@@ -1,3 +1,8 @@
+import { TopBar } from './ui/TopBar';
+import { GroupCard } from './ui/GroupCard';
+import { FormRow } from './ui/FormRow';
+import { AppButton } from './ui/AppButton';
+import { FontSize, LineHeight, Sizes, Space } from '../common/Theme';
 import { T3Client } from '../services/T3Client';
 import { record } from '../protocol/Wire';
 import {
@@ -80,69 +85,107 @@ export struct AutoSettlePanel {
   }
 
   @Builder
-  setting(title: string, key: AutoSettleKey, enabled: boolean, next: AutoSettleValue) {
-    Row({ space: 8 }) {
-      Column({ space: 4 }) {
-        Text(title).fontSize(15)
-        if (this.value(key) === undefined) {
-          Text('当前服务不支持此设置').fontSize(13).fontColor($r('app.color.muted'))
-        } else if (this.snapshot && autoSettleField(this.snapshot, key).locked) {
-          Text(this.snapshot.managedBy + ' 管理此设置').fontSize(13).fontColor($r('app.color.muted'))
-        }
-      }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-      if (this.value(key) !== undefined) {
-        Button(enabled ? '已开启' : '已关闭').fontSize(14).borderRadius(8).constraintSize({ minHeight: 44 })
-          .backgroundColor(enabled ? $r('app.color.primary') : $r('app.color.canvas'))
-          .fontColor(enabled ? $r('app.color.on_primary') : $r('app.color.muted'))
-          .enabled(this.canEdit(key)).accessibilityText(title + (enabled ? '，已开启' : '，已关闭'))
-          .onClick(() => { void this.save(key, next); })
-      }
-    }.width('100%').padding(12).borderRadius(12).backgroundColor($r('app.color.surface'))
+  setting(title: string, key: AutoSettleKey, enabled: boolean, next: AutoSettleValue, isFirst: boolean = false) {
+    if (this.value(key) === undefined) {
+      FormRow({
+        kind: 'value',
+        label: title,
+        subtitle: '当前服务不支持此设置',
+        value: '不支持',
+        valueMuted: true,
+        chevron: false,
+        isFirst
+      })
+    } else {
+      FormRow({
+        kind: 'switch',
+        label: title,
+        subtitle: this.snapshot && autoSettleField(this.snapshot, key).locked ? (this.snapshot.managedBy + ' 管理此设置') : '',
+        checked: enabled,
+        disabled: !this.canEdit(key),
+        isFirst,
+        onToggle: () => { void this.save(key, next); }
+      })
+    }
   }
 
   build() {
-    Column() {
-      Row({ space: 8 }) {
-        Button({ type: ButtonType.Normal }) { Image($r('app.media.ui_back')).width(22).height(22) }
-          .width(44).height(44).backgroundColor(Color.Transparent).accessibilityText('返回设置').onClick(this.onBack)
-        Text('自动归整会话').fontSize(20).fontWeight(FontWeight.Medium).layoutWeight(1)
-        Button('刷新').fontSize(14).backgroundColor(Color.Transparent).fontColor($r('app.color.primary'))
-          .enabled(!this.busy && !!this.connection).onClick(() => { void this.refresh(); })
-      }.width('100%').padding(8)
+    Column({ space: 0 }) {
+      TopBar({
+        title: '自动归整会话',
+        showBack: true,
+        backLabel: '返回设置',
+        onBack: () => this.onBack()
+      }) {
+        AppButton({
+          label: '刷新',
+          kind: 'text',
+          disabled: this.busy || !this.connection,
+          onTap: () => { void this.refresh(); }
+        })
+      }
       Scroll() {
-        Column({ space: 10 }) {
+        Column({ space: 0 }) {
           Text('由当前环境的服务自动执行。项目单独设置优先。')
-            .fontSize(13).fontColor($r('app.color.muted')).width('100%')
-          if (!this.connection) { Text('请先连接一个环境').fontSize(15) }
-          if (this.busy) { Text('正在同步…').fontSize(13).fontColor($r('app.color.muted')) }
-          if (this.message) { Text(this.message).fontSize(14).width('100%') }
-          if (this.snapshot) {
-            if (this.connection?.canScope('settings:write') === false) {
-              Text('当前连接仅可查看').fontSize(13).fontColor($r('app.color.muted'))
-            }
-            this.setting('合并 PR 后自动归整', 'sidebarAutoSettleOnMerge',
-              this.value('sidebarAutoSettleOnMerge') === true, this.value('sidebarAutoSettleOnMerge') !== true)
-            this.setting('闲置后自动归整', 'sidebarAutoSettleAfterDays',
-              typeof this.value('sidebarAutoSettleAfterDays') === 'number',
-              this.value('sidebarAutoSettleAfterDays') === null ? DEFAULT_AUTO_SETTLE_DAYS : null)
-            if (typeof this.value('sidebarAutoSettleAfterDays') === 'number') {
-              Row({ space: 8 }) {
-                Text('闲置天数').fontSize(15)
-                TextInput({ text: this.days, placeholder: '1–90 天，可输入小数' }).layoutWeight(1)
-                  .accessibilityText('闲置天数').enabled(this.canEdit('sidebarAutoSettleAfterDays'))
-                  .onChange((value: string) => { this.days = value; })
-                Button('保存').fontSize(14)
-                  .enabled(this.canEdit('sidebarAutoSettleAfterDays') && validAutoSettleDays(Number(this.days)) &&
-                    Number(this.days) !== this.value('sidebarAutoSettleAfterDays'))
-                  .onClick(() => { void this.save('sidebarAutoSettleAfterDays', Number(this.days)); })
-              }.width('100%').padding(12)
-              this.setting('闲置规则保留含 PR 的会话', 'sidebarAutoSettleKeepPullRequests',
-                this.value('sidebarAutoSettleKeepPullRequests') === true,
-                this.value('sidebarAutoSettleKeepPullRequests') !== true)
+            .fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.muted'))
+            .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs, bottom: Space.xxs }).width('100%')
+          if (!this.connection) {
+            GroupCard() {
+              FormRow({ kind: 'value', label: '请先连接一个环境', value: '', valueMuted: true, chevron: false, isFirst: true })
             }
           }
-        }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: 16, right: 16, bottom: 28 })
+          if (this.busy) {
+            Text('正在同步…').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+          }
+          if (this.message) {
+            Text(this.message).fontSize(FontSize.callout).fontColor($r('app.color.primary_text'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+          }
+          if (this.snapshot) {
+            if (this.connection?.canScope('settings:write') === false) {
+              Text('当前连接仅可查看').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+                .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+            }
+            GroupCard({ title: '自动规则' }) {
+              this.setting('合并 PR 后自动归整', 'sidebarAutoSettleOnMerge',
+                this.value('sidebarAutoSettleOnMerge') === true, this.value('sidebarAutoSettleOnMerge') !== true, true)
+              this.setting('闲置后自动归整', 'sidebarAutoSettleAfterDays',
+                typeof this.value('sidebarAutoSettleAfterDays') === 'number',
+                this.value('sidebarAutoSettleAfterDays') === null ? DEFAULT_AUTO_SETTLE_DAYS : null, false)
+              if (typeof this.value('sidebarAutoSettleAfterDays') === 'number') {
+                Column() {
+                  Row({ space: Space.xs }) {
+                    Text('闲置天数').fontSize(FontSize.body).fontColor($r('app.color.ink')).flexShrink(0)
+                    TextInput({ text: this.days, placeholder: '1–90 天，可输入小数' })
+                      .layoutWeight(1).height(40).fontSize(FontSize.body).textAlign(TextAlign.End)
+                      .fontColor($r('app.color.ink')).placeholderColor($r('app.color.placeholder'))
+                      .backgroundColor(Color.Transparent).padding(0)
+                      .accessibilityText('闲置天数').enabled(this.canEdit('sidebarAutoSettleAfterDays'))
+                      .onChange((value: string) => { this.days = value; })
+                    AppButton({
+                      label: '保存',
+                      kind: 'primary',
+                      compact: true,
+                      disabled: !(this.canEdit('sidebarAutoSettleAfterDays') && validAutoSettleDays(Number(this.days)) &&
+                        Number(this.days) !== this.value('sidebarAutoSettleAfterDays')),
+                      onTap: () => { void this.save('sidebarAutoSettleAfterDays', Number(this.days)); }
+                    })
+                  }.width('100%').alignItems(VerticalAlign.Center)
+                }
+                .width('100%')
+                .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                .constraintSize({ minHeight: Sizes.formRowMin })
+                .justifyContent(FlexAlign.Center)
+                .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+                this.setting('闲置规则保留含 PR 的会话', 'sidebarAutoSettleKeepPullRequests',
+                  this.value('sidebarAutoSettleKeepPullRequests') === true,
+                  this.value('sidebarAutoSettleKeepPullRequests') !== true, false)
+              }
+            }
+          }
+        }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: Space.sm, right: Space.sm, bottom: Space.lg })
       }.width('100%').layoutWeight(1).align(Alignment.TopStart)
-    }.width('100%').height('100%').backgroundColor($r('app.color.canvas')).foregroundColor($r('app.color.ink'))
+    }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

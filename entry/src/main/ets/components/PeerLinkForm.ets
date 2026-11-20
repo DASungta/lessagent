@@ -1,3 +1,8 @@
+import { TopBar } from './ui/TopBar';
+import { GroupCard } from './ui/GroupCard';
+import { FormRow } from './ui/FormRow';
+import { AppButton } from './ui/AppButton';
+import { FontSize, LineHeight, Sizes, Space } from '../common/Theme';
 import { LinkRequestView, LinkAnswer, linkAccessChoices, LinkAccessChoice } from '../protocol/Core';
 import { LinkMachine, LinkTarget, resolveLinkTarget, initialLinkMachine, linkOrigin } from '../protocol/LinkTarget';
 import { T3Client } from '../services/T3Client';
@@ -74,57 +79,148 @@ export struct PeerLinkForm {
     finally { this.busy = false; this.onBusy(false); }
   }
   build() {
-    Column({ space: 12 }) {
-      Row() {
-        Text('链接 ' + (this.target().label || '一台机器')).fontSize(20).fontWeight(FontWeight.Medium).layoutWeight(1)
-        Button('×').width(44).height(44).backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
-          .accessibilityText('关闭链接请求').enabled(!this.busy).onClick(this.onClose)
-      }.width('100%')
+    Column({ space: 0 }) {
+      TopBar({
+        title: '链接 ' + (this.target().label || '一台机器'),
+        showBack: true,
+        closeStyle: true,
+        backLabel: '关闭链接请求',
+        onBack: () => { if (!this.busy) this.onClose(); }
+      })
       Scroll() {
-        Column({ space: 16 }) {
-          Text('此环境的 Agent 可在目标环境启动、发送和等待会话。可在目标环境的共享与访问设置中撤销授权。').fontSize(14).width('100%')
+        Column({ space: 0 }) {
+          Text('此环境的 Agent 可在目标环境启动、发送和等待会话。可在目标环境的共享与访问设置中撤销授权。')
+            .fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.muted'))
+            .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+
           if (!this.request.url && !this.request.environmentId) {
-            Text('选择机器').fontSize(14).width('100%')
-            ForEach(this.machines, (machine: LinkMachine) => {
-              Button((this.selected() === machine.environmentId ? '✓ ' : '') + machine.label + (machine.linked ? ' · 已链接' : machine.connected ? '' : ' · 未连接'))
-                .width('100%').enabled(!this.busy).onClick(() => { this.choice = machine.environmentId; this.error = ''; void this.refreshMintPermission(); })
-            }, (machine: LinkMachine) => machine.environmentId)
-            Button((this.selected() === 'another-address' ? '✓ ' : '') + '另一地址…').width('100%').enabled(!this.busy)
-              .onClick(() => { this.choice = 'another-address'; this.error = ''; void this.refreshMintPermission(); })
-          }
-          if (this.needsAddress() && this.address.trim() && !this.useExisting()) {
-            Text('请核对地址：本应用无法确认这是你的机器，粘贴的配对码会发送到此处。').fontSize(14).width('100%')
-            Text(linkOrigin(this.address) || '无效地址').fontSize(13).width('100%').copyOption(CopyOptions.InApp)
-          }
-          if (this.needsAddress() && !this.request.url) {
-            TextInput({ text: this.address, placeholder: 'https://machine.tailnet.ts.net' }).enabled(!this.busy)
-              .accessibilityText('链接目标地址').onChange((value: string) => this.address = value)
-          }
-          if (this.useExisting()) {
-            Text('该环境已有可用链接，将按现有权限交给 Agent 使用。更改权限请到环境设置。').fontSize(14).width('100%')
-          } else if (this.target().kind !== 'none') {
-            if (!this.canMint) {
-              TextInput({ text: this.code, placeholder: '粘贴目标环境的配对码' }).type(InputType.Password).enableAutoFill(false)
-                .enabled(!this.busy).accessibilityText('环境链接配对码').onChange((value: string) => this.code = value)
-              Text('在目标环境的共享与访问 → 已授权客户端中创建链接，然后在此粘贴配对码。').fontSize(13).width('100%')
+            GroupCard({ title: '选择机器' }) {
+              ForEach(this.machines, (machine: LinkMachine, index: number) => {
+                FormRow({
+                  kind: 'choice',
+                  label: machine.label,
+                  subtitle: machine.linked ? '已链接' : machine.connected ? '已连接' : '未连接',
+                  checked: this.selected() === machine.environmentId,
+                  disabled: this.busy,
+                  isFirst: index === 0,
+                  onTap: () => { this.choice = machine.environmentId; this.error = ''; void this.refreshMintPermission(); }
+                })
+              }, (machine: LinkMachine) => machine.environmentId)
+              FormRow({
+                kind: 'choice',
+                label: '另一地址…',
+                checked: this.selected() === 'another-address',
+                disabled: this.busy,
+                isFirst: this.machines.length === 0,
+                onTap: () => { this.choice = 'another-address'; this.error = ''; void this.refreshMintPermission(); }
+              })
             }
-            Text('Agent 在目标环境的权限').fontSize(14).width('100%')
-            ForEach(linkAccessChoices, (option: LinkAccessChoice) => {
-              Button({ type: ButtonType.Normal }) {
-                Column({ space: 4 }) {
-                  Text((this.access === option.value ? '✓ ' : '') + option.label).fontSize(15).width('100%')
-                  Text(option.description).fontSize(13).fontColor($r('app.color.muted')).width('100%')
-                }.padding(12).width('100%').alignItems(HorizontalAlign.Start)
-              }.width('100%').backgroundColor(this.access === option.value ? $r('app.color.selected') : $r('app.color.surface'))
-                .fontColor($r('app.color.ink')).enabled(!this.busy).onClick(() => this.access = option.value)
-            }, (option: LinkAccessChoice) => option.value)
-            Text('目标环境的权限也不会高于 Agent 在当前环境的模式；它启动的会话不能改动目标环境已有的会话、项目或设置。').fontSize(13).width('100%')
           }
-          if (this.error) { Text(this.error).fontSize(13).fontColor($r('app.color.danger')).width('100%') }
-          Button(this.busy ? '链接中…' : this.useExisting() ? '使用现有链接' : '链接').width('100%').enabled(!this.busy && this.canSubmit()).onClick(() => this.submit())
-          Button('取消').width('100%').enabled(!this.busy).onClick(this.onClose)
-        }.width('100%').padding({ bottom: 20 }).alignItems(HorizontalAlign.Start)
+
+          if ((this.needsAddress() && !this.request.url) || (!this.useExisting() && this.target().kind !== 'none' && !this.canMint) ||
+            (this.needsAddress() && this.address.trim() && !this.useExisting())) {
+            GroupCard({
+              title: '连接目标',
+              footnote: (!this.useExisting() && this.target().kind !== 'none' && !this.canMint)
+                ? '在目标环境的共享与访问 → 已授权客户端中创建链接，然后在此粘贴配对码。' : ''
+            }) {
+              if (this.needsAddress() && !this.request.url) {
+                Column() {
+                  Row({ space: 10 }) {
+                    Text('地址').fontSize(FontSize.body).fontColor($r('app.color.ink')).width(64).flexShrink(0)
+                    TextInput({ text: this.address, placeholder: 'https://machine.tailnet.ts.net' })
+                      .layoutWeight(1).height(40).fontSize(FontSize.body).fontColor($r('app.color.ink'))
+                      .placeholderColor($r('app.color.placeholder')).backgroundColor(Color.Transparent).padding(0)
+                      .enabled(!this.busy).accessibilityText('链接目标地址').onChange((value: string) => this.address = value)
+                  }.width('100%').alignItems(VerticalAlign.Center)
+                }
+                .width('100%')
+                .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                .constraintSize({ minHeight: Sizes.formRowMin })
+                .justifyContent(FlexAlign.Center)
+              }
+              if (this.needsAddress() && this.address.trim() && !this.useExisting()) {
+                FormRow({
+                  kind: 'multiline',
+                  label: '请核对地址：本应用无法确认这是你的机器，粘贴的配对码会发送到此处',
+                  value: linkOrigin(this.address) || '无效地址',
+                  valueMuted: true,
+                  isFirst: !(!this.request.url && this.needsAddress())
+                })
+              }
+              if (!this.useExisting() && this.target().kind !== 'none' && !this.canMint) {
+                Column() {
+                  Row({ space: 10 }) {
+                    Text('配对码').fontSize(FontSize.body).fontColor($r('app.color.ink')).width(64).flexShrink(0)
+                    TextInput({ text: this.code, placeholder: '粘贴目标环境的配对码' })
+                      .layoutWeight(1).height(40).fontSize(FontSize.body).fontColor($r('app.color.ink'))
+                      .placeholderColor($r('app.color.placeholder')).backgroundColor(Color.Transparent).padding(0)
+                      .type(InputType.Password).enableAutoFill(false)
+                      .enabled(!this.busy).accessibilityText('环境链接配对码').onChange((value: string) => this.code = value)
+                  }.width('100%').alignItems(VerticalAlign.Center)
+                }
+                .width('100%')
+                .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                .constraintSize({ minHeight: Sizes.formRowMin })
+                .justifyContent(FlexAlign.Center)
+                .border({ width: { top: !this.needsAddress() ? 0 : Sizes.hairline }, color: { top: $r('app.color.separator') } })
+              }
+            }
+          }
+
+          if (this.useExisting()) {
+            GroupCard() {
+              FormRow({
+                kind: 'multiline',
+                label: '现有链接',
+                value: '该环境已有可用链接，将按现有权限交给 Agent 使用。更改权限请到环境设置。',
+                valueMuted: true,
+                isFirst: true
+              })
+            }
+          } else if (this.target().kind !== 'none') {
+            GroupCard({
+              title: 'Agent 在目标环境的权限',
+              footnote: '目标环境的权限也不会高于 Agent 在当前环境的模式；它启动的会话不能改动目标环境已有的会话、项目或设置。'
+            }) {
+              ForEach(linkAccessChoices, (option: LinkAccessChoice, index: number) => {
+                FormRow({
+                  kind: 'choice',
+                  label: option.label,
+                  subtitle: option.description,
+                  checked: this.access === option.value,
+                  disabled: this.busy,
+                  isFirst: index === 0,
+                  onTap: () => { this.access = option.value; }
+                })
+              }, (option: LinkAccessChoice) => option.value)
+            }
+          }
+
+          if (this.error) {
+            Text(this.error).fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.danger'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.sm }).width('100%')
+          }
+
+          Column({ space: Space.xs }) {
+            AppButton({
+              label: this.busy ? '链接中…' : this.useExisting() ? '使用现有链接' : '链接',
+              kind: 'primary',
+              fill: true,
+              loading: this.busy,
+              disabled: !this.canSubmit(),
+              onTap: () => { void this.submit(); }
+            })
+            AppButton({
+              label: '取消',
+              kind: 'secondary',
+              fill: true,
+              disabled: this.busy,
+              onTap: () => this.onClose()
+            })
+          }.width('100%').padding({ top: Space.md })
+        }.width('100%').padding({ left: Space.sm, right: Space.sm, bottom: Space.lg }).alignItems(HorizontalAlign.Start)
       }.width('100%').layoutWeight(1)
-    }.width('100%').height('100%').padding(24).foregroundColor($r('app.color.ink'))
+    }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

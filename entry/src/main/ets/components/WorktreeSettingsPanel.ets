@@ -1,3 +1,8 @@
+import { TopBar } from './ui/TopBar';
+import { GroupCard } from './ui/GroupCard';
+import { FormRow } from './ui/FormRow';
+import { AppButton } from './ui/AppButton';
+import { FontSize, LineHeight, Sizes, Space } from '../common/Theme';
 import { T3Client } from '../services/T3Client';
 import { record } from '../protocol/Wire';
 import { WorktreeDefaults, readWorktreeDefaults, worktreeSettingLocked, worktreeValue, writeWorktreeDefault } from '../protocol/WorktreeSettings';
@@ -68,125 +73,175 @@ export struct WorktreeSettingsPanel {
     } finally { if (this.alive) this.busy = false; }
   }
   @Builder
-  option(title: string, description: string, value: string) {
-    Button({ type: ButtonType.Normal }) {
-      Row({ space: 12 }) {
-        Radio({ value: value, group: 'worktree-submodules' }).checked(this.snapshot?.submodules === value)
-          .width(20).height(20).hitTestBehavior(HitTestMode.None).accessibilityLevel('no')
-        Column({ space: 4 }) {
-          Text(title).fontSize(15).width('100%')
-          Text(description).fontSize(13).fontColor($r('app.color.muted')).width('100%')
-        }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-      }.width('100%').padding(14)
-    }.width('100%').backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).borderRadius(12)
-      .enabled(this.canWrite() && this.snapshot?.submodulesLocked !== true)
-      .accessibilityText(title + (this.snapshot?.submodules === value ? '，已选择' : ''))
-      .onClick(() => { void this.save('worktreeSubmodules', value); })
+  option(title: string, description: string, value: string, isFirst: boolean = false) {
+    FormRow({
+      kind: 'choice',
+      label: title,
+      subtitle: description,
+      checked: this.snapshot?.submodules === value,
+      disabled: !(this.canWrite() && this.snapshot?.submodulesLocked !== true),
+      isFirst,
+      onTap: () => { void this.save('worktreeSubmodules', value); }
+    })
   }
+
   @Builder
-  namingMode(title: string, detail: string, value: string) {
-    Button({ type: ButtonType.Normal }) {
-      Row({ space: 12 }) {
-        Radio({ value, group: 'worktree-branch-naming' }).checked(this.snapshot?.branchNamingMode === value)
-          .width(20).height(20).hitTestBehavior(HitTestMode.None).accessibilityLevel('no')
-        Column({ space: 4 }) {
-          Text(title).fontSize(15).width('100%')
-          Text(detail).fontSize(13).fontColor($r('app.color.muted')).width('100%')
-        }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-      }.width('100%').padding(14)
-    }.width('100%').backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).borderRadius(12)
-      .enabled(this.canWriteBranch('branchNamingMode'))
-      .accessibilityText(title + (this.snapshot?.branchNamingMode === value ? '，已选择' : ''))
-      .onClick(() => {
+  namingMode(title: string, detail: string, value: string, isFirst: boolean = false) {
+    FormRow({
+      kind: 'choice',
+      label: title,
+      subtitle: detail,
+      checked: this.snapshot?.branchNamingMode === value,
+      disabled: !this.canWriteBranch('branchNamingMode'),
+      isFirst,
+      onTap: () => {
         if (this.snapshot?.branchNamingMode !== value) void this.save('branchNamingMode', value);
-      })
+      }
+    })
   }
+
   @Builder
   branchFieldNotice(key: string) {
     if (this.snapshot && worktreeSettingLocked(this.snapshot.lockedPaths, key)) {
-      Text(this.snapshot.managedBy + ' 管理此设置').fontSize(13).fontColor($r('app.color.muted')).width('100%')
+      Text(this.snapshot.managedBy + ' 管理此设置')
+        .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted'))
+        .padding({ left: Space.xxs, right: Space.xxs, bottom: 4 }).width('100%')
     } else if (this.snapshot && worktreeValue(this.snapshot, key) === undefined) {
-      Text('当前服务未提供此设置').fontSize(13).fontColor($r('app.color.muted')).width('100%')
+      Text('当前服务未提供此设置')
+        .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted'))
+        .padding({ left: Space.xxs, right: Space.xxs, bottom: 4 }).width('100%')
     }
   }
+
   build() {
     Column({ space: 0 }) {
-      Row({ space: 8 }) {
-        Button({ type: ButtonType.Normal }) { Image($r('app.media.ui_back')).width(22).height(22) }
-          .width(44).height(44).backgroundColor(Color.Transparent).accessibilityText('返回设置').onClick(this.onBack)
-        Text('工作树默认设置').fontSize(20).fontWeight(FontWeight.Medium).layoutWeight(1)
-        Button('刷新').constraintSize({ minWidth: 44, minHeight: 44 })
-          .fontSize(14).backgroundColor(Color.Transparent).fontColor($r('app.color.primary'))
-          .enabled(!this.busy).onClick(() => { void this.refresh(); })
-      }.width('100%').padding(8)
+      TopBar({ title: '工作树默认设置', showBack: true, backLabel: '返回设置', onBack: () => this.onBack() }) {
+        AppButton({ label: '刷新', kind: 'text', disabled: this.busy, onTap: () => { void this.refresh(); } })
+      }
       Scroll() {
-        Column({ space: 14 }) {
+        Column({ space: 0 }) {
           Text('对当前环境中新建的工作树生效；项目单独设置和创建时的选择可以覆盖默认值。')
-            .fontSize(13).fontColor($r('app.color.muted')).width('100%')
-          Button('项目级覆盖', { type: ButtonType.Normal }).width('100%').constraintSize({ minHeight: 44 })
-            .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).borderRadius(12)
-            .onClick(this.onProjects)
-          if (!this.connection) { Text('请先连接一个环境').fontSize(15) }
-          if (this.busy) { Text('正在同步…').fontSize(13).fontColor($r('app.color.muted')) }
-          if (this.error) { Text(this.error).fontSize(14).fontColor($r('app.color.ink')).width('100%') }
-          if (this.notice) { Text(this.notice).fontSize(13).fontColor($r('app.color.muted')).width('100%') }
+            .fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.muted'))
+            .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs, bottom: Space.xxs }).width('100%')
+
+          GroupCard() {
+            FormRow({ kind: 'value', label: '项目级覆盖', value: '', isFirst: true, onTap: () => this.onProjects() })
+          }
+
+          if (!this.connection) {
+            GroupCard() {
+              FormRow({ kind: 'value', label: '请先连接一个环境', value: '', valueMuted: true, chevron: false, isFirst: true })
+            }
+          }
+          if (this.busy) {
+            Text('正在同步…').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+          }
+          if (this.error) {
+            Text(this.error).fontSize(FontSize.callout).fontColor($r('app.color.danger'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+          }
+          if (this.notice) {
+            Text(this.notice).fontSize(FontSize.callout).fontColor($r('app.color.primary_text'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+          }
+
           if (this.snapshot) {
             if (this.settingsWriteAllowed === false) {
-              Text('当前连接仅可查看，无法修改设置').fontSize(13).fontColor($r('app.color.muted'))
+              Text('当前连接仅可查看，无法修改设置')
+                .fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+                .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
             }
-            Row({ space: 12 }) {
-              Column({ space: 4 }) {
-                Text('从远程分支开始').fontSize(15).width('100%')
-                Text('优先使用基准分支跟踪的远程最新提交；没有对应远程时使用本地分支。')
-                  .fontSize(13).fontColor($r('app.color.muted')).width('100%')
-              }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-              Toggle({ type: ToggleType.Switch, isOn: this.snapshot.remote })
-                .enabled(this.canWrite() && !this.snapshot.remoteLocked)
-                .accessibilityText('从远程分支开始')
-                .onChange((value: boolean) => { void this.save('newWorktreesStartFromOrigin', String(value)); })
-            }.width('100%').padding(14).backgroundColor($r('app.color.surface')).borderRadius(12)
-            if (this.snapshot.remoteLocked) {
-              Text(this.snapshot.managedBy + ' 管理工作树起点').fontSize(13).fontColor($r('app.color.muted'))
+
+            GroupCard({
+              title: '分支起点',
+              footnote: this.snapshot.remoteLocked ? (this.snapshot.managedBy + ' 管理工作树起点') : ''
+            }) {
+              FormRow({
+                kind: 'switch',
+                label: '从远程分支开始',
+                subtitle: '优先使用基准分支跟踪的远程最新提交；没有对应远程时使用本地分支。',
+                checked: this.snapshot.remote,
+                disabled: !(this.canWrite() && !this.snapshot.remoteLocked),
+                isFirst: true,
+                onToggle: (value: boolean) => { void this.save('newWorktreesStartFromOrigin', String(value)); }
+              })
             }
-            Text('子模块').fontSize(13).fontColor($r('app.color.muted')).width('100%')
-            this.option('继承仓库设置', '使用 t3.json；未设置时递归初始化。', 'inherit')
-            this.option('递归初始化', '包括嵌套子模块。', 'recursive')
-            this.option('仅顶层', '不初始化子模块中的嵌套子模块。', 'top-level')
-            this.option('跳过', '保持子模块为空，由安装脚本处理。', 'none')
-            if (this.snapshot.submodulesLocked) {
-              Text(this.snapshot.managedBy + ' 管理子模块设置').fontSize(13).fontColor($r('app.color.muted'))
+
+            GroupCard({
+              title: '子模块',
+              footnote: this.snapshot.submodulesLocked ? (this.snapshot.managedBy + ' 管理子模块设置') : ''
+            }) {
+              this.option('继承仓库设置', '使用 t3.json；未设置时递归初始化。', 'inherit', true)
+              this.option('递归初始化', '包括嵌套子模块。', 'recursive')
+              this.option('仅顶层', '不初始化子模块中的嵌套子模块。', 'top-level')
+              this.option('跳过', '保持子模块为空，由安装脚本处理。', 'none')
             }
-            Text('工作树分支命名').fontSize(13).fontColor($r('app.color.muted')).width('100%')
-            this.branchFieldNotice('branchNamingMode')
-            if (this.snapshot.branchNamingMode !== undefined) {
-              this.namingMode('固定前缀', '为生成的分支名使用固定前缀。', 'static')
-              this.namingMode('语义前缀', '让模型选择 feat/、fix/ 等前缀。', 'semantic')
-              this.namingMode('自定义说明', '根据命名说明生成完整分支名。', 'custom')
-            }
-            if (this.snapshot.branchNamingMode === 'static') {
-              this.branchFieldNotice('branchNamePrefix')
-              if (this.snapshot.branchNamePrefix !== undefined) {
-                TextInput({ text: this.branchDraft, placeholder: '留空不加前缀' }).constraintSize({ minHeight: 44 })
-                  .accessibilityText('分支前缀').enabled(this.canWriteBranch('branchNamePrefix'))
-                  .onChange((value: string) => { this.branchDraft = value; })
-                Button('保存分支前缀').constraintSize({ minHeight: 44 })
-                  .enabled(this.canWriteBranch('branchNamePrefix') && this.branchDraft.trim() !== this.snapshot?.branchNamePrefix)
-                  .onClick(() => { void this.save('branchNamePrefix', this.branchDraft); })
+
+            GroupCard({ title: '工作树分支命名' }) {
+              if (worktreeSettingLocked(this.snapshot.lockedPaths, 'branchNamingMode') ||
+                worktreeValue(this.snapshot, 'branchNamingMode') === undefined) {
+                FormRow({
+                  kind: 'value',
+                  label: worktreeSettingLocked(this.snapshot.lockedPaths, 'branchNamingMode')
+                    ? (this.snapshot.managedBy + ' 管理此设置') : '当前服务未提供此设置',
+                  value: '',
+                  valueMuted: true,
+                  chevron: false,
+                  isFirst: true
+                })
               }
-            } else if (this.snapshot.branchNamingMode === 'custom') {
-              this.branchFieldNotice('branchNameInstructions')
-              if (this.snapshot.branchNameInstructions !== undefined) {
-                TextArea({ text: this.branchDraft, placeholder: '分支命名说明' }).constraintSize({ minHeight: 96 })
-                  .accessibilityText('分支命名说明').enabled(this.canWriteBranch('branchNameInstructions'))
-                  .onChange((value: string) => { this.branchDraft = value; })
-                Button('保存命名说明').constraintSize({ minHeight: 44 })
-                  .enabled(this.canWriteBranch('branchNameInstructions') && this.branchDraft.trim() !== this.snapshot?.branchNameInstructions)
-                  .onClick(() => { void this.save('branchNameInstructions', this.branchDraft); })
+              if (this.snapshot.branchNamingMode !== undefined) {
+                this.namingMode('固定前缀', '为生成的分支名使用固定前缀。', 'static',
+                  !worktreeSettingLocked(this.snapshot.lockedPaths, 'branchNamingMode'))
+                this.namingMode('语义前缀', '让模型选择 feat/、fix/ 等前缀。', 'semantic')
+                this.namingMode('自定义说明', '根据命名说明生成完整分支名。', 'custom')
+              }
+              if (this.snapshot.branchNamingMode === 'static' && this.snapshot.branchNamePrefix !== undefined) {
+                Column() {
+                  Row({ space: Space.xs }) {
+                    TextInput({ text: this.branchDraft, placeholder: '分支前缀（留空不加前缀）' })
+                      .layoutWeight(1).height(40).fontSize(FontSize.body).fontColor($r('app.color.ink'))
+                      .placeholderColor($r('app.color.placeholder')).backgroundColor(Color.Transparent).padding(0)
+                      .accessibilityText('分支前缀').enabled(this.canWriteBranch('branchNamePrefix'))
+                      .onChange((value: string) => { this.branchDraft = value; })
+                    AppButton({
+                      label: '保存', kind: 'primary', compact: true,
+                      disabled: !(this.canWriteBranch('branchNamePrefix') && this.branchDraft.trim() !== this.snapshot?.branchNamePrefix),
+                      onTap: () => { void this.save('branchNamePrefix', this.branchDraft); }
+                    })
+                  }.width('100%').alignItems(VerticalAlign.Center)
+                }
+                .width('100%')
+                .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                .constraintSize({ minHeight: Sizes.formRowMin })
+                .justifyContent(FlexAlign.Center)
+                .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+              } else if (this.snapshot.branchNamingMode === 'custom' && this.snapshot.branchNameInstructions !== undefined) {
+                Column() {
+                  Column({ space: Space.xs }) {
+                    TextArea({ text: this.branchDraft, placeholder: '分支命名说明' })
+                      .width('100%').constraintSize({ minHeight: 84 }).fontSize(FontSize.body).fontColor($r('app.color.ink'))
+                      .placeholderColor($r('app.color.placeholder')).backgroundColor(Color.Transparent).padding(0)
+                      .accessibilityText('分支命名说明').enabled(this.canWriteBranch('branchNameInstructions'))
+                      .onChange((value: string) => { this.branchDraft = value; })
+                    AppButton({
+                      label: '保存命名说明', kind: 'primary', fill: true, compact: true,
+                      disabled: !(this.canWriteBranch('branchNameInstructions') && this.branchDraft.trim() !== this.snapshot?.branchNameInstructions),
+                      onTap: () => { void this.save('branchNameInstructions', this.branchDraft); }
+                    })
+                  }.width('100%').alignItems(HorizontalAlign.Start)
+                }
+                .width('100%')
+                .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                .constraintSize({ minHeight: Sizes.formRowMin })
+                .justifyContent(FlexAlign.Center)
+                .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
               }
             }
           }
-        }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: 16, right: 16, bottom: 28 })
+        }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: Space.sm, right: Space.sm, bottom: Space.lg })
       }.width('100%').layoutWeight(1).align(Alignment.TopStart)
-    }.width('100%').height('100%').backgroundColor($r('app.color.canvas')).foregroundColor($r('app.color.ink'))
+    }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

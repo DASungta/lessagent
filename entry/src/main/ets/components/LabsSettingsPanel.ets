@@ -1,3 +1,8 @@
+import { TopBar } from './ui/TopBar';
+import { GroupCard } from './ui/GroupCard';
+import { FormRow } from './ui/FormRow';
+import { AppButton } from './ui/AppButton';
+import { FontSize, LineHeight, Sizes, Space } from '../common/Theme';
 import { EnvironmentEntry } from '../protocol/Environment';
 import { LabsField, LabsSettingKey, LabsSettings, readLabsSettings, writeLabsSetting } from '../protocol/LabsSettings';
 import { T3Client } from '../services/T3Client';
@@ -107,59 +112,73 @@ export struct LabsSettingsPanel {
   }
 
   @Builder
-  setting(title: string, detail: string, key: LabsSettingKey) {
+  setting(title: string, detail: string, key: LabsSettingKey, isFirst: boolean = false) {
     if (this.field(key)?.value !== undefined) {
-      Row({ space: 8 }) {
-        Column({ space: 4 }) {
-          Text(title).fontSize(15).width('100%')
-          Text(detail).fontSize(13).fontColor($r('app.color.muted')).width('100%')
-          if (this.field(key)?.locked === true) {
-            Text(this.snapshot?.managedBy + ' 管理此设置').fontSize(13).fontColor($r('app.color.muted')).width('100%')
-          }
-        }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-        Button(this.field(key)?.value ? '已开启' : '已关闭').fontSize(14).borderRadius(8)
-          .constraintSize({ minHeight: 44 })
-          .backgroundColor(this.field(key)?.value ? $r('app.color.primary') : $r('app.color.canvas'))
-          .fontColor(this.field(key)?.value ? $r('app.color.on_primary') : $r('app.color.muted'))
-          .enabled(this.canEdit(key))
-          .accessibilityText(title + (this.field(key)?.value ? '，已开启' : '，已关闭'))
-          .onClick(() => { void this.toggleSetting(key); })
-      }.width('100%').padding(12).borderRadius(12).backgroundColor($r('app.color.surface'))
+      FormRow({
+        kind: 'switch',
+        label: title,
+        subtitle: this.field(key)?.locked === true ? (detail + ' · ' + (this.snapshot?.managedBy || '') + ' 管理') : detail,
+        checked: this.field(key)?.value === true,
+        disabled: !this.canEdit(key),
+        isFirst,
+        onToggle: () => { void this.toggleSetting(key); }
+      })
     }
   }
 
   build() {
     Column({ space: 0 }) {
-      Row({ space: 8 }) {
-        Button({ type: ButtonType.Normal }) { Image($r('app.media.ui_back')).width(22).height(22) }
-          .width(44).height(44).backgroundColor(Color.Transparent).accessibilityText('返回设置').onClick(this.onBack)
-        Text('实验室').fontSize(20).fontWeight(FontWeight.Medium).layoutWeight(1)
-        Button('刷新').fontSize(14).backgroundColor(Color.Transparent).fontColor($r('app.color.primary'))
-          .enabled(!this.busy).onClick(() => { void this.refresh(); })
-      }.width('100%').padding(8)
+      TopBar({ title: '实验室', showBack: true, backLabel: '返回设置', onBack: () => this.onBack() }) {
+        AppButton({ label: '刷新', kind: 'text', disabled: this.busy, onTap: () => { void this.refresh(); } })
+      }
       Scroll() {
-        Column({ space: 12 }) {
+        Column({ space: 0 }) {
           if (this.machines().length > 0) {
-            Select(this.options()).selected(this.machines().findIndex((entry: EnvironmentEntry) => entry.localId === this.selectedLocalId))
-              .value(this.target()?.label || '选择环境').enabled(!this.busy).accessibilityText('实验设置环境')
-              .onSelect((index: number) => this.chooseMachine(index))
+            GroupCard({ title: '目标环境' }) {
+              Column() {
+                Row({ space: 10 }) {
+                  Text('环境').fontSize(FontSize.body).fontColor($r('app.color.ink')).flexShrink(0)
+                  Select(this.options()).layoutWeight(1).constraintSize({ minHeight: 38 })
+                    .selected(this.machines().findIndex((entry: EnvironmentEntry) => entry.localId === this.selectedLocalId))
+                    .value(this.target()?.label || '选择环境').enabled(!this.busy).accessibilityText('实验设置环境')
+                    .backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
+                    .onSelect((index: number) => this.chooseMachine(index))
+                }.width('100%').alignItems(VerticalAlign.Center)
+              }
+              .width('100%')
+              .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+              .constraintSize({ minHeight: Sizes.formRowMin })
+              .justifyContent(FlexAlign.Center)
+            }
           }
-          if (this.busy) { Text('正在同步…').fontSize(13).fontColor($r('app.color.muted')) }
-          if (this.message) { Text(this.message).fontSize(14).width('100%') }
+          if (this.busy) {
+            Text('正在同步…').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+          }
+          if (this.message) {
+            Text(this.message).fontSize(FontSize.callout).fontColor($r('app.color.primary_text'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+          }
           if (this.snapshot) {
             if (this.connectionFor(this.selectedLocalId)?.canScope('settings:write') === false) {
-              Text('当前连接仅可查看').fontSize(13).fontColor($r('app.color.muted'))
+              Text('当前连接仅可查看').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+                .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
             }
             if (this.snapshot.linkedEnvironmentsEnabled.value === undefined && this.snapshot.fastWorktreeCheckout.value === undefined) {
-              Text('当前环境未提供实验功能').fontSize(14).width('100%')
+              GroupCard() {
+                FormRow({ kind: 'value', label: '当前环境未提供实验功能', value: '', valueMuted: true, chevron: false, isFirst: true })
+              }
+            } else {
+              GroupCard({ title: '实验功能（Beta）' }) {
+                this.setting('关联环境（Beta）', '允许代理通过已建立的关联在不同环境工作。关闭后，已运行的任务可继续完成。',
+                  'linkedEnvironmentsEnabled', true)
+                this.setting('快速检出工作树（Beta）', 'Mac 使用缓存加快工作树检出。关闭后服务端清除检出缓存。',
+                  'fastWorktreeCheckout', this.field('linkedEnvironmentsEnabled')?.value === undefined)
+              }
             }
-            this.setting('关联环境（Beta）', '允许代理通过已建立的关联在不同环境工作。关闭后，已运行的任务可继续完成。',
-              'linkedEnvironmentsEnabled')
-            this.setting('快速检出工作树（Beta）', 'Mac 使用缓存加快工作树检出。关闭后服务端清除检出缓存。',
-              'fastWorktreeCheckout')
           }
-        }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: 16, right: 16, bottom: 28 })
+        }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: Space.sm, right: Space.sm, bottom: Space.lg })
       }.width('100%').layoutWeight(1).align(Alignment.TopStart)
-    }.width('100%').height('100%').backgroundColor($r('app.color.canvas')).foregroundColor($r('app.color.ink'))
+    }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

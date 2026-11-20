@@ -1,3 +1,8 @@
+import { TopBar } from './ui/TopBar';
+import { GroupCard } from './ui/GroupCard';
+import { FormRow } from './ui/FormRow';
+import { AppButton } from './ui/AppButton';
+import { FontSize, LineHeight, Sizes, Space } from '../common/Theme';
 import { common } from '@kit.AbilityKit';
 import { EnvironmentEntry } from '../protocol/Environment';
 import { ShareCacheEntry, inspectShareCache, clearShareCache, cacheRemovable, cacheSizeLabel } from '../services/ShareCache';
@@ -42,29 +47,72 @@ export struct StorageSettingsPanel {
     finally { this.busy = false; }
   }
   build() {
-    Column({ space: 12 }) {
-      Row({ space: 8 }) {
-        Button({ type: ButtonType.Normal }) { Image($r('app.media.ui_back')).width(22).height(22) }
-          .width(44).height(44).backgroundColor(Color.Transparent).accessibilityText('返回设置').onClick(this.onBack)
-        Text('客户端存储').fontSize(20).fontWeight(FontWeight.Medium).layoutWeight(1)
-        Button('刷新').backgroundColor(Color.Transparent).fontColor($r('app.color.primary')).onClick(() => { this.notice = ''; this.refresh(); })
-      }.width('100%')
+    Column({ space: 0 }) {
+      TopBar({ title: '客户端存储', showBack: true, backLabel: '返回设置', onBack: () => this.onBack() }) {
+        AppButton({ label: '刷新', kind: 'text', onTap: () => { this.notice = ''; this.refresh(); } })
+      }
       Scroll() {
-        Column({ space: 16 }) {
-          Select(this.options()).selected(this.selected).value(this.options()[this.selected]?.value || '所有环境').onSelect((index: number) => { this.selected = index; this.notice = ''; })
-          Text('临时分享文件').fontSize(18).fontWeight(FontWeight.Medium).width('100%')
-          Text(this.rows().length + ' 个文件 · ' + cacheSizeLabel(this.rows().reduce((sum: number, entry: ShareCacheEntry) => sum + entry.bytes, 0))).fontSize(16).width('100%')
-          Text('可清理 ' + this.removable().length + ' 个文件').fontSize(14).fontColor($r('app.color.muted')).width('100%')
-          Text('保留最近一小时的分享文件。清理不会删除凭据、草稿、未知提交记录、服务端文件或你另存的文件。')
-            .fontSize(14).lineHeight('22fp').fontColor($r('app.color.muted')).width('100%')
-          Button('清理旧临时文件').width('100%').constraintSize({ minHeight: 48 })
-            .backgroundColor($r('app.color.surface')).fontColor($r('app.color.ink')).enabled(!this.busy && !this.error && this.removable().length > 0)
-            .onClick(() => AlertDialog.show({ title: '清理临时分享文件？', message: '将删除所选范围内一小时前生成的临时副本。请先完成正在进行的分享。',
-              primaryButton: { value: '取消', action: () => {} }, secondaryButton: { value: '清理', action: () => this.clear() } }))
-          if (this.notice) { Text(this.notice).fontSize(14).width('100%') }
-          if (this.error) { Text(this.error).fontSize(14).fontColor($r('app.color.danger')).width('100%') }
-        }.width('100%').alignItems(HorizontalAlign.Start)
+        Column({ space: 0 }) {
+          GroupCard({
+            title: '临时分享文件',
+            footnote: '保留最近一小时的分享文件。清理不会删除凭据、草稿、未知提交记录、服务端文件或你另存的文件。'
+          }) {
+            Column() {
+              Row({ space: 10 }) {
+                Text('筛选范围').fontSize(FontSize.body).fontColor($r('app.color.ink')).flexShrink(0)
+                Select(this.options()).selected(this.selected).layoutWeight(1).constraintSize({ minHeight: 38 })
+                  .backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
+                  .value(this.options()[this.selected]?.value || '所有环境')
+                  .onSelect((index: number) => { this.selected = index; this.notice = ''; })
+              }.width('100%').alignItems(VerticalAlign.Center)
+            }
+            .width('100%')
+            .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+            .constraintSize({ minHeight: Sizes.formRowMin })
+            .justifyContent(FlexAlign.Center)
+            FormRow({
+              kind: 'value',
+              label: '当前占用',
+              value: this.rows().length + ' 个文件 · ' + cacheSizeLabel(this.rows().reduce((sum: number, entry: ShareCacheEntry) => sum + entry.bytes, 0)),
+              valueMuted: true,
+              chevron: false
+            })
+            FormRow({
+              kind: 'value',
+              label: '可清理数量',
+              value: this.removable().length + ' 个文件',
+              valueMuted: true,
+              chevron: false
+            })
+          }
+          if (this.notice) {
+            Text(this.notice)
+              .fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.primary_text'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+          }
+          if (this.error) {
+            Text(this.error)
+              .fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.danger'))
+              .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+          }
+          Column() {
+            AppButton({
+              label: '清理旧临时文件',
+              kind: 'secondary',
+              fill: true,
+              disabled: this.busy || !!this.error || this.removable().length === 0,
+              onTap: () => {
+                AlertDialog.show({
+                  title: '清理临时分享文件？',
+                  message: '将删除所选范围内一小时前生成的临时副本。请先完成正在进行的分享。',
+                  primaryButton: { value: '取消', action: () => {} },
+                  secondaryButton: { value: '清理', action: () => { this.clear(); } }
+                });
+              }
+            })
+          }.width('100%').padding({ top: Space.md })
+        }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: Space.sm, right: Space.sm, bottom: Space.lg })
       }.width('100%').layoutWeight(1).align(Alignment.TopStart)
-    }.padding(16).width('100%').height('100%').backgroundColor($r('app.color.canvas')).foregroundColor($r('app.color.ink'))
+    }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }
