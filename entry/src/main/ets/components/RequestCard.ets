@@ -197,9 +197,11 @@ export struct RequestCard {
               Flex({ wrap: FlexWrap.Wrap }) {
                 ForEach(this.secretProviders(), (name: string) => {
                   Button(name).constraintSize({ minHeight: 38 }).fontSize(FontSize.callout)
+                    .fontWeight(this.referenceProvider === name ? Weight.semibold : Weight.medium)
                     .borderRadius(Radius.button).margin({ right: Space.xs, bottom: Space.xs })
-                    .backgroundColor(this.referenceProvider === name ? $r('app.color.prominent') : $r('app.color.group'))
-                    .fontColor(this.referenceProvider === name ? $r('app.color.on_prominent') : $r('app.color.ink'))
+                    .backgroundColor(this.referenceProvider === name ? $r('app.color.info_bg') : $r('app.color.group'))
+                    .fontColor(this.referenceProvider === name ? $r('app.color.primary_text') : $r('app.color.ink'))
+                    .border({ width: 1, color: this.referenceProvider === name ? $r('app.color.primary') : Color.Transparent })
                     .onClick(() => this.referenceProvider = name)
                 })
               }.width('100%')
@@ -264,8 +266,11 @@ export struct RequestCard {
           ForEach(q.options, (option: string, index: number) => {
             Button((this.selected(q, q.values[index]) ? '✓ ' : '') + option)
               .width('100%').fontSize(FontSize.callout).constraintSize({ minHeight: 40 }).borderRadius(Radius.button)
-              .backgroundColor(this.selected(q, q.values[index]) ? $r('app.color.selected') : $r('app.color.group'))
-              .fontColor($r('app.color.ink')).accessibilityText(option + (this.selected(q, q.values[index]) ? '，已选中' : '，未选中'))
+              .fontWeight(this.selected(q, q.values[index]) ? Weight.semibold : Weight.medium)
+              .backgroundColor(this.selected(q, q.values[index]) ? $r('app.color.info_bg') : $r('app.color.group'))
+              .fontColor(this.selected(q, q.values[index]) ? $r('app.color.primary_text') : $r('app.color.ink'))
+              .border({ width: 1, color: this.selected(q, q.values[index]) ? $r('app.color.primary') : Color.Transparent })
+              .accessibilityText(option + (this.selected(q, q.values[index]) ? '，已选中' : '，未选中'))
               .onClick(() => this.choose(q, q.values[index])).enabled(!this.busy && !this.submitted)
           })
           if (q.custom) {

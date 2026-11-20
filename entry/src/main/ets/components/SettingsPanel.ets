@@ -618,9 +618,10 @@ export struct SettingsPanel {
                 Row({ space: 10 }) {
                   Text('代码自动换行').fontSize(FontSize.body).lineHeight(LineHeight.body).fontColor($r('app.color.ink')).layoutWeight(1)
                   Button(this.codeWordBreak ? '已开启' : '已关闭')
-                    .backgroundColor(this.codeWordBreak ? $r('app.color.primary') : $r('app.color.group'))
-                    .fontColor(this.codeWordBreak ? $r('app.color.on_primary_fill') : $r('app.color.ink'))
-                    .fontSize(FontSize.callout).fontWeight(Weight.medium).borderRadius(Radius.badge)
+                    .backgroundColor(this.codeWordBreak ? $r('app.color.info_bg') : $r('app.color.group'))
+                    .fontColor(this.codeWordBreak ? $r('app.color.primary_text') : $r('app.color.ink'))
+                    .border({ width: 1, color: this.codeWordBreak ? $r('app.color.primary') : Color.Transparent })
+                    .fontSize(FontSize.callout).fontWeight(this.codeWordBreak ? Weight.semibold : Weight.medium).borderRadius(Radius.badge)
                     .constraintSize({ minHeight: 34 }).padding({ left: Space.sm, right: Space.sm })
                     .enabled(!this.savingCodeAppearance)
                     .accessibilityText(this.codeWordBreak ? '代码自动换行，已开启' : '代码自动换行，已关闭')
