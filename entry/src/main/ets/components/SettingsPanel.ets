@@ -288,7 +288,8 @@ export struct SettingsPanel {
     } else if (this.section === 'storage') {
       StorageSettingsPanel({ environments: this.environments, onBack: () => this.section = '' })
     } else if (this.section === 'usage') {
-      UsagePanel({ connection: this.connection, onBack: () => this.section = '' })
+      UsagePanel({ connection: this.connection, environments: this.environments,
+        connectionFor: this.connectionFor, onBack: () => this.section = '' })
     } else if (this.section === 'schedules') {
       ScheduledTasksPanel({ connection: this.connection, connectionKey: this.scheduledConnectionKey,
         scopedProjects: this.projects, activeLocalId: this.activeLocalId, onBack: () => this.section = '' })

@@ -3,7 +3,8 @@ import { GroupCard } from './ui/GroupCard';
 import { FormRow } from './ui/FormRow';
 import { AppButton } from './ui/AppButton';
 import { StatusBadge } from './ui/StatusBadge';
-import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
+import { ProviderLogo } from './ui/ProviderLogo';
+import { FontSize, LineHeight, Opacity, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { common } from '@kit.AbilityKit';
 import { T3Client } from '../services/T3Client';
 import { record } from '../protocol/Wire';
@@ -300,15 +301,28 @@ export struct ProviderSettingsPanel {
             } else {
               GroupCard({ title: 'Providers' }) {
                 ForEach(this.visibleProviders(), (provider: ProviderView, index: number) => {
-                  FormRow({
-                    kind: 'value',
-                    label: provider.name,
-                    subtitle: providerStatus(provider) + ' · ' + String(provider.models.length) + ' 个模型',
-                    value: '',
-                    disabled: this.busy,
-                    isFirst: index === 0,
-                    onTap: () => this.choose(provider.id)
-                  })
+                  Row({ space: Space.sm }) {
+                    ProviderLogo({ driver: provider.driver || provider.id, logoSize: 18 })
+                    Column({ space: 2 }) {
+                      Text(provider.name)
+                        .fontSize(FontSize.body).lineHeight(LineHeight.body).fontColor($r('app.color.ink'))
+                        .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+                      Text(providerStatus(provider) + ' · ' + String(provider.models.length) + ' 个模型')
+                        .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted'))
+                        .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
+                    }.alignItems(HorizontalAlign.Start).layoutWeight(1)
+                    Image($r('app.media.ui_chevron_right'))
+                      .width(Sizes.chevron).height(Sizes.chevron).opacity(0.6).flexShrink(0).accessibilityLevel('no')
+                  }
+                  .width('100%').constraintSize({ minHeight: Sizes.formRowMin })
+                  .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                  .alignItems(VerticalAlign.Center)
+                  .border({ width: { top: index === 0 ? 0 : Sizes.hairline }, color: { top: $r('app.color.separator') } })
+                  .enabled(!this.busy)
+                  .opacity(this.busy ? Opacity.disabled : 1)
+                  .accessibilityGroup(true)
+                  .accessibilityText(provider.name + '，' + providerStatus(provider) + '，' + String(provider.models.length) + ' 个模型')
+                  .onClick(() => { if (!this.busy) this.choose(provider.id); })
                 }, (provider: ProviderView) => provider.id)
               }
             }

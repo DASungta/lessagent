@@ -1,11 +1,13 @@
 import { EnvironmentEntry } from '../protocol/Environment';
 import {
   ScopedThread, ThreadCapabilities, ThreadShelfState, snoozeWakeLabel,
-  canMoveBeforeActiveNeighbor, effectiveSnoozed, threadCanArchive, threadCanSnooze, threadStatus
+  canMoveBeforeActiveNeighbor, effectiveSnoozed, threadCanArchive, threadCanSnooze,
+  threadIsSettled, threadStatus
 } from '../protocol/Projects';
-import { compactTime, providerGlyph, threadSubline, threadTone } from '../protocol/ThreadRow';
+import { compactTime, threadSubline, threadTone } from '../protocol/ThreadRow';
 import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { ProjectMonogram } from './ui/ProjectMonogram';
+import { ProviderLogo } from './ui/ProviderLogo';
 import { SectionHeader } from './ui/SectionHeader';
 import { AppButton } from './ui/AppButton';
 
@@ -73,8 +75,43 @@ export struct ThreadList {
     if (up ? index <= 0 : index < 0 || index >= ordered.length - 1) return false;
     return !!thread.pinnedAt || canMoveBeforeActiveNeighbor(ordered, up ? index - 1 : index + 2);
   }
+  private isSettled(thread: ScopedThread): boolean {
+    return threadIsSettled(thread, this.caps(thread));
+  }
+  private isSnoozed(thread: ScopedThread): boolean {
+    return this.caps(thread).snooze && effectiveSnoozed(thread, this.nowMs);
+  }
+  private isSlimRow(thread: ScopedThread): boolean {
+    return this.isSnoozed(thread) || this.isSettled(thread);
+  }
+  private cardOpacity(thread: ScopedThread): number {
+    const status = threadStatus(thread, this.nowMs);
+    return (!this.isSelected(thread) && (status === '运行中' || status === '等待')) ? 0.72 : 1;
+  }
+  private settledMeta(thread: ScopedThread): string {
+    const time = this.rowTime(thread);
+    if (this.query.trim()) return time ? '已完成 · ' + time : '已完成';
+    return time || '已完成';
+  }
+  private rowKey(thread: ScopedThread): string {
+    return [
+      thread.localId, thread.id,
+      this.isSlimRow(thread) ? 'slim' : 'card',
+      this.isSelected(thread) ? '1' : '0',
+      this.query.trim() ? 'q' : '',
+      threadStatus(thread, this.nowMs),
+      thread.settledOverride,
+      thread.lastVisitedAt,
+      thread.latestRunCompletedAt,
+      thread.snoozedUntil,
+      thread.pinnedAt,
+      thread.label,
+      thread.lastError,
+      this.searchSnippet(thread)
+    ].join('|');
+  }
   private rowTime(thread: ScopedThread): string {
-    if (thread.settledOverride === 'settled') return compactTime(thread.settledAt || thread.updatedAt, this.nowMs);
+    if (this.isSettled(thread)) return compactTime(thread.settledAt || thread.updatedAt, this.nowMs);
     if (thread.snoozedUntil) return snoozeWakeLabel(thread, this.nowMs);
     return compactTime(thread.latestUserMessageAt || thread.updatedAt || thread.createdAt, this.nowMs);
   }
@@ -94,6 +131,7 @@ export struct ThreadList {
   private statusIcon(status: string): Resource {
     const tone = threadTone(status);
     if (tone === 'run') return $r('app.media.status_run');
+    if (tone === 'done') return $r('app.media.status_done');
     if (tone === 'wait') return $r('app.media.status_wait');
     if (tone === 'danger') return $r('app.media.status_danger');
     return $r('app.media.status_neutral');
@@ -102,6 +140,7 @@ export struct ThreadList {
   private statusColor(status: string): ResourceColor {
     const tone = threadTone(status);
     if (tone === 'run') return $r('app.color.primary_text');
+    if (tone === 'done') return $r('app.color.success');
     if (tone === 'wait') return $r('app.color.warning');
     if (tone === 'danger') return $r('app.color.danger');
     return $r('app.color.muted');
@@ -144,32 +183,21 @@ export struct ThreadList {
   @Builder
   sectionHeader(title: string, count: number, expanded: boolean, kind: string) {
     Column() {
-      SectionHeader({ title: kind === 'pinned' || expanded ? title : title + ' (' + count + ')',
-        collapsible: kind !== 'pinned', collapsed: !expanded,
+      SectionHeader({ title: kind === 'pinned' ? title : title + ' (' + count + ')',
+        collapsible: kind !== 'pinned' && kind !== 'active', collapsed: !expanded,
         onToggle: () => {
           if (kind === 'working') this.onToggleWorking();
           else if (kind === 'snoozed') this.onToggleSnoozed();
-          else this.onToggleSettled();
+          else if (kind === 'settled') this.onToggleSettled();
         } })
     }.padding({ left: Space.sm, right: Space.sm, top: Space.xxs })
   }
 
-  @Builder
-  providerIcon(providerInstanceId: string) {
-    if (providerGlyph(providerInstanceId) === 'claude') {
-      Image($r('app.media.provider_claude')).width(15).height(15).accessibilityLevel('no')
-    } else if (providerGlyph(providerInstanceId) === 'openai') {
-      Image($r('app.media.provider_openai')).width(15).height(15).accessibilityLevel('no')
-    } else if (providerGlyph(providerInstanceId) === 'gemini') {
-      Image($r('app.media.provider_gemini')).width(15).height(15).accessibilityLevel('no')
-    } else if (providerGlyph(providerInstanceId) === 'cursor') {
-      Image($r('app.media.provider_cursor')).width(15).height(15).accessibilityLevel('no')
-    } else if (providerGlyph(providerInstanceId) === 'generic') {
-      Image($r('app.media.provider_generic')).width(15).height(15).accessibilityLevel('no')
-    }
-  }
-
   private rowA11y(thread: ScopedThread): string {
+    if (this.isSettled(thread)) {
+      return [thread.label, thread.projectLabel, '已完成', this.rowTime(thread), thread.pinnedAt ? '已固定' : '']
+        .filter((part: string) => !!part).join('，') + '。长按查看操作';
+    }
     const status = threadStatus(thread, this.nowMs);
     const sub = threadSubline(status, thread.lastError, thread.environmentLabel);
     return [thread.label, thread.projectLabel, status || this.rowTime(thread), sub.text, thread.pinnedAt ? '已固定' : '']
@@ -178,57 +206,93 @@ export struct ThreadList {
 
   @Builder
   threadRow(thread: ScopedThread) {
-    Column({ space: 3 }) {
-      Row({ space: Space.xs }) {
-        Column() {
-          ProjectMonogram({ projectId: thread.projectId, name: thread.projectLabel })
-        }.constraintSize({ minHeight: LineHeight.body }).justifyContent(FlexAlign.Center)
-        Text(thread.label).fontSize(FontSize.body).lineHeight(LineHeight.body)
-          .fontWeight(thread.settledOverride === 'settled' ? Weight.regular : Weight.medium)
-          .fontColor($r('app.color.ink')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
-        Row({ space: 4 }) {
-          if (thread.pinnedAt) {
-            Image($r('app.media.ui_pin')).width(12).height(12).accessibilityLevel('no')
-          }
-          if (threadStatus(thread, this.nowMs)) {
-            Image(this.statusIcon(threadStatus(thread, this.nowMs))).width(13).height(13).accessibilityLevel('no')
-            Text(threadStatus(thread, this.nowMs)).fontSize(FontSize.caption).fontWeight(Weight.bold)
-              .fontColor(this.statusColor(threadStatus(thread, this.nowMs))).maxLines(1)
-          } else {
-            Text(this.rowTime(thread)).fontSize(FontSize.caption).fontColor($r('app.color.muted')).maxLines(1)
-          }
-        }.constraintSize({ minHeight: LineHeight.body }).alignItems(VerticalAlign.Center)
-      }.width('100%').alignItems(VerticalAlign.Top)
-      Row({ space: 4 }) {
-        if (threadSubline(threadStatus(thread, this.nowMs), thread.lastError, thread.environmentLabel).error) {
-          Text(threadSubline(threadStatus(thread, this.nowMs), thread.lastError, thread.environmentLabel).text)
-            .fontSize(FontSize.caption).fontColor($r('app.color.danger')).maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
-        } else {
-          Image($r('app.media.ui_env_desktop')).width(12).height(12).accessibilityLevel('no')
-          Text(thread.environmentLabel).fontSize(FontSize.caption).fontColor($r('app.color.muted')).maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
+    if (this.isSlimRow(thread)) {
+      Column({ space: 3 }) {
+        Row({ space: Space.xs }) {
+          Column() {
+            ProjectMonogram({ projectId: thread.projectId, name: thread.projectLabel })
+          }.constraintSize({ minHeight: LineHeight.body }).justifyContent(FlexAlign.Center).opacity(0.4)
+          Text(thread.label).fontSize(FontSize.body).lineHeight(LineHeight.body)
+            .fontWeight(Weight.regular)
+            .fontColor(this.isSelected(thread) ? $r('app.color.ink') : $r('app.color.muted'))
+            .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
+          Row({ space: 4 }) {
+            if (thread.pinnedAt) {
+              Image($r('app.media.ui_pin')).width(12).height(12).opacity(0.6).accessibilityLevel('no')
+            }
+            if (this.isSnoozed(thread)) {
+              Image($r('app.media.status_neutral')).width(13).height(13).accessibilityLevel('no')
+              Text(snoozeWakeLabel(thread, this.nowMs)).fontSize(FontSize.caption).fontColor($r('app.color.muted')).maxLines(1)
+            } else {
+              Image($r('app.media.status_settled')).width(13).height(13).accessibilityLevel('no')
+              Text(this.settledMeta(thread)).fontSize(FontSize.caption).fontColor($r('app.color.muted')).maxLines(1)
+            }
+          }.constraintSize({ minHeight: LineHeight.body }).alignItems(VerticalAlign.Center)
+        }.width('100%').alignItems(VerticalAlign.Center)
+        if (this.searchSnippet(thread)) {
+          Text(this.searchSnippet(thread)).fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted'))
+            .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%')
+            .padding({ left: Sizes.monogram + Space.xs })
         }
-        this.providerIcon(thread.providerInstanceId)
-      }.width('100%').padding({ left: Sizes.monogram + Space.xs }).alignItems(VerticalAlign.Center)
-      if (this.searchSnippet(thread)) {
-        Text(this.searchSnippet(thread)).fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.ink'))
-          .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%')
-          .padding({ left: Sizes.monogram + Space.xs })
-      }
-    }.width('100%').padding({ left: Space.sm, right: Space.sm, top: 10, bottom: 10 }).borderRadius(20)
-      .backgroundColor(this.isSelected(thread) ? $r('app.color.card') : Color.Transparent)
-      .accessibilityGroup(true).accessibilityText(this.rowA11y(thread))
-      .onClick(() => this.onSelect(thread))
-      .bindContextMenu(this.rowMenu(thread), ResponseType.LongPress)
+      }.width('100%').constraintSize({ minHeight: 44 }).padding({ left: Space.sm, right: Space.sm, top: 8, bottom: 8 }).borderRadius(16)
+        .backgroundColor(this.isSelected(thread) ? $r('app.color.card') : Color.Transparent)
+        .accessibilityGroup(true).accessibilityText(this.rowA11y(thread))
+        .onClick(() => this.onSelect(thread))
+        .bindContextMenu(this.rowMenu(thread), ResponseType.LongPress)
+    } else {
+      Column({ space: 3 }) {
+        Row({ space: Space.xs }) {
+          Column() {
+            ProjectMonogram({ projectId: thread.projectId, name: thread.projectLabel })
+          }.constraintSize({ minHeight: LineHeight.body }).justifyContent(FlexAlign.Center)
+          Text(thread.label).fontSize(FontSize.body).lineHeight(LineHeight.body)
+            .fontWeight(Weight.medium)
+            .fontColor($r('app.color.ink')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
+          Row({ space: 4 }) {
+            if (thread.pinnedAt) {
+              Image($r('app.media.ui_pin')).width(12).height(12).accessibilityLevel('no')
+            }
+            if (threadStatus(thread, this.nowMs)) {
+              Image(this.statusIcon(threadStatus(thread, this.nowMs))).width(13).height(13).accessibilityLevel('no')
+              Text(threadStatus(thread, this.nowMs)).fontSize(FontSize.caption).fontWeight(Weight.bold)
+                .fontColor(this.statusColor(threadStatus(thread, this.nowMs))).maxLines(1)
+            } else {
+              Text(this.rowTime(thread)).fontSize(FontSize.caption).fontColor($r('app.color.muted')).maxLines(1)
+            }
+          }.constraintSize({ minHeight: LineHeight.body }).alignItems(VerticalAlign.Center)
+        }.width('100%').alignItems(VerticalAlign.Top)
+        Row({ space: 4 }) {
+          if (threadSubline(threadStatus(thread, this.nowMs), thread.lastError, thread.environmentLabel).error) {
+            Text(threadSubline(threadStatus(thread, this.nowMs), thread.lastError, thread.environmentLabel).text)
+              .fontSize(FontSize.caption).fontColor($r('app.color.danger')).maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
+          } else {
+            Image($r('app.media.ui_env_desktop')).width(12).height(12).accessibilityLevel('no')
+            Text(thread.environmentLabel).fontSize(FontSize.caption).fontColor($r('app.color.muted')).maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
+          }
+          ProviderLogo({ driver: thread.providerInstanceId, model: thread.model, logoSize: 15 })
+        }.width('100%').padding({ left: Sizes.monogram + Space.xs }).alignItems(VerticalAlign.Center)
+        if (this.searchSnippet(thread)) {
+          Text(this.searchSnippet(thread)).fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.ink'))
+            .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%')
+            .padding({ left: Sizes.monogram + Space.xs })
+        }
+      }.width('100%').padding({ left: Space.sm, right: Space.sm, top: 10, bottom: 10 }).borderRadius(20)
+        .backgroundColor(this.isSelected(thread) ? $r('app.color.card') : Color.Transparent)
+        .opacity(this.cardOpacity(thread))
+        .accessibilityGroup(true).accessibilityText(this.rowA11y(thread))
+        .onClick(() => this.onSelect(thread))
+        .bindContextMenu(this.rowMenu(thread), ResponseType.LongPress)
+    }
   }
 
   @Builder
   rowMenu(thread: ScopedThread) {
     Menu() {
       if (this.caps(thread).settlement) {
-        MenuItem({ content: thread.settledOverride === 'settled' ? '取消 Settle' : 'Settle' })
-          .onClick(() => this.onAction(thread, thread.settledOverride === 'settled' ? 'unsettle' : 'settle'))
+        MenuItem({ content: this.isSettled(thread) ? '取消完成' : '标记已完成' })
+          .onClick(() => this.onAction(thread, this.isSettled(thread) ? 'unsettle' : 'settle'))
       }
       if (this.caps(thread).snooze && thread.snoozedUntil && Date.parse(thread.snoozedUntil) > this.nowMs) {
         MenuItem({ content: '取消暂缓' }).onClick(() => this.onAction(thread, 'unsnooze'))
@@ -274,11 +338,11 @@ export struct ThreadList {
           .onClick(() => this.onAction(thread, 'unsnooze'))
       } else if (this.caps(thread).settlement) {
         Column() {
-          Text(thread.settledOverride === 'settled' ? '取消完成' : '完成').fontSize(FontSize.callout).fontWeight(Weight.medium)
-            .fontColor(thread.settledOverride === 'settled' ? $r('app.color.ink') : $r('app.color.on_prominent'))
+          Text(this.isSettled(thread) ? '取消完成' : '完成').fontSize(FontSize.callout).fontWeight(Weight.medium)
+            .fontColor(this.isSettled(thread) ? $r('app.color.ink') : $r('app.color.on_prominent'))
         }.width(64).height('100%').justifyContent(FlexAlign.Center)
-          .backgroundColor(thread.settledOverride === 'settled' ? $r('app.color.group') : $r('app.color.prominent'))
-          .onClick(() => this.onAction(thread, thread.settledOverride === 'settled' ? 'unsettle' : 'settle'))
+          .backgroundColor(this.isSettled(thread) ? $r('app.color.group') : $r('app.color.prominent'))
+          .onClick(() => this.onAction(thread, this.isSettled(thread) ? 'unsettle' : 'settle'))
       } else {
         Column() {
           Text('归档').fontSize(FontSize.callout).fontWeight(Weight.medium).fontColor($r('app.color.ink'))
@@ -326,7 +390,7 @@ export struct ThreadList {
         }
         ForEach(this.shelves.matches, (thread: ScopedThread) => {
           this.rowItem(thread)
-        }, (thread: ScopedThread) => thread.localId + ':' + thread.id)
+        }, (thread: ScopedThread) => this.rowKey(thread))
       } else if (this.shelves.pinned.length + this.shelves.active.length + this.shelves.workingCount +
         this.shelves.snoozedCount + this.shelves.settledCount === 0) {
         ListItem() {
@@ -344,37 +408,41 @@ export struct ThreadList {
         if (this.shelves.pinned.length) {
           ListItem() { this.sectionHeader('固定', this.shelves.pinned.length, true, 'pinned') }
           ForEach(this.shelves.pinned, (thread: ScopedThread) => { this.rowItem(thread) },
-            (thread: ScopedThread) => thread.localId + ':' + thread.id)
+            (thread: ScopedThread) => this.rowKey(thread))
+        }
+        if (this.shelves.active.length > 0 && (this.shelves.settledCount > 0 || this.shelves.workingCount > 0 ||
+          this.shelves.snoozedCount > 0 || this.shelves.pinned.length > 0)) {
+          ListItem() { this.sectionHeader('未完成', this.shelves.active.length, true, 'active') }
         }
         ForEach(this.shelves.active, (thread: ScopedThread) => { this.rowItem(thread) },
-          (thread: ScopedThread) => thread.localId + ':' + thread.id)
+          (thread: ScopedThread) => this.rowKey(thread))
         if (this.shelves.workingCount > 0) {
           ListItem() { this.sectionHeader('进行中', this.shelves.workingCount, this.workingShelfExpanded, 'working') }
           if (this.workingShelfExpanded) {
             ForEach(this.shelves.working, (thread: ScopedThread) => { this.rowItem(thread) },
-              (thread: ScopedThread) => thread.localId + ':' + thread.id)
+              (thread: ScopedThread) => this.rowKey(thread))
           } else {
             ForEach(this.shelves.working.filter((thread: ScopedThread) => this.isSelected(thread)),
               (thread: ScopedThread) => { this.rowItem(thread) },
-              (thread: ScopedThread) => thread.localId + ':' + thread.id)
+              (thread: ScopedThread) => this.rowKey(thread))
           }
         }
         if (this.shelves.snoozedCount > 0) {
           ListItem() { this.sectionHeader('暂缓', this.shelves.snoozedCount, this.snoozedShelfExpanded, 'snoozed') }
           if (this.snoozedShelfExpanded) {
             ForEach(this.shelves.snoozed, (thread: ScopedThread) => { this.rowItem(thread) },
-              (thread: ScopedThread) => thread.localId + ':' + thread.id)
+              (thread: ScopedThread) => this.rowKey(thread))
           } else {
             ForEach(this.shelves.snoozed.filter((thread: ScopedThread) => this.isSelected(thread)),
               (thread: ScopedThread) => { this.rowItem(thread) },
-              (thread: ScopedThread) => thread.localId + ':' + thread.id)
+              (thread: ScopedThread) => this.rowKey(thread))
           }
         }
         if (this.shelves.settledCount > 0) {
           ListItem() { this.sectionHeader('已完成', this.shelves.settledCount, this.settledShelfExpanded, 'settled') }
           if (this.settledShelfExpanded) {
             ForEach(this.shelves.settled.slice(0, this.settledLimit), (thread: ScopedThread) => { this.rowItem(thread) },
-              (thread: ScopedThread) => thread.localId + ':' + thread.id)
+              (thread: ScopedThread) => this.rowKey(thread))
             if (this.shelves.settled.length > this.settledLimit) {
               ListItem() {
                 AppButton({ label: '显示更多已完成会话', kind: 'text', fill: true, onTap: () => this.onShowMoreSettled() })

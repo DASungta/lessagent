@@ -11,13 +11,27 @@ import { FontSize, LineHeight, Radius, Space, Weight } from '../common/Theme';
 export struct MarkdownView {
   @Prop markdown: string = '';
   @Prop selectable: boolean = true;
+  @Prop compact: boolean = false;
   onCopy: (value: string) => void = () => {};
   onOpenLink: (url: string) => void = () => {};
   onOpenImage: (path: string) => void = () => {};
   @State expanded: Record<string, boolean> = {};
   @State wrapCode: Record<string, boolean> = {};
 
+  private bodySize(): number {
+    return this.compact ? FontSize.callout : FontSize.body;
+  }
+
+  private bodyLineHeight(): number {
+    return this.compact ? 20 : 23;
+  }
+
+  private bodyColor(): ResourceColor {
+    return this.compact ? $r('app.color.muted') : $r('app.color.ink');
+  }
+
   private headingSize(level: number): number {
+    if (this.compact) return level <= 2 ? 15 : 14;
     return level === 1 ? 24 : level === 2 ? 21 : level === 3 ? 19 : level === 4 ? 17 : 16;
   }
 
@@ -70,17 +84,17 @@ export struct MarkdownView {
 
   @Builder
   listBlock(block: MarkdownBlock) {
-    Column({ space: 4 }) {
+    Column({ space: this.compact ? 3 : 4 }) {
       ForEach(block.items, (item: MarkdownListItem, index: number) => {
         Row({ space: 6 }) {
           Text(item.checked === undefined ? (item.ordered ? (block.start + index) + '.' : '•') :
             (item.checked ? '☑' : '☐'))
-            .fontSize(15).fontColor(item.checked === undefined ? $r('app.color.muted') : $r('app.color.primary_text'))
-            .width(28).textAlign(TextAlign.End)
+            .fontSize(this.bodySize()).fontColor(item.checked === undefined ? $r('app.color.muted') : $r('app.color.primary_text'))
+            .width(this.compact ? 18 : 28).textAlign(TextAlign.End)
           Column() {
-            this.inline(item.spans, FontSize.body, 23, $r('app.color.ink'), FontWeight.Normal)
+            this.inline(item.spans, this.bodySize(), this.bodyLineHeight(), this.bodyColor(), FontWeight.Normal)
           }.layoutWeight(1)
-        }.width('100%').padding({ left: Math.min(item.depth, 4) * 18 }).alignItems(VerticalAlign.Top)
+        }.width('100%').padding({ left: Math.min(item.depth, 4) * (this.compact ? 12 : 18) }).alignItems(VerticalAlign.Top)
       }, (item: MarkdownListItem, index: number) => index + ':' + item.text)
     }.width('100%')
   }
@@ -225,7 +239,7 @@ export struct MarkdownView {
         .accessibilityText(block.summary + (this.expanded[key] ? '，已展开' : '，已折叠'))
         .onClick(() => { this.expanded[key] = !this.expanded[key]; })
       if (this.expanded[key]) {
-        MarkdownView({ markdown: block.body, selectable: this.selectable,
+        MarkdownView({ markdown: block.body, selectable: this.selectable, compact: this.compact,
           onCopy: this.onCopy, onOpenLink: this.onOpenLink, onOpenImage: this.onOpenImage })
       }
     }.width('100%').padding(10).border({ width: 1, color: $r('app.color.border') }).borderRadius(10)
@@ -234,13 +248,13 @@ export struct MarkdownView {
   @Builder
   blockView(block: MarkdownBlock, index: number) {
     if (block.kind === 'heading') {
-      this.inline(block.spans, this.headingSize(block.level), this.headingSize(block.level) * 1.35,
-        $r('app.color.ink'), FontWeight.Medium)
+      this.inline(block.spans, this.headingSize(block.level), Math.round(this.headingSize(block.level) * 1.35),
+        this.bodyColor(), FontWeight.Medium)
     } else if (block.kind === 'paragraph') {
-      this.inline(block.spans, FontSize.body, 23, $r('app.color.ink'), FontWeight.Normal)
+      this.inline(block.spans, this.bodySize(), this.bodyLineHeight(), this.bodyColor(), FontWeight.Normal)
     } else if (block.kind === 'quote') {
       Column() {
-        this.inline(block.spans, FontSize.body, 22, $r('app.color.muted'), FontWeight.Normal)
+        this.inline(block.spans, this.bodySize(), this.bodyLineHeight(), $r('app.color.muted'), FontWeight.Normal)
       }.width('100%').padding({ left: 12, top: 2, bottom: 2 })
         .border({ width: { left: 3 }, color: $r('app.color.border') })
     } else if (block.kind === 'list') {
@@ -288,10 +302,10 @@ export struct MarkdownView {
   }
 
   build() {
-    Column({ space: 10 }) {
+    Column({ space: this.compact ? 6 : 10 }) {
       ForEach(markdownDocument(this.markdown), (block: MarkdownBlock, index: number) => {
         this.blockView(block, index)
-      }, (block: MarkdownBlock, index: number) => index + ':' + block.kind + ':' + block.text.slice(0, 40))
+      }, (block: MarkdownBlock, index: number) => index + ':' + block.kind + ':' + block.text.length + ':' + block.text.slice(0, 40))
     }.width('100%').alignItems(HorizontalAlign.Start).foregroundColor($r('app.color.ink'))
   }
 }

@@ -1,8 +1,9 @@
 import { T3Client } from '../services/T3Client';
 import {
   activityLines, ActivityLine, activitySummary, ActivitySummary, appendOutput,
-  ColoredDiffLine, MessageWorkMap, parseDiffPreviewLines, TurnWorkGroup
+  ColoredDiffLine, MessageWorkMap, parseDiffPreviewLines, resolveExpandedActivityBody, TurnWorkGroup
 } from '../protocol/ThreadItems';
+import { MarkdownView } from './MarkdownView';
 import { record, text } from '../protocol/Wire';
 import { FontSize, LineHeight, Radius, Space, Weight } from '../common/Theme';
 
@@ -110,12 +111,12 @@ struct ActivityRowView {
           .fontColor(this.badgeColor(this.summary()))
           .maxLines(1)
       }
-      if (this.isExpanded) {
+      if (this.isExpanded || this.line.kind === 'reasoning') {
         Image($r('app.media.ui_chevron_down'))
           .width(12)
           .height(12)
-          .opacity(0.55)
-          .rotate({ angle: 180 })
+          .opacity(this.isExpanded ? 0.55 : 0.45)
+          .rotate({ angle: this.isExpanded ? 180 : 0 })
           .accessibilityLevel('no')
       }
     }
@@ -270,6 +271,10 @@ export struct ThreadActivity {
               (typeof item.newStr === 'string' ? item.newStr : '');
           }
           if (!this.output && item.changes !== undefined) this.detail = JSON.stringify(item.changes);
+        } else if (line.kind === 'reasoning') {
+          const fetchedReasoning = typeof item.text === 'string' && item.text ? item.text :
+            (typeof item.summary === 'string' ? item.summary : '');
+          if (fetchedReasoning) this.output = fetchedReasoning;
         } else {
           const fetchedOutput = typeof item.output === 'string' ? item.output : '';
           if (fetchedOutput) this.output = fetchedOutput;
@@ -292,7 +297,8 @@ export struct ThreadActivity {
 
   private expandedBodyText(line: ActivityLine): string {
     const summary = activitySummary(line);
-    return stripCommandHeader(this.output, line, summary);
+    const body = resolveExpandedActivityBody(line, this.output);
+    return stripCommandHeader(body, line, summary);
   }
 
   private diffLineColor(tone: 'add' | 'del' | 'hunk' | 'plain'): ResourceColor {
@@ -326,77 +332,119 @@ export struct ThreadActivity {
       .onClick(() => { void this.open(line); })
 
       if (this.expanded === line.itemId) {
-        Column({ space: 4 }) {
-          Row({ space: Space.xs }) {
-            Text(this.expandedHeaderTitle(line))
-              .fontSize(FontSize.caption)
-              .lineHeight(LineHeight.caption)
-              .fontFamily('monospace')
-              .fontColor($r('app.color.muted'))
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .layoutWeight(1)
-            Button({ type: ButtonType.Circle, stateEffect: true }) {
-              Image($r('app.media.ui_copy')).width(14).height(14).accessibilityLevel('no')
+        if (line.kind === 'reasoning') {
+          Column({ space: 4 }) {
+            if (this.expandedBodyText(line)) {
+              MarkdownView({
+                markdown: this.expandedBodyText(line),
+                selectable: true,
+                compact: true,
+                onCopy: this.onCopy
+              })
+            } else {
+              Text(line.label.indexOf('inProgress') >= 0 ? '正在思考…' : '（无思考内容）')
+                .fontSize(FontSize.callout)
+                .lineHeight(LineHeight.callout)
+                .fontColor($r('app.color.muted'))
             }
-            .width(28).height(28).backgroundColor(Color.Transparent)
-            .accessibilityText('复制输出')
-            .onClick(() => this.onCopy(this.output || activitySummary(line).title))
-            Button({ type: ButtonType.Circle, stateEffect: true }) {
-              Image($r('app.media.ui_quote')).width(14).height(14).accessibilityLevel('no')
+            if (this.detail) {
+              Text(this.detail)
+                .fontSize(FontSize.caption)
+                .lineHeight(LineHeight.caption)
+                .fontColor($r('app.color.muted'))
+                .width('100%')
             }
-            .width(28).height(28).backgroundColor(Color.Transparent)
-            .accessibilityText('引用为上下文')
-            .onClick(() => this.onReference({
-              itemId: line.itemId, kind: line.kind, label: line.label, text: this.output
-            }))
           }
           .width('100%')
-          .padding({ left: Space.xs, right: 2, top: 2 })
-          .alignItems(VerticalAlign.Center)
+          .alignItems(HorizontalAlign.Start)
+          .padding({ left: 12, right: 4, top: 2, bottom: 6 })
+          .margin({ left: 7 })
+          .border({ width: { left: 2 }, color: { left: $r('app.color.border') } })
+        } else {
+          Column({ space: 4 }) {
+            Row({ space: Space.xs }) {
+              Text(this.expandedHeaderTitle(line))
+                .fontSize(FontSize.caption)
+                .lineHeight(LineHeight.caption)
+                .fontFamily(line.kind === 'command_execution' || line.kind === 'file_change' ? 'monospace' : '')
+                .fontColor($r('app.color.muted'))
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+                .layoutWeight(1)
+              Button({ type: ButtonType.Circle, stateEffect: true }) {
+                Image($r('app.media.ui_copy')).width(14).height(14).accessibilityLevel('no')
+              }
+              .width(28).height(28).backgroundColor(Color.Transparent)
+              .accessibilityText('复制输出')
+              .onClick(() => this.onCopy(this.expandedBodyText(line) || activitySummary(line).title))
+              Button({ type: ButtonType.Circle, stateEffect: true }) {
+                Image($r('app.media.ui_quote')).width(14).height(14).accessibilityLevel('no')
+              }
+              .width(28).height(28).backgroundColor(Color.Transparent)
+              .accessibilityText('引用为上下文')
+              .onClick(() => this.onReference({
+                itemId: line.itemId, kind: line.kind, label: line.label, text: this.expandedBodyText(line)
+              }))
+            }
+            .width('100%')
+            .padding({ left: Space.xs, right: 2, top: 2 })
+            .alignItems(VerticalAlign.Center)
 
-          Scroll() {
-            Scroll() {
-              if (line.kind === 'file_change' && this.expandedBodyText(line)) {
-                Column({ space: 0 }) {
-                  ForEach(parseDiffPreviewLines(this.expandedBodyText(line)), (diffLine: ColoredDiffLine, idx: number) => {
-                    Text(diffLine.text || ' ')
+            if (line.kind === 'file_change' || line.kind === 'command_execution') {
+              Scroll() {
+                Scroll() {
+                  if (line.kind === 'file_change' && this.expandedBodyText(line)) {
+                    Column({ space: 0 }) {
+                      ForEach(parseDiffPreviewLines(this.expandedBodyText(line)), (diffLine: ColoredDiffLine, idx: number) => {
+                        Text(diffLine.text || ' ')
+                          .fontSize(FontSize.mono)
+                          .lineHeight(LineHeight.mono)
+                          .fontFamily('monospace')
+                          .fontColor(this.diffLineColor(diffLine.tone))
+                          .backgroundColor(this.diffLineBackground(diffLine.tone))
+                          .padding({ left: 6, right: 6 })
+                          .copyOption(CopyOptions.InApp)
+                      }, (diffLine: ColoredDiffLine, idx: number) => idx + ':' + diffLine.tone + ':' + diffLine.text)
+                    }.alignItems(HorizontalAlign.Start).padding({ left: 2, right: 2, bottom: Space.xs })
+                  } else {
+                    Text(this.expandedBodyText(line) || '（无输出）')
                       .fontSize(FontSize.mono)
                       .lineHeight(LineHeight.mono)
                       .fontFamily('monospace')
-                      .fontColor(this.diffLineColor(diffLine.tone))
-                      .backgroundColor(this.diffLineBackground(diffLine.tone))
-                      .padding({ left: 6, right: 6 })
+                      .fontColor(this.expandedBodyText(line) ? $r('app.color.ink') : $r('app.color.muted'))
                       .copyOption(CopyOptions.InApp)
-                  }, (diffLine: ColoredDiffLine, idx: number) => idx + ':' + diffLine.tone + ':' + diffLine.text)
-                }.alignItems(HorizontalAlign.Start).padding({ left: 2, right: 2, bottom: Space.xs })
-              } else {
+                      .padding({ left: Space.xs, right: Space.xs, top: 2, bottom: Space.xs })
+                  }
+                }.scrollable(ScrollDirection.Horizontal).align(Alignment.Start).width('100%')
+              }.scrollable(ScrollDirection.Vertical).constraintSize({ maxHeight: 240 }).width('100%')
+            } else {
+              Scroll() {
                 Text(this.expandedBodyText(line) || '（无输出）')
-                  .fontSize(FontSize.mono)
-                  .lineHeight(LineHeight.mono)
-                  .fontFamily('monospace')
+                  .fontSize(FontSize.callout)
+                  .lineHeight(LineHeight.callout)
                   .fontColor(this.expandedBodyText(line) ? $r('app.color.ink') : $r('app.color.muted'))
                   .copyOption(CopyOptions.InApp)
+                  .width('100%')
                   .padding({ left: Space.xs, right: Space.xs, top: 2, bottom: Space.xs })
-              }
-            }.scrollable(ScrollDirection.Horizontal).align(Alignment.Start).width('100%')
-          }.scrollable(ScrollDirection.Vertical).constraintSize({ maxHeight: 240 }).width('100%')
+              }.scrollable(ScrollDirection.Vertical).constraintSize({ maxHeight: 240 }).width('100%')
+            }
 
-          if (this.detail) {
-            Text(this.detail)
-              .fontSize(FontSize.caption)
-              .lineHeight(LineHeight.caption)
-              .fontColor($r('app.color.muted'))
-              .padding({ left: Space.xs, right: Space.xs, bottom: Space.xxs })
-              .width('100%')
-              .copyOption(CopyOptions.InApp)
+            if (this.detail) {
+              Text(this.detail)
+                .fontSize(FontSize.caption)
+                .lineHeight(LineHeight.caption)
+                .fontColor($r('app.color.muted'))
+                .padding({ left: Space.xs, right: Space.xs, bottom: Space.xxs })
+                .width('100%')
+                .copyOption(CopyOptions.InApp)
+            }
           }
+          .width('100%')
+          .padding({ top: 4, bottom: 4, left: 4, right: 4 })
+          .backgroundColor($r('app.color.card'))
+          .borderRadius(Radius.tool)
+          .border({ width: 1, color: $r('app.color.border') })
         }
-        .width('100%')
-        .padding({ top: 4, bottom: 4, left: 4, right: 4 })
-        .backgroundColor($r('app.color.card'))
-        .borderRadius(Radius.tool)
-        .border({ width: 1, color: $r('app.color.border') })
       }
     }.width('100%').alignItems(HorizontalAlign.Start)
   }
@@ -537,7 +585,7 @@ export struct ThreadActivity {
                     line,
                     this.isRunning && index === activityLines(this.items).length - 1
                   )
-                }, (line: ActivityLine) => line.itemId)
+                }, (line: ActivityLine) => line.itemId + ':' + line.label + ':' + line.text.length)
               }
               .width('100%')
               .padding({ left: 10, top: 2, bottom: 2 })

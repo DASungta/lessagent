@@ -4,6 +4,7 @@ import { FormRow } from './ui/FormRow';
 import { AppButton } from './ui/AppButton';
 import { StatusBadge } from './ui/StatusBadge';
 import { SectionHeader } from './ui/SectionHeader';
+import { ProviderLogo } from './ui/ProviderLogo';
 import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { ModelChoice } from '../protocol/Core';
 import { ModelSelection, OptionSelection, TaskSettings, ModelOptionControl, ModelOptionValue, optionControls, supportedModes, interactionModes } from '../protocol/Composer';
@@ -45,6 +46,10 @@ export struct TaskSettingsPanel {
   private providerLabel(instanceId: string): string {
     const provider = this.providers().find((row: Record<string, Object>) => row.instanceId === instanceId);
     return provider && typeof provider.displayName === 'string' ? provider.displayName : instanceId;
+  }
+  private providerDriver(instanceId: string): string {
+    const provider = this.providers().find((row: Record<string, Object>) => row.instanceId === instanceId);
+    return provider && typeof provider.driver === 'string' && provider.driver ? provider.driver : instanceId;
   }
   private chooseOption(id: string, value: string | boolean): void {
     const options = (this.selected.options || []).filter((option: OptionSelection) => option.id !== id);
@@ -103,24 +108,45 @@ export struct TaskSettingsPanel {
             }
           } else {
             ForEach(this.visibleProviderIds(), (providerId: string) => {
-              GroupCard({ title: this.providerLabel(providerId) }) {
-                ForEach(this.modelsForProvider(providerId), (model: ModelChoice, index: number) => {
-                  FormRow({
-                    kind: 'choice',
-                    label: model.model,
-                    subtitle: model.label,
-                    checked: this.selected.instanceId === model.instanceId && this.selected.model === model.model,
-                    disabled: this.busy,
-                    isFirst: index === 0,
-                    onTap: () => {
-                      this.selected = { instanceId: model.instanceId, model: model.model, options: [] };
-                      const modes = this.modes();
-                      if (!modes.includes(this.permission)) this.permission = modes[0] || '';
-                      if (!interactionModes(this.config, this.selected).includes(this.interaction)) this.interaction = 'default';
-                    }
-                  })
-                }, (model: ModelChoice) => model.instanceId + ':' + model.model)
+              Column() {
+                Row({ space: 6 }) {
+                  ProviderLogo({ driver: this.providerDriver(providerId), logoSize: 14 })
+                  Text(this.providerLabel(providerId))
+                    .fontSize(FontSize.caption)
+                    .lineHeight(LineHeight.caption)
+                    .fontColor($r('app.color.muted'))
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                }
+                .width('100%')
+                .alignItems(VerticalAlign.Center)
+                .padding({ left: Space.xxs, right: Space.xxs, bottom: 5 })
+                Column() {
+                  ForEach(this.modelsForProvider(providerId), (model: ModelChoice, index: number) => {
+                    FormRow({
+                      kind: 'choice',
+                      label: model.model,
+                      subtitle: model.label,
+                      checked: this.selected.instanceId === model.instanceId && this.selected.model === model.model,
+                      disabled: this.busy,
+                      isFirst: index === 0,
+                      onTap: () => {
+                        this.selected = { instanceId: model.instanceId, model: model.model, options: [] };
+                        const modes = this.modes();
+                        if (!modes.includes(this.permission)) this.permission = modes[0] || '';
+                        if (!interactionModes(this.config, this.selected).includes(this.interaction)) this.interaction = 'default';
+                      }
+                    })
+                  }, (model: ModelChoice) => model.instanceId + ':' + model.model)
+                }
+                .width('100%')
+                .backgroundColor($r('app.color.card'))
+                .borderRadius(Radius.card)
+                .clip(true)
               }
+              .width('100%')
+              .alignItems(HorizontalAlign.Start)
+              .padding({ top: Space.sm })
             }, (providerId: string) => providerId)
           }
 
@@ -201,6 +227,7 @@ export struct TaskSettingsPanel {
               ForEach(this.providers(), (provider: Record<string, Object>, index: number) => {
                 Column({ space: Space.xs }) {
                   Row({ space: Space.xs }) {
+                    ProviderLogo({ driver: String(provider.driver || provider.instanceId || ''), logoSize: 16 })
                     Text(String(provider.displayName || provider.instanceId))
                       .fontSize(FontSize.body).fontWeight(Weight.medium).fontColor($r('app.color.ink')).layoutWeight(1)
                     StatusBadge({

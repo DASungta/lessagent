@@ -696,3 +696,13 @@ export function parseDiffPreviewLines(value: string): ColoredDiffLine[] {
   return rows;
 }
 
+/** 解析展开态工作项正文：reasoning 流式阶段优先采用实时快照正文，历史快照省略正文时再回落到单条拉取文本。 */
+export function resolveExpandedActivityBody(line: ActivityLine, fetchedOutput: string): string {
+  if (line.kind === 'reasoning') {
+    const live = line.text || '';
+    const fetched = fetchedOutput || '';
+    return live.length >= fetched.length ? live : fetched;
+  }
+  return fetchedOutput || line.text || '';
+}
+

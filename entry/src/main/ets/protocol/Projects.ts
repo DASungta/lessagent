@@ -290,7 +290,7 @@ export function threadView(value: Object): ThreadView {
     id: cleanId(row.id, '会话标识'),
     label: cleanId(row.title, '会话名称'),
     projectId: cleanId(row.projectId, '会话项目'),
-    providerInstanceId: text(row.providerInstanceId === undefined ? '' : row.providerInstanceId),
+    providerInstanceId: text(row.providerInstanceId === undefined ? '' : row.providerInstanceId) || model.instanceId,
     model: model.model,
     branch: optionalText(row.branch, '会话分支'),
     worktreePath: optionalText(row.worktreePath, '会话工作区'),
@@ -344,6 +344,30 @@ export function hasPendingUserInput(thread: ThreadView): boolean {
 
 function runtimeStatus(thread: ThreadView): string {
   return thread.activityRunStatus || thread.status;
+}
+
+export function threadIsSettled(thread: ThreadView, caps?: ThreadCapabilities): boolean {
+  return (caps === undefined || caps.settlement) && thread.settledOverride === 'settled';
+}
+
+export function threadHasUnseenCompletion(thread: ThreadView): boolean {
+  if (thread.settledOverride === 'settled') return false;
+  if (!thread.latestRunCompletedAt || !thread.lastVisitedAt) return false;
+  const status = runtimeStatus(thread);
+  if (status === 'interrupted' || status === 'cancelled' || status === 'failed') return false;
+  const completedAtMs = Date.parse(thread.latestRunCompletedAt);
+  if (!Number.isFinite(completedAtMs)) return false;
+  const lastVisitedAtMs = Date.parse(thread.lastVisitedAt);
+  if (!Number.isFinite(lastVisitedAtMs)) return true;
+  return completedAtMs > lastVisitedAtMs;
+}
+
+export function hasUnseenRunFailure(thread: ThreadView): boolean {
+  if (!thread.latestRunCompletedAt || !thread.lastVisitedAt) return true;
+  const failedAtMs = Date.parse(thread.latestRunCompletedAt);
+  const visitedAtMs = Date.parse(thread.lastVisitedAt);
+  if (!Number.isFinite(failedAtMs) || !Number.isFinite(visitedAtMs)) return true;
+  return failedAtMs > visitedAtMs;
 }
 
 export function threadIsWorking(thread: ThreadView): boolean {
@@ -663,7 +687,7 @@ export function buildThreadShelves(input: {
       activeReorder: false, autoSettleOptOut: false, titleRegeneration: false
     };
     if (caps.snooze && effectiveSnoozed(thread, input.nowMs)) { snoozed.push(thread); continue; }
-    if (caps.settlement && thread.settledOverride === 'settled') { settled.push(thread); continue; }
+    if (threadIsSettled(thread, caps)) { settled.push(thread); continue; }
     if (thread.pinnedAt) { pinned.push(thread); continue; }
     if (workingShelfEnabled && threadIsWorking(thread)) { working.push(thread); continue; }
     active.push(thread);
@@ -795,8 +819,12 @@ export function threadStatus(thread: ScopedThread, nowMs: number): string {
   const status = runtimeStatus(thread);
   if (status === 'running' || status === 'starting' || status === 'preparing' || status === 'queued') return '运行中';
   if (status === 'waiting') return '等待';
-  if (status === 'failed') return thread.lastErrorClass === 'usage_limit' ? '用量受限' : '失败';
+  if (status === 'failed') {
+    if (thread.lastErrorClass === 'usage_limit') return '用量受限';
+    return hasUnseenRunFailure(thread) ? '失败' : '';
+  }
   if (effectiveSnoozed(thread, nowMs)) return '暂缓 ' + snoozeWakeLabel(thread, nowMs);
+  if (threadHasUnseenCompletion(thread)) return '已回复';
   return '';
 }
 

@@ -231,6 +231,74 @@
     {
       "name": "tab_bar_active",
       "value": "#2e2e33"
+    },
+    {
+      "name": "usage_codex",
+      "value": "#e6e6e6"
+    },
+    {
+      "name": "usage_claude",
+      "value": "#d97757"
+    },
+    {
+      "name": "usage_grok",
+      "value": "#a1a1aa"
+    },
+    {
+      "name": "usage_cursor",
+      "value": "#8b8b8b"
+    },
+    {
+      "name": "usage_opencode",
+      "value": "#5b9bbd"
+    },
+    {
+      "name": "usage_antigravity",
+      "value": "#8c7bd1"
+    },
+    {
+      "name": "usage_pi",
+      "value": "#4d9f8a"
+    },
+    {
+      "name": "usage_muse",
+      "value": "#0866ff"
+    },
+    {
+      "name": "usage_mix_input",
+      "value": "#7a7a82"
+    },
+    {
+      "name": "usage_mix_cache_read",
+      "value": "#404047"
+    },
+    {
+      "name": "usage_mix_cache_write",
+      "value": "#a3a3ab"
+    },
+    {
+      "name": "usage_mix_output",
+      "value": "#e6e6e6"
+    },
+    {
+      "name": "usage_mix_other",
+      "value": "#5a5a63"
+    },
+    {
+      "name": "usage_mix_standard",
+      "value": "#4a4a52"
+    },
+    {
+      "name": "usage_mix_fast",
+      "value": "#838383"
+    },
+    {
+      "name": "usage_mix_ultrafast",
+      "value": "#e6e6e6"
+    },
+    {
+      "name": "usage_track",
+      "value": "#2a2a2e"
     }
   ]
 }

@@ -382,3 +382,67 @@ test('saved filters stay scoped before snapshots, through reconnect and regroupi
   assert.equal(workspacePrefs.projectFilterGroupingMode, undefined);
   assert.equal(page.shelves.active.length, 2);
 });
+
+test('settled detection, unseen completion badge, and visited failure clearing match Thread List V2 rules', () => {
+  const now = Date.parse('2026-01-05T12:00:00.000Z');
+  const fullCaps = caps();
+  const noSettleCaps = caps({ settlement: false });
+
+  const settled = scopedThread('a', thread('s1', 'p', 'Settled thread', {
+    settledOverride: 'settled',
+    latestRunCompletedAt: '2026-01-05T10:00:00.000Z',
+    lastVisitedAt: '2026-01-05T09:00:00.000Z'
+  }));
+  assert.equal(P.threadIsSettled(settled, fullCaps), true);
+  assert.equal(P.threadIsSettled(settled, noSettleCaps), false);
+  assert.equal(P.threadHasUnseenCompletion(settled), false);
+
+  const unseen = scopedThread('a', thread('u1', 'p', 'Unseen completion', {
+    latestRunCompletedAt: '2026-01-05T10:00:00.000Z',
+    lastVisitedAt: '2026-01-05T09:00:00.000Z'
+  }));
+  assert.equal(P.threadHasUnseenCompletion(unseen), true);
+  assert.equal(P.threadStatus(unseen, now), '已回复');
+
+  const visited = scopedThread('a', thread('u2', 'p', 'Visited completion', {
+    latestRunCompletedAt: '2026-01-05T10:00:00.000Z',
+    lastVisitedAt: '2026-01-05T10:05:00.000Z'
+  }));
+  assert.equal(P.threadHasUnseenCompletion(visited), false);
+  assert.equal(P.threadStatus(visited, now), '');
+
+  const neverVisited = scopedThread('a', thread('u3', 'p', 'No lastVisitedAt', {
+    latestRunCompletedAt: '2026-01-05T10:00:00.000Z'
+  }));
+  assert.equal(P.threadHasUnseenCompletion(neverVisited), false);
+  assert.equal(P.threadStatus(neverVisited, now), '');
+
+  const interrupted = scopedThread('a', thread('u4', 'p', 'Interrupted', {
+    status: 'interrupted',
+    latestRunCompletedAt: '2026-01-05T10:00:00.000Z',
+    lastVisitedAt: '2026-01-05T09:00:00.000Z'
+  }));
+  assert.equal(P.threadHasUnseenCompletion(interrupted), false);
+
+  const unseenFailed = scopedThread('a', thread('f1', 'p', 'Failed unseen', {
+    status: 'failed',
+    latestRunCompletedAt: '2026-01-05T10:00:00.000Z',
+    lastVisitedAt: '2026-01-05T09:00:00.000Z'
+  }));
+  assert.equal(P.threadStatus(unseenFailed, now), '失败');
+
+  const seenFailed = scopedThread('a', thread('f2', 'p', 'Failed seen', {
+    status: 'failed',
+    latestRunCompletedAt: '2026-01-05T10:00:00.000Z',
+    lastVisitedAt: '2026-01-05T10:01:00.000Z'
+  }));
+  assert.equal(P.threadStatus(seenFailed, now), '');
+
+  const seenLimited = scopedThread('a', thread('f3', 'p', 'Usage limited seen', {
+    status: 'failed',
+    lastErrorClass: 'usage_limit',
+    latestRunCompletedAt: '2026-01-05T10:00:00.000Z',
+    lastVisitedAt: '2026-01-05T10:01:00.000Z'
+  }));
+  assert.equal(P.threadStatus(seenLimited, now), '用量受限');
+});

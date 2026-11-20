@@ -9,7 +9,8 @@ const source = (await readFile(new URL('../entry/src/main/ets/protocol/ThreadIte
 const {
   activityLines, activitySummary, isPlainUserText,
   isHiddenWorkItem, isProminentWorkItem, summarizeWork,
-  formatWorkDuration, deriveCheckpointBadges, groupWorkByMessage, parseDiffPreviewLines
+  formatWorkDuration, deriveCheckpointBadges, groupWorkByMessage,
+  parseDiffPreviewLines, resolveExpandedActivityBody
 } = await import(data(compile(source)));
 
 test('command_execution summarizes first command line and exit tone', () => {
@@ -264,4 +265,28 @@ test('groupWorkByMessage places post-assistant failure into afterAssistant and g
   ]).map(activitySummary);
   assert.equal(summary.title.includes('dynamic_tool'), false);
   assert.equal(summary.title.includes('completed'), false);
+});
+
+test('resolveExpandedActivityBody tracks live reasoning deltas and fetched historical snapshots', () => {
+  assert.equal(
+    resolveExpandedActivityBody(
+      { itemId: 'r1', kind: 'reasoning', label: '思考过程 · inProgress', text: 'The new user request indicates a desire for logos and better wrapping.' },
+      'The new user request indicates a desire for'
+    ),
+    'The new user request indicates a desire for logos and better wrapping.'
+  );
+  assert.equal(
+    resolveExpandedActivityBody(
+      { itemId: 'r2', kind: 'reasoning', label: '思考过程 · completed', text: '' },
+      'Loaded full reasoning text from turnItem RPC.'
+    ),
+    'Loaded full reasoning text from turnItem RPC.'
+  );
+  assert.equal(
+    resolveExpandedActivityBody(
+      { itemId: 'c1', kind: 'command_execution', label: '命令 · completed · exit 0', text: 'ls\npartial' },
+      'ls\nfull output'
+    ),
+    'ls\nfull output'
+  );
 });
