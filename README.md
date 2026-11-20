@@ -1,44 +1,137 @@
-# T3 Code Harmony
+<div align="center">
 
-基于 ArkTS + ArkUI 的 T3 Code 鸿蒙原生客户端，连接电脑或服务器上的 T3 Code，Agent 在服务端运行。目标为整个原版移动端迁移。
+<h1>T3 Code Harmony</h1>
 
-专用 Mate60Pro 已可直连服务、管理会话、发送任务、审阅文件与 Git 变更，并使用远端终端和浏览器。项目当前在补齐 R6–R8 的功能和逐页真机验收。
+<p>
+  基于 <strong>ArkTS + ArkUI</strong> 打造的 <strong>T3 Code</strong> 鸿蒙原生客户端 ——<br />
+  在手机上直连电脑或服务器端的 T3 Code，随时操控远端 Coding Agent、审阅变更与驱动研发工具。
+</p>
 
-**开发已暂停并进入移交。** [开发交接](docs/开发交接.md) · [全部测试过程图库](docs/handoff/index.html)
+<p>
+  <img src="https://img.shields.io/badge/HarmonyOS_NEXT-API_24%2B-0A59F7?style=flat-square" alt="HarmonyOS API 24+" />
+  <img src="https://img.shields.io/badge/ArkTS_%2B_ArkUI-Native-18181B?style=flat-square" alt="ArkTS + ArkUI Native" />
+  <img src="https://img.shields.io/badge/Version-v0.1.1-2563EB?style=flat-square" alt="Version v0.1.1" />
+  <img src="https://img.shields.io/badge/Tests-562_passing-16A34A?style=flat-square" alt="562 Tests Passing" />
+  <img src="https://img.shields.io/badge/License-MIT-52525B?style=flat-square" alt="MIT License" />
+</p>
 
-## 手机上怎么用
+<p>
+  <strong>简体中文</strong> · <a href="README.en.md">English</a>
+</p>
+
+<p>
+  <a href="#界面预览">界面预览</a> ·
+  <a href="#核心特性">核心特性</a> ·
+  <a href="#日常使用">日常使用</a> ·
+  <a href="#本地开发与构建">本地开发与构建</a> ·
+  <a href="#项目结构">项目结构</a> ·
+  <a href="#工程文档">工程文档</a>
+</p>
+
+</div>
+
+---
+
+**T3 Code Harmony** 是 [T3 Code](https://github.com/pingdotgg/t3code) 的独立 HarmonyOS 原生客户端（架构上作为瘦客户端运行，所有 Coding Agent 执行与仓库操作均在桌面端或远端服务端完成）。全套页面、会话流、Markdown、代码高亮、Mermaid 图表与 Diff 审阅均以原生 ArkUI 实现，并在 HUAWEI Mate 60 Pro / Mate 70 Pro 上完成真机联调与视觉对齐。
+
+## 界面预览
+
+| 首页工作台 | 会话与代码高亮 | 文件浏览与原生 Mermaid | Git 变更与提交 |
+| :---: | :---: | :---: | :---: |
+| <img src="docs/screenshots/promo-v0.1.1/01-home-light.jpeg" width="200" alt="首页工作台（浅色）" /> | <img src="docs/screenshots/promo-v0.1.1/02-chat-light.jpeg" width="200" alt="会话与代码高亮（浅色）" /> | <img src="docs/screenshots/promo-v0.1.1/03-files-mermaid-light.jpeg" width="200" alt="文件浏览与原生 Mermaid（浅色）" /> | <img src="docs/screenshots/promo-v0.1.1/04-git-light.jpeg" width="200" alt="Git 变更与提交（浅色）" /> |
+
+| 分组设置中心 | 关于与版本 v0.1.1 | 深色首页工作台 | 深色会话详情 |
+| :---: | :---: | :---: | :---: |
+| <img src="docs/screenshots/promo-v0.1.1/05-settings-light.jpeg" width="200" alt="分组设置中心（浅色）" /> | <img src="docs/screenshots/promo-v0.1.1/06-about-version-light.jpeg" width="200" alt="关于与版本 v0.1.1" /> | <img src="docs/screenshots/promo-v0.1.1/07-home-dark.jpeg" width="200" alt="深色首页工作台" /> | <img src="docs/screenshots/promo-v0.1.1/08-chat-dark.jpeg" width="200" alt="深色会话详情" /> |
+
+> 以上截图均采集自 HUAWEI Mate 60 Pro 真机（演示仓库测试数据）。
+
+## 核心特性
+
+- **多环境工作台与会话管理**
+  - 支持局域网 / SSH / 回环地址直连配对（手动输入、扫码、深链）以及 T3 Connect / Cloud Relay（OAuth + PKCE + DPoP）。
+  - 底部悬浮四栏（`会话 / 拉取请求 / 用量 / 设置`）与新建任务快捷入口；支持仓库、路径与平铺分组、全文搜索、环境与项目筛选、置顶、稍后提醒（Snooze）、Settle、归档与多草稿恢复。
+- **原生会话与富媒体渲染**
+  - 纯 ArkUI 对话消息流、按轮次分组的可折叠工作日志与检查点、子 Agent 线程查看、工具审批与密钥请求卡片。
+  - 原生支持 Markdown、代码语法高亮（支持 8–18 号字号与长行自动换行）、LaTeX 数学公式，以及原生 ArkUI Mermaid 图表（流程图、时序图、类图、状态图）；内置中文离线语音口述草稿。
+- **移动端研发工具箱**
+  - 随时浏览工作区文件与全文检索、查看支持选行与行级评论的 Diff、执行 Git 状态检查 / 暂存 / 提交 / 分支切换 / 推送拉取。
+  - 支持 GitHub Pull Requests 阅读 / 评审 / Guide 导览、会话顶栏直达的远端 ANSI 终端（含回滚与复制）、远端浏览器预览与 iOS Simulator / Android Emulator 设备预览。
+- **设计系统与鸿蒙原生集成**
+  - 内置 58 组深浅色对称语义颜色令牌（`base/element/color.json` 与 `dark/element/color.json`），WCAG AA（≥ 4.5:1）对比度由自动化测试守门。
+  - 支持通过鸿蒙系统分享面板「T3 Harmony」将相册图片或文件直接导入为任务草稿，并提供 2×2 桌面快捷卡片与图标长按快捷入口。
+
+## 日常使用
 
 | 要做的事 | 从哪里进入 |
 |---|---|
-| 开始任务或继续会话 | 首页右上角「新任务」，或点已有会话。输入框下方可选模型和发送方式。 |
-| 管理连接环境 | 点首页左上角「T3 Code」打开环境管理。 |
-| 从系统分享导入附件 | 在文件管理器或相册选择文件 → 分享 →「T3 Harmony」。在「导入分享」中审阅，图片可点「查看图片」，确认目标后存为草稿。已真机验证图库单张 PNG 的分享、预览和草稿恢复。[图片分享实测](docs/evidence/r8/batch38/README.md) |
-| 用中文口述草稿 | 聊天输入区「工具 → 语音输入」，结束识别后加入输入框。 |
-| 操作远端终端或浏览器 | 进入已有会话，点右上角「更多」，选择「终端」或「浏览器预览」。 |
-| 调整源码和 Diff 阅读字号 | 首页齿轮，搜索「代码」。支持 8–18 号和长行自动换行。 |
-| 添加项目或设置克隆目录 | 首页搜索框旁的齿轮 →「项目 → 添加项目」或「源码管理」。 |
-| 为某个项目单独设置工作树 | 齿轮 →「工作树 → 项目级覆盖」，选择环境和具体项目。 |
-| 创建停用的定时任务 | 首页齿轮 →「定时任务 → 新建任务」。选择项目后可指定目标会话。 |
+| **新建任务或继续会话** | 点击底部悬浮栏右下角「新建任务」按钮，或点选已有会话；输入区下方可切换环境、项目、模型与模式。 |
+| **管理连接环境** | 点击首页左上角 `T3 Code` 字标，支持手动配对、扫码、深链导入与多连接路径管理。 |
+| **搜索与筛选会话** | 点击首页右上角搜索图标检索会话，或点击筛选图标按环境与项目过滤。 |
+| **文件、Diff、Git、PR、终端与预览** | 进入会话后，顶栏可直接打开「终端」，或点击右上角「更多」进入文件、Diff、Git、拉取请求、浏览器预览与设备预览。 |
+| **从系统分享导入附件** | 在相册或文件管理中选择文件 → 分享 →「T3 Harmony」，核对预览并选择目标项目后存为草稿。 |
+| **中文语音口述草稿** | 在会话输入区打开「工具 → 语音输入」，语音识别完成后自动写入输入框。 |
+| **代码阅读、项目、工作树与定时任务** | 切换到底部「设置」标签页，按分组配置代码字号（8–18）/ 自动换行、添加项目、源码管理、工作树项目级覆盖、定时任务与深浅色主题。 |
 
-## 开发文档
+## 本地开发与构建
 
-- [整体进度与下一步](docs/development-status.md)：统一状态入口，2026-11-19 第三十九批宿主测试 537/537 通过。
-- [完整迁移计划](docs/full-mobile-migration-plan.md)：R0–R8 范围与验收标准。
-- 阶段记录：[R0](docs/r0-delivery.md) · [R1](docs/r1-progress.md) · [R2](docs/r2-progress.md) · [R3](docs/r3-progress.md) · [R4](docs/r4-progress.md) · [R5](docs/r5-progress.md) · [R6](docs/r6-progress.md) · [R7](docs/r7-progress.md) · [R8](docs/r8-progress.md)。
-- 对照索引：[能力矩阵](docs/r0-mobile-capability-matrix.md) · [路由台账](docs/r0-route-ledger.md) · [UI 记录](docs/ui-refresh.md)。
-- 历史资料：[旧开发规划](docs/development-plan.md) · [阶段一](docs/phase-one.md) · [阶段二](docs/phase-two.md) · [阶段三](docs/phase-three.md)。
+### 环境要求
 
-- [设备调试常亮](docs/device-keep-awake.md)：系统级开关，应用重装期间仍保持亮屏。
+- **DevEco Studio 6.1.1+** 与 HarmonyOS SDK `6.1.1(24)`（`API 24+`）
+- **Node.js 22+**（用于运行 `--experimental-strip-types` 宿主单元测试）
+- 电脑或服务器上运行中的 [T3 Code](https://github.com/pingdotgg/t3code) 服务端
 
-## 开发与验证
+### 运行测试与构建 HAP
 
-独立 HarmonyOS Stage 工程，当前目录尚未初始化 Git。既有构建记录使用 DevEco Studio 6.1.1 / API 24，真机记录含 Mate 70 Pro 与专用 Mate 60 Pro（系统 7 / API 26）。
+```bash
+git clone https://github.com/DASungta/t3code-harmony.git
+cd t3code-harmony
 
-```sh
+# 运行全部宿主单元测试与主题对比度校验（562/562）
 node --experimental-strip-types --test tests/*.test.mjs
+
+# 构建 Debug HAP（可通过 DEVECO_HOME 指定 DevEco Studio 安装路径）
 ./scripts/build.sh
 ```
 
-页面、聊天、Markdown 与 Diff 使用原生 ArkUI。终端、云连接及远程预览按完整计划独立验证。临时配对与服务状态须在续调前重核；测试通过不能替代真机及完整功能验收。
+> **签名提示**：如需打包安装到真机，请在 DevEco Studio 中为 `build-profile.json5` 配置你自己的 HarmonyOS 调试签名证书，切勿向公开仓库提交个人签名文件与密钥。
 
-上游：[官方仓库](https://github.com/pingdotgg/t3code) · [用户 fork](https://github.com/DASungta/t3code)。固定参考提交及实际联调版本见阶段记录。
+## 项目结构
+
+```text
+t3code-harmony/
+├── AppScope/                         # 应用元信息 (app.json5)、全局图标与名称
+├── entry/src/main/
+│   ├── ets/
+│   │   ├── common/                   # Theme.ets（字号、行高、间距、圆角与尺寸令牌）
+│   │   ├── components/               # 业务面板与 ui/ 基础设计系统组件
+│   │   ├── pages/                    # 主入口页面 Index.ets
+│   │   ├── protocol/                 # 服务端协议、状态派生、Markdown/Diff/Mermaid 解析
+│   │   ├── services/                 # 网络通信、配对认证、远端终端与系统能力桥接
+│   │   ├── storage/                  # 本地偏好设置、连接档案与草稿持久化
+│   │   ├── entryability/             # 主 Ability 与系统分享 / 深链接入
+│   │   └── formextension/            # 2×2 桌面快捷卡片扩展
+│   └── resources/
+│       ├── base/element/color.json   # 浅色主题 58 组语义颜色令牌
+│       ├── dark/element/color.json   # 深色主题 58 组语义颜色令牌
+│       └── rawfile/                  # 内置开源许可证与连接预设
+├── scripts/                          # 构建脚本与联调 / 真机常亮工具
+├── tests/                            # 宿主单元测试与深浅色对比度校验
+└── docs/                             # 设计规范、迁移计划、宣传截图与真机证据
+```
+
+## 工程文档
+
+- **设计与视觉**：[设计规范与令牌文档](docs/design/README.md) · [可视化风格指南](docs/design/style-guide.html) · [视觉重构真机证据（Step 2–6b）](docs/evidence/visual-refresh)
+- **项目进度与计划**：[整体开发状态与真机记录](docs/development-status.md) · [完整移动端迁移计划（R0–R8）](docs/full-mobile-migration-plan.md)
+- **对照台账与验收**：[移动端能力矩阵](docs/r0-mobile-capability-matrix.md) · [路由台账](docs/r0-route-ledger.md) · [R6–R8 验收记录](docs/r6-r8-acceptance.md)
+- **调试与交接**：[真机调试常亮指南](docs/device-keep-awake.md) · [开发交接说明](docs/开发交接.md)
+
+## 当前边界
+
+当前 `v0.1.1` 已在 HUAWEI Mate 60 Pro / Mate 70 Pro 上完成主链路能力与全站视觉重构收口，但部分依赖外部运行环境的边缘场景（例如外接 iOS Simulator 宿主机、实体蓝牙键盘快捷键全覆盖、独立生产级云中继服务部署以及平板 / 折叠屏多形态响应式矩阵）仍在文档中持续跟踪；宿主单元测试通过亦不能替代完整真机与端到端联调验收。
+
+## 上游与开源协议
+
+- 上游项目：[pingdotgg/t3code](https://github.com/pingdotgg/t3code) · [DASungta/t3code](https://github.com/DASungta/t3code)
+- 开源协议：遵循 [MIT License](entry/src/main/resources/rawfile/t3code-license.txt)（应用内置许可证副本）。
