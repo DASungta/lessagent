@@ -1,35 +1,33 @@
 # 设计基础层：令牌与公共组件
 
-依据：[style-guide.html](style-guide.html)（已确认的设计稿）。颜色来源：原版 `apps/mobile/generated-uniwind-default-theme-variables.json`（上游提交 `ad1b136`，副本见 `docs/baselines/upstream-mobile/`）。
-
-这一层只新增令牌和组件，**不改变任何现有页面的外观**。现有页面按「会话 → 首页 → 设置 / 表单 → 终端 / 文件 / Git」的顺序逐页迁移。
+依据：[style-guide.html](style-guide.html)（已确认的设计稿）。颜色来源：原版 `apps/mobile/generated-uniwind-default-theme-variables.json`（上游提交 `ad1b136`，副本见 `docs/baselines/upstream-mobile/`），并在 Step 6 完成全部深色令牌对齐与对比度校验。
 
 ## 1. 颜色令牌
 
-定义在 `entry/src/main/resources/base/element/color.json`（浅色）和 `dark/element/color.json`（深色），两份同名。组件里只能写 `$r('app.color.xxx')`，不要写十六进制色值。ArkUI 颜色带透明度时写成 `#AARRGGBB`。
+定义在 `entry/src/main/resources/base/element/color.json`（浅色）和 `dark/element/color.json`（深色），两份同名共 58 个令牌。组件里只能写 `$r('app.color.xxx')`，不要写十六进制色值。ArkUI 颜色带透明度时写成 `#AARRGGBB`。
 
-| 令牌 | 浅色 | 深色 | 原版变量 | 用途 |
+| 令牌 | 浅色 | 深色 | 原版变量 / 取值说明 | 用途 |
 |---|---|---|---|---|
 | `screen` | `#fcfcfc` | `#0a0a0a` | `--color-screen` | 页面底色 |
 | `group` | `#f4f4f5` | `#1a1b1b` | `--color-grouped-card` | 分组页底色、输入区、次要按钮、搜索框 |
 | `card` | `#ffffff` | `#111111` | `--color-card` | 分组卡片、列表组 |
-| `ink` ⚠ | `#27272a` | `#f4f4f5` | `--color-foreground`（深色应为 `#f5f5f5`） | 正文 |
-| `muted` ⚠ | `#6f6f79` | `#a1a1aa` | `--color-foreground-muted`（深色应为 `#838383`） | 次要文字 |
+| `ink` | `#27272a` | `#f5f5f5` | `--color-foreground` | 正文 |
+| `muted` | `#6f6f79` | `#838383` | `--color-foreground-muted` | 次要文字 |
 | `muted_tertiary` | `#71717b` | `#818181` | `--color-foreground-tertiary` | 中性角标文字、更弱的说明 |
 | `placeholder` | `#6f6f79` | `#838383` | `--color-placeholder` | 占位文字 |
 | `icon` / `icon_muted` | `#27272a` / `#71717b` | `#f5f5f5` / `#818181` | `--color-icon(-muted)` | 图标（SVG 目前直接写色值，见下文） |
-| `border` ⚠ | `#e4e4e7` | `#2e2e33` | `--color-border`（深色应为 `#191919`） | 描边 |
-| `border_subtle` | `#B3E4E4E7` | `#B3191919` | `--color-border-subtle` | 弱描边 |
-| `separator` | `#B3E4E4E7` | `#B3191919` | `--color-border-subtle` | 列表 / 分组行之间的分隔线（与设计稿一致取 0.7 透明度；原版 `--color-separator` 为 0.55） |
+| `border` | `#e4e4e7` | `#262626` | 浅色 `--color-border`；深色依 `style-guide.html` 取 `#262626`（原版 `#191919` 在 `#1a1b1b` 分组底不可见） | 描边 |
+| `border_subtle` | `#B3E4E4E7` | `#B3262626` | 70% `border` 透明度（对应 `--color-border-subtle` 比例） | 弱描边 |
+| `separator` | `#B3E4E4E7` | `#B3262626` | 70% `border` 透明度（与设计稿一致；原版 `--color-separator` 为 0.55） | 列表 / 分组行之间的分隔线 |
 | `chevron` | `#6B71717B` | `#6B818181` | `--color-chevron` | › 箭头 |
 | `dot_separator` | `#5971717B` | `#59818181` | `--color-dot-separator` | 副标题里的 · 分隔点 |
-| `primary` ⚠ | `#1b4ed8` | `#6f9bff` | `--color-primary`（深色应为 `#346bf1`） | 开关、选中态、审批「允许」底色 |
-| `primary_text` | `#1b4ed8` | `#4b7cf3` | `--color-primary-text` | 链接、文字按钮 |
-| `on_primary_fill` | `#ffffff` | `#ffffff` | `--color-primary-foreground` | 蓝色实心按钮上的文字（现有 `on_primary` 深色是 `#0b0b0d`，不能用于蓝底） |
+| `primary` | `#1b4ed8` | `#346bf1` | `--color-primary`（与 `#ffffff` 文字对比度 4.65:1） | 开关、选中态边框、审批「允许」底色 |
+| `primary_text` | `#1b4ed8` | `#5585f5` | 浅色 `--color-primary-text`；深色由 `#4b7cf3` 微亮至 `#5585f5` 以满足 `info_bg` 对比度 ≥ 4.5:1（4.92:1） | 链接、文字按钮、选中蓝字 |
+| `on_primary_fill` | `#ffffff` | `#ffffff` | `--color-primary-foreground` | 蓝色实心按钮上的文字 |
 | `prominent` | `#27272a` | `#f5f5f5` | `--color-prominent-action` | 主按钮底色（ink 近黑 / 深色近白） |
 | `on_prominent` | `#fcfcfc` | `#0a0a0a` | `--color-prominent-action-foreground` | 主按钮文字 |
 | `bubble` / `bubble_ink` | `#efeff1` / `#27272a` | `#161616` / `#f5f5f5` | `--color-user-bubble(-foreground)` | 用户消息气泡 |
-| `danger` ⚠ | `#c10007` | `#ff8a8a` | `--color-danger-foreground`（深色应为 `#ff6467`） | 危险文字 |
+| `danger` | `#c10007` | `#ff6467` | `--color-danger-foreground` | 危险文字 |
 | `danger_bg` | `#fcebec` | `#301214` | `--color-danger` | 危险按钮 / 角标底 |
 | `danger_border` | `#52FB2C36` | `#52FB414A` | `--color-danger-border` | 危险卡片描边 |
 | `warning` | `#bb4d00` | `#ffb900` | `--color-warning-foreground` | 警告文字 |
@@ -46,8 +44,6 @@
 | `monogram_1..8_fg/_bg` | 见 color.json | 见 color.json | 原版无，取设计稿首页色块 | ProjectMonogram 的 8 组配色 |
 | `tab_bar_bg` | `#f4f4f5` | `#1a1b1b` | 原版悬浮底栏 | 首页底部四栏胶囊底色 |
 | `tab_bar_active` | `#e0e0e5` | `#2e2e33` | 原版悬浮底栏激活态 | 首页底部四栏选中态胶囊 |
-
-⚠ 标记的是**现有颜色名，深色取值与原版不一致**，本步骤没有改（改了会改变现有页面外观）。新组件在深色模式下用到它们时，会暂时沿用旧值，见第 5 节。
 
 ProjectMonogram 配色：浅色是 Tailwind 600/700 字 + 100 底（设计稿首页的 blue / fuchsia / lime / cyan / teal 五组，另补 orange / violet / rose）。为保证可读，lime、cyan、teal、orange 的字色从 600 加深到 700（对比度 ≥ 4.5:1）。深色是 300 字 + 950 底。
 
@@ -88,7 +84,8 @@ Text('会话标题').fontSize(FontSize.headline).lineHeight(LineHeight.headline)
 |---|---|---|---|
 | `title` | string | `''` | 17fp semibold，单行省略 |
 | `subtitle` | string | `''` | 12fp muted，空则不显示 |
-| `showBack` | boolean | false | 显示返回图标按钮（`ui_back`） |
+| `showBack` | boolean | false | 显示返回或关闭图标按钮 |
+| `closeStyle` | boolean | false | true 时左键使用 `ui_close`（弹层/面板），false 用 `ui_back` |
 | `backLabel` | string | `'返回'` | 返回按钮读屏文本 |
 | `onBack` | () => void | | |
 | `actions` | @BuilderParam | 空 | 右侧动作区，可用尾随闭包 |
@@ -149,17 +146,18 @@ StatusBadge({ text: '等待审批', tone: 'warning' })
 
 | 属性 | 类型 | 默认 | 说明 |
 |---|---|---|---|
-| `kind` | `'value' \| 'switch' \| 'custom' \| 'multiline' \| 'content'` | `'value'` | |
+| `kind` | `'value' \| 'switch' \| 'choice' \| 'custom' \| 'multiline' \| 'content'` | `'value'` | `'choice'` 用于单选行（右侧显示 `✓`） |
 | `label` | string | | |
+| `subtitle` | string | `''` | 标签下方副标题，空则不显示 |
 | `value` / `placeholder` | string | | value 为空时显示 placeholder（`placeholder` 色） |
 | `valueMuted` | boolean | false | 只读信息行的取值用 muted |
 | `chevron` | boolean | true | value 行显示 › |
-| `checked` | boolean | false | switch 行状态 |
+| `checked` | boolean | false | switch 行开关状态 / choice 行选中状态（显示 `✓`） |
 | `disabled` | boolean | false | |
 | `destructive` | boolean | false | 标签用 danger 色 |
 | `isFirst` | boolean | false | 第一行不画顶部分隔线 |
 | `labelWidth` | number | 0 | 0 表示按内容；最多占 60% |
-| `onTap` | () => void | | value / multiline 行点击 |
+| `onTap` | () => void | | value / choice / multiline 行点击 |
 | `onToggle` | (on: boolean) => void | | switch 行切换（点开关或整行都会触发） |
 | `trailing` | @BuilderParam | | custom 行的尾部 |
 | `body` | @BuilderParam | | content 行的整行内容 |
@@ -193,31 +191,15 @@ GroupCard({ title: '调度' }) {
 
 ## 4. 图标
 
-新增 `ui_chevron_right`、`ui_chevron_down`（base 描边 `#71717b`，dark 描边 `#818181`）。现有 `ui_*` 图标沿用。工程里没有用 `fillColor` 给 SVG 着色的先例，组件继续采用「base / dark 两份同名 SVG」的方式，不依赖 `fillColor` 对描边的支持。
+新增 `ui_chevron_right`、`ui_chevron_down`（base 描边 `#71717b`，dark 描边 `#818181`）。现有 `ui_*` 图标沿用，并在 Step 6 同步更新 `dark/media/status_run.svg`（`#5585f5`）与 `dark/media/status_danger.svg`（`#ff6467`）。工程里没有用 `fillColor` 给 SVG 着色的先例，组件继续采用「base / dark 两份同名 SVG」的方式，不依赖 `fillColor` 对描边的支持。
 
-## 5. 现有颜色名与原版不一致清单（本步未改值）
+## 5. Step 6 深色令牌对齐与旧颜色清理记录
 
-| 名称 | 模式 | 现值 | 原版对应 | 原版值 |
-|---|---|---|---|---|
-| `canvas` | 深色 | `#121214` | `--color-screen` | `#0a0a0a` |
-| `start_window_background` | 深色 | `#121214` | `--color-screen` | `#0a0a0a` |
-| `surface` | 深色 | `#1c1c1f` | `--color-grouped-card` | `#1a1b1b` |
-| `composer` | 深色 | `#1c1c1f` | `--color-composer-surface` | `rgba(26,27,27,.9)` |
-| `composer` | 浅色 | `#F4F4F5` | `--color-composer-surface` | `rgba(244,244,245,.94)`（仅透明度差异） |
-| `ink` | 深色 | `#f4f4f5` | `--color-foreground` | `#f5f5f5` |
-| `muted` | 深色 | `#a1a1aa` | `--color-foreground-muted` | `#838383` |
-| `muted` | 浅色 | `#6f6f79` | 设计稿写的是 `#71717b`（`--color-foreground-tertiary`）；与原版 `--color-foreground-muted` 一致 | `#6f6f79` |
-| `selected` | 深色 | `#2a2a2e` | 无直接对应（`--color-thread-selected` `#1a1b1b`，`--color-user-bubble` `#161616`） | — |
-| `selected` | 浅色 | `#efeff1` | 无直接对应（值等于 `--color-user-bubble`；`--color-thread-selected` 为 `#ffffff`） | — |
-| `border` | 深色 | `#2e2e33` | `--color-border` | `#191919` |
-| `primary` | 深色 | `#6f9bff` | `--color-primary` | `#346bf1` |
-| `on_primary` | 深色 | `#0b0b0d` | `--color-primary-foreground` | `#ffffff` |
-| `danger` | 深色 | `#ff8a8a` | `--color-danger-foreground` | `#ff6467` |
-| `diff_add` / `diff_add_ink` / `diff_del` / `diff_del_ink` | 两种 | — | 原版无同名变量 | — |
+Step 6 已完成收尾：
 
-浅色下 `canvas`、`surface`、`ink`、`danger`、`border`、`primary`、`on_primary`、`start_window_background` 与原版一致。
-
-建议在逐页迁移时：新页面改用 `screen` / `group` 等新令牌；全部页面迁移完后再把上表的深色值改成原版值，或删除旧名。新组件引用的 `ink`、`muted`、`border`、`primary`、`danger` 在此之前深色下会沿用旧值（差异较小，`border` 和 `primary` 最明显）。
+- **删除 5 个未用旧令牌**（浅/深色 `color.json` 对称保留 58 个令牌）：`canvas`、`surface`、`selected`、`composer`、`on_primary`。
+- **对齐 9 个深色值**：`start_window_background` → `#0a0a0a`、`ink` → `#f5f5f5`、`muted` → `#838383`、`border` → `#262626`（对齐 `style-guide.html` 保证在 `#1a1b1b` 分组底清晰可见）、`border_subtle` / `separator` → `#B3262626`、`primary` → `#346bf1`、`primary_text` → `#5585f5`（在 `#121b34` `info_bg` 上对比度 `4.92:1`）、`danger` → `#ff6467`。
+- **修复深色对比度隐患**：将 6 处文本/高亮改用 `primary_text`（不再用 `primary` 当字色），将 `ArchivePanel` 左滑删除按钮由白字+`danger` 改为 `danger` 字+`danger_bg` 底，并通过 `tests/theme-tokens.test.mjs` 对浅/深色所有关键文字与填充组合强制校验 WCAG AA（≥ 4.5:1）。
 
 ## 6. ArkTS 约束与取舍
 

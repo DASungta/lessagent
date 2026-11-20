@@ -64,7 +64,7 @@ test('light and dark text pairs meet normal text contrast',async()=>{
  for(const theme of ['base','dark']) {
   const {color}=JSON.parse(await readFile(new URL(`../entry/src/main/resources/${theme}/element/color.json`,import.meta.url),'utf8'));
   const colors=Object.fromEntries(color.map(x=>[x.name,x.value]));
-  for(const [fg,bg] of [['ink','canvas'],['muted','canvas'],['ink','surface'],['muted','surface'],['on_primary','primary']]) {
+  for(const [fg,bg] of [['ink','screen'],['muted','screen'],['ink','card'],['muted','card'],['ink','group'],['muted','group'],['on_primary_fill','primary']]) {
    const a=luminance(colors[fg]),b=luminance(colors[bg]);assert.ok((Math.max(a,b)+.05)/(Math.min(a,b)+.05)>=4.5,`${theme} ${fg}/${bg}`);
   }
  }

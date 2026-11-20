@@ -65,8 +65,8 @@ export struct ArchivePanel {
       }.width(68).height('100%').justifyContent(FlexAlign.Center).backgroundColor($r('app.color.card'))
         .onClick(() => this.onUnarchive(thread))
       Column({ space: 2 }) {
-        Text('删除').fontSize(FontSize.callout).fontWeight(Weight.medium).fontColor($r('app.color.on_primary_fill'))
-      }.width(68).height('100%').justifyContent(FlexAlign.Center).backgroundColor($r('app.color.danger'))
+        Text('删除').fontSize(FontSize.callout).fontWeight(Weight.medium).fontColor($r('app.color.danger'))
+      }.width(68).height('100%').justifyContent(FlexAlign.Center).backgroundColor($r('app.color.danger_bg'))
         .onClick(() => this.onDelete(thread))
     }.height('100%')
   }

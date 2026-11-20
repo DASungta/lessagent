@@ -165,7 +165,7 @@ export struct FormRow {
             Text(this.checked ? '✓' : '')
               .fontSize(FontSize.headline)
               .fontWeight(Weight.semibold)
-              .fontColor($r('app.color.primary'))
+              .fontColor($r('app.color.primary_text'))
               .width(20)
               .textAlign(TextAlign.End)
               .flexShrink(0)

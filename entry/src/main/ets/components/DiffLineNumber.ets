@@ -11,7 +11,7 @@ export struct DiffLineNumber {
         .lineHeight((this.codeFontSize + 9) + 'fp').maxLines(1).opacity(0).accessibilityLevel('no')
       Text(this.line ? String(this.line) : '').fontSize(Math.max(8, this.codeFontSize - 3)).fontFamily('monospace')
         .lineHeight((this.codeFontSize + 9) + 'fp').maxLines(1)
-        .fontColor(this.active ? $r('app.color.primary') : $r('app.color.muted'))
+        .fontColor(this.active ? $r('app.color.primary_text') : $r('app.color.muted'))
     }.padding({ right: 4 })
   }
 }

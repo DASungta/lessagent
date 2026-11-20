@@ -26,7 +26,7 @@ export struct MarkdownView {
   }
 
   private tokenColor(kind: string): ResourceColor {
-    if (kind === 'keyword') return $r('app.color.primary');
+    if (kind === 'keyword') return $r('app.color.primary_text');
     if (kind === 'string') return $r('app.color.diff_add_ink');
     if (kind === 'comment') return $r('app.color.muted');
     if (kind === 'number') return $r('app.color.diff_del_ink');
@@ -70,7 +70,7 @@ export struct MarkdownView {
         Row({ space: 6 }) {
           Text(item.checked === undefined ? (item.ordered ? (block.start + index) + '.' : '•') :
             (item.checked ? '☑' : '☐'))
-            .fontSize(15).fontColor(item.checked === undefined ? $r('app.color.muted') : $r('app.color.primary'))
+            .fontSize(15).fontColor(item.checked === undefined ? $r('app.color.muted') : $r('app.color.primary_text'))
             .width(28).textAlign(TextAlign.End)
           Column() {
             this.inline(item.spans, FontSize.body, 23, $r('app.color.ink'), FontWeight.Normal)

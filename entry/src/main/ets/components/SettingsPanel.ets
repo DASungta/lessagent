@@ -249,7 +249,7 @@ export struct SettingsPanel {
             .fontColor($r('app.color.muted')).width('100%')
         }.layoutWeight(1).alignItems(HorizontalAlign.Start)
         Text(this.groupingMode === value ? '✓' : '')
-          .fontSize(FontSize.headline).fontWeight(Weight.semibold).fontColor($r('app.color.primary'))
+          .fontSize(FontSize.headline).fontWeight(Weight.semibold).fontColor($r('app.color.primary_text'))
           .width(20).textAlign(TextAlign.End).accessibilityLevel('no')
       }.width('100%').padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs }).constraintSize({ minHeight: Sizes.formRowMin })
     }

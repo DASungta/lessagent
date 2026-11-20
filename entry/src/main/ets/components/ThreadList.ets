@@ -101,7 +101,7 @@ export struct ThreadList {
 
   private statusColor(status: string): ResourceColor {
     const tone = threadTone(status);
-    if (tone === 'run') return $r('app.color.primary');
+    if (tone === 'run') return $r('app.color.primary_text');
     if (tone === 'wait') return $r('app.color.warning');
     if (tone === 'danger') return $r('app.color.danger');
     return $r('app.color.muted');
