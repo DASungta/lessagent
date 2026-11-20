@@ -105,7 +105,7 @@ export class CloudEnvironmentTransport {
   }
 
   async requestJson(path: string, method: http.RequestMethod, body: string = '',
-    json: boolean = false, retry: boolean = true): Promise<Object> {
+    json: boolean = false, extraHeaders?: Record<string, string>, retry: boolean = true): Promise<Object> {
     this.assertActive();
     const bootstrap = await this.ensureBootstrap();
     let token = await this.accessToken();
@@ -118,6 +118,9 @@ export class CloudEnvironmentTransport {
       'Authorization': 'DPoP ' + token.accessToken,
       'dpop': proof
     };
+    if (extraHeaders) {
+      for (const key of Object.keys(extraHeaders)) headers[key] = extraHeaders[key];
+    }
     try {
       const result = await cloudHttp(target, method, headers, body,
         body ? (json ? 'application/json' : 'application/x-www-form-urlencoded') : '');
@@ -127,7 +130,7 @@ export class CloudEnvironmentTransport {
       if (error instanceof CloudHttpFailure) {
         if (retry && error.status === 401) {
           await this.accessToken(true);
-          return this.requestJson(path, method, body, json, false);
+          return this.requestJson(path, method, body, json, extraHeaders, false);
         }
         throw new Error(error.status === 403 ? 'T3 Connect 环境不允许此操作' :
           error.status === 404 ? 'T3 Connect 环境不支持此接口' : 'T3 Connect 环境请求失败');

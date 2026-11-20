@@ -240,13 +240,21 @@ export class ThreadState {
           if (row.sourceThreadId !== undefined) item.sourceThreadId = row.sourceThreadId;
           return item;
         });
-      const messages = objects(projection.messages);
-      this.messages = [];
-      for (const message of messages) this.upsert(record(message));
       this.requests = projection.runtimeRequests ? objects(projection.runtimeRequests).map(record) : [];
       this.checkpoints = projection.checkpoints ? objects(projection.checkpoints).map(record) : [];
       this.items = visible.length ? visible : (projection.turnItems ? objects(projection.turnItems).map(record) : []);
-      for (const item of this.items) this.upsertItemMessage(item);
+      this.messages = [];
+      const hasItemMessages = this.items.some((entry: Record<string, Object>) =>
+        entry.type === 'user_message' || entry.type === 'assistant_message');
+      if (hasItemMessages) {
+        for (const item of this.items) this.upsertItemMessage(item);
+      } else {
+        const messages = objects(projection.messages);
+        for (const raw of messages) {
+          const msg = record(raw);
+          if (!this.isHiddenContinuationMessage(msg)) this.upsert(msg);
+        }
+      }
       this.historyCursor = typeof item.historyCursor === 'string' ? item.historyCursor : '';
       this.hasMoreHistory = item.hasMoreHistory === true;
       this.cursor = cursor;
@@ -259,10 +267,18 @@ export class ThreadState {
     const event = record(item.event);
     if (text(event.threadId) !== this.threadId) throw new Error('会话事件身份不一致');
     const type = text(event.type);
-    if (type === 'message.updated') { this.upsert(record(event.payload)); this.merge(this.messageRecords, record(event.payload)); }
+    if (type === 'message.updated') {
+      const payload = record(event.payload);
+      this.merge(this.messageRecords, payload);
+      const isQueued = typeof payload.runId === 'string' &&
+        this.runs.some((r: Record<string, Object>) => r.id === payload.runId && r.status === 'queued');
+      if (!this.isHiddenContinuationMessage(payload) && !isQueued) {
+        this.upsert(payload);
+      }
+    }
     else if (type === 'turn-item.updated') {
       const payload = record(event.payload);
-      this.merge(this.items, payload);
+      this.mergeItemByOrdinal(payload);
       this.upsertItemMessage(payload);
     }
     else if (type === 'runtime-request.updated') this.merge(this.requests, record(event.payload));
@@ -284,41 +300,116 @@ export class ThreadState {
     this.cursor = cursor;
   }
 
+  private isHiddenContinuationMessage(payload: Record<string, Object>): boolean {
+    return (payload.role === 'user' || payload.type === 'user_message') && payload.createdBy === 'agent' &&
+      (payload.notification !== undefined || payload.creationSource === 'provider');
+  }
+
+  private findMessageRecord(id: string): Record<string, Object> | undefined {
+    for (let index = this.messageRecords.length - 1; index >= 0; index -= 1) {
+      if (this.messageRecords[index].id === id) return this.messageRecords[index];
+    }
+    return undefined;
+  }
+
+  private mergeItemByOrdinal(payload: Record<string, Object>): void {
+    const id = text(payload.id);
+    const existingIndex = this.items.findIndex((item: Record<string, Object>) => item.id === id);
+    if (existingIndex >= 0) {
+      const previous = this.items[existingIndex];
+      if (payload.visibility === undefined && previous.visibility !== undefined) payload.visibility = previous.visibility;
+      if (payload.sourceThreadId === undefined && previous.sourceThreadId !== undefined) payload.sourceThreadId = previous.sourceThreadId;
+      this.items[existingIndex] = payload;
+      return;
+    }
+    if (typeof payload.ordinal === 'number') {
+      const targetOrdinal = payload.ordinal as number;
+      const insertAt = this.items.findIndex((item: Record<string, Object>) =>
+        typeof item.ordinal === 'number' && (item.ordinal as number) > targetOrdinal);
+      if (insertAt >= 0) {
+        this.items.splice(insertAt, 0, payload);
+        return;
+      }
+    }
+    this.items.push(payload);
+  }
+
   private upsertItemMessage(payload: Record<string, Object>): void {
     if (payload.type !== 'assistant_message' && payload.type !== 'user_message') return;
-    if (typeof payload.messageId !== 'string' || typeof payload.text !== 'string') return;
+    if (payload.type === 'user_message' && payload.inputIntent === 'queued_turn' && payload.status === 'pending') return;
+    if (payload.type === 'user_message' && this.isHiddenContinuationMessage(payload)) return;
+    if (typeof payload.messageId !== 'string') return;
+    const matched = this.findMessageRecord(payload.messageId);
+    const textValue = typeof payload.text === 'string' && (payload.text.length > 0 || payload.bodyDeduped !== true)
+      ? payload.text
+      : (matched && typeof matched.text === 'string' ? matched.text : undefined);
+    if (typeof textValue !== 'string') return;
     const role = payload.type === 'user_message' ? 'user' : 'assistant';
     const streaming = payload.type === 'assistant_message' && payload.streaming === true;
-    this.upsert({ id: payload.messageId, threadId: this.threadId, role,
-      text: payload.text, streaming,
-      runId: typeof payload.runId === 'string' ? payload.runId : '',
-      timestamp: typeof payload.completedAt === 'string' ? payload.completedAt :
-        typeof payload.startedAt === 'string' ? payload.startedAt : undefined,
-      attachmentNames: payload.attachments ? objects(payload.attachments).map((a: Object) => text(record(a).name)) : [] });
+    const createdAt = (matched && typeof matched.createdAt === 'string' ? matched.createdAt : undefined) ||
+      (typeof payload.startedAt === 'string' ? payload.startedAt : undefined) ||
+      (typeof payload.createdAt === 'string' ? payload.createdAt : undefined) ||
+      (typeof payload.completedAt === 'string' ? payload.completedAt : undefined);
+    const attachmentsSource = payload.attachments !== undefined ? payload.attachments : matched?.attachments;
+    const msgRecord: Record<string, Object> = {
+      id: payload.messageId,
+      threadId: this.threadId,
+      role,
+      text: textValue,
+      streaming,
+      runId: typeof payload.runId === 'string' ? payload.runId : ''
+    };
+    if (createdAt) msgRecord.createdAt = createdAt;
+    if (Array.isArray(attachmentsSource)) {
+      msgRecord.attachmentNames = objects(attachmentsSource).map((a: Object) => text(record(a).name));
+    }
+    this.upsert(msgRecord);
   }
 
   prependHistory(items: Record<string, Object>[]): void {
     const older: ChatMessage[] = [];
+    const unseenItems: Record<string, Object>[] = [];
     for (const item of items) {
       if (item.type === 'user_message' && typeof item.messageId === 'string' && typeof item.text === 'string') {
-        const names = item.attachments ? objects(item.attachments).map((a: Object) => text(record(a).name)) : [];
-        if (item.text.trim() || names.length) {
-          const entry: ChatMessage = { id: item.messageId, role: 'user', text: item.text,
-            streaming: false, timestamp: typeof item.createdAt === 'string' ? item.createdAt : undefined,
-            attachmentNames: names };
-          if (typeof item.runId === 'string' && item.runId) entry.runId = item.runId;
-          older.push(entry);
+        const isQueued = item.inputIntent === 'queued_turn' && item.status === 'pending';
+        if (!isQueued && !this.isHiddenContinuationMessage(item)) {
+          const names = item.attachments ? objects(item.attachments).map((a: Object) => text(record(a).name)) : [];
+          if (item.text.trim() || names.length) {
+            const matched = this.findMessageRecord(item.messageId);
+            const ts = (matched && typeof matched.createdAt === 'string' ? matched.createdAt : undefined) ||
+              (typeof item.createdAt === 'string' ? item.createdAt : undefined) ||
+              (typeof item.startedAt === 'string' ? item.startedAt : undefined);
+            const entry: ChatMessage = { id: item.messageId, role: 'user', text: item.text,
+              streaming: false, timestamp: ts,
+              attachmentNames: names };
+            if (typeof item.runId === 'string' && item.runId) entry.runId = item.runId;
+            older.push(entry);
+          }
         }
       } else if (item.type === 'assistant_message' && typeof item.messageId === 'string' && typeof item.text === 'string') {
+        const matched = this.findMessageRecord(item.messageId);
+        const ts = (matched && typeof matched.createdAt === 'string' ? matched.createdAt : undefined) ||
+          (typeof item.startedAt === 'string' ? item.startedAt : undefined) ||
+          (typeof item.createdAt === 'string' ? item.createdAt : undefined) ||
+          (typeof item.completedAt === 'string' ? item.completedAt : undefined);
         const entry: ChatMessage = { id: item.messageId, role: 'assistant', text: item.text, streaming: item.streaming === true,
-          timestamp: typeof item.completedAt === 'string' ? item.completedAt :
-            typeof item.createdAt === 'string' ? item.createdAt : undefined,
+          timestamp: ts,
           attachmentNames: item.attachments ? objects(item.attachments).map((a: Object) => text(record(a).name)) : [] };
         if (typeof item.runId === 'string' && item.runId) entry.runId = item.runId;
         older.push(entry);
       }
-      this.merge(this.items, item);
+      const itemId = text(item.id);
+      const existingItemIndex = this.items.findIndex((row: Record<string, Object>) => row.id === itemId);
+      if (existingItemIndex >= 0) {
+        const previous = this.items[existingItemIndex];
+        if (item.visibility === undefined && previous.visibility !== undefined) item.visibility = previous.visibility;
+        if (item.sourceThreadId === undefined && previous.sourceThreadId !== undefined) item.sourceThreadId = previous.sourceThreadId;
+        this.items[existingItemIndex] = item;
+      } else if (!unseenItems.some((row: Record<string, Object>) => row.id === itemId)) {
+        unseenItems.push(item);
+      }
     }
+    if (unseenItems.length) this.items = unseenItems.concat(this.items);
     const existing = new Set<string>(this.messages.map((message: ChatMessage) => message.id));
     this.messages = older.filter((message: ChatMessage) => !existing.has(message.id)).concat(this.messages);
   }
@@ -344,15 +435,21 @@ export class ThreadState {
     if (text(message.threadId) !== this.threadId || typeof message.streaming !== 'boolean') {
       throw new Error('无效消息身份或流式状态');
     }
+    const index = this.messages.findIndex((entry: ChatMessage) => entry.id === text(message.id));
+    const existing = index >= 0 ? this.messages[index] : undefined;
+    const attachmentNames = message.attachments ? objects(message.attachments).map((a: Object) => text(record(a).name)) :
+      Array.isArray(message.attachmentNames) ? (message.attachmentNames as Object[]).map((name: Object) => text(name)) :
+      (existing?.attachmentNames || []);
     const next: ChatMessage = {
-      id: text(message.id), role, text: body, streaming: message.streaming === true,
-      timestamp: typeof message.createdAt === 'string' ? message.createdAt : undefined,
-      attachmentNames: message.attachments ? objects(message.attachments).map((a: Object) => text(record(a).name)) :
-        Array.isArray(message.attachmentNames) ? (message.attachmentNames as Object[]).map((name: Object) => text(name)) : []
+      id: text(message.id),
+      role,
+      text: body,
+      streaming: message.streaming === true,
+      timestamp: typeof message.createdAt === 'string' ? message.createdAt :
+        (typeof message.timestamp === 'string' ? message.timestamp : existing?.timestamp),
+      attachmentNames
     };
-    const index = this.messages.findIndex((entry: ChatMessage) => entry.id === next.id);
-    const runId = typeof message.runId === 'string' && message.runId ? message.runId :
-      (index >= 0 ? this.messages[index].runId : undefined);
+    const runId = typeof message.runId === 'string' && message.runId ? message.runId : existing?.runId;
     if (runId) next.runId = runId;
     if (index < 0) this.messages.push(next);
     else this.messages[index] = next;

@@ -217,3 +217,51 @@ test('parseDiffPreviewLines classifies add, del, hunk and file headers', () => {
     ]
   );
 });
+
+test('groupWorkByMessage places post-assistant failure into afterAssistant and gives unique groupIds per message', async () => {
+  const { threadItemsUrl } = await import('./load-core.mjs');
+  const { activityLines, activitySummary } = await import(threadItemsUrl);
+
+  const res = groupWorkByMessage(
+    [
+      { id: 'u1', type: 'user_message', role: 'user', text: 'go', runId: 'r1' },
+      { id: 't1', type: 'tool_call', title: 'Read foo.ts', status: 'completed', runId: 'r1' },
+      { id: 'a1a', type: 'assistant_message', role: 'assistant', text: 'part 1', runId: 'r1' },
+      { id: 't2', type: 'tool_call', title: 'Read bar.ts', status: 'completed', runId: 'r1' },
+      { id: 'a1b', type: 'assistant_message', role: 'assistant', text: 'part 2', runId: 'r1' },
+      { id: 'err-r1', type: 'error', status: 'failed', failure: { message: 'provider_error 4m36s timeout' }, runId: 'r1' },
+      { id: 'u2', type: 'user_message', role: 'user', text: 'next', runId: 'r2' },
+      { id: 'a2', type: 'assistant_message', role: 'assistant', text: 'done', runId: 'r2' }
+    ],
+    [],
+    [],
+    [
+      { id: 'u1', role: 'user', text: 'go', streaming: false, runId: 'r1' },
+      { id: 'a1a', role: 'assistant', text: 'part 1', streaming: false, runId: 'r1' },
+      { id: 'a1b', role: 'assistant', text: 'part 2', streaming: false, runId: 'r1' },
+      { id: 'u2', role: 'user', text: 'next', streaming: false, runId: 'r2' },
+      { id: 'a2', role: 'assistant', text: 'done', streaming: false, runId: 'r2' }
+    ]
+  );
+
+  assert.equal(res.tail, undefined);
+  assert.ok(res.before['a1a']);
+  assert.ok(res.before['a1b']);
+  assert.notEqual(res.before['a1a'].groupId, res.before['a1b'].groupId);
+  assert.ok(res.afterAssistant?.['a1b']);
+  assert.equal(res.afterAssistant['a1b'].prominent.some((a) => a.id === 'err-r1'), true);
+  assert.equal(res.before['a2'], undefined);
+
+  const [summary] = activityLines([
+    {
+      id: 'dt1',
+      type: 'dynamic_tool',
+      toolName: 'Read',
+      title: 'Read src/App.ets',
+      status: 'completed',
+      runId: 'r1'
+    }
+  ]).map(activitySummary);
+  assert.equal(summary.title.includes('dynamic_tool'), false);
+  assert.equal(summary.title.includes('completed'), false);
+});

@@ -246,3 +246,95 @@ test('ThreadState parses projection.checkpoints, updates on checkpoint.captured,
   assert.equal(state.checkpoints.length, 2);
   assert.equal(state.checkpoints[1].id, 'cp-2');
 });
+
+test('ThreadState derives ordered visible messages, filters hidden wakes, and prepends older history', async () => {
+  const state = new ThreadState('t-ord');
+  state.apply({
+    kind: 'snapshot',
+    snapshotSequence: 10,
+    historyCursor: '40',
+    hasMoreHistory: true,
+    projection: {
+      thread: { id: 't-ord', title: 'Order Test', modelSelection: { provider: 'codex', model: 'm' } },
+      messages: [
+        { id: 'u1', role: 'user', text: 'turn 1', createdAt: '2026-01-01T00:01:00.000Z', runId: 'r1' },
+        { id: 'a1', role: 'assistant', text: 'ans 1', createdAt: '2026-01-01T00:01:05.000Z', runId: 'r1' },
+        { id: 'u2', role: 'user', text: 'turn 2', createdAt: '2026-01-01T00:02:00.000Z', runId: 'r2' },
+        { id: 'a2', role: 'assistant', text: 'ans 2', createdAt: '2026-01-01T00:02:05.000Z', runId: 'r2' },
+        { id: 'wake-1', role: 'user', createdBy: 'agent', creationSource: 'provider', notification: { kind: 'background_task' }, text: 'Background task completed.\nTask ID: bg-1', createdAt: '2026-01-01T00:00:30.000Z', runId: 'r0' }
+      ],
+      visibleTurnItems: [
+        { id: 'item-u1', type: 'user_message', messageId: 'u1', role: 'user', text: 'turn 1', runId: 'r1' },
+        { id: 'tool-1', type: 'tool_call', title: 'Read', status: 'completed', runId: 'r1' },
+        { id: 'item-a1', type: 'assistant_message', messageId: 'a1', role: 'assistant', text: 'ans 1', runId: 'r1' },
+        { id: 'item-u2', type: 'user_message', messageId: 'u2', role: 'user', text: 'turn 2', runId: 'r2' },
+        { id: 'item-a2', type: 'assistant_message', messageId: 'a2', role: 'assistant', text: 'ans 2', runId: 'r2' }
+      ]
+    }
+  });
+
+  assert.equal(state.historyCursor, '40');
+  assert.equal(state.hasMoreHistory, true);
+  assert.deepEqual(state.messages.map((m) => m.id), ['u1', 'a1', 'u2', 'a2']);
+  assert.equal(state.messages[0].timestamp, '2026-01-01T00:01:00.000Z');
+
+  // Hidden wake arriving as live message.updated or turn-item.updated event is excluded
+  state.apply({
+    kind: 'event',
+    sequence: 11,
+    event: {
+      threadId: 't-ord',
+      type: 'message.updated',
+      payload: {
+        id: 'wake-live',
+        threadId: 't-ord',
+        role: 'user',
+        streaming: false,
+        createdBy: 'agent',
+        creationSource: 'provider',
+        notification: { kind: 'background_task' },
+        text: 'Background task completed.\nLive wake',
+        runId: 'r2'
+      }
+    }
+  });
+  state.apply({
+    kind: 'event',
+    sequence: 12,
+    event: {
+      threadId: 't-ord',
+      type: 'turn-item.updated',
+      payload: {
+        id: 'item-wake-live',
+        type: 'user_message',
+        messageId: 'wake-item-live',
+        createdBy: 'agent',
+        creationSource: 'provider',
+        notification: { kind: 'background_task' },
+        text: 'Background task completed.',
+        runId: 'r2'
+      }
+    }
+  });
+  assert.equal(state.messages.some((m) => m.id === 'wake-live' || m.id === 'wake-item-live'), false);
+
+  // Older history prepends before existing items/messages rather than appending
+  state.prependHistory([
+    { id: 'item-u0', type: 'user_message', messageId: 'u0', text: 'turn 0', createdAt: '2026-01-01T00:00:00.000Z', runId: 'r0' },
+    { id: 'item-a0', type: 'assistant_message', messageId: 'a0', text: 'ans 0', createdAt: '2026-01-01T00:00:05.000Z', runId: 'r0' }
+  ]);
+  assert.deepEqual(state.items.map((item) => item.id), ['item-u0', 'item-a0', 'item-u1', 'tool-1', 'item-a1', 'item-u2', 'item-a2', 'item-wake-live']);
+  assert.deepEqual(state.messages.map((m) => m.id), ['u0', 'a0', 'u1', 'a1', 'u2', 'a2']);
+});
+
+test('inlineSpans strips backticks for code nested inside bold and keeps bold styling', async () => {
+  const { markdownUrl } = await import('./load-core.mjs');
+  const { inlineSpans } = await import(markdownUrl);
+  const spans = inlineSpans('**`ca02`** and **T3 `v0.1.1`** and [`/Users/a`](file:///Users/a)');
+  const codeSpans = spans.filter((span) => span.kind === 'code');
+  assert.deepEqual(codeSpans.map((span) => span.text), ['ca02', 'v0.1.1']);
+  assert.equal(codeSpans.every((span) => span.bold === true), true);
+  const linkSpan = spans.find((span) => span.kind === 'link');
+  assert.equal(linkSpan?.text, '/Users/a');
+  assert.equal(spans.some((span) => span.text.includes('`')), false);
+});

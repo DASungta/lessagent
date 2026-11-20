@@ -565,7 +565,7 @@ export struct ThreadActivity {
 export struct MessageWorkSlot {
   connection: T3Client | undefined = undefined;
   @Prop messageId: string = '';
-  @Prop slotKind: 'before' | 'afterUser' = 'before';
+  @Prop slotKind: 'before' | 'afterUser' | 'afterAssistant' = 'before';
   @Consume('t3WorkMap') workMap: MessageWorkMap;
   @Consume('t3CanOpenDiff') canOpenDiff: boolean;
   onToggleGroup: (group: TurnWorkGroup) => void = () => {};
@@ -575,9 +575,9 @@ export struct MessageWorkSlot {
 
   private currentGroup(): TurnWorkGroup | undefined {
     if (!this.messageId || !this.workMap) return undefined;
-    return this.slotKind === 'before'
-      ? this.workMap.before[this.messageId]
-      : this.workMap.afterUser[this.messageId];
+    if (this.slotKind === 'before') return this.workMap.before[this.messageId];
+    if (this.slotKind === 'afterAssistant') return this.workMap.afterAssistant[this.messageId];
+    return this.workMap.afterUser[this.messageId];
   }
 
   build() {

@@ -6,6 +6,7 @@ export interface InlineSpan {
   kind: InlineKind;
   text: string;
   href?: string;
+  bold?: boolean;
 }
 
 export interface MarkdownListItem {
@@ -179,7 +180,7 @@ export function inlineSpans(source: string): InlineSpan[] {
       const link = scanLink(source, index);
       if (link) {
         flush();
-        push('link', plainInline(link.text), link.url);
+        push('link', plainInline(link.text).replace(/^`+([^`]+)`+$/, '$1'), link.url);
         index = link.end;
         continue;
       }
@@ -206,7 +207,30 @@ export function inlineSpans(source: string): InlineSpan[] {
     if (strong) {
       const close = findClosing(source, strong, index + 2);
       if (close > index + 2) {
-        flush(); push('strong', source.slice(index + 2, close)); index = close + 2; continue;
+        flush();
+        const inner = source.slice(index + 2, close);
+        let pos = 0;
+        let plainBuf = '';
+        while (pos < inner.length) {
+          if (inner[pos] === '`') {
+            let run = 1;
+            while (inner[pos + run] === '`') run += 1;
+            const marker = '`'.repeat(run);
+            const codeClose = inner.indexOf(marker, pos + run);
+            if (codeClose >= 0) {
+              if (plainBuf) { spans.push({ kind: 'strong', text: plainBuf }); plainBuf = ''; }
+              const codeBody = inner.slice(pos + run, codeClose).replace(/\n/g, ' ');
+              if (codeBody) spans.push({ kind: 'code', text: codeBody, bold: true });
+              pos = codeClose + run;
+              continue;
+            }
+          }
+          plainBuf += inner[pos];
+          pos += 1;
+        }
+        if (plainBuf) spans.push({ kind: 'strong', text: plainBuf });
+        index = close + 2;
+        continue;
       }
     }
     if (char === '~' && source[index + 1] === '~') {

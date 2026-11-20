@@ -7,7 +7,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createRequire} from 'node:module';
-import { compile, data, r4Url } from './load-core.mjs';
+import { compile, data, r4Url, threadItemsUrl } from './load-core.mjs';
+const { emptyWorkMap } = await import(threadItemsUrl);
 const ts=createRequire(import.meta.url)((process.env.DEVECO_HOME || '/Applications/DevEco-Studio.app/Contents')+'/sdk/default/openharmony/ets/build-tools/ets-loader/node_modules/typescript');
 const source=await readFile(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),'utf8');
 const method=source.slice(source.indexOf('  private async send()'),source.indexOf('  private async stop()'));
@@ -89,7 +90,7 @@ test('environment binding scopes colliding thread drafts and clears displayed da
  const registry={directory:{entries,selectedLocalId:'b'},clients:new Map([['a',a],['b',b]]),entryVisible:()=>true};
  let bound;
  class Picker {constructor(owner){this.owner=owner}belongsTo(owner){return this.owner===owner}}
- const Page=new Function('bindClient','AttachmentPicker','client','buildProjectGroups','workspacePrefs','projectGroupRefs',compiled)(v=>bound=v,Picker,b,()=>[],{projectGroupingMode:'repository'},projectGroupRefs);
+ const Page=new Function('bindClient','AttachmentPicker','client','buildProjectGroups','workspacePrefs','projectGroupRefs','emptyWorkMap',compiled)(v=>bound=v,Picker,b,()=>[],{projectGroupingMode:'repository'},projectGroupRefs,emptyWorkMap);
  const page=new Page();Object.assign(page,{registry:()=>registry,selectedLocalId:'a',prompt:'draft A',threadId:'same',draftMode:false,activeDraftId:'',
    textDrafts:new Map(),settingsDrafts:new Map(),contextDrafts:new Map(),draftRecords:[],draftContext:[{contextId:'ctx-a'}],attachments:[],drafts:new Map(),pickers:new Map(),messages:['private A'],source:{update:()=>{}},panel:'server'});
  page.bindEnvironment();assert.equal(bound,b);assert.equal(page.prompt,'');assert.deepEqual(page.messages,[]);

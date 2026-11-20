@@ -12,13 +12,15 @@ export class MessageSource implements IDataSource {
   update(rows: ChatMessage[]): void {
     const previous = this.rows;
     this.rows = rows.slice();
-    if (previous.some((row: ChatMessage, index: number) => row.id !== rows[index]?.id)) {
+    if ((previous.length === 0 && rows.length > 0) || rows.length < previous.length ||
+      previous.some((row: ChatMessage, index: number) => row.id !== rows[index]?.id)) {
       this.listeners.forEach((listener: DataChangeListener) => listener.onDataReloaded());
       return;
     }
     rows.forEach((row: ChatMessage, index: number) => {
       if (index >= previous.length) this.listeners.forEach((listener: DataChangeListener) => listener.onDataAdd(index));
       else if (row.text !== previous[index].text || row.streaming !== previous[index].streaming ||
+        row.timestamp !== previous[index].timestamp ||
         JSON.stringify(row.attachmentNames) !== JSON.stringify(previous[index].attachmentNames)) {
         this.listeners.forEach((listener: DataChangeListener) => listener.onDataChange(index));
       }

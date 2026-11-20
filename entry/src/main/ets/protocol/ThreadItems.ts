@@ -137,6 +137,21 @@ export function activitySummary(line: ActivityLine): ActivitySummary {
   if (line.kind === 'error') {
     return { icon: 'info', title: line.label || '错误', badge: '失败', badgeTone: 'danger', additions: '', deletions: '' };
   }
+  if (line.kind === 'dynamic_tool') {
+    const status = statusBadge(line.label, '进行中');
+    let title = line.label.replace(/^dynamic_tool\s*·\s*/, '')
+      .replace(/\s*·\s*(completed|failed|inProgress|running)\s*$/i, '').trim();
+    if (title.startsWith('Read ')) {
+      const rawPath = title.slice(5).trim().replace(/\\/g, '/');
+      const slash = rawPath.lastIndexOf('/');
+      const base = slash >= 0 ? rawPath.slice(slash + 1) : rawPath;
+      return { icon: 'file', title: '读取 ' + (base || rawPath), badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
+    }
+    if (title.startsWith('Run ')) {
+      return { icon: 'cmd', title: '执行 ' + title.slice(4).trim(), badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
+    }
+    return { icon: 'info', title: title || '工具调用', badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
+  }
   return { icon: 'info', title: line.label || line.kind, badge: '', badgeTone: 'neutral', additions: '', deletions: '' };
 }
 
@@ -208,6 +223,7 @@ export interface TurnWorkGroup {
 export interface MessageWorkMap {
   before: Record<string, TurnWorkGroup>;
   afterUser: Record<string, TurnWorkGroup>;
+  afterAssistant: Record<string, TurnWorkGroup>;
   tail?: TurnWorkGroup;
   hasVisible: boolean;
   revision: string;
@@ -219,7 +235,7 @@ export interface ColoredDiffLine {
 }
 
 export function emptyWorkMap(): MessageWorkMap {
-  return { before: {}, afterUser: {}, hasVisible: false, revision: '' };
+  return { before: {}, afterUser: {}, afterAssistant: {}, hasVisible: false, revision: '' };
 }
 
 function failureCode(item: Record<string, Object>): string {
@@ -518,6 +534,7 @@ export function groupWorkByMessage(items: Record<string, Object>[],
   const derived = deriveCheckpointBadges(checkpoints, items, messages);
   const before: Record<string, TurnWorkGroup> = {};
   const afterUser: Record<string, TurnWorkGroup> = {};
+  const afterAssistant: Record<string, TurnWorkGroup> = {};
   const attachedCheckpointIds: Record<string, boolean> = {};
 
   let pendingWork: Record<string, Object>[] = [];
@@ -525,23 +542,35 @@ export function groupWorkByMessage(items: Record<string, Object>[],
   let pendingCheckpoint: CheckpointBadge | undefined = undefined;
   let pendingRunId: string = '';
   let lastUserMessageId: string = '';
+  let lastAssistantMessageId: string = '';
   let seenAssistantSinceLastUser: boolean = false;
   let groupCounter: number = 0;
 
-  const flushToUserOrTail = (forceIntoAfterUser: boolean): void => {
+  let tailGroup: TurnWorkGroup | undefined = undefined;
+
+  const flushPending = (target: 'afterUser' | 'afterAssistant' | 'tail'): void => {
     const runRecord = pendingRunId ? runById[pendingRunId] : undefined;
     const firstItemId = pendingWork.length ? text(pendingWork[0].id) :
       pendingProminent.length ? text(pendingProminent[0].id) : '';
-    const gId = pendingRunId || (lastUserMessageId ? 'user:' + lastUserMessageId : '') ||
-      (firstItemId ? 'item:' + firstItemId : 'tail:' + String(groupCounter));
+    let gId = '';
+    if (target === 'afterUser' && lastUserMessageId) {
+      gId = (pendingRunId || 'user') + ':u:' + lastUserMessageId + ':' + String(groupCounter);
+    } else if (target === 'afterAssistant' && lastAssistantMessageId) {
+      gId = (pendingRunId || 'asst') + ':a:' + lastAssistantMessageId + ':' + String(groupCounter);
+    } else {
+      gId = pendingRunId || (lastUserMessageId ? 'user:' + lastUserMessageId : '') ||
+        (firstItemId ? 'item:' + firstItemId : 'tail:' + String(groupCounter));
+    }
     const cp = pendingCheckpoint || (pendingRunId && !derived.byAssistantMessage[pendingRunId] ? derived.byRun[pendingRunId] : undefined);
     const group = buildWorkGroup(gId, pendingRunId, pendingWork, pendingProminent, cp, runRecord);
     if (group) {
       groupCounter += 1;
       if (cp) attachedCheckpointIds[cp.checkpointId] = true;
-      if (forceIntoAfterUser && lastUserMessageId) {
+      if (target === 'afterUser' && lastUserMessageId) {
         afterUser[lastUserMessageId] = group;
-      } else {
+      } else if (target === 'afterAssistant' && lastAssistantMessageId) {
+        afterAssistant[lastAssistantMessageId] = group;
+      } else if (target === 'tail') {
         tailGroup = group;
       }
     }
@@ -551,21 +580,26 @@ export function groupWorkByMessage(items: Record<string, Object>[],
     pendingRunId = '';
   };
 
-  let tailGroup: TurnWorkGroup | undefined = undefined;
-
   for (const item of items) {
     const type = text(item.type);
     const itemRunId = optional(item.runId);
     if (type === 'user_message') {
-      if (!seenAssistantSinceLastUser && lastUserMessageId &&
-        (pendingWork.length > 0 || pendingProminent.length > 0 || pendingCheckpoint !== undefined)) {
-        flushToUserOrTail(true);
-      } else if (pendingWork.length > 0 || pendingProminent.length > 0 || pendingCheckpoint !== undefined) {
-        flushToUserOrTail(false);
+      if (pendingWork.length > 0 || pendingProminent.length > 0 || pendingCheckpoint !== undefined) {
+        if (!seenAssistantSinceLastUser && lastUserMessageId) {
+          flushPending('afterUser');
+        } else if (seenAssistantSinceLastUser && lastAssistantMessageId) {
+          flushPending('afterAssistant');
+        } else {
+          pendingWork = [];
+          pendingProminent = [];
+          pendingCheckpoint = undefined;
+          pendingRunId = '';
+        }
       } else {
         pendingRunId = '';
       }
       lastUserMessageId = optional(item.messageId) || text(item.id);
+      lastAssistantMessageId = '';
       seenAssistantSinceLastUser = false;
       continue;
     }
@@ -578,7 +612,7 @@ export function groupWorkByMessage(items: Record<string, Object>[],
       if (!cp) cp = pendingCheckpoint;
       if (cp && attachedCheckpointIds[cp.checkpointId]) cp = undefined;
 
-      const gId = effectiveRunId || (msgId ? 'msg:' + msgId : 'group:' + String(groupCounter));
+      const gId = (effectiveRunId ? effectiveRunId + ':' : 'msg:') + (msgId || String(groupCounter));
       const group = buildWorkGroup(gId, effectiveRunId, pendingWork, pendingProminent, cp, runRecord);
       if (group && msgId) {
         before[msgId] = group;
@@ -589,6 +623,7 @@ export function groupWorkByMessage(items: Record<string, Object>[],
       pendingProminent = [];
       pendingCheckpoint = undefined;
       pendingRunId = '';
+      lastAssistantMessageId = msgId;
       seenAssistantSinceLastUser = true;
       continue;
     }
@@ -606,7 +641,7 @@ export function groupWorkByMessage(items: Record<string, Object>[],
   }
 
   if (pendingWork.length > 0 || pendingProminent.length > 0 || pendingCheckpoint !== undefined) {
-    flushToUserOrTail(false);
+    flushPending('tail');
   }
 
   // Ensure any ready checkpoint with changed files mapped to an assistant message without tools still surfaces.
@@ -626,12 +661,15 @@ export function groupWorkByMessage(items: Record<string, Object>[],
   const revisions: string[] = [];
   for (const key of Object.keys(before)) revisions.push('B:' + key + '=' + before[key].revision);
   for (const key of Object.keys(afterUser)) revisions.push('U:' + key + '=' + afterUser[key].revision);
+  for (const key of Object.keys(afterAssistant)) revisions.push('A:' + key + '=' + afterAssistant[key].revision);
   if (tailGroup) revisions.push('T:' + tailGroup.revision);
 
-  const hasVisible = Object.keys(before).length > 0 || Object.keys(afterUser).length > 0 || tailGroup !== undefined;
+  const hasVisible = Object.keys(before).length > 0 || Object.keys(afterUser).length > 0 ||
+    Object.keys(afterAssistant).length > 0 || tailGroup !== undefined;
   return {
     before,
     afterUser,
+    afterAssistant,
     tail: tailGroup,
     hasVisible,
     revision: revisions.join(';;')

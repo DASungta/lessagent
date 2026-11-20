@@ -53,8 +53,11 @@ async function setup(options = {}) {
           } else if (url.endsWith('/oauth/token')) {
             if (options.authError) status = 401;
             value = { access_token: 'SYNTHETIC_TOKEN', token_type: 'Bearer', expires_in: 3600 };
+          } else if (url.includes('/api/orchestration/threads/') && url.includes('/history')) {
+            value = options.historyResponse ?? { items: [], messages: [], hasMore: false, oldestCursor: null };
           } else {
             if (options.ticket404 && url.endsWith('/rpc')) status = 404;
+            if (options.transientRpcStatus && url.endsWith('/rpc')) status = options.transientRpcStatus;
             value = { ticket: 'SYNTHETIC_TICKET' };
           }
           return { responseCode: status, result: JSON.stringify(value) };
@@ -899,4 +902,78 @@ test('stale non-pending recovery is cleared on known subscribe rejection while p
   assert.equal(second.client.ready,false);
   assert.deepEqual(await pendingStore.load(),pendingRecord);
  } finally {second.client.disconnect();}
+});
+
+test('bounded subscribeThread payload, disconnect-reconnect re-watch, transient retry recovery, and loadOlderHistory', async () => {
+ const { client, frames, requests } = await setup({
+  historyResponse: {
+   items: [{ item: { id: 'item-u0', type: 'user_message', messageId: 'u0', text: 'older q', createdAt: '2026-01-01T00:00:00.000Z', runId: 'r0' }, visibility: 'visible' }],
+   nextCursor: '20',
+   hasMoreHistory: false
+  }
+ });
+ client.store = { async load() { return undefined; }, async save() {}, async clear() {} };
+ try {
+  await client.connect('https://test', 'synthetic');
+  await new Promise(setImmediate);
+  await client.watch('thread-bound');
+  await new Promise(setImmediate);
+
+  const subFrame = frames.find((f) => f.tag === 'orchestration.subscribeThread');
+  assert.deepEqual(subFrame.payload, {
+   threadId: 'thread-bound',
+   acceptBoundedSnapshot: true,
+   requestCompletionMarker: true
+  });
+
+  // Apply bounded snapshot history metadata and load older history without compactIds=1
+  client.thread.apply({
+   kind: 'snapshot',
+   snapshotSequence: 11,
+   historyCursor: '40',
+   hasMoreHistory: true,
+   projection: {
+    thread: { id: 'thread-bound', title: 'Bounded', modelSelection: { provider: 'codex', model: 'm' } },
+    messages: [{ id: 'u1', role: 'user', text: 'latest q', createdAt: '2026-01-01T00:01:00.000Z', runId: 'r1' }],
+    visibleTurnItems: [{ item: { id: 'item-u1', type: 'user_message', messageId: 'u1', text: 'latest q', runId: 'r1' }, visibility: 'visible' }]
+   }
+  });
+  await client.loadOlderHistory();
+  const histReq = requests.find((r) => r.url.includes('/history'));
+  assert.ok(histReq);
+  assert.equal(histReq.url.includes('compactIds'), false);
+  assert.equal(histReq.url.includes('cursor=40'), true);
+  assert.equal(histReq.args.header['x-t3-orchestration-protocol'], '2');
+  assert.deepEqual(client.thread.messages.map((m) => m.id), ['u0', 'u1']);
+
+  // Background disconnect -> reconnect without pending recovery still re-watches lastWatchedThreadId
+  const beforeCount = frames.filter((f) => f.tag === 'orchestration.subscribeThread').length;
+  client.disconnect();
+  await client.connect('https://test', 'synthetic');
+  await new Promise(setImmediate);
+  const afterCount = frames.filter((f) => f.tag === 'orchestration.subscribeThread').length;
+  assert.equal(afterCount, beforeCount + 1);
+  assert.equal(frames.filter((f) => f.tag === 'orchestration.subscribeThread').at(-1).payload.threadId, 'thread-bound');
+
+  // Forget clears remembered route/watched thread
+  await client.forget();
+  assert.equal(client.lastWatchedThreadId, '');
+ } finally {
+  client.disconnect();
+ }
+
+ // Transient 502 on saved connect schedules recovery instead of dying silently
+ const transient = await setup({ transientRpcStatus: 502 });
+ transient.client.store = {
+  async load() { return { base: 'https://test', environmentId: 'env', token: 'SYNTHETIC_TOKEN', expiresAt: Date.now() + 60000 }; },
+  async save() {},
+  async clear() {}
+ };
+ try {
+  await transient.client.connect('https://test', 'synthetic');
+  assert.equal(transient.client.ready, false);
+  assert.ok(transient.client.retryTimer !== undefined || transient.client.status.includes('重连'));
+ } finally {
+  transient.client.disconnect();
+ }
 });

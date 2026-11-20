@@ -1,4 +1,4 @@
-import { CodeToken, codeTokens, InlineSpan, MarkdownBlock, MarkdownListItem, markdownDocument,
+import { CodeToken, codeTokens, InlineSpan, inlineSpans, MarkdownBlock, MarkdownListItem, markdownDocument,
   mathText } from '../protocol/Markdown';
 import { parseMermaid, parseMermaidClass, parseMermaidSequence, parseMermaidState } from '../protocol/Mermaid';
 import { MermaidView } from './MermaidView';
@@ -45,11 +45,16 @@ export struct MarkdownView {
         } else if (span.kind === 'strike') {
           Span(span.text).decoration({ type: TextDecorationType.LineThrough, color: $r('app.color.muted') })
         } else if (span.kind === 'code') {
-          Span(span.text).fontFamily('monospace').fontSize(size - 2).backgroundColor($r('app.color.group'))
+          Span(span.text).fontFamily('monospace').fontSize(size - 2)
+            .fontWeight(span.bold ? FontWeight.Bold : weight).backgroundColor($r('app.color.group'))
         } else if (span.kind === 'link') {
-          Span(span.text).fontColor($r('app.color.primary_text'))
-            .decoration({ type: TextDecorationType.Underline, color: $r('app.color.primary_text') })
-            .onClick(() => { if (span.href) this.onOpenLink(span.href); })
+          if (span.href && span.href.startsWith('t3-context://')) {
+            Span(span.text).fontColor($r('app.color.primary_text')).fontWeight(FontWeight.Medium)
+          } else {
+            Span(span.text).fontColor($r('app.color.primary_text'))
+              .decoration({ type: TextDecorationType.Underline, color: $r('app.color.primary_text') })
+              .onClick(() => { if (span.href) this.onOpenLink(span.href); })
+          }
         } else if (span.kind === 'image') {
           Span('[图片] ' + span.text).fontColor($r('app.color.muted'))
             .onClick(() => { if (span.href) this.onOpenImage(span.href); })
@@ -86,15 +91,17 @@ export struct MarkdownView {
       Column() {
         Row() {
           ForEach(block.header, (cell: string, index: number) => {
-            Text(cell).fontColor($r('app.color.ink')).fontSize(13).fontWeight(FontWeight.Medium).padding(8)
-              .width(160).textAlign(this.cellAlign(block, index))
+            Column() {
+              this.inline(inlineSpans(cell), 13, 19, $r('app.color.ink'), FontWeight.Medium)
+            }.width(136).padding(8).alignItems(this.cellAlign(block, index) === TextAlign.End ? HorizontalAlign.End : HorizontalAlign.Start)
           }, (cell: string, index: number) => 'h' + index)
         }.backgroundColor($r('app.color.group'))
         ForEach(block.rows, (row: string[], rowIndex: number) => {
           Row() {
             ForEach(row, (cell: string, index: number) => {
-              Text(cell).fontColor($r('app.color.ink')).fontSize(13).padding(8).width(160)
-                .textAlign(this.cellAlign(block, index))
+              Column() {
+                this.inline(inlineSpans(cell), 13, 19, $r('app.color.ink'), FontWeight.Normal)
+              }.width(136).padding(8).alignItems(this.cellAlign(block, index) === TextAlign.End ? HorizontalAlign.End : HorizontalAlign.Start)
             }, (cell: string, index: number) => 'c' + rowIndex + '-' + index)
           }.border({ width: { top: 1 }, color: $r('app.color.border') })
         }, (row: string[], rowIndex: number) => 'r' + rowIndex)
@@ -232,12 +239,10 @@ export struct MarkdownView {
     } else if (block.kind === 'paragraph') {
       this.inline(block.spans, FontSize.body, 23, $r('app.color.ink'), FontWeight.Normal)
     } else if (block.kind === 'quote') {
-      Row({ space: 10 }) {
-        Divider().vertical(true).height('100%').color($r('app.color.border'))
-        Column() {
-          this.inline(block.spans, FontSize.body, 22, $r('app.color.muted'), FontWeight.Normal)
-        }.layoutWeight(1)
-      }.width('100%').alignItems(VerticalAlign.Top)
+      Column() {
+        this.inline(block.spans, FontSize.body, 22, $r('app.color.muted'), FontWeight.Normal)
+      }.width('100%').padding({ left: 12, top: 2, bottom: 2 })
+        .border({ width: { left: 3 }, color: $r('app.color.border') })
     } else if (block.kind === 'list') {
       this.listBlock(block)
     } else if (block.kind === 'table') {

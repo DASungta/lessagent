@@ -53,6 +53,11 @@ interface PeerPairingPayload { label: string; scopes: string[]; }
 interface EmptyPayload { }
 interface NamePayload { name: string; }
 interface ThreadIdPayload { threadId: string; }
+interface SubscribeThreadPayload {
+  threadId: string;
+  acceptBoundedSnapshot: boolean;
+  requestCompletionMarker: boolean;
+}
 interface PathPayload { partialPath: string; }
 interface RepositoryPayload { provider: string; repository: string; }
 interface ProjectIdPayload { projectId: string; }
@@ -96,7 +101,8 @@ export interface CloudTransport {
   environmentId: string;
   label: string;
   endpoint(): Promise<CloudEndpoint>;
-  requestJson(path: string, method: http.RequestMethod, body?: string, json?: boolean): Promise<Object>;
+  requestJson(path: string, method: http.RequestMethod, body?: string, json?: boolean,
+    extraHeaders?: Record<string, string>): Promise<Object>;
   socketUrl(): Promise<string>;
   renew(): Promise<number>;
   reset(): Promise<void>;
@@ -136,6 +142,9 @@ export class T3Client {
   private lastInbound: number = 0;
   private generation: number = 0;
   private threadChunk: ((value: Object) => void) | undefined = undefined;
+  private lastWatchedThreadId: string = '';
+  private resumingWatchThreadId: string = '';
+  get pendingWatchThreadId(): string { return this.thread?.threadId || this.resumingWatchThreadId; }
   private shellChunk: ((value: Object) => void) | undefined = undefined;
   private worktreeChunk: ((value: Object) => void) | undefined = undefined;
   worktreeSetup: Record<string, Object> | undefined = undefined;
@@ -441,13 +450,17 @@ export class T3Client {
 
   private async httpJson(base: string, path: string, method: http.RequestMethod,
     body: string = '', token: string = '', json: boolean = false,
-    cloudAuth: boolean = false, timeoutMs: number = 10000): Promise<Object> {
-    if (cloudAuth && this.cloud) return this.cloud.requestJson(path, method, body, json);
+    cloudAuth: boolean = false, timeoutMs: number = 10000,
+    extraHeaders?: Record<string, string>): Promise<Object> {
+    if (cloudAuth && this.cloud) return this.cloud.requestJson(path, method, body, json, extraHeaders);
     const request = http.createHttp();
     try {
       const headers: Record<string, string> = { 'Accept': 'application/json' };
       if (token) headers['Authorization'] = 'Bearer ' + token;
       if (body) headers['Content-Type'] = json ? 'application/json' : 'application/x-www-form-urlencoded';
+      if (extraHeaders) {
+        for (const key of Object.keys(extraHeaders)) headers[key] = extraHeaders[key];
+      }
       const options: http.HttpRequestOptions = {
         method, header: headers, connectTimeout: 10000, readTimeout: timeoutMs,
         usingCache: false, maxRedirects: 0, expectDataType: http.HttpDataType.STRING
@@ -667,10 +680,16 @@ export class T3Client {
       await this.finishConnection(socketUrl(base, text(record(ticket).ticket)),
         environmentId, base, saved, generation);
     } catch (error) {
-      if (generation === this.generation) this.disconnect((error as Error).message,
-        (!!this.saved || !!this.cloud) &&
-        ((error as Error).message.startsWith('HTTP ') || (error as Error).message.startsWith('WebSocket') ||
-          (error as Error).message.startsWith('T3 Connect')));
+      if (generation === this.generation) {
+        const errMsg = (error as Error).message || '';
+        const nonRecoverable = errMsg.includes('没有此服务器的有效会话') ||
+          errMsg.includes('服务器身份') || errMsg.includes('协议不兼容') ||
+          errMsg.includes('DPoP') || errMsg.includes('配对') || errMsg.includes('HTTP 400') ||
+          errMsg.includes('HTTP 401') || errMsg.includes('HTTP 403') ||
+          errMsg.includes('HTTP 404') || errMsg.includes('无效');
+        const canRecover = (!!this.saved || !!this.cloud || (!!this.reconnectSavedRoutes && !!this.store)) && !nonRecoverable;
+        this.disconnect(errMsg, canRecover);
+      }
     } finally { this.connectionsPending--; }
   }
 
@@ -765,9 +784,14 @@ export class T3Client {
     this.retryDelay = 1000;
     this.status = '已连接';
     void this.refreshSessionAccess();
+    const resumeThreadId = this.recovery?.threadId || (!this.draftScope ? this.lastWatchedThreadId : '');
+    this.resumingWatchThreadId = resumeThreadId;
     this.onUpdate();
     if (this.cloud) this.scheduleCloudRenewal(generation);
-    if (this.recovery) await this.watch(this.recovery.threadId);
+    if (resumeThreadId) {
+      try { await this.watch(resumeThreadId); }
+      finally { if (this.resumingWatchThreadId === resumeThreadId) this.resumingWatchThreadId = ''; }
+    }
   }
 
   applyVerifiedSettingsConfig(value: Object, environmentId: string, generation: number | undefined): void {
@@ -962,6 +986,7 @@ export class T3Client {
     if (!threadId.trim()) throw new Error('请输入会话 ID');
     const rpc = this.requireRpc();
     if (this.mutating || this.launching) throw new Error('请求正在提交，请稍候');
+    this.lastWatchedThreadId = threadId.trim();
     const previousChunk = this.threadChunk;
     this.threadChunk = undefined;
     if (previousChunk) rpc.cancelStream(previousChunk);
@@ -986,7 +1011,12 @@ export class T3Client {
       this.notify();
     };
     this.threadChunk = chunk;
-    void rpc.request('orchestration.subscribeThread', { threadId: state.threadId }, chunk).then(() => {
+    const subscribePayload: SubscribeThreadPayload = {
+      threadId: state.threadId,
+      acceptBoundedSnapshot: true,
+      requestCompletionMarker: true
+    };
+    void rpc.request('orchestration.subscribeThread', subscribePayload, chunk, 30000, true).then(() => {
       if (this.threadChunk === chunk) this.disconnect('会话订阅已结束，请重新连接');
     }).catch((error: Error) => {
       if (this.rpc !== rpc || this.threadChunk !== chunk) return;
@@ -1517,17 +1547,23 @@ export class T3Client {
     return this.watchRpcStream('orchestration.subscribeCommandOutput', payload, onFrame);
   }
   async loadOlderHistory(): Promise<boolean> {
-    if (!this.thread || !this.thread.historyCursor || !this.thread.hasMoreHistory) return false;
+    if (!this.ready || !this.thread || !this.thread.historyCursor || !this.thread.hasMoreHistory) return false;
     const state = this.thread;
     const path = '/api/orchestration/threads/' + encodeURIComponent(state.threadId) +
-      '/history?cursor=' + encodeURIComponent(state.historyCursor) + '&compactIds=1';
+      '/history?cursor=' + encodeURIComponent(state.historyCursor);
+    const protocolHeaders: Record<string, string> = { 'x-t3-orchestration-protocol': '2' };
     const value = record(await this.httpJson(this.activeBase(), path, http.RequestMethod.GET,
-      '', this.saved?.token || '', false, !!this.cloud));
+      '', this.saved?.token || '', false, !!this.cloud, 15000, protocolHeaders));
     if (this.thread !== state) return false;
     const items: Record<string, Object>[] = [];
     for (const projected of objects(value.items)) {
       const row = record(projected);
-      if (row.item !== undefined && row.item !== null) items.push(record(row.item));
+      if (row.item !== undefined && row.item !== null) {
+        const extractedItem = record(row.item);
+        if (row.visibility !== undefined) extractedItem.visibility = row.visibility;
+        if (row.sourceThreadId !== undefined) extractedItem.sourceThreadId = row.sourceThreadId;
+        items.push(extractedItem);
+      }
     }
     state.prependHistory(items);
     state.historyCursor = typeof value.nextCursor === 'string' ? value.nextCursor : '';
@@ -1604,6 +1640,8 @@ export class T3Client {
 
   async forget(): Promise<void> {
     this.disconnect();
+    this.lastWatchedThreadId = '';
+    this.resumingWatchThreadId = '';
     this.saved = undefined;
     this.recovery = undefined;
     this.attachment = undefined; this.attachments = []; this.attachmentThread = ''; this.draftScope = '';

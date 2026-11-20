@@ -15,6 +15,7 @@ import { CloudDevice, CloudPairingLink } from '../protocol/Cloud';
 export struct ConnectionsPanel {
   @Prop entries: EnvironmentEntry[] = [];
   @Prop statuses: Record<string, string> = {};
+  @Prop readyMap: Record<string, boolean> = {};
   @Prop linkedGroups: LinkedEnvironmentGroup[] = [];
   @Prop initialized: boolean = false;
   @Prop cloudConfigured: boolean = false;
@@ -50,10 +51,14 @@ export struct ConnectionsPanel {
     try { await action(); } catch (error) { this.error = (error as Error).message; }
     finally { this.busy = false; }
   }
+  private isConnected(status: string, entry: EnvironmentEntry): boolean {
+    return this.readyMap[entry.localId] === true || status === '已连接' || status === '会话已同步' ||
+      status === '正在同步会话' || status.startsWith('任务状态');
+  }
   private statusBadgeText(entry: EnvironmentEntry): string {
     if (!entry.enabled) return '已停用';
     const status = this.statuses[entry.localId] || '';
-    if (status === '已连接') return '已连接';
+    if (this.isConnected(status, entry)) return '已连接';
     if (status.includes('正在连接') || status.includes('连接中')) return '连接中';
     if (status.includes('解锁')) return '需解锁';
     if (status.includes('失败') || status.includes('错误')) return '连接失败';
@@ -62,7 +67,7 @@ export struct ConnectionsPanel {
   private statusBadgeTone(entry: EnvironmentEntry): BadgeTone {
     if (!entry.enabled) return 'neutral';
     const status = this.statuses[entry.localId] || '';
-    if (status === '已连接') return 'success';
+    if (this.isConnected(status, entry)) return 'success';
     if (status.includes('正在连接') || status.includes('连接中')) return 'info';
     if (status.includes('失败') || status.includes('错误')) return 'danger';
     return 'warning';
@@ -281,7 +286,9 @@ export struct ConnectionsPanel {
                     }.width('100%').padding({ left: 14, right: 14, bottom: 14 }).alignItems(HorizontalAlign.Start)
                   }
                 }.width('100%').backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
-              }, (entry: EnvironmentEntry) => environmentRouteKey(entry))
+              }, (entry: EnvironmentEntry) => environmentRouteKey(entry) + ':' + (entry.enabled ? '1' : '0') + ':' +
+                (this.readyMap[entry.localId] ? '1' : '0') + ':' + (this.statuses[entry.localId] || '') + ':' +
+                entry.label + ':' + entry.base + ':' + (entry.prRouting || ''))
             }.width('100%')
           }
 

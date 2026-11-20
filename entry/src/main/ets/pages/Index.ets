@@ -193,6 +193,7 @@ struct Index {
   private undoTimer: number = 0;
   @State environmentEntries: EnvironmentEntry[] = [];
   @State environmentStatuses: Record<string, string> = {};
+  @State environmentReady: Record<string, boolean> = {};
   @State loaded: boolean = false;
   private pickers: Map<string, AttachmentPicker> = new Map();
   @State linkItems: LinkRequestView[] = [];
@@ -224,6 +225,12 @@ struct Index {
   @Provide('t3WorkMap') workMap: MessageWorkMap = emptyWorkMap();
   @Provide('t3ExpandedWork') expandedWorkGroups: Record<string, boolean> = {};
   private lastWorkThreadKey: string = '';
+  private renderedThreadKey: string = '';
+  @State hasMoreHistory: boolean = false;
+  private pendingScrollBottomKey: string = '';
+  private lastAutoWatchKey: string = '';
+  @State cachedChatTitle: string = '';
+  @State cachedChatProject: string = '';
   @State panelOpen: boolean = false;
   @State panel: string = 'server';
   @State address: string = '';
@@ -329,7 +336,26 @@ struct Index {
       this.settingsWriteAllowed = client.ready ? client.canScope('settings:write') : false;
       this.scheduledConnectionKey = this.selectedLocalId + ':' + client.generationValue() + ':' +
         String(client.ready) + ':' + String(client.canScope('orchestration:operate') !== false);
-      this.messages = this.draftMode ? [] : client.thread ? client.thread.messages.slice() : this.messages;
+      const currentThreadKey = this.selectedLocalId + ':' + this.threadId;
+      const keepRenderedOnSync = !this.draftMode && this.renderedThreadKey === currentThreadKey &&
+        (!client.thread || (client.thread.threadId === this.threadId && client.thread.cursor < 0));
+      if (this.draftMode) {
+        this.messages = [];
+        this.renderedThreadKey = '';
+        this.hasMoreHistory = false;
+      } else if (client.thread && client.thread.threadId === this.threadId) {
+        if (client.thread.cursor >= 0) {
+          this.messages = client.thread.messages.slice();
+          this.renderedThreadKey = currentThreadKey;
+          this.hasMoreHistory = client.thread.hasMoreHistory;
+        } else if (!keepRenderedOnSync) {
+          this.messages = [];
+          this.hasMoreHistory = false;
+        }
+      } else if (!client.thread && !keepRenderedOnSync) {
+        this.messages = [];
+        this.hasMoreHistory = false;
+      }
       this.queued = !this.draftMode && client.thread ? queuedRuns(client.thread.runs, client.thread.messageRecords) : [];
       if (client.recoveredMessageId && this.messages.some((m: ChatMessage) =>
         m.id === client.recoveredMessageId && m.text === this.prompt)) {
@@ -359,9 +385,11 @@ struct Index {
         this.lastWorkThreadKey = workKey;
         this.expandedWorkGroups = {};
       }
-      this.workMap = !this.draftMode && client.thread
-        ? groupWorkByMessage(client.thread.items, client.thread.runs, client.thread.checkpoints, this.messages)
-        : emptyWorkMap();
+      if (!keepRenderedOnSync) {
+        this.workMap = !this.draftMode && client.thread
+          ? groupWorkByMessage(client.thread.items, client.thread.runs, client.thread.checkpoints, this.messages)
+          : emptyWorkMap();
+      }
       this.tools = !this.draftMode && client.thread && this.workMap.hasVisible
         ? visibleWorkItems(client.thread.items).map((row: Record<string, Object>) => String(row.type) + ' · ' + String(row.status))
         : [];
@@ -371,6 +399,41 @@ struct Index {
         if (this.page === 'chat') {
           this.projectId = this.threads.find((t: Choice) => t.id === this.threadId)?.projectId || this.projectId;
         }
+      }
+      if (this.page === 'chat' && !this.draftMode && this.threadId) {
+        const matchedThread = this.threads.find((t: ThreadView) => t.id === this.threadId);
+        const matchedScopedThread = this.scopedThreads.find((t: ScopedThread) =>
+          t.localId === this.selectedLocalId && t.id === this.threadId);
+        const resolvedTitle = matchedThread?.label || matchedScopedThread?.label || '';
+        if (resolvedTitle) this.cachedChatTitle = resolvedTitle;
+        const resolvedProjId = matchedThread?.projectId || matchedScopedThread?.projectId || this.projectId;
+        if (resolvedProjId) this.projectId = resolvedProjId;
+        const resolvedProject = this.projects.find((p: ProjectView) => p.id === this.projectId)?.label ||
+          this.scopedProjects.find((p: ScopedProject) => p.localId === this.selectedLocalId && p.id === this.projectId)?.label || '';
+        if (resolvedProject) this.cachedChatProject = resolvedProject;
+      }
+      if (this.page === 'chat' && !this.draftMode && this.threadId && client.ready && !client.submitting && !this.busy &&
+        client.pendingWatchThreadId !== this.threadId) {
+        const watchKey = this.selectedLocalId + ':' + client.generationValue() + ':' + this.threadId;
+        if (watchKey !== this.lastAutoWatchKey) {
+          this.lastAutoWatchKey = watchKey;
+          void client.watch(this.threadId).catch((error: Error) => { if (this.alive) this.status = error.message; });
+        }
+      }
+      if (this.page === 'chat' && !this.draftMode && this.pendingScrollBottomKey === currentThreadKey &&
+        client.thread && client.thread.threadId === this.threadId && client.thread.cursor >= 0 && this.messages.length > 0) {
+        const scrolledThreadId = this.threadId;
+        this.pendingScrollBottomKey = '';
+        setTimeout(() => {
+          if (this.alive && this.page === 'chat' && !this.draftMode && this.threadId === scrolledThreadId) {
+            this.scroller.scrollEdge(Edge.Bottom);
+          }
+        }, 80);
+        setTimeout(() => {
+          if (this.alive && this.page === 'chat' && !this.draftMode && this.threadId === scrolledThreadId) {
+            this.scroller.scrollEdge(Edge.Bottom);
+          }
+        }, 240);
       }
       this.ensureDeviceWatch();
       this.refreshLinkedWhenChanged();
@@ -564,8 +627,13 @@ struct Index {
     const registry = this.registry();
     this.environmentEntries = registry.directory.entries.filter((entry: EnvironmentEntry) => registry.entryVisible(entry));
     const statuses: Record<string, string> = {};
-    registry.clients.forEach((value: T3Client, id: string) => { statuses[id] = value.status; });
+    const readyMap: Record<string, boolean> = {};
+    registry.clients.forEach((value: T3Client, id: string) => {
+      statuses[id] = value.status;
+      readyMap[id] = Boolean(value.ready);
+    });
     this.environmentStatuses = statuses;
+    this.environmentReady = readyMap;
     const threads: ScopedThread[] = [];
     const projects: ScopedProject[] = [];
     const capabilities: Record<string, ThreadCapabilities> = {};
@@ -606,7 +674,13 @@ struct Index {
       this.draftMode = false;
       if (next) next.draftScope = '';
       this.messages = []; this.source.update([]); this.actions = []; this.tools = [];
-      this.workMap = { before: {}, afterUser: {}, hasVisible: false, revision: '' };
+      this.workMap = emptyWorkMap();
+      this.renderedThreadKey = '';
+      this.hasMoreHistory = false;
+      this.pendingScrollBottomKey = '';
+      this.lastAutoWatchKey = '';
+      this.cachedChatTitle = '';
+      this.cachedChatProject = '';
       this.expandedWorkGroups = {};
       this.canOpenDiff = false;
       this.projectId = ''; this.modelIndex = 0;
@@ -1413,7 +1487,13 @@ struct Index {
     client.bindDraftAttachments(client.draftScope);
     this.branches = []; this.branchesLoading = false; this.commandPanel = '';
     this.messages = []; this.source.update([]); this.actions = []; this.tools = []; this.linkItems = [];
-    this.workMap = { before: {}, afterUser: {}, hasVisible: false, revision: '' };
+    this.workMap = emptyWorkMap();
+    this.renderedThreadKey = '';
+    this.hasMoreHistory = false;
+    this.pendingScrollBottomKey = '';
+    this.lastAutoWatchKey = '';
+    this.cachedChatTitle = '';
+    this.cachedChatProject = '';
     this.expandedWorkGroups = {}; this.canOpenDiff = false;
     this.queued = []; this.extraPlans = []; this.extraSubagents = []; this.extraBackground = [];
     this.extraGuest = undefined; this.extraUsage = undefined;
@@ -1825,19 +1905,36 @@ struct Index {
       this.contextDrafts.set(previousKey, this.draftContext.slice());
     }
     this.draftMode = false; client.draftScope = '';
+    const targetKey = this.selectedLocalId + ':' + id;
+    if (targetKey !== this.renderedThreadKey) {
+      this.messages = [];
+      this.source.update([]);
+      this.workMap = emptyWorkMap();
+      this.renderedThreadKey = '';
+      this.hasMoreHistory = false;
+      this.cachedChatTitle = '';
+      this.cachedChatProject = '';
+    }
+    this.pendingScrollBottomKey = targetKey;
+    this.lastAutoWatchKey = this.selectedLocalId + ':' + client.generationValue() + ':' + id;
     this.threadId = id;
     this.prompt = this.textDrafts.get(this.draftKey()) || '';
     this.draftContext = (this.contextDrafts.get(this.draftKey()) || []).slice();
+    this.page = 'chat'; this.showTools = false; this.panelOpen = false;
     this.busy = true;
     try {
       await client.watch(id);
-      this.page = 'chat'; this.showTools = false; this.panelOpen = false;
       this.expandedWorkGroups = {};
       this.lastWorkThreadKey = this.selectedLocalId + ':' + id;
       this.canOpenDiff = !this.draftMode && !!this.currentWorkspace();
       this.threadTerminalEnabled = this.ready && !this.draftMode && !!this.currentWorkspace() && client.canScope('terminal:read') !== false;
       const thread = this.scopedThreads.find((item: ScopedThread) => item.localId === this.selectedLocalId && item.id === id);
-      if (thread && !thread.archivedAt) this.rememberProject(thread.projectId);
+      if (thread) {
+        if (thread.label) this.cachedChatTitle = thread.label;
+        const proj = this.scopedProjects.find((p: ScopedProject) => p.localId === this.selectedLocalId && p.id === thread.projectId);
+        if (proj?.label) this.cachedChatProject = proj.label;
+        if (!thread.archivedAt) this.rememberProject(thread.projectId);
+      }
     }
     catch (error) { this.status = (error as Error).message; }
     finally { this.busy = false; this.incomingPairing(); }
@@ -2524,7 +2621,7 @@ struct Index {
         onClose: () => { this.panelOpen = false; },
         onBusy: (busy: boolean) => { this.busy = busy; if (!busy) { this.peerCanAnswer = this.linkOwner === client && !!this.linkOwner?.canManagePeerAccess(); this.incomingPairing(); } } })
     } else if (this.panel === 'server') {
-          ConnectionsPanel({ entries: this.environmentEntries, linkedGroups: this.linkedGroups, statuses: this.environmentStatuses, initialized: this.loaded,
+          ConnectionsPanel({ entries: this.environmentEntries, linkedGroups: this.linkedGroups, statuses: this.environmentStatuses, readyMap: this.environmentReady, initialized: this.loaded,
             cloudConfigured: this.cloudConfigured, cloudSignedIn: this.cloudSignedIn, cloudStatus: this.cloudStatus,
             deviceEnvironmentLabel: this.deviceEnvironmentLabel, pendingDevices: this.pendingDevices,
             approvedDevices: this.approvedDevices,
@@ -2824,21 +2921,29 @@ struct Index {
             .onClick(() => { void this.openAttachment(name); })
         })
         if (isPlainUserText(message.text)) {
-          Text(message.text)
-            .fontSize(FontSize.body).lineHeight(LineHeight.body)
-            .fontColor($r('app.color.bubble_ink'))
-            .copyOption(CopyOptions.InApp)
+          Column() {
+            Text(message.text)
+              .fontSize(FontSize.body).lineHeight(LineHeight.body)
+              .fontColor($r('app.color.bubble_ink'))
+              .copyOption(CopyOptions.InApp)
+          }.alignItems(HorizontalAlign.Start)
+            .constraintSize({ maxWidth: '84%' })
+            .padding({ left: 14, right: 14, top: 10, bottom: 10 })
+            .backgroundColor($r('app.color.bubble'))
+            .borderRadius({ topLeft: Radius.bubble, topRight: Radius.bubble, bottomLeft: Radius.bubble, bottomRight: 6 })
         } else {
-          MarkdownView({ markdown: message.text, selectable: true,
-            onCopy: (value: string) => { void this.copy(value); },
-            onOpenLink: (url: string) => { void this.openLink(url); },
-            onOpenImage: (url: string) => { void this.openMarkdownImage(url); } })
+          Column({ space: Space.xs }) {
+            MarkdownView({ markdown: message.text, selectable: true,
+              onCopy: (value: string) => { void this.copy(value); },
+              onOpenLink: (url: string) => { void this.openLink(url); },
+              onOpenImage: (url: string) => { void this.openMarkdownImage(url); } })
+          }.alignItems(HorizontalAlign.Start)
+            .width('84%').clip(true)
+            .padding({ left: 14, right: 14, top: 10, bottom: 10 })
+            .backgroundColor($r('app.color.bubble'))
+            .borderRadius({ topLeft: Radius.bubble, topRight: Radius.bubble, bottomLeft: Radius.bubble, bottomRight: 6 })
         }
-      }.alignItems(HorizontalAlign.Start)
-        .constraintSize({ maxWidth: '84%' })
-        .padding({ left: 14, right: 14, top: 10, bottom: 10 })
-        .backgroundColor($r('app.color.bubble'))
-        .borderRadius({ topLeft: Radius.bubble, topRight: Radius.bubble, bottomLeft: Radius.bubble, bottomRight: 6 })
+      }.alignItems(HorizontalAlign.End)
     }.width('100%').justifyContent(FlexAlign.End)
       .accessibilityText('我的消息：' + message.text)
   }
@@ -2928,7 +3033,7 @@ struct Index {
       }.width('100%').padding({ left: Space.md, right: Space.md, top: Space.xxs, bottom: Space.xs })
     }
     List({ space: 14, scroller: this.scroller }) {
-      if (!this.draftMode && client.thread?.hasMoreHistory) {
+      if (!this.draftMode && this.hasMoreHistory) {
         ListItem() {
           AppButton({ label: '加载更早的记录', kind: 'text', fill: true, disabled: this.busy,
             onTap: () => {
@@ -2939,7 +3044,14 @@ struct Index {
         }
       }
       if (!this.messages.length) {
-        ListItem() { this.emptyState(this.draftMode ? '新任务' : '开始对话', '描述你想完成的任务。') }
+        if (!this.draftMode && (!this.ready || !client.thread || client.thread.cursor < 0)) {
+          ListItem() {
+            this.emptyState(this.ready ? '正在同步会话…' : '正在连接服务器…',
+              this.status || '连接恢复后将自动加载最新消息。')
+          }
+        } else {
+          ListItem() { this.emptyState(this.draftMode ? '新任务' : '开始对话', '描述你想完成的任务。') }
+        }
       }
       LazyForEach(this.source, (message: ChatMessage) => {
         ListItem() {
@@ -2977,10 +3089,22 @@ struct Index {
                 onReference: (line: ActivityLine) => this.addTerminalContext(line),
                 onOpenDiff: () => this.openReview()
               })
+            } else if (message.role !== 'user' && !this.draftMode) {
+              MessageWorkSlot({
+                connection: client,
+                messageId: message.id,
+                slotKind: 'afterAssistant',
+                onToggleGroup: (group: TurnWorkGroup) => this.toggleWorkGroup(group),
+                onCopy: (value: string) => { void this.copy(value); },
+                onReference: (line: ActivityLine) => this.addTerminalContext(line),
+                onOpenDiff: () => this.openReview()
+              })
             }
           }.width('100%')
         }
-      }, (message: ChatMessage) => JSON.stringify(message))
+      }, (message: ChatMessage) => message.id + ':' + message.role + ':' + message.text.length + ':' +
+        (message.streaming ? '1' : '0') + ':' + (message.timestamp || '') + ':' +
+        (message.attachmentNames ? message.attachmentNames.length : 0) + ':' + message.text.slice(-16))
       if (!this.draftMode && this.workMap.tail) {
         ListItem() {
           this.turnWorkView(this.workMap.tail)
@@ -3584,10 +3708,10 @@ struct Index {
           Row({ space: Space.xxs }) {
             IconButton({ icon: $r('app.media.ui_back'), label: '返回会话列表', onTap: () => { this.page = 'sessions'; } })
             Column() {
-              Text(this.draftMode ? '新任务' : this.threads.find((t: ThreadView) => t.id === this.threadId)?.label || '会话')
+              Text(this.draftMode ? '新任务' : this.threads.find((t: ThreadView) => t.id === this.threadId)?.label || this.cachedChatTitle || '会话')
                 .fontSize(FontSize.headline).lineHeight(LineHeight.headline).fontWeight(Weight.semibold)
                 .fontColor($r('app.color.ink')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-              Text((this.projects.find((p: ProjectView) => p.id === this.projectId)?.label || 'No project') + ' · ' +
+              Text((this.projects.find((p: ProjectView) => p.id === this.projectId)?.label || this.cachedChatProject || 'No project') + ' · ' +
                 (this.environmentEntries.find((e: EnvironmentEntry) => e.localId === this.selectedLocalId)?.label || '环境'))
                 .fontSize(FontSize.caption).lineHeight(LineHeight.caption)
                 .fontColor($r('app.color.muted')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })

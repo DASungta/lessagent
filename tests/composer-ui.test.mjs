@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {compile} from './load-core.mjs';
+import {compile, threadItemsUrl} from './load-core.mjs';
+const { emptyWorkMap } = await import(threadItemsUrl);
 const source=await readFile(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),'utf8');
 const methods=source.slice(source.indexOf('  private draftKey()'),source.indexOf('  private openTaskSettings()'));
 const emptyWorkspace=()=>({mode:'local',branch:'',worktreePath:'',startFromOrigin:true});
@@ -10,7 +11,7 @@ let counter=0;
 const util={generateRandomUUID:()=>`draft-${++counter}`};
 const draftStore={async save(){}};
 const client={bindDraftAttachments(){}};
-const Page=new Function('client','util','emptyWorkspace','draftSettings','draftStore',compile('return class { '+methods+' }'))(client,util,emptyWorkspace,draftSettings,draftStore);
+const Page=new Function('client','util','emptyWorkspace','draftSettings','draftStore','emptyWorkMap',compile('return class { '+methods+' }'))(client,util,emptyWorkspace,draftSettings,draftStore,emptyWorkMap);
 function page(localId='a') {
   return Object.assign(new Page(),{selectedLocalId:localId,threadId:'old',draftMode:false,projectId:'old-project',prompt:'old text',
     remembered:[],rememberProject:function(id){this.remembered.push(id)},activeDraftId:'',draftRecords:[],textDrafts:new Map(),settingsDrafts:new Map(),contextDrafts:new Map(),models:[{instanceId:'codex',model:'m'}],
