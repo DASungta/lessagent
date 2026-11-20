@@ -14,8 +14,8 @@
 <p>
   <img src="https://img.shields.io/badge/HarmonyOS_NEXT-API_24%2B-0A59F7?style=flat-square" alt="HarmonyOS API 24+" />
   <img src="https://img.shields.io/badge/ArkTS_%2B_ArkUI-Native-18181B?style=flat-square" alt="ArkTS + ArkUI Native" />
-  <a href="https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.2-preview"><img src="https://img.shields.io/badge/Preview-v0.1.2--preview-2563EB?style=flat-square" alt="Preview v0.1.2-preview" /></a>
-  <img src="https://img.shields.io/badge/Tests-562_passing-16A34A?style=flat-square" alt="562 Tests Passing" />
+  <a href="https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.3-preview"><img src="https://img.shields.io/badge/Preview-v0.1.3--preview-2563EB?style=flat-square" alt="Preview v0.1.3-preview" /></a>
+  <img src="https://img.shields.io/badge/Tests-575_passing-16A34A?style=flat-square" alt="575 Tests Passing" />
   <img src="https://img.shields.io/badge/License-MIT-52525B?style=flat-square" alt="MIT License" />
 </p>
 
@@ -62,7 +62,7 @@
   - 随时浏览工作区文件与全文检索、查看支持选行与行级评论的 Diff、执行 Git 状态检查 / 暂存 / 提交 / 分支切换 / 推送拉取。
   - 支持 GitHub Pull Requests 阅读 / 评审 / Guide 导览、会话顶栏直达的远端 ANSI 终端（含回滚与复制）、远端浏览器预览与 iOS Simulator / Android Emulator 设备预览。
 - **设计系统与鸿蒙原生集成**
-  - 内置 58 组深浅色对称语义颜色令牌（`base/element/color.json` 与 `dark/element/color.json`），WCAG AA（≥ 4.5:1）对比度由自动化测试守门。
+  - 内置 75 组深浅色对称语义颜色令牌（`base/element/color.json` 与 `dark/element/color.json`），WCAG AA（≥ 4.5:1）对比度由自动化测试守门。
   - 支持通过鸿蒙系统分享面板「T3 Harmony」将相册图片或文件直接导入为任务草稿，并提供 2×2 桌面快捷卡片与图标长按快捷入口。
 
 ## 日常使用
@@ -81,7 +81,7 @@
 
 ### 下载预览侧载包
 
-当前项目处于 **Preview** 阶段，可在 [GitHub Releases (`v0.1.2-preview`)](https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.2-preview) 下载预编译的**未签名调试模式 HAP**（`t3code-harmony-v0.1.2-preview-unsigned.hap`，附 SHA-256 校验文件）。
+当前项目处于 **Preview** 阶段，可在 [GitHub Releases (`v0.1.3-preview`)](https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.3-preview) 下载预编译的**未签名调试模式 HAP**（`t3code-harmony-v0.1.3-preview-unsigned.hap`，附 SHA-256 校验文件）。
 
 > **HarmonyOS NEXT 侧载说明**：出于系统安全机制，鸿蒙真机拒绝直接安装未签名包，而调试签名又强绑定单台设备 UDID 与个人证书。下载 `unsigned.hap` 后，请使用你自己的华为开发者账号通过社区侧载签名工具（如 AutoInstaller / 鸿蒙侧载助手）或 `hap-sign-tool` + `hdc` 注入调试签名后安装，也可直接克隆源码在 DevEco Studio 中开启自动签名编译安装。
 
@@ -97,7 +97,7 @@
 git clone https://github.com/DASungta/t3code-harmony.git
 cd t3code-harmony
 
-# 运行全部宿主单元测试与主题对比度校验（562/562）
+# 运行全部宿主单元测试与主题对比度校验（575/575）
 node --experimental-strip-types --test tests/*.test.mjs
 
 # 构建 Debug HAP（可通过 DEVECO_HOME 指定 DevEco Studio 安装路径）
