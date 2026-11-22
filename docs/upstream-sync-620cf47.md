@@ -61,3 +61,28 @@
 - 未知 provider/usage 枚举及非法限额项在 `Usage`、`ProviderSettings`、`Composer`、`DraftDefaults` 中的容错
 - `ScheduledTasks`、`R4`、`R5`、`Files` 响应数组中单条非法/未知元素仅丢弃该项
 - `Environment`、`Cloud`、`Pairing`、`Wire`（协议版本/会话身份）、`Core`（peerLinks/uploadTarget）安全边界继续严格拒绝非法输入
+
+---
+
+## 第 1+2 批上游同步完成记录（C1–C5、U1–U4）
+
+基线：`6085c0f`（宿主单测 651/651）→ 同步后全量宿主单测 672/672。
+
+### 第 1 批：连接与发送稳定性（C1–C5）
+
+| 编号 | 上游参考提交 | 实现要点 | 关键文件 |
+|---|---|---|---|
+| **C1** | `11224f63d2` | `T3Client.mutate()` 增加断线重放（`resendOnSocketLoss`，最多 2 次、单次 60s 超时），复用于首条消息 `orchestration.launchThread`、`message.dispatch`、队列 `start`/`resume`、`queued-message.promote-to-steer` 与 `resumeLatestRun`；断线重连后使用同一 `commandId` 重放以依赖服务端幂等回执，显式服务端拒绝（`RpcFailure.known`）绝不重放。 | `T3Client.ets`、`tests/native-client.test.mjs` |
+| **C2** | `b479ce21ed` | `Wire.ts` 新增 `validateServerConfig()`；初始配置快照解码失败时抛出 `ServerConfigIncompatibleError`，终止会话、不回退 `server.getConfig`、停止自动重连风暴，并在 `ConnectionsPanel.ets` 显示红色「版本不兼容」标签与手动「重试」；已建立连接后的后续不可读更新或流结束转为瞬态断线重连。 | `Wire.ts`、`T3Client.ets`、`EnvironmentRegistry.ets`、`ConnectionsPanel.ets`、`tests/native-client.test.mjs` |
+| **C3** | `38bac7091a`、`003d53ace1` | 保护 `T3Client` 重连循环、心跳、前后台恢复、网络事件及回调（`emitUpdate`、`handleReconnectFailure`），`NetworkMonitor` 在启动/注册失败或观察者抛错后自动重启并核对默认网络，`EnvironmentRegistry` 隔离单环境异常避免阻塞其余环境。 | `T3Client.ets`、`NetworkMonitor.ets`、`EnvironmentRegistry.ets`、`tests/native-client.test.mjs`、`tests/network-monitor.test.mjs` |
+| **C4** | `73e6472545` | `T3Client.watch()` 在带 `afterSequence` 恢复订阅遇到解码异常、流中断或服务端拒绝时，保留已缓存 `ThreadState` 与消息列表不闪空，立即丢弃 `afterSequence` 回退完整快照；若完整快照仍失败则设置 `threadSyncError = '无法同步消息'` 并指数退避重试，直至快照应用后清除强制标记。 | `T3Client.ets`、`Index.ets`、`tests/native-client.test.mjs` |
+| **C5** | `245a1ead92` | `R4.ts` 新增 `MANUAL_CONTINUATION_FALLBACK_TEXT = 'Continue where you left off.'` 与 `manualContinuationText()`；`T3Client.resumeLatestRun()` 在空文本且无附件的手动继续命令上发送该回退文本（新服务端自动清空，旧服务端原样派发避免发送空消息），与上游实现完全一致。 | `R4.ts`、`T3Client.ets`、`tests/r4.test.mjs`、`tests/native-client.test.mjs` |
+
+### 第 2 批：交互与审阅体验（U1–U4）
+
+| 编号 | 上游参考提交 | 实现要点 | 关键文件 |
+|---|---|---|---|
+| **U1** | `78d74598d4` | `ThreadState` 同步快照 `attempts` 及 `run-attempt.created`/`run-attempt.updated` 事件；`R4.ts` 移植 `unsentManualContinuationSource()` 与 `deriveResumableRunId()`；当 `supportsNativeResume === false` 且消息已送达 Provider 时隐藏 `Index.ets` 中的「恢复最近的运行」入口并在 `resumeLatestRun()` 拦截，兼容缺少该字段的旧服务端。 | `Wire.ts`、`R4.ts`、`T3Client.ets`、`Index.ets`、`tests/r4.test.mjs`、`tests/native-client.test.mjs` |
+| **U2** | `910c1a8df9` | 新增 `CollapsibleUserMessageBody.ets` 及 `ThreadItems.ts` 阈值工具（`USER_MESSAGE_FOLDED_HEIGHT = 176`，仅在内容高度 `>= 352` 时折叠）；折叠态屏蔽裁切高度回调防止闪烁循环，带底部气泡色渐变遮罩与「展开全文」/「收起」按钮，展开态通过 `@Provide('t3ExpandedUserMessages')` 按 `message.id` 在 `LazyForEach` 中稳定保持。 | `ThreadItems.ts`、`CollapsibleUserMessageBody.ets`、`Index.ets`、`tests/thread-activity.test.mjs` |
+| **U3** | `71ff113795`、`210996207d` | `R5.ts` 完整移植 `classifyChangedFile()`、`isTestChangedFile()`、`filterDiffTestFiles()`、`diffFileTreePositions()` 与 `orderDiffFilesForReview()`（依赖先于被依赖、源码→测试→生成物、目录连续、保留同名符号链接双条目）；`WorkspacePrefs.ets` 新增 `pullRequestHideTestFiles`（`AppStorage` `t3HideTestFiles`），`ReviewPanel.ets` 与 `PullRequestsPanel.ets` 共享「隐藏测试文件」筛选与全隐藏空态。 | `R5.ts`、`WorkspacePrefs.ets`、`ReviewPanel.ets`、`PullRequestsPanel.ets`、`tests/r5.test.mjs`、`tests/workspace-prefs.test.mjs`、`tests/pull-request-reads.test.mjs` |
+| **U4** | `b5481adcd8`、`898c22f990` | `ScheduledTasks.ts` 新增 `scheduledTaskWorktreeBaseRef()`（优先 `isDefault`，其次 `main`/`master` 及 `origin/*`），`ScheduledTasksPanel.ets` 新建工作树自动等待并选取项目默认分支；支持在编辑已绑定会话的任务时清除目标会话，显式发送 `threadId: null` 与 `unbindThread: true` 并保留原 `threadMode`，回读确认 `saved.threadId === null`。 | `ScheduledTasks.ts`、`ScheduledTasksPanel.ets`、`tests/scheduled-tasks.test.mjs`、`tests/scheduled-tasks-ui.test.mjs` |
