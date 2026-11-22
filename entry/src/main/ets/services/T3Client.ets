@@ -1427,6 +1427,66 @@ export class T3Client {
       return undefined;
     }
   }
+  subscribeSideThread(
+    threadId: string,
+    onItem: (value: Object) => void,
+    onEnd: () => void,
+    onError: (error: Error) => void
+  ): () => void {
+    const tid = threadId.trim();
+    if (!tid) {
+      onError(new Error('目标会话标识无效'));
+      return () => {};
+    }
+    const rpc = this.requireRpc();
+    const payload: Record<string, Object> = { threadId: tid, initialTurnItemLimit: 60 };
+    let active = true;
+    const chunk = (value: Object): void => {
+      if (!active || rpc !== this.rpc) return;
+      onItem(value);
+    };
+    void rpc.request('orchestration.subscribeThread', payload, chunk, 30000, false).then(() => {
+      if (!active) return;
+      active = false;
+      onEnd();
+    }).catch((error: Error) => {
+      if (!active) return;
+      active = false;
+      onError(error);
+    });
+    return (): void => {
+      if (!active) return;
+      active = false;
+      if (this.rpc === rpc) rpc.cancelStream(chunk);
+    };
+  }
+  async sideThreadHistoryPage(threadId: string, cursor: string): Promise<LinkedThreadHistoryPage> {
+    const tid = threadId.trim();
+    const cur = cursor.trim();
+    if (!this.ready || !tid || !cur) throw new Error('历史翻页参数无效');
+    const path = '/api/orchestration/threads/' + encodeURIComponent(tid) +
+      '/history?cursor=' + encodeURIComponent(cur);
+    const protocolHeaders: Record<string, string> = { 'x-t3-orchestration-protocol': '2' };
+    const value = await this.httpJson(this.activeBase(), path, http.RequestMethod.GET,
+      '', this.saved?.token || '', false, !!this.cloud, 15000, protocolHeaders);
+    return parseLinkedThreadHistoryPage(value);
+  }
+  async sideThreadItem(threadId: string, itemId: string): Promise<Record<string, Object> | undefined> {
+    const tid = threadId.trim();
+    const id = itemId.trim();
+    if (!tid || !id || id.length > 256) throw new Error('会话条目标识无效');
+    const payload: TurnItemPayload = { threadId: tid, itemId: id };
+    const value = record(await this.rpcRequest('orchestration.getTurnItem', payload, 15000, false));
+    return value.item === undefined || value.item === null ? undefined : record(value.item);
+  }
+  async sendToSideThread(threadId: string, prompt: string): Promise<void> {
+    const tid = threadId.trim();
+    if (!tid || !prompt.trim()) throw new Error('请输入指令');
+    const rpc = this.requireRpc();
+    const commandId = util.generateRandomUUID();
+    const messageId = util.generateRandomUUID();
+    await rpc.request('orchestration.dispatchCommand', sendMessage(commandId, tid, messageId, prompt), undefined, 15000, false);
+  }
   stopAuthAccess(): void {
     const rpc = this.rpc;
     const chunk = this.accessChunk;

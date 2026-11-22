@@ -106,6 +106,19 @@ import {
   threadLinkCandidates
 } from '../protocol/LinkedThread';
 import { LinkedThreadPanel } from '../components/LinkedThreadPanel';
+import {
+  parseSideThreadOpenTarget,
+  popSideThreadReturn,
+  pushSideThreadReturn,
+  resolveSideThreadOpenTarget,
+  sideChatsForThread,
+  sideThreadKindOf,
+  SideThreadKind,
+  SideThreadOpenIntent,
+  SideThreadReturnPoint,
+  SideThreadTarget
+} from '../protocol/SideThread';
+import { SideThreadPanel } from '../components/SideThreadPanel';
 import { WorkspaceActions, WorkspaceUndo } from '../services/Workspace';
 import { rememberThreadProject, saveWorkspacePreferences, setWorkingShelfEnabled, workspacePrefs } from '../services/WorkspacePrefs';
 import { ThreadList } from '../components/ThreadList';
@@ -312,6 +325,10 @@ struct Index {
   @State linkedConnectNotice: string = '';
   @State linkedConnectError: boolean = false;
   @State linkedConnectTarget: LinkedThreadTarget | undefined = undefined;
+  @State sideThreadTarget: SideThreadTarget | undefined = undefined;
+  @State sideThreadReturnStack: SideThreadReturnPoint[] = [];
+  private chatScrollIndex: number = 0;
+  private pendingScrollRestore: SideThreadReturnPoint | undefined = undefined;
   @State commandPanel: string = '';
   @State commandQuery: string = '';
   @State mentionFiles: string[] = [];
@@ -518,7 +535,24 @@ struct Index {
           void client.watch(this.threadId).catch((error: Error) => { if (this.alive) this.status = error.message; });
         }
       }
-      if (this.page === 'chat' && !this.draftMode && this.pendingScrollBottomKey === currentThreadKey &&
+      if (this.page === 'chat' && !this.draftMode && this.pendingScrollRestore &&
+        this.pendingScrollRestore.localId === this.selectedLocalId &&
+        this.pendingScrollRestore.threadId === this.threadId &&
+        client.thread && client.thread.threadId === this.threadId && client.thread.cursor >= 0 && this.messages.length > 0) {
+        const restore = this.pendingScrollRestore;
+        this.pendingScrollRestore = undefined;
+        const applyRestore = (): void => {
+          if (!this.alive || this.page !== 'chat' || this.draftMode || this.threadId !== restore.threadId) return;
+          if (restore.scrollY > 0) {
+            this.scroller.scrollTo({ xOffset: 0, yOffset: restore.scrollY });
+          } else if (restore.scrollIndex > 0) {
+            this.scroller.scrollToIndex(restore.scrollIndex);
+          }
+          this.chatAwayFromBottom = this.messages.length > 0 && !this.scroller.isAtEnd();
+        };
+        setTimeout(applyRestore, 80);
+        setTimeout(applyRestore, 240);
+      } else if (this.page === 'chat' && !this.draftMode && this.pendingScrollBottomKey === currentThreadKey &&
         client.thread && client.thread.threadId === this.threadId && client.thread.cursor >= 0 && this.messages.length > 0) {
         const scrolledThreadId = this.threadId;
         this.pendingScrollBottomKey = '';
@@ -2118,7 +2152,12 @@ struct Index {
     try {
       const id = await client.forkThread(runId, sideChat);
       this.panelOpen = false;
-      await this.watch(id);
+      if (sideChat) {
+        this.busy = false;
+        await this.openSideThread('side-chat', id, '', '');
+      } else {
+        await this.watch(id);
+      }
     } catch (error) { this.status = (error as Error).message; }
     finally { this.busy = false; }
   }
@@ -2602,7 +2641,7 @@ struct Index {
     finally { this.busy = false; }
   }
 
-  private async watch(id: string): Promise<void> {
+  private async watch(id: string, preserveScroll: boolean = false): Promise<void> {
     const previousKey = this.draftKey();
     if (this.draftMode) await this.persistDraft();
     else {
@@ -2635,7 +2674,8 @@ struct Index {
     }
     this.chatAwayFromBottom = false;
     this.threadRunning = false;
-    this.pendingScrollBottomKey = targetKey;
+    this.pendingScrollBottomKey = preserveScroll ? '' : targetKey;
+    if (!preserveScroll) this.pendingScrollRestore = undefined;
     this.lastAutoWatchKey = this.selectedLocalId + ':' + client.generationValue() + ':' + id;
     this.threadId = id;
     this.prompt = this.textDrafts.get(this.draftKey()) || '';
@@ -2832,7 +2872,78 @@ struct Index {
       return false;
     }
   }
-  private async openRemoteOrLocalThread(threadId: string, remoteEnvironmentId: string, remoteLabel: string = ''): Promise<void> {
+  private captureCurrentChatPosition(): SideThreadReturnPoint | undefined {
+    if (this.page !== 'chat' || this.draftMode || !this.selectedLocalId || !this.threadId) return undefined;
+    let scrollY = 0;
+    try {
+      const offset = this.scroller.currentOffset();
+      if (offset && typeof offset.yOffset === 'number' && Number.isFinite(offset.yOffset) && offset.yOffset > 0) {
+        scrollY = offset.yOffset;
+      }
+    } catch (_) {}
+    return {
+      localId: this.selectedLocalId,
+      threadId: this.threadId,
+      scrollY,
+      scrollIndex: this.chatScrollIndex > 0 ? this.chatScrollIndex : 0
+    };
+  }
+  private async returnToParentThread(): Promise<boolean> {
+    const popped = popSideThreadReturn(this.sideThreadReturnStack);
+    if (!popped.point) return false;
+    this.sideThreadReturnStack = popped.rest;
+    const point = popped.point;
+    this.panelOpen = false;
+    this.linkedThreadTarget = undefined;
+    this.sideThreadTarget = undefined;
+    this.pendingScrollRestore = point;
+    this.page = 'chat';
+    if (point.localId !== this.selectedLocalId) {
+      await this.registry().select(point.localId);
+      this.bindEnvironment();
+      this.page = 'chat';
+    }
+    if (this.threadId === point.threadId && client.thread && client.thread.threadId === point.threadId && this.messages.length > 0) {
+      const restore = this.pendingScrollRestore;
+      this.pendingScrollRestore = undefined;
+      if (restore) {
+        setTimeout(() => {
+          if (!this.alive || this.page !== 'chat' || this.threadId !== restore.threadId) return;
+          if (restore.scrollY > 0) this.scroller.scrollTo({ xOffset: 0, yOffset: restore.scrollY });
+          else if (restore.scrollIndex > 0) this.scroller.scrollToIndex(restore.scrollIndex);
+        }, 60);
+      }
+      return true;
+    }
+    await this.watch(point.threadId, true);
+    return true;
+  }
+  private async leaveChatOrReturnParent(): Promise<void> {
+    if (this.sideThreadReturnStack.length > 0) {
+      const returned = await this.returnToParentThread();
+      if (returned) return;
+    }
+    this.sideThreadReturnStack = [];
+    this.pendingScrollRestore = undefined;
+    this.page = 'sessions';
+  }
+  private async leaveLinkedThreadPage(): Promise<void> {
+    this.linkedThreadTarget = undefined;
+    this.linkedConnectNotice = '';
+    this.linkedConnectError = false;
+    if (this.sideThreadReturnStack.length > 0) {
+      const returned = await this.returnToParentThread();
+      if (returned) return;
+    }
+    this.page = 'chat';
+  }
+  private async openSideThread(
+    requestedKind: SideThreadKind,
+    threadId: string,
+    remoteEnvironmentId: string,
+    remoteLabel: string = '',
+    intent: SideThreadOpenIntent = 'primary'
+  ): Promise<void> {
     if (this.busy) return;
     const tid = threadId.trim();
     const envId = remoteEnvironmentId.trim();
@@ -2840,10 +2951,50 @@ struct Index {
     const currentEntry = this.environmentEntries.find((candidate: EnvironmentEntry) =>
       !candidate.deleting && candidate.localId === this.selectedLocalId);
     const viaEnvId = currentEntry?.environmentId || '';
-    if (!envId || envId === viaEnvId) {
+    const targetMode = resolveSideThreadOpenTarget(
+      parseSideThreadOpenTarget(workspacePrefs.sideThreadOpenTarget),
+      intent,
+      true
+    );
+
+    const openConnectedInTarget = async (entry: EnvironmentEntry | undefined, targetThreadId: string): Promise<void> => {
+      const targetLocalId = entry ? entry.localId : this.selectedLocalId;
+      const targetEnvId = entry ? entry.environmentId : viaEnvId;
+      const targetEnvLabel = entry ? entry.label : (currentEntry?.label || this.server || '当前环境');
+      const matched = this.scopedThreads.find((t: ScopedThread) => t.localId === targetLocalId && t.id === targetThreadId);
+      const inferredKind = sideThreadKindOf(matched);
+      const effectiveKind: 'side-chat' | 'subagent' | 'provider-subagent' =
+        inferredKind || (requestedKind === 'side-chat' ? 'side-chat' : requestedKind === 'provider-subagent' ? 'provider-subagent' : 'subagent');
+      if (targetMode === 'panel') {
+        this.sideThreadTarget = {
+          kind: effectiveKind,
+          localId: targetLocalId,
+          environmentId: targetEnvId,
+          environmentLabel: targetEnvLabel,
+          threadId: targetThreadId,
+          title: matched?.label || ''
+        };
+        this.panel = 'side-thread';
+        this.panelOpen = true;
+        return;
+      }
+      const parentPos = this.captureCurrentChatPosition();
+      if (parentPos && (parentPos.localId !== targetLocalId || parentPos.threadId !== targetThreadId)) {
+        this.sideThreadReturnStack = pushSideThreadReturn(this.sideThreadReturnStack, parentPos);
+      }
+      this.sideThreadTarget = undefined;
       this.panelOpen = false;
       this.page = 'chat';
-      await this.watch(tid);
+      if (targetLocalId !== this.selectedLocalId) {
+        await this.registry().select(targetLocalId);
+        this.bindEnvironment();
+        this.page = 'chat';
+      }
+      await this.watch(targetThreadId);
+    };
+
+    if (!envId || envId === viaEnvId) {
+      await openConnectedInTarget(currentEntry, tid);
       return;
     }
     const ownEntry = this.environmentEntries.find((candidate: EnvironmentEntry) =>
@@ -2855,13 +3006,7 @@ struct Index {
       linkedEnvironmentsEnabled: client.ready && client.linkedEnvironmentsEnabled()
     });
     if (resolution === 'direct' && ownEntry) {
-      this.panelOpen = false;
-      this.page = 'chat';
-      if (ownEntry.localId !== this.selectedLocalId) {
-        await this.registry().select(ownEntry.localId);
-        this.bindEnvironment();
-      }
-      await this.watch(tid);
+      await openConnectedInTarget(ownEntry, tid);
       return;
     }
     if (resolution === 'linked') {
@@ -2884,11 +3029,23 @@ struct Index {
       this.linkedConnecting = false;
       this.linkedConnectNotice = '';
       this.linkedConnectError = false;
-      this.panel = 'linked-thread';
-      this.panelOpen = true;
+      if (targetMode === 'main') {
+        const parentPos = this.captureCurrentChatPosition();
+        if (parentPos) {
+          this.sideThreadReturnStack = pushSideThreadReturn(this.sideThreadReturnStack, parentPos);
+        }
+        this.panelOpen = false;
+        this.page = 'linked-thread';
+      } else {
+        this.panel = 'linked-thread';
+        this.panelOpen = true;
+      }
       return;
     }
     this.status = '目标会话所在环境未连接，且当前环境未开启链接环境';
+  }
+  private async openRemoteOrLocalThread(threadId: string, remoteEnvironmentId: string, remoteLabel: string = ''): Promise<void> {
+    await this.openSideThread('subagent', threadId, remoteEnvironmentId, remoteLabel);
   }
   private async connectLinkedThreadEnvironment(target: LinkedThreadTarget): Promise<void> {
     if (this.linkedConnecting || this.busy) return;
@@ -2962,23 +3119,16 @@ struct Index {
       const ownEntry = this.environmentEntries.find((candidate: EnvironmentEntry) =>
         !candidate.deleting && candidate.enabled && candidate.environmentId === parsed.environmentId);
       if (ownEntry) {
-        this.panelOpen = false;
-        this.page = 'chat';
-        if (ownEntry.localId !== this.selectedLocalId) {
-          await this.registry().select(ownEntry.localId);
-          this.bindEnvironment();
-        }
-        await this.watch(pickThreadId(this.threads));
+        const pool = this.scopedThreads.filter((t: ScopedThread) => t.localId === ownEntry.localId);
+        await this.openSideThread('linked', pickThreadId(pool), parsed.environmentId, ownEntry.label);
         return;
       }
-      await this.openRemoteOrLocalThread(parsed.decodedThreadId || parsed.threadId, parsed.environmentId, '');
+      await this.openSideThread('linked', parsed.decodedThreadId || parsed.threadId, parsed.environmentId, '');
       return;
     }
     for (const id of candidates) {
       if (this.threads.some((t: ThreadView) => t.id === id)) {
-        this.panelOpen = false;
-        this.page = 'chat';
-        await this.watch(id);
+        await this.openSideThread('linked', id, '', '');
         return;
       }
     }
@@ -2986,18 +3136,10 @@ struct Index {
       candidates.includes(t.id));
     if (crossMatches.length === 1) {
       const match = crossMatches[0];
-      this.panelOpen = false;
-      this.page = 'chat';
-      if (match.localId !== this.selectedLocalId) {
-        await this.registry().select(match.localId);
-        this.bindEnvironment();
-      }
-      await this.watch(match.id);
+      await this.openSideThread('linked', match.id, match.environmentId, match.environmentLabel);
       return;
     }
-    this.panelOpen = false;
-    this.page = 'chat';
-    await this.watch(parsed.decodedThreadId || parsed.threadId);
+    await this.openSideThread('linked', parsed.decodedThreadId || parsed.threadId, '', '');
   }
   private async openLink(url: string): Promise<void> {
     const parsedThread = parseThreadLinkHref(url);
@@ -3200,7 +3342,18 @@ struct Index {
       this.page = 'sessions';
       return true;
     }
-    if (this.page === 'chat') { this.page = 'sessions'; return true; }
+    if (this.page === 'linked-thread') {
+      void this.leaveLinkedThreadPage();
+      return true;
+    }
+    if (this.page === 'chat') {
+      if (this.sideThreadReturnStack && this.sideThreadReturnStack.length > 0) {
+        void this.returnToParentThread();
+        return true;
+      }
+      this.page = 'sessions';
+      return true;
+    }
     if (this.page === 'settings') { this.page = 'sessions'; return true; }
     if (this.page === 'choose-project') {
       const next = this.choosingShare ? 'share' : (this.projectPickerReturn === 'chat' && this.draftMode ? 'chat' : 'sessions');
@@ -3573,12 +3726,16 @@ struct Index {
       })
     } else if (this.panel === 'extras') {
       ThreadExtrasPanel({ busy: this.busy, plans: this.extraPlans, subagents: this.extraSubagents,
+        sideChats: sideChatsForThread(this.threads, this.threadId),
         backgroundTasks: this.extraBackground,
         usage: this.extraUsage, guest: this.extraGuest, connected: this.ready,
         onClose: () => this.panelOpen = false,
         onCopy: (value: string) => { void this.copy(value); },
         onOpenThread: (threadId: string, remoteEnvironmentId: string, remoteLabel: string) => {
-          void this.openRemoteOrLocalThread(threadId, remoteEnvironmentId, remoteLabel);
+          void this.openSideThread('subagent', threadId, remoteEnvironmentId, remoteLabel);
+        },
+        onOpenSideChat: (threadId: string) => {
+          void this.openSideThread('side-chat', threadId, '', '');
         },
         onStopSubagent: (id: string) => {
           this.busy = true;
@@ -3625,7 +3782,7 @@ struct Index {
         stopPending: isBackgroundWorkStopPending(this.backgroundStopRequest, this.selectedLocalId + ':' + this.threadId, this.pendingBackgroundItems, this.nowMs),
         busy: this.busy,
         onClose: () => { this.panelOpen = false; },
-        onOpenThread: (threadId: string) => { void this.watch(threadId); },
+        onOpenThread: (threadId: string) => { void this.openSideThread('subagent', threadId, '', ''); },
         onStopAll: () => { this.stopBackgroundWork(); }
       })
     } else if (this.panelOpen && this.panel === 'task-settings') {
@@ -3726,15 +3883,46 @@ struct Index {
         onSignIn: () => this.cloudSignIn(), onSignOut: () => this.cloudSignOut(),
         onRefresh: () => this.cloudRefresh(), onConnect: (id: string) => this.cloudConnect(id),
         onLink: (id: string) => this.cloudLink(id), onUnlink: (id: string) => this.cloudUnlink(id) })
+    } else if (this.panel === 'side-thread' && this.sideThreadTarget) {
+      SideThreadPanel({
+        target: this.sideThreadTarget,
+        ownerClient: this.registry().connection(this.sideThreadTarget.localId) || client,
+        ownerReady: this.environmentReady[this.sideThreadTarget.localId] === true ||
+          (this.sideThreadTarget.localId === this.selectedLocalId && this.ready),
+        onClose: () => {
+          this.panelOpen = false;
+          this.sideThreadTarget = undefined;
+        },
+        onOpenInMain: () => {
+          const current = this.sideThreadTarget;
+          if (!current) return;
+          this.panelOpen = false;
+          this.sideThreadTarget = undefined;
+          void this.openSideThread(current.kind, current.threadId, current.environmentId, current.environmentLabel, 'main');
+        },
+        onCopy: (value: string) => { void this.copy(value); },
+        onOpenLink: (url: string) => { void this.openLink(url); }
+      })
     } else if (this.panel === 'linked-thread' && this.linkedThreadTarget) {
       LinkedThreadPanel({
         target: this.linkedThreadTarget,
         viaClient: this.registry().connection(this.linkedThreadTarget.viaLocalId) || client,
         viaReady: this.environmentReady[this.linkedThreadTarget.viaLocalId] === true ||
           (this.linkedThreadTarget.viaLocalId === this.selectedLocalId && this.ready),
+        showOpenInMain: true,
         connecting: this.linkedConnecting,
         connectNotice: this.linkedConnectNotice,
         connectError: this.linkedConnectError,
+        onOpenInMain: () => {
+          const current = this.linkedThreadTarget;
+          if (!current) return;
+          this.panelOpen = false;
+          const parentPos = this.captureCurrentChatPosition();
+          if (parentPos) {
+            this.sideThreadReturnStack = pushSideThreadReturn(this.sideThreadReturnStack, parentPos);
+          }
+          this.page = 'linked-thread';
+        },
         onConnect: (target: LinkedThreadTarget) => this.connectLinkedThreadEnvironment(target),
         onClose: () => {
           this.panelOpen = false;
@@ -4026,7 +4214,7 @@ struct Index {
         settledLimit: this.settledLimit,
         searchOpen: this.searchOpen,
         bottomInset: 88,
-        onSelect: (thread: ScopedThread) => { void this.openScopedThread(thread); },
+        onSelect: (thread: ScopedThread) => { this.sideThreadReturnStack = []; this.pendingScrollRestore = undefined; void this.openScopedThread(thread); },
         onAction: (thread: ScopedThread, action: string) => { void this.threadAction(thread, action); },
         onSnooze: (thread: ScopedThread) => { this.snoozeThread = thread; this.openPanel('snooze'); },
         onMove: (thread: ScopedThread, ordered: ScopedThread[], up: boolean) => {
@@ -4538,6 +4726,9 @@ struct Index {
         .contentStartOffset(Space.xs)
         .contentEndOffset(this.floatingCapsule.visible ? 56 : Space.sm)
         .scrollBar(BarState.Off)
+        .onScrollIndex((start: number): void => {
+          this.chatScrollIndex = start;
+        })
         .onDidScroll((): void => {
           this.chatAwayFromBottom = this.messages.length > 0 && !this.scroller.isAtEnd();
         })
@@ -5155,9 +5346,28 @@ struct Index {
           projectLabel: this.projects.find((project: ProjectView) => project.id === this.projectId)?.label || '',
           onBack: () => this.page = 'chat', onStatus: (value: string) => this.status = value,
           onCopy: (value: string) => { void this.copy(value); } })
+        } else if (this.page === 'linked-thread' && this.linkedThreadTarget) {
+          LinkedThreadPanel({
+            target: this.linkedThreadTarget,
+            viaClient: this.registry().connection(this.linkedThreadTarget.viaLocalId) || client,
+            viaReady: this.environmentReady[this.linkedThreadTarget.viaLocalId] === true ||
+              (this.linkedThreadTarget.viaLocalId === this.selectedLocalId && this.ready),
+            showOpenInMain: false,
+            connecting: this.linkedConnecting,
+            connectNotice: this.linkedConnectNotice,
+            connectError: this.linkedConnectError,
+            onConnect: (target: LinkedThreadTarget) => this.connectLinkedThreadEnvironment(target),
+            onClose: () => { void this.leaveLinkedThreadPage(); },
+            onCopy: (value: string) => { void this.copy(value); },
+            onOpenLink: (url: string) => { void this.openLink(url); }
+          })
         } else if (this.page === 'chat') {
           Row({ space: Space.xxs }) {
-            IconButton({ icon: $r('app.media.ui_back'), label: '返回会话列表', onTap: () => { this.page = 'sessions'; } })
+            IconButton({
+              icon: $r('app.media.ui_back'),
+              label: this.sideThreadReturnStack.length > 0 ? '返回父会话' : '返回会话列表',
+              onTap: () => { void this.leaveChatOrReturnParent(); }
+            })
             Column() {
               Text(this.draftMode ? '新任务' : this.threads.find((t: ThreadView) => t.id === this.threadId)?.label || this.cachedChatTitle || '会话')
                 .fontSize(FontSize.headline).lineHeight(LineHeight.headline).fontWeight(Weight.semibold)
@@ -5288,6 +5498,7 @@ struct Index {
         this.panel === 'composer-command' ? '78%' :
         this.panel === 'paste-context' ? '48%' : this.panel === 'markdown-image' ? '80%' :
         this.panel === 'rename' ? '36%' : this.panel === 'filter' ? '58%' :
+        this.panel === 'linked-thread' || this.panel === 'side-thread' ? '88%' :
         this.panel === 'cloud' || this.panel === 'snooze' ? '85%' : '70%',
         showClose: false,
         onWillDismiss: (action: DismissSheetAction) => { if (this.panel !== 'peer-link' || !this.busy) action.dismiss(); },

@@ -22,7 +22,7 @@ test('R3 preferences validate grouping, sort, filter bounds and default omitted 
     projectFilterGroupingMode: 'repository_path',
     threadSortOrder: 'created_at', archivedSortOrder: 'oldest', workingShelfEnabled: true,
     useLastProjectForNewThreads: true, lastThreadProject: undefined,
-    workingShelfExpanded: false, snoozedShelfExpanded: false, settledShelfExpanded: false, followUpBehavior: 'steer', terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE, codeFontSize: null, codeWordBreak: false, pullRequestHideTestFiles: false
+    workingShelfExpanded: false, snoozedShelfExpanded: false, settledShelfExpanded: false, followUpBehavior: 'steer', terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE, codeFontSize: null, codeWordBreak: false, pullRequestHideTestFiles: false, sideThreadOpenTarget: 'panel'
   });
   assert.throws(() => P.workspacePreferences({ schemaVersion: 2 }), /版本/);
   assert.throws(() => P.workspacePreferences({ schemaVersion: 1, projectGroupingMode: 'bad',
@@ -163,4 +163,26 @@ test('U3: pullRequestHideTestFiles defaults false, migrates safely, persists and
   await assert.rejects(P.setPullRequestHideTestFiles(false), /disk/);
   assert.equal(P.workspacePrefs.pullRequestHideTestFiles, true);
   assert.equal(published.get('t3HideTestFiles'), true);
+});
+
+test('L3: sideThreadOpenTarget defaults panel, migrates legacy records, validates and persists atomically', async () => {
+  const base = P.defaultWorkspacePreferences();
+  assert.equal(base.sideThreadOpenTarget, 'panel');
+  const legacy = { ...base };
+  delete legacy.sideThreadOpenTarget;
+  assert.equal(P.workspacePreferences(legacy).sideThreadOpenTarget, 'panel');
+  assert.equal(P.workspacePreferences({ ...base, sideThreadOpenTarget: 'main' }).sideThreadOpenTarget, 'main');
+  assert.throws(() => P.workspacePreferences({ ...base, sideThreadOpenTarget: 'invalid' }), /打开方式无效/);
+
+  await P.prepareWorkspacePreferences('/synthetic');
+  const saved = [];
+  P.workspacePrefsStore.save = async value => { saved.push(value.sideThreadOpenTarget); };
+  await P.setSideThreadOpenTarget('main');
+  assert.equal(P.workspacePrefs.sideThreadOpenTarget, 'main');
+  assert.deepEqual(saved, ['main']);
+  await assert.rejects(P.setSideThreadOpenTarget('bogus'), /无效/);
+
+  P.workspacePrefsStore.save = async () => { throw Error('disk'); };
+  await assert.rejects(P.setSideThreadOpenTarget('panel'), /disk/);
+  assert.equal(P.workspacePrefs.sideThreadOpenTarget, 'main');
 });

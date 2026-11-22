@@ -1,5 +1,6 @@
 import { FontSize, LineHeight, Radius, Space, Weight } from '../common/Theme';
 import { BackgroundTaskView, DraftAttachment, GuestMessageView, GuestShareView, PlanView, SubagentView, TokenUsage } from '../protocol/R4';
+import { ThreadView } from '../protocol/Projects';
 import { AppButton } from './ui/AppButton';
 import { GroupCard } from './ui/GroupCard';
 import { StatusBadge } from './ui/StatusBadge';
@@ -10,6 +11,7 @@ export struct ThreadExtrasPanel {
   @Prop busy: boolean = false;
   @Prop plans: PlanView[] = [];
   @Prop subagents: SubagentView[] = [];
+  @Prop sideChats: ThreadView[] = [];
   @Prop backgroundTasks: BackgroundTaskView[] = [];
   @Prop usage: TokenUsage | undefined = undefined;
   @Prop guest: GuestShareView | undefined = undefined;
@@ -17,6 +19,7 @@ export struct ThreadExtrasPanel {
   onClose: () => void = () => {};
   onCopy: (text: string) => void = () => {};
   onOpenThread: (threadId: string, remoteEnvironmentId: string, remoteLabel: string) => void = () => {};
+  onOpenSideChat: (threadId: string) => void = () => {};
   onStopSubagent: (id: string) => void = () => {};
   onFork: (sideChat: boolean) => void = () => {};
   onCreateGuest: () => void = () => {};
@@ -118,6 +121,22 @@ export struct ThreadExtrasPanel {
               }.padding(Space.md).width('100%').alignItems(HorizontalAlign.Start)
                 .backgroundColor($r('app.color.card')).borderRadius(Radius.card)
             }, (agent: SubagentView) => agent.id)
+          }
+          if (this.sideChats.length) {
+            GroupCard({ title: 'Side chat · ' + this.sideChats.length }) {
+              Column({ space: Space.xs }) {
+                ForEach(this.sideChats, (chat: ThreadView) => {
+                  AppButton({
+                    label: chat.label || 'Side chat',
+                    kind: 'secondary',
+                    compact: true,
+                    fill: true,
+                    disabled: !this.connected,
+                    onTap: () => this.onOpenSideChat(chat.id)
+                  })
+                }, (chat: ThreadView) => chat.id + ':' + chat.label)
+              }.padding(Space.sm).width('100%')
+            }
           }
           if (this.backgroundTasks.length) {
             GroupCard({ title: '后台工作' }) {

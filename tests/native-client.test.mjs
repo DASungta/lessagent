@@ -2610,3 +2610,47 @@ test('L2: T3Client.requestPeerClientPairing parses credential, unsupported, and 
     s.client.disconnect();
   }
 });
+
+test('L3: T3Client.subscribeSideThread, sideThreadItem, and sendToSideThread operate independently of main thread', async () => {
+  const dispatched = [];
+  const s = await setup({
+    onRequest: (value, sock) => {
+      if (value.tag === 'orchestration.getTurnItem') {
+        sock.emit({
+          _tag: 'Exit',
+          requestId: value.id,
+          exit: { _tag: 'Success', value: { item: { id: value.payload.itemId, output: 'side detail' } } }
+        });
+        return 'handled';
+      }
+      if (value.tag === 'orchestration.dispatchCommand') {
+        dispatched.push(value.payload);
+        sock.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Success', value: { sequence: 20 } } });
+        return 'handled';
+      }
+      return undefined;
+    }
+  });
+  try {
+    await s.client.connect('https://test', 'CODE');
+    await s.client.watch('parent-thread');
+    const sideFrames = [];
+    const cancel = s.client.subscribeSideThread('child-side', (frame) => sideFrames.push(frame), () => {}, () => {});
+    await new Promise((r) => setTimeout(r, 30));
+    assert.equal(s.client.thread.threadId, 'parent-thread');
+    assert.equal(sideFrames.length, 1);
+    assert.equal(sideFrames[0].projection.thread.id, 'child-side');
+
+    const item = await s.client.sideThreadItem('child-side', 'it-1');
+    assert.equal(item.output, 'side detail');
+
+    await s.client.sendToSideThread('child-side', 'follow up in side panel');
+    assert.equal(dispatched.length, 1);
+    assert.equal(dispatched[0].threadId, 'child-side');
+    assert.equal(dispatched[0].text, 'follow up in side panel');
+    cancel();
+    assert.equal(s.client.thread.threadId, 'parent-thread');
+  } finally {
+    s.client.disconnect();
+  }
+});

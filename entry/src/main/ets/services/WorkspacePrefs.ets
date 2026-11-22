@@ -26,6 +26,7 @@ export interface WorkspacePreferences {
   codeFontSize: number | null;
   codeWordBreak: boolean;
   pullRequestHideTestFiles: boolean;
+  sideThreadOpenTarget: string;
 }
 
 export function defaultWorkspacePreferences(): WorkspacePreferences {
@@ -33,7 +34,7 @@ export function defaultWorkspacePreferences(): WorkspacePreferences {
     schemaVersion: 1, projectGroupingMode: 'repository', environmentFilter: '', projectFilterKey: '',
     threadSortOrder: 'updated_at', archivedSortOrder: 'newest', workingShelfEnabled: true,
     useLastProjectForNewThreads: true,
-    workingShelfExpanded: false, snoozedShelfExpanded: false, settledShelfExpanded: true, followUpBehavior: 'steer', terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE, codeFontSize: null, codeWordBreak: false, pullRequestHideTestFiles: false
+    workingShelfExpanded: false, snoozedShelfExpanded: false, settledShelfExpanded: true, followUpBehavior: 'steer', terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE, codeFontSize: null, codeWordBreak: false, pullRequestHideTestFiles: false, sideThreadOpenTarget: 'panel'
   };
 }
 
@@ -65,6 +66,8 @@ export function workspacePreferences(value: Object): WorkspacePreferences {
   if (env.length > 256 || project.length > 512) throw new Error('列表过滤条件无效');
   const followUp = row.followUpBehavior === undefined ? 'steer' : row.followUpBehavior;
   if (followUp !== 'queue' && followUp !== 'steer') throw new Error('后续消息方式无效');
+  const sideTarget = row.sideThreadOpenTarget === undefined ? 'panel' : row.sideThreadOpenTarget;
+  if (sideTarget !== 'panel' && sideTarget !== 'main') throw new Error('子会话打开方式无效');
   return {
     schemaVersion: 1, projectGroupingMode: mode, environmentFilter: env, projectFilterKey: project,
     projectFilterGroupingMode: project ? filterMode : undefined,
@@ -80,7 +83,8 @@ export function workspacePreferences(value: Object): WorkspacePreferences {
     codeFontSize: typeof row.codeFontSize === 'number' && Number.isFinite(row.codeFontSize)
       ? Math.min(MAX_CODE_FONT_SIZE, Math.max(MIN_CODE_FONT_SIZE, Math.round(row.codeFontSize))) : null,
     codeWordBreak: row.codeWordBreak === true,
-    pullRequestHideTestFiles: row.pullRequestHideTestFiles === true
+    pullRequestHideTestFiles: row.pullRequestHideTestFiles === true,
+    sideThreadOpenTarget: sideTarget as string
   };
 }
 
@@ -205,4 +209,13 @@ export async function setPullRequestHideTestFiles(value: boolean): Promise<void>
   await workspacePrefsStore.save(snapshot);
   workspacePrefs.pullRequestHideTestFiles = value;
   AppStorage.setOrCreate('t3HideTestFiles', value);
+}
+
+export async function setSideThreadOpenTarget(value: string): Promise<void> {
+  if (value !== 'panel' && value !== 'main') throw new Error('子会话打开方式无效');
+  if (!workspacePrefsStore) throw new Error('设置尚未初始化');
+  const snapshot = workspacePreferences(JSON.parse(JSON.stringify(workspacePrefs)) as Object);
+  snapshot.sideThreadOpenTarget = value;
+  await workspacePrefsStore.save(snapshot);
+  workspacePrefs.sideThreadOpenTarget = value;
 }

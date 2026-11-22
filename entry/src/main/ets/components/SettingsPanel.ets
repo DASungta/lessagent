@@ -16,6 +16,7 @@ import { ScheduledTasksPanel } from './ScheduledTasksPanel';
 import { EnvironmentEntry } from '../protocol/Environment';
 import { ProviderSettingsPanel } from './ProviderSettingsPanel';
 import { FollowUpSettingsPanel } from './FollowUpSettingsPanel';
+import { SideThreadOpenSettingsPanel } from './SideThreadOpenSettingsPanel';
 import { KeyboardHelpPanel } from './KeyboardHelpPanel';
 import { NotificationSettingsPanel } from './NotificationSettingsPanel';
 import { T3Client } from '../services/T3Client';
@@ -77,6 +78,7 @@ export struct SettingsPanel {
     try {
       await saveAppearance(this.getUIContext().getHostContext() as common.Context, mode);
       this.appearance = mode;
+      AppStorage.setOrCreate('t3AppearanceMode', mode);
       this.notice = '';
     } catch (_) { this.notice = '外观保存失败，请重试'; }
     finally { this.savingAppearance = false; }
@@ -190,7 +192,8 @@ export struct SettingsPanel {
       '实验功能 Labs Beta 工作树',
       '自动归整 Settle 闲置 合并 会话',
       '新任务 默认 权限 工作区 流式 浏览器',
-      '最近项目 上次 使用项目 新任务 默认 last project'
+      '最近项目 上次 使用项目 新任务 默认 last project',
+      '子会话 侧聊 子智能体 链接会话 打开方式 面板 主视图 sideThreadOpenTarget'
     ];
   }
 
@@ -297,6 +300,8 @@ export struct SettingsPanel {
       ProviderSettingsPanel({ connection: this.connection, onBack: () => this.section = '' })
     } else if (this.section === 'followup') {
       FollowUpSettingsPanel({ onBack: () => this.section = '' })
+    } else if (this.section === 'side-thread-open') {
+      SideThreadOpenSettingsPanel({ onBack: () => this.section = '' })
     } else if (this.section === 'keyboard') {
       KeyboardHelpPanel({ onBack: () => this.section = '' })
     } else if (this.section === 'notifications') {
@@ -527,6 +532,12 @@ export struct SettingsPanel {
                     onToggle: () => { void this.changeUseLastProject(); }
                   })
                 }
+                if (settingsMatch(this.query, '子会话 侧聊 子智能体 链接会话 打开方式 面板 主视图 sideThreadOpenTarget')) {
+                  this.row('子会话打开方式', '子智能体、侧聊与链接会话',
+                    workspacePrefs.sideThreadOpenTarget === 'main' ? '主视图' : '面板',
+                    this.isFirstVisible(this.workspaceSectionKeywords(), 8),
+                    () => this.section = 'side-thread-open')
+                }
               }.width('100%').backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
             }
 
@@ -635,6 +646,7 @@ export struct SettingsPanel {
               !settingsMatch(this.query, '自动归整 Settle 闲置 合并 会话') &&
               !settingsMatch(this.query, '新任务 默认 权限 工作区 流式 浏览器') &&
               !settingsMatch(this.query, '最近项目 上次 使用项目 新任务 默认 last project') &&
+              !settingsMatch(this.query, '子会话 侧聊 子智能体 链接会话 打开方式 面板 主视图 sideThreadOpenTarget') &&
               !settingsMatch(this.query, WORKTREE_SEARCH) && !settingsMatch(this.query, '通知 提醒 完成 任务 在线') &&
               !settingsMatch(this.query, 'Provider 模型 账号 登录') && !settingsMatch(this.query, '会话 后续消息 排队 引导') &&
               !settingsMatch(this.query, '键盘 快捷键') && !settingsMatch(this.query, '用量 限额 费用 usage') &&
