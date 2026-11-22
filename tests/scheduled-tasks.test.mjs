@@ -344,3 +344,54 @@ test('current checkout stays a valid base ref but cannot masquerade as a linked 
   await assert.rejects(api.mutateScheduledTask(c, 'e', 'upsert', payload), api.ScheduledWorkspaceSelectionError);
   assert.ok(!c.calls.includes('scheduledTasks.upsert'));
 });
+
+test('U4: scheduledTaskWorktreeBaseRef resolves explicit base, project default branch, main/master fallback', () => {
+  const mk = (name, isDefault = false) => ({ name, isDefault });
+  assert.equal(api.scheduledTaskWorktreeBaseRef(' release ', [mk('master', true)]), 'release');
+  assert.equal(api.scheduledTaskWorktreeBaseRef('', [mk('feature'), mk('master', true)]), 'master');
+  assert.equal(api.scheduledTaskWorktreeBaseRef(' ', [mk('origin/develop', true)]), 'origin/develop');
+  assert.equal(api.scheduledTaskWorktreeBaseRef('', [mk('feature'), mk('master')]), 'master');
+  assert.equal(api.scheduledTaskWorktreeBaseRef('', [mk('origin/master')]), 'origin/master');
+  assert.equal(api.scheduledTaskWorktreeBaseRef('', [mk('master'), mk('main')]), 'main');
+  assert.equal(api.scheduledTaskWorktreeBaseRef('', []), 'main');
+});
+
+test('U4: explicitly clearing a bound task thread sends threadId null with unbindThread true and verifies readback', async () => {
+  const bound = { ...task, threadId: 'bound-thread', threadMode: 'continue', creationSource: 'mobile' };
+  const cleared = api.scheduledTaskInput({ ...draft, threadId: null, unbindThread: true }, 'UTC', bound);
+  assert.equal(cleared.threadId, null);
+  assert.equal(cleared.unbindThread, true);
+  assert.equal(cleared.threadMode, 'continue');
+  assert.equal(cleared.requireExisting, true);
+
+  const c = fixture([bound]);
+  let sent;
+  const rpc = c.rpcRequest.bind(c);
+  c.rpcRequest = async (method, payload) => {
+    if (method === 'scheduledTasks.upsert') sent = payload;
+    return rpc(method, payload);
+  };
+  const after = await api.mutateScheduledTask(c, 'e', 'upsert', cleared, bound);
+  assert.equal(sent.threadId, null);
+  assert.equal(sent.unbindThread, true);
+  assert.equal(after.tasks[0].threadId, null);
+  assert.equal(after.tasks[0].threadMode, 'continue');
+
+  // If a legacy server ignores unbindThread and keeps the old threadId, readback catches it.
+  const staleServer = fixture([bound]);
+  const staleRpc = staleServer.rpcRequest.bind(staleServer);
+  staleServer.rpcRequest = async (method, payload) => staleRpc(
+    method,
+    method === 'scheduledTasks.upsert' ? { ...payload, threadId: 'bound-thread' } : payload
+  );
+  await assert.rejects(api.mutateScheduledTask(staleServer, 'e', 'upsert', cleared, bound), /保存尚未确认/);
+
+  // Forged unbindThread without threadId=null or on an already unbound task is rejected before RPC.
+  const forged = fixture([bound]);
+  await assert.rejects(api.mutateScheduledTask(forged, 'e', 'upsert', { ...cleared, threadId: 'bound-thread' }, bound), /不能更改/);
+  assert.ok(!forged.calls.includes('scheduledTasks.upsert'));
+  const alreadyUnbound = fixture([task]);
+  await assert.rejects(api.mutateScheduledTask(alreadyUnbound, 'e', 'upsert',
+    { ...api.scheduledTaskInput(draft, 'UTC', task), unbindThread: true }, task), /不能更改/);
+  assert.ok(!alreadyUnbound.calls.includes('scheduledTasks.upsert'));
+});

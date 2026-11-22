@@ -12,7 +12,8 @@ import { BranchView } from '../protocol/R4';
 import { providerCatalog, ProviderView, ProviderModelView } from '../protocol/ProviderSettings';
 import { ScheduledTaskView, ScheduleDraft, readScheduledTasks, scheduledTaskInput, mutateScheduledTask,
   scheduledTaskModelReplacementNeedsConfirmation, readScheduledWorkspaceOptions, ScheduledWorkspaceOptions,
-  ScheduledWorkspaceSelectionError, ScheduledWorkspaceStrategy } from '../protocol/ScheduledTasks';
+  ScheduledWorkspaceSelectionError, ScheduledWorkspaceStrategy,
+  scheduledTaskWorktreeBaseRef } from '../protocol/ScheduledTasks';
 
 export function scheduleWeekdaySelection(current: string, day: number): string {
   const days = current ? current.split(',') : ['0', '1', '2', '3', '4', '5', '6'];
@@ -39,6 +40,7 @@ export struct ScheduledTasksPanel {
   @State prompt: string = '';
   @State projectId: string = '';
   @State draftThreadId: string = '';
+  @State unbindExistingThread: boolean = false;
   @State threadCandidates: ThreadView[] = [];
   @State draftThreadMode: string = 'new_thread';
   @State targetConfirmation: string = '';
@@ -148,6 +150,7 @@ export struct ScheduledTasksPanel {
     this.projects = [];
     this.projectsChanged();
     this.draftThreadId = '';
+    this.unbindExistingThread = false;
     this.threadCandidates = [];
     this.draftThreadMode = 'new_thread';
     this.targetConfirmation = '';
@@ -176,10 +179,24 @@ export struct ScheduledTasksPanel {
     this.workspaceOrigin = typeof strategy?.startFromOrigin === 'boolean' ? strategy.startFromOrigin : true;
     if (!task?.threadId && this.workspaceType !== 'root') void this.loadWorkspaceOptions();
   }
+  private hasBoundThread(): boolean {
+    return (!this.selected && !!this.draftThreadId) ||
+      (!!this.selected && !!this.selected.threadId && !this.unbindExistingThread);
+  }
+  private automaticBaseRefLoading(): boolean {
+    return !this.hasBoundThread() && this.workspaceType === 'worktree' &&
+      !this.workspaceBaseRef && this.workspaceLoading;
+  }
+  private toggleUnbindExistingThread(unbind: boolean): void {
+    if (!this.selected?.threadId || !this.writable()) return;
+    this.unbindExistingThread = unbind;
+    this.invalidateWorkspaceOptions();
+    if (unbind && this.workspaceType !== 'root') void this.loadWorkspaceOptions();
+  }
   private async loadWorkspaceOptions(): Promise<void> {
     const owner = this.connection;
     const projectId = this.projectId;
-    if (!owner || !this.writable() || !projectId || !this.editor || this.draftThreadId || this.selected?.threadId ||
+    if (!owner || !this.writable() || !projectId || !this.editor || this.hasBoundThread() ||
       (this.workspaceType !== 'worktree' && this.workspaceType !== 'existing_worktree')) return;
     const query = this.workspaceQuery.trim().slice(0, 256);
     this.invalidateWorkspaceOptions();
@@ -187,16 +204,18 @@ export struct ScheduledTasksPanel {
     const epoch = this.workspaceEpoch;
     const generation = owner.generationValue();
     const active = (): boolean => this.alive && this.editor && this.workspaceEpoch === epoch && this.connection === owner &&
-      owner.generationValue() === generation && this.projectId === projectId && !this.draftThreadId && !this.selected?.threadId;
+      owner.generationValue() === generation && this.projectId === projectId && !this.hasBoundThread();
     this.workspaceLoading = true;
     try {
       const options = await readScheduledWorkspaceOptions(owner, this.environmentId, projectId, query);
       if (!active()) return;
       this.workspaceOptions = options;
       if (options.truncated) this.workspaceFilterAvailable = true;
-      if (this.workspaceType === 'worktree' && !this.workspaceBaseRef && !query) {
-        this.workspaceBaseRef = options.refs.find((ref: BranchView) => ref.isDefault && !ref.isRemote)?.name ||
-          options.refs.find((ref: BranchView) => ref.current)?.name || '';
+      if (this.workspaceType === 'worktree' && !this.workspaceBaseRef && !query && options.isRepo && options.refs.length > 0) {
+        const preferred = scheduledTaskWorktreeBaseRef('', options.refs);
+        const matched = options.refs.find((ref: BranchView) => ref.name === preferred);
+        this.workspaceBaseRef = matched ? matched.name :
+          (options.refs.find((ref: BranchView) => ref.current)?.name || options.refs[0].name);
         this.workspaceVerifiedBaseRef = this.workspaceBaseRef;
       }
     } catch (_) {
@@ -208,7 +227,12 @@ export struct ScheduledTasksPanel {
   private selectWorkspace(index: number): void {
     const type = ['root', 'worktree', 'existing_worktree'][index];
     if (!type || type === this.workspaceType) return;
+    const previousType = this.workspaceType;
     this.workspaceType = type;
+    if (type === 'worktree' && previousType !== 'worktree') {
+      this.workspaceBaseRef = '';
+      this.workspaceVerifiedBaseRef = '';
+    }
     this.invalidateWorkspaceOptions();
     if (type !== 'root') void this.loadWorkspaceOptions();
   }
@@ -227,7 +251,7 @@ export struct ScheduledTasksPanel {
     this.workspaceRefHint = this.workspaceOptions?.refs.find((ref: BranchView) => ref.worktreePath === path)?.name || '';
   }
   private draftWorkspace(): ScheduledWorkspaceStrategy | undefined {
-    if (this.draftThreadId || this.selected?.threadId) return undefined;
+    if (this.hasBoundThread()) return undefined;
     const saved = this.selected ? record(this.selected.workspaceStrategy) : undefined;
     if (!saved && this.workspaceType === 'root') return undefined;
     if (saved?.type === this.workspaceType &&
@@ -237,6 +261,9 @@ export struct ScheduledTasksPanel {
         (this.workspaceType === 'existing_worktree' && saved.worktreePath === this.workspacePath))) return undefined;
     if (this.workspaceType === 'root') return { type: 'root' };
     if (this.workspaceType === 'worktree') {
+      if (this.automaticBaseRefLoading()) {
+        throw new Error('正在读取项目默认分支，请稍候。');
+      }
       const ref = this.workspaceOptions?.refs.find((item: BranchView) => item.name === this.workspaceBaseRef);
       if (!ref && (!this.workspaceBaseRef || this.workspaceVerifiedBaseRef !== this.workspaceBaseRef)) {
         throw new Error('请选择当前项目中可用的基准分支。');
@@ -374,14 +401,17 @@ export struct ScheduledTasksPanel {
         throw new Error('所选会话已不可用，请重新选择。');
       }
       if (!task && !this.currentProjects().some((p: ScopedProject) => p.id === this.projectId)) throw new Error('请选择当前环境的可用项目');
+      const unbinding = !!task && task.threadId !== null && this.unbindExistingThread;
+      const effectiveThreadId = task ? (unbinding ? null : task.threadId) : (target?.id || null);
       const before = task ? record(task.modelSelection) : undefined;
-      const modelChanged = !!task && !task.threadId && this.editingModel &&
+      const modelChanged = !!task && !effectiveThreadId && this.editingModel &&
         ((before?.instanceId || before?.provider) !== this.instanceId || before?.model !== this.model);
       const resetOptions = !!task && modelChanged && scheduledTaskModelReplacementNeedsConfirmation(task, this.instanceId, this.model);
       const draft: ScheduleDraft = { title: this.titleInput, prompt: this.prompt, projectId: this.projectId,
         instanceId: target?.providerInstanceId || this.instanceId, model: target?.model || this.model,
         type: this.scheduleType, time: this.time, weekdays: this.weekdays, minutes: this.minutes,
-        modelChanged, confirmModelOptionsReset: resetOptions, threadId: target?.id || null,
+        modelChanged, confirmModelOptionsReset: resetOptions, threadId: effectiveThreadId,
+        unbindThread: unbinding,
         threadMode: this.draftThreadMode, supportsThreadModes: this.supportsThreadModes(),
         workspaceStrategy: this.draftWorkspace() };
       if ((!task && !target) || modelChanged) {
@@ -395,15 +425,16 @@ export struct ScheduledTasksPanel {
         });
       }
       this.pending = scheduledTaskInput(draft, this.timeZone, task);
-      this.targetConfirmation = '目标：' + this.targetLabel(task?.threadId || target?.id || null,
+      this.targetConfirmation = '目标：' + this.targetLabel(effectiveThreadId,
         task ? task.threadMode || (task.threadId ? 'continue' : 'new_thread') : this.draftThreadMode) +
+        (unbinding ? '（将解除当前会话绑定）' : '') +
         '\n调度：' + this.scheduleLabel(record(this.pending).schedule) +
-        '\n工作区：' + (task?.threadId || target ? '绑定会话的工作区' : this.workspaceSummary(record(this.pending).workspaceStrategy));
+        '\n工作区：' + (effectiveThreadId ? '绑定会话的工作区' : this.workspaceSummary(record(this.pending).workspaceStrategy));
       this.modelConfirmation = !task ? (target ? '模型：' + this.modelLabel(target.providerInstanceId, target.model) + '\n运行时使用绑定会话的当前模型。' :
         '模型：' + this.modelLabel(this.instanceId, this.model) + '，使用默认选项。') :
         modelChanged ? '原模型：' + this.shownModel(task) + '\n新模型：' + this.modelLabel(this.instanceId, this.model) +
           (resetOptions ? '\n确认后将清除原模型的专属选项，新模型使用默认选项。' : '\n新模型使用默认选项。') :
-          task.threadId ? '模型：' + this.shownModel(task) + '\n任务继续使用绑定会话的当前模型。' :
+          effectiveThreadId ? '模型：' + this.shownModel(task) + '\n任务继续使用绑定会话的当前模型。' :
             '模型：' + this.shownModel(task) + '\n保留原模型及专属选项。';
       this.confirmation = 'upsert'; this.error = '';
     } catch (error) { this.error = (error as Error).message; }
@@ -665,16 +696,38 @@ export struct ScheduledTasksPanel {
                   .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
                 }
               } else {
+                if (this.selected.threadId) {
+                  Row({ space: 10 }) {
+                    Column({ space: 2 }) {
+                      Text('目标会话').fontSize(FontSize.body).fontColor($r('app.color.ink'))
+                      Text(this.unbindExistingThread
+                        ? '已清除目标会话（下次运行创建新会话）'
+                        : this.targetLabel(this.selected.threadId, this.selected.threadMode || 'continue'))
+                        .fontSize(FontSize.caption).fontColor($r('app.color.muted')).wordBreak(WordBreak.BREAK_ALL)
+                    }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+                    AppButton({
+                      label: this.unbindExistingThread ? '撤销清除' : '清除目标会话',
+                      kind: 'secondary',
+                      compact: true,
+                      disabled: !this.writable(),
+                      onTap: () => { this.toggleUnbindExistingThread(!this.unbindExistingThread); }
+                    })
+                  }
+                  .width('100%')
+                  .alignItems(VerticalAlign.Center)
+                  .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                  .constraintSize({ minHeight: Sizes.formRowMin })
+                }
                 FormRow({
                   kind: 'value',
                   label: '当前模型',
                   value: this.shownModel(this.selected),
-                  subtitle: this.selected.threadId ? '任务绑定会话，运行时使用该会话的当前模型。' : '',
-                  chevron: !this.selected.threadId,
-                  disabled: !!this.selected.threadId || !this.writable(),
-                  isFirst: true,
+                  subtitle: this.hasBoundThread() ? '任务绑定会话，运行时使用该会话的当前模型。' : '',
+                  chevron: !this.hasBoundThread(),
+                  disabled: this.hasBoundThread() || !this.writable(),
+                  isFirst: !this.selected.threadId,
                   onTap: () => {
-                    if (!this.selected?.threadId && this.writable()) {
+                    if (!this.hasBoundThread() && this.writable()) {
                       this.resetModelChoice();
                       this.editingModel = !this.editingModel;
                     }
@@ -682,7 +735,7 @@ export struct ScheduledTasksPanel {
                 })
               }
 
-              if (this.editingModel && !this.selected?.threadId && !this.draftThreadId) {
+              if (this.editingModel && !this.hasBoundThread()) {
                 Row({ space: 10 }) {
                   Text('Provider').fontSize(FontSize.body).fontColor($r('app.color.ink')).flexShrink(0)
                   Select(this.providerOptions()).layoutWeight(1).constraintSize({ minHeight: 38 }).enabled(this.writable())
@@ -714,7 +767,7 @@ export struct ScheduledTasksPanel {
                 .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
               }
 
-              if (this.selected?.threadId || this.draftThreadId) {
+              if (this.hasBoundThread()) {
                 FormRow({
                   kind: 'value',
                   label: '工作区',
@@ -1077,7 +1130,7 @@ export struct ScheduledTasksPanel {
             label: '检查并保存',
             kind: 'primary',
             fill: true,
-            disabled: !this.writable(),
+            disabled: !this.writable() || this.automaticBaseRefLoading(),
             onTap: () => { this.prepareSave(); }
           })
         }.width('100%').padding({ left: Space.sm, right: Space.sm, top: Space.xs, bottom: Space.sm })

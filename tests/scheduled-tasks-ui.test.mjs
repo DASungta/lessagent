@@ -29,7 +29,7 @@ async function loadSchedulePanel() {
     import { isListedThread } from ${JSON.stringify(projectsUrl)};
     import { providerCatalog } from ${JSON.stringify(providerUrl)};
     import { readScheduledTasks, mutateScheduledTask, scheduledTaskInput, scheduledTaskModelReplacementNeedsConfirmation,
-      readScheduledWorkspaceOptions } from ${JSON.stringify(protocolUrl)};
+      readScheduledWorkspaceOptions, scheduledTaskWorktreeBaseRef } from ${JSON.stringify(protocolUrl)};
     ${code.replace('@Component\nexport struct', 'export class').replace(/@(?:State|Prop)\s+|@Watch\([^)]*\)\s*/g, '')}
   `)))).ScheduledTasksPanel;
 }
@@ -317,4 +317,72 @@ test('late project snapshots unlock an open editor without rebasing the draft or
   assert.equal(panel.titleInput, 'unsaved title');
   assert.equal(panel.prompt, 'unsaved prompt');
   assert.equal(panel.editor, true);
+});
+
+test('U4: Settings scheduled task uses project default branch for new worktrees and sends unbindThread when clearing bound thread', async () => {
+  const ScheduledTasksPanel = await loadSchedulePanel();
+  const panel = new ScheduledTasksPanel();
+  const projects = [{ id: 'p', workspaceRoot: '/repo' }];
+  let resolveRefs;
+  const connection = {
+    ready: true, generationValue: () => 1, canScope: () => true, supports: () => true,
+    config: { environment: { environmentId: 'env' }, providers: [{ instanceId: 'codex', installed: true, enabled: true, models: [{ slug: 'm' }] }] },
+    shell: { threads: [{ id: 'bound-1', projectId: 'p', label: 'Bound Thread', providerInstanceId: 'codex', model: 'm', updatedAt: '2026-01-01' }], projects },
+    watchRpcStream(_method, _payload, callback) {
+      queueMicrotask(() => callback({ kind: 'snapshot', snapshot: { projects, threads: [] } }));
+      return callback;
+    },
+    stopRpcStream() {},
+    async rpcRequest(method) {
+      assert.equal(method, 'vcs.listRefs');
+      return new Promise((resolve) => { resolveRefs = resolve; });
+    }
+  };
+  Object.assign(panel, {
+    connection, environmentId: 'env', activeLocalId: 'local', alive: true,
+    loadedOwner: connection, loadedGeneration: 1, needsRefresh: false, timeZone: 'Asia/Shanghai',
+    providers: [{ id: 'codex', name: 'Codex', models: [{ id: 'm', name: 'M' }] }],
+    scopedProjects: [{ id: 'p', localId: 'local', environmentId: 'env', label: 'Repo' }]
+  });
+  const tick = () => new Promise((r) => setImmediate(r));
+
+  // 1. Creating a worktree task waits while default branch loads, then picks project default branch ('master') instead of current ('feature')
+  panel.edit();
+  panel.titleInput = 'Nightly'; panel.prompt = 'Check repo'; panel.instanceId = 'codex'; panel.model = 'm';
+  panel.selectProject(1);
+  panel.selectWorkspace(1);
+  await tick();
+  assert.equal(panel.automaticBaseRefLoading(), true);
+  assert.throws(() => panel.draftWorkspace(), /默认分支/);
+  resolveRefs({
+    isRepo: true, nextCursor: null,
+    refs: [
+      { name: 'feature', current: true, isDefault: false, isRemote: false, worktreePath: '/repo' },
+      { name: 'master', current: false, isDefault: false, isRemote: false, worktreePath: null }
+    ]
+  });
+  await tick();
+  assert.equal(panel.automaticBaseRefLoading(), false);
+  assert.equal(panel.workspaceBaseRef, 'master');
+  panel.prepareSave();
+  assert.equal(panel.pending.enabled, false);
+  assert.deepEqual(panel.pending.workspaceStrategy, { type: 'worktree', baseRef: 'master', startFromOrigin: true });
+
+  // 2. Editing an existing bound task and clearing its target thread sets threadId: null + unbindThread: true
+  const existing = {
+    id: 'task-bound', title: 'Bound', prompt: 'Do check', enabled: false, projectId: 'p',
+    threadId: 'bound-1', threadMode: 'continue', workspaceStrategy: { type: 'root' },
+    modelSelection: { instanceId: 'codex', model: 'm' }, runtimeMode: 'approval-required',
+    interactionMode: 'default', schedule: { type: 'interval', everyMs: 60000 },
+    updatedAt: '2026-11-20T00:00:00Z', nextRunAt: '', lastRunStatus: 'never', blocked: false
+  };
+  panel.edit(existing);
+  assert.equal(panel.hasBoundThread(), true);
+  panel.toggleUnbindExistingThread(true);
+  assert.equal(panel.hasBoundThread(), false);
+  panel.prepareSave();
+  assert.equal(panel.pending.threadId, null);
+  assert.equal(panel.pending.unbindThread, true);
+  assert.equal(panel.pending.threadMode, 'continue');
+  assert.match(panel.targetConfirmation, /解除当前会话绑定/);
 });

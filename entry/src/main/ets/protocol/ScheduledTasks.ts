@@ -25,11 +25,26 @@ export interface ScheduledWorkspaceStrategy {
   worktreePath?: string;
 }
 export interface ScheduledWorkspaceOptions { isRepo: boolean; refs: BranchView[]; checkoutPaths: string[]; truncated: boolean; }
+export interface WorktreeRefCandidate { name: string; isDefault: boolean; }
+
+/** An empty base is automatic: the project's default branch, else `main` or `master`. */
+export function scheduledTaskWorktreeBaseRef(baseRef: string, refs: WorktreeRefCandidate[]): string {
+  const picked = baseRef.trim();
+  if (picked) return picked;
+  const defaultRef = refs.find((ref: WorktreeRefCandidate) => ref.isDefault);
+  if (defaultRef) return defaultRef.name;
+  for (const name of ['main', 'master']) {
+    const match = refs.find((ref: WorktreeRefCandidate) => ref.name === name || ref.name === 'origin/' + name);
+    if (match) return match.name;
+  }
+  return 'main';
+}
+
 export interface ScheduleDraft {
   title: string; prompt: string; projectId: string; instanceId: string; model: string;
   type: string; time: string; weekdays: string; minutes: string;
   modelChanged?: boolean; confirmModelOptionsReset?: boolean;
-  threadId?: string | null; threadMode?: string; supportsThreadModes?: boolean;
+  threadId?: string | null; unbindThread?: boolean; threadMode?: string; supportsThreadModes?: boolean;
   workspaceStrategy?: ScheduledWorkspaceStrategy;
 }
 function required(value: Object): string {
@@ -258,7 +273,7 @@ function scheduledModel(draft: ScheduleDraft, existing?: ScheduledTaskView): Obj
   const model = required(draft.model);
   if (existing) {
     if (sameScheduledModel(existing.modelSelection, instanceId, model)) return existing.modelSelection;
-    if (existing.threadId !== null) throw new Error('绑定会话使用该会话的当前模型，不能在这里修改');
+    if (existing.threadId !== null && draft.unbindThread !== true) throw new Error('绑定会话使用该会话的当前模型，不能在这里修改');
     if (scheduledTaskModelReplacementNeedsConfirmation(existing, instanceId, model) && draft.confirmModelOptionsReset !== true) {
       throw new Error('切换模型会清除原模型选项，请确认后再保存');
     }
@@ -268,7 +283,8 @@ function scheduledModel(draft: ScheduleDraft, existing?: ScheduledTaskView): Obj
 
 export function scheduledTaskInput(draft: ScheduleDraft, timeZone: string, existing?: ScheduledTaskView): Object {
   if (draft.type === 'fixed_time' && !timeZone) throw new Error('服务端未提供时区，暂不能保存固定时间');
-  const threadId = existing ? existing.threadId : draft.threadId == null ? null : required(draft.threadId);
+  const unbinding = !!existing && existing.threadId !== null && draft.unbindThread === true;
+  const threadId = existing ? (unbinding ? null : existing.threadId) : draft.threadId == null ? null : required(draft.threadId);
   if (threadId !== null && draft.workspaceStrategy !== undefined) throw new Error('绑定会话使用自己的工作区');
   const input: Record<string, Object> = {
     title: required(draft.title), prompt: required(draft.prompt), enabled: existing ? existing.enabled : false,
@@ -283,6 +299,7 @@ export function scheduledTaskInput(draft: ScheduleDraft, timeZone: string, exist
   if (existing) {
     if (!['fixed_time', 'interval', 'once'].includes(String(record(existing.schedule).type))) throw new Error('此调度类型请使用原客户端编辑');
     input.id = existing.id; input.requireExisting = true;
+    if (unbinding) input.unbindThread = true;
     if (existing.threadMode !== undefined) input.threadMode = existing.threadMode;
     if (existing.creationSource !== undefined) input.creationSource = existing.creationSource;
   } else {
@@ -318,14 +335,20 @@ export async function mutateScheduledTask(connection: ScheduleConnection, enviro
     const current = requireCurrentTask(before, expected);
     if (payload.id !== expected.id) throw new Error('任务已变化，请刷新');
     if (action === 'upsert') {
-      if (payload.requireExisting !== true || payload.projectId !== current.projectId || payload.threadId !== current.threadId ||
+      const unbinding = current.threadId !== null && payload.threadId === null && payload.unbindThread === true;
+      if (payload.requireExisting !== true || payload.projectId !== current.projectId ||
+        (!unbinding && payload.threadId !== current.threadId) ||
+        (payload.unbindThread !== undefined && !unbinding) ||
         payload.enabled !== current.enabled || payload.runtimeMode !== current.runtimeMode ||
         payload.interactionMode !== current.interactionMode || payload.threadMode !== current.threadMode ||
         payload.creationSource !== current.creationSource) {
         throw new Error('编辑不能更改任务的目标、状态或运行设置');
       }
+      if (unbinding && connection.canScope('orchestration:operate') !== true) {
+        throw new Error('没有任务操作权限');
+      }
       if (JSON.stringify(payload.workspaceStrategy) !== JSON.stringify(current.workspaceStrategy)) {
-        if (current.threadId !== null) throw new Error('绑定会话使用自己的工作区');
+        if (current.threadId !== null && !unbinding) throw new Error('绑定会话使用自己的工作区');
         if (connection.canScope('orchestration:operate') !== true) throw new Error('没有任务操作权限');
         const workspace = scheduledWorkspace(payload.workspaceStrategy);
         checkContext();
@@ -336,7 +359,7 @@ export async function mutateScheduledTask(connection: ScheduleConnection, enviro
         if (connection.canScope('orchestration:operate') !== true) throw new Error('没有任务操作权限');
       }
       if (JSON.stringify(payload.modelSelection) !== JSON.stringify(current.modelSelection)) {
-        if (current.threadId !== null) throw new Error('绑定会话不能更改模型');
+        if (current.threadId !== null && !unbinding) throw new Error('绑定会话不能更改模型');
         if (connection.canScope('orchestration:operate') !== true) throw new Error('没有任务操作权限');
         const model = record(payload.modelSelection);
         if (Object.keys(model).length !== 2) throw new Error('新模型不能使用旧模型选项');
