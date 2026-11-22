@@ -61,6 +61,7 @@ export struct ConnectionsPanel {
     if (this.isConnected(status, entry)) return '已连接';
     if (status.includes('正在连接') || status.includes('连接中')) return '连接中';
     if (status.includes('解锁')) return '需解锁';
+    if (status.includes('不兼容')) return '版本不兼容';
     if (status.includes('失败') || status.includes('错误')) return '连接失败';
     return '未连接';
   }
@@ -69,7 +70,7 @@ export struct ConnectionsPanel {
     const status = this.statuses[entry.localId] || '';
     if (this.isConnected(status, entry)) return 'success';
     if (status.includes('正在连接') || status.includes('连接中')) return 'info';
-    if (status.includes('失败') || status.includes('错误')) return 'danger';
+    if (status.includes('不兼容') || status.includes('失败') || status.includes('错误')) return 'danger';
     return 'warning';
   }
   private expand(entry: EnvironmentEntry): void {

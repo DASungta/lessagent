@@ -1932,3 +1932,115 @@ test('C1: known server refusal does not resend and resend cap stops after 2 sock
     capped.client.disconnect();
   }
 });
+
+test('C2: incompatible initial server config stops session without auto-reconnect and allows manual retry', async () => {
+  let badConfig = true;
+  let stored = { base: 'https://test', environmentId: 'env', token: 'SYNTHETIC_TOKEN', expiresAt: Date.now() + 60000 };
+  const { client, frames } = await setup({
+    onRequest(frame, sock) {
+      if (frame.tag !== 'subscribeServerConfig') return;
+      if (badConfig) {
+        sock.emit({
+          _tag: 'Chunk',
+          requestId: frame.id,
+          values: [{ version: 1, type: 'snapshot', config: { environment: { environmentId: 'env' }, cwd: 42 } }]
+        });
+        return 'handled';
+      }
+      // Minimal config missing optional fields (cwd, settings, capabilities, providers) must succeed (P0-2)
+      sock.emit({
+        _tag: 'Chunk',
+        requestId: frame.id,
+        values: [{ version: 1, type: 'snapshot', config: { environment: { environmentId: 'env' }, unknownFutureField: { x: 1 } } }]
+      });
+      return 'handled';
+    }
+  });
+  client.store = {
+    async load() { return structuredClone(stored); },
+    async save(v) { stored = structuredClone(v); },
+    async clear() { stored = undefined; }
+  };
+  try {
+    await client.connect('https://test', 'synthetic');
+    assert.equal(client.ready, false);
+    assert.equal(client.reconnectPending, false, 'incompatible config must stop auto-reconnect');
+    assert.match(client.status, /不兼容/);
+    assert.equal(frames.some((f) => f.tag === 'server.getConfig'), false, 'must not fall back to server.getConfig on decode error');
+
+    // Manual retry succeeds once server config is compatible (even with optional fields absent)
+    badConfig = false;
+    await client.connect('https://test', 'synthetic');
+    assert.equal(client.ready, true);
+  } finally {
+    client.disconnect();
+  }
+
+  // Legacy server.getConfig fallback with unreadable critical config also blocks without reconnect storm
+  const legacyBad = await setup({
+    rejectSubscribeConfig: true,
+    onRequest(frame, sock) {
+      if (frame.tag !== 'server.getConfig') return;
+      sock.emit({ _tag: 'Exit', requestId: frame.id, exit: { _tag: 'Success', value: { environment: { environmentId: 'env' }, settings: 'invalid-string' } } });
+      return 'handled';
+    }
+  });
+  legacyBad.client.store = {
+    async load() { return structuredClone(stored); },
+    async save(v) { stored = structuredClone(v); },
+    async clear() { stored = undefined; }
+  };
+  try {
+    await legacyBad.client.connect('https://test', 'synthetic');
+    assert.equal(legacyBad.client.ready, false);
+    assert.equal(legacyBad.client.reconnectPending, false);
+    assert.match(legacyBad.client.status, /不兼容/);
+  } finally {
+    legacyBad.client.disconnect();
+  }
+});
+
+test('C2: unreadable later config update or server-ended config stream terminates session for reconnect', async () => {
+  // 1. Unreadable later update ends established session with transient reconnect
+  let stored = { base: 'https://test', environmentId: 'env', token: 'SYNTHETIC_TOKEN', expiresAt: Date.now() + 60000 };
+  const s1 = await setup();
+  s1.client.store = {
+    async load() { return structuredClone(stored); },
+    async save(v) { stored = structuredClone(v); },
+    async clear() { stored = undefined; }
+  };
+  try {
+    await s1.client.connect('https://test', 'synthetic');
+    assert.equal(s1.client.ready, true);
+    const sub = s1.frames.find((f) => f.tag === 'subscribeServerConfig');
+    s1.socket().emit({
+      _tag: 'Chunk',
+      requestId: sub.id,
+      values: [{ version: 1, type: 'snapshot', config: { environment: { environmentId: 'env' }, cwd: 42 } }]
+    });
+    assert.equal(s1.client.ready, false, 'later unreadable config update must end session');
+    assert.equal(s1.client.reconnectPending, true, 'later unreadable update triggers transient reconnect');
+    assert.match(s1.client.status, /无法读取的服务器配置更新/);
+  } finally {
+    s1.client.disconnect();
+  }
+
+  // 2. Server interrupts/closes config stream after readiness -> ends session for reconnect
+  const s2 = await setup();
+  s2.client.store = {
+    async load() { return structuredClone(stored); },
+    async save(v) { stored = structuredClone(v); },
+    async clear() { stored = undefined; }
+  };
+  try {
+    await s2.client.connect('https://test', 'synthetic');
+    assert.equal(s2.client.ready, true);
+    const sub = s2.frames.find((f) => f.tag === 'subscribeServerConfig');
+    s2.socket().emit({ _tag: 'Exit', requestId: sub.id, exit: { _tag: 'Success', value: null } });
+    await new Promise(setImmediate);
+    assert.equal(s2.client.ready, false, 'server-ended config stream must end session');
+    assert.equal(s2.client.reconnectPending, true, 'server-ended config stream triggers reconnect');
+  } finally {
+    s2.client.disconnect();
+  }
+});

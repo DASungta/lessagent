@@ -420,7 +420,7 @@ export class EnvironmentRegistry {
         if (client.status) lastError = client.status;
       }
       const message = lastError || '所有已保存的连接路径当前均不可达';
-      const nonRecoverable = message.includes('服务器身份') || message.includes('协议不兼容') ||
+      const nonRecoverable = message.includes('服务器身份') || message.includes('不兼容') ||
         message.includes('没有此服务器的有效会话') || message.includes('DPoP');
       client.disconnect(message, !nonRecoverable, false);
       throw new Error(client.status || message);

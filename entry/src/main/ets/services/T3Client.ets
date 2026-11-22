@@ -18,7 +18,7 @@ import { util } from '@kit.ArkTS';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { bootstrapForm, createThread, DPOP_ACCESS_TOKEN_REFRESH_SKEW_MS, objects, record, RpcClient,
   RpcFailure, RpcSender, sendMessage, serverBase, socketUrl, text, ThreadState, tokenRenewalForm,
-  validateDescriptor } from '../protocol/Wire';
+  validateDescriptor, validateServerConfig } from '../protocol/Wire';
 import { dpopSigner } from './Dpop';
 import { directHostKind, shouldBypassSystemProxy, urlHostname } from '../protocol/Hosts';
 
@@ -61,6 +61,18 @@ class HttpFailure extends Error {
     super(status === 401 || status === 403 ? '鉴权失败或权限不足，请检查配对凭据' :
       status === 426 ? '服务端协议不兼容' : 'HTTP 请求失败（' + status + '）');
     this.status = status;
+  }
+}
+
+class ServerConfigIncompatibleError extends Error {
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+class ServerConfigUpdateError extends Error {
+  constructor(message: string) {
+    super(message);
   }
 }
 
@@ -1374,8 +1386,9 @@ export class T3Client {
     } catch (error) {
       if (generation === this.generation) {
         const errMsg = (error as Error).message || '';
-        const nonRecoverable = errMsg.includes('没有此服务器的有效会话') ||
-          errMsg.includes('服务器身份') || errMsg.includes('协议不兼容') ||
+        const nonRecoverable = error instanceof ServerConfigIncompatibleError ||
+          errMsg.includes('没有此服务器的有效会话') ||
+          errMsg.includes('服务器身份') || errMsg.includes('不兼容') ||
           errMsg.includes('DPoP') || errMsg.includes('配对') || errMsg.includes('HTTP 400') ||
           errMsg.includes('HTTP 401') || errMsg.includes('HTTP 403') ||
           errMsg.includes('HTTP 404') || errMsg.includes('无效');
@@ -1445,7 +1458,8 @@ export class T3Client {
     } catch (error) {
       if (generation === this.generation) {
         const errMsg = (error as Error).message || '';
-        const nonRecoverable = errMsg.includes('账号已切换') || errMsg.includes('身份不一致');
+        const nonRecoverable = error instanceof ServerConfigIncompatibleError ||
+          errMsg.includes('账号已切换') || errMsg.includes('身份不一致') || errMsg.includes('不兼容');
         this.disconnect(errMsg, !nonRecoverable, false);
       }
     } finally {
@@ -1479,18 +1493,61 @@ export class T3Client {
     return mergedList;
   }
 
-  private applyConfigStreamEvent(value: Object, environmentId: string): Record<string, Object> | undefined {
-    const event = record(value);
-    const type = typeof event.type === 'string' ? event.type : '';
-    if (type === 'snapshot' && event.config !== undefined && event.config !== null) {
-      const cfg = record(event.config);
-      if (text(record(cfg.environment).environmentId) !== environmentId) {
-        throw new Error('服务器身份不一致，已中止连接');
-      }
-      return cfg;
+  private incompatibleConfigMessage(): string {
+    const host = this.environmentLabel || '服务端';
+    return host + ' 发送了不兼容的服务器配置（服务端版本不兼容），请将客户端和服务器更新到兼容的版本。';
+  }
+
+  private incompatibleConfigUpdateMessage(): string {
+    const host = this.environmentLabel || '服务端';
+    return host + ' 发送了此客户端无法读取的服务器配置更新。';
+  }
+
+  private decodeServerConfig(value: Object, environmentId: string, established: boolean): Record<string, Object> {
+    let cfg: Record<string, Object>;
+    try {
+      cfg = validateServerConfig(value);
+    } catch (_) {
+      throw established
+        ? new ServerConfigUpdateError(this.incompatibleConfigUpdateMessage())
+        : new ServerConfigIncompatibleError(this.incompatibleConfigMessage());
     }
-    if (type === 'settingsUpdated' && event.payload !== undefined && event.payload !== null) {
-      const payload = record(event.payload);
+    if (text(record(cfg.environment).environmentId) !== environmentId) {
+      throw new Error('服务器身份不一致，已中止连接');
+    }
+    return cfg;
+  }
+
+  private applyConfigStreamEvent(value: Object, environmentId: string,
+    established: boolean): Record<string, Object> | undefined {
+    let event: Record<string, Object>;
+    try {
+      event = record(value);
+      text(event.type);
+    } catch (_) {
+      throw established
+        ? new ServerConfigUpdateError(this.incompatibleConfigUpdateMessage())
+        : new ServerConfigIncompatibleError(this.incompatibleConfigMessage());
+    }
+    const type = event.type as string;
+    if (type === 'snapshot') {
+      if (event.config === undefined || event.config === null) {
+        throw established
+          ? new ServerConfigUpdateError(this.incompatibleConfigUpdateMessage())
+          : new ServerConfigIncompatibleError(this.incompatibleConfigMessage());
+      }
+      return this.decodeServerConfig(event.config, environmentId, established);
+    }
+    if (type === 'settingsUpdated') {
+      let payload: Record<string, Object>;
+      try {
+        payload = record(event.payload);
+        if (payload.settings !== undefined && payload.settings !== null) record(payload.settings);
+      } catch (_) {
+        throw established
+          ? new ServerConfigUpdateError(this.incompatibleConfigUpdateMessage())
+          : new ServerConfigIncompatibleError(this.incompatibleConfigMessage());
+      }
       if (payload.settings !== undefined && payload.settings !== null && Object.keys(this.config).length > 0) {
         const next: Record<string, Object> = {};
         for (const key of Object.keys(this.config)) next[key] = this.config[key];
@@ -1500,8 +1557,16 @@ export class T3Client {
       }
       return undefined;
     }
-    if (type === 'providerStatuses' && event.payload !== undefined && event.payload !== null) {
-      const payload = record(event.payload);
+    if (type === 'providerStatuses') {
+      let payload: Record<string, Object>;
+      try {
+        payload = record(event.payload);
+        if (payload.providers !== undefined && payload.providers !== null) objects(payload.providers);
+      } catch (_) {
+        throw established
+          ? new ServerConfigUpdateError(this.incompatibleConfigUpdateMessage())
+          : new ServerConfigIncompatibleError(this.incompatibleConfigMessage());
+      }
       if (payload.providers !== undefined && payload.providers !== null && Object.keys(this.config).length > 0) {
         const next: Record<string, Object> = {};
         for (const key of Object.keys(this.config)) next[key] = this.config[key];
@@ -1511,8 +1576,16 @@ export class T3Client {
       }
       return undefined;
     }
-    if (type === 'providerStatusDeltas' && event.payload !== undefined && event.payload !== null) {
-      const payload = record(event.payload);
+    if (type === 'providerStatusDeltas') {
+      let payload: Record<string, Object>;
+      try {
+        payload = record(event.payload);
+        if (payload.providers !== undefined && payload.providers !== null) objects(payload.providers);
+      } catch (_) {
+        throw established
+          ? new ServerConfigUpdateError(this.incompatibleConfigUpdateMessage())
+          : new ServerConfigIncompatibleError(this.incompatibleConfigMessage());
+      }
       if (payload.providers !== undefined && payload.providers !== null && Object.keys(this.config).length > 0) {
         const next: Record<string, Object> = {};
         for (const key of Object.keys(this.config)) next[key] = this.config[key];
@@ -1531,12 +1604,15 @@ export class T3Client {
       workspaceSnapshotsOnDemand: true,
       providerStatusDeltas: true
     };
+    let locallyCancelled = false;
     try {
       return await new Promise<Record<string, Object>>((resolve, reject) => {
         let settled = false;
+        let established = false;
         const finish = (config: Record<string, Object>): void => {
           if (settled) return;
           settled = true;
+          established = true;
           resolve(config);
         };
         const fail = (error: Error): void => {
@@ -1550,7 +1626,7 @@ export class T3Client {
             return;
           }
           try {
-            const snapshot = this.applyConfigStreamEvent(value, environmentId);
+            const snapshot = this.applyConfigStreamEvent(value, environmentId, established);
             if (snapshot) {
               if (!settled) {
                 finish(snapshot);
@@ -1561,37 +1637,54 @@ export class T3Client {
             }
           } catch (error) {
             const err = error as Error;
-            const wasSettled = settled;
+            const wasEstablished = established;
             fail(err);
-            if (wasSettled && rpc === this.rpc && generation === this.generation &&
-              err.message.includes('服务器身份不一致')) {
-              this.disconnect(err.message, false, false);
+            if (wasEstablished && rpc === this.rpc && generation === this.generation) {
+              locallyCancelled = true;
+              if (this.configChunk === chunk) this.configChunk = undefined;
+              rpc.cancelStream(chunk);
+              if (err.message.includes('服务器身份不一致')) {
+                this.disconnect(err.message, false, false);
+              } else {
+                this.disconnect(err instanceof ServerConfigUpdateError
+                  ? err.message : this.incompatibleConfigUpdateMessage(), true, false);
+              }
             }
           }
         };
         this.configChunk = chunk;
         void rpc.request('subscribeServerConfig', payload, chunk, CONFIG_SYNC_TIMEOUT_MS, false).then(() => {
           if (this.configChunk === chunk) this.configChunk = undefined;
-          if (!settled) fail(new Error('FALLBACK_GET_CONFIG'));
+          if (!settled) {
+            fail(new Error('FALLBACK_GET_CONFIG'));
+          } else if (established && !locallyCancelled && rpc === this.rpc && generation === this.generation) {
+            this.disconnect((this.environmentLabel || '服务端') + ' 配置订阅已结束，正在重连', true, false);
+          }
         }).catch((error: Error) => {
           if (this.configChunk === chunk) this.configChunk = undefined;
-          if (!settled) fail(error);
+          if (!settled) {
+            fail(error);
+          } else if (established && !locallyCancelled && rpc === this.rpc && generation === this.generation) {
+            this.disconnect((this.environmentLabel || '服务端') + ' 配置订阅中断，正在重连', true, false);
+          }
         });
       });
     } catch (error) {
       if (rpc !== this.rpc || generation !== this.generation) throw error as Error;
-      const message = (error as Error).message || '';
-      if (message.includes('服务器身份不一致')) throw error as Error;
+      const err = error as Error;
+      const message = err.message || '';
       if (this.configChunk) {
+        locallyCancelled = true;
         rpc.cancelStream(this.configChunk);
         this.configChunk = undefined;
       }
-      const empty: EmptyPayload = {};
-      const config = record(await rpc.request('server.getConfig', empty, undefined, 30000, false));
-      if (text(record(config.environment).environmentId) !== environmentId) {
-        throw new Error('服务器身份不一致，已中止连接');
+      if (err instanceof ServerConfigIncompatibleError || message.includes('服务器身份不一致') ||
+        message.includes('不兼容')) {
+        throw err;
       }
-      return config;
+      const empty: EmptyPayload = {};
+      const raw = await rpc.request('server.getConfig', empty, undefined, 30000, false);
+      return this.decodeServerConfig(raw, environmentId, false);
     }
   }
 

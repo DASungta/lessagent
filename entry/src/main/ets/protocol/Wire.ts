@@ -133,6 +133,30 @@ export function validateDescriptor(value: Object): Record<string, Object> {
   return descriptor;
 }
 
+export function validateServerConfig(value: Object): Record<string, Object> {
+  const config = record(value);
+  const environment = record(config.environment);
+  if (!text(environment.environmentId).trim()) {
+    throw new Error('服务器配置缺少有效环境标识');
+  }
+  if (environment.capabilities !== undefined && environment.capabilities !== null) {
+    record(environment.capabilities);
+  }
+  if (environment.platform !== undefined && environment.platform !== null) {
+    record(environment.platform);
+  }
+  if (config.settings !== undefined && config.settings !== null) {
+    record(config.settings);
+  }
+  if (config.providers !== undefined && config.providers !== null) {
+    objects(config.providers);
+  }
+  if (config.cwd !== undefined && config.cwd !== null) {
+    text(config.cwd);
+  }
+  return config;
+}
+
 export function socketUrl(base: string, ticket: string, dpopProof?: string): string {
   const dpop = dpopProof ? '&dpop=' + encodeURIComponent(dpopProof) : '';
   return base.replace(/^http/, 'ws') + '/ws?orchestrationProtocol=2&wsTicket=' +
