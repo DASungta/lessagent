@@ -405,3 +405,146 @@ test('Markdown keeps single-line display math and following content', () => {
   assert.equal(blocks[1].kind, 'paragraph');
   assert.equal(blocks[1].text, 'after');
 });
+
+test('U3: classifyChangedFile and isTestChangedFile match upstream rules across source, tests, mocks, generated and docs', () => {
+  const cases = [
+    ['src/contest.py', 'code', false],
+    ['test/fixtures/pr.json', 'mocks', true],
+    ['pnpm-lock.yaml', 'generated', false],
+    ['convex/_generated/api.d.ts', 'generated', false],
+    ['src/agent.eval.ts', 'tests', true],
+    ['evals/title-generation.ts', 'tests', true],
+    ['src/Button.stories.tsx', 'tests', true],
+    ['src\\Button.STORIES.TSX', 'tests', true],
+    ['src/Button.stories.generated.ts', 'generated', false],
+    ['__mocks__/Button.stories.tsx', 'mocks', true],
+    ['src/stories.ts', 'code', false],
+    ['src/stories/Button.tsx', 'code', false],
+    ['.storybook/main.ts', 'code', false],
+    ['README.md', 'docs', false],
+    ['tests/README.md', 'tests', true],
+    ['src/FooTest.java', 'tests', true],
+    ['src/Latest.java', 'code', false],
+    ['requirements.txt', 'code', false]
+  ];
+  for (const [path, kind, isTest] of cases) {
+    assert.equal(r5.classifyChangedFile(path), kind, path);
+    assert.equal(r5.isTestChangedFile(path), isTest, path);
+  }
+});
+
+test('U3: orderDiffFilesForReview orders dependencies before dependents, pairs tests, groups directories, and keeps symlinks', () => {
+  const make = (name, additionLines = [], deletionLines = []) => ({ name, additionLines, deletionLines });
+  const order = (list) => r5.orderDiffFilesForReview(list, (entry) => entry.name).map((entry) => entry.name);
+
+  // Dependencies before dependents across relative climbs, index, .mts/.cts, queries, require, and cycles
+  assert.deepEqual(
+    order([make('src/ui/a.ts', ['import { b } from "../lib/b";']), make('src/lib/b.ts')]),
+    ['src/lib/b.ts', 'src/ui/a.ts']
+  );
+  assert.deepEqual(
+    order([make('src/a.ts', ['import { b } from "./lib";']), make('src/lib/index.ts')]),
+    ['src/lib/index.ts', 'src/a.ts']
+  );
+  assert.deepEqual(
+    order([make('a.mts', ['import { z } from "./z.mjs";']), make('z.mts')]),
+    ['z.mts', 'a.mts']
+  );
+  assert.deepEqual(
+    order([make('src/a.js', ['import Worker from "./z.js?worker";']), make('src/z.js')]),
+    ['src/z.js', 'src/a.js']
+  );
+  assert.deepEqual(
+    order([make('src/a.ts', ['const b = require("./b");', 'import "./c";']), make('src/b.ts'), make('src/c.ts')]),
+    ['src/b.ts', 'src/c.ts', 'src/a.ts']
+  );
+  assert.deepEqual(
+    order([make('src/b.ts', ['import { a } from "./a";']), make('src/a.ts', ['import { b } from "./b";'])]),
+    ['src/a.ts', 'src/b.ts']
+  );
+
+  // Ambiguous last segment ignored rather than guessed
+  assert.deepEqual(
+    order([make('src/a.ts', ['import { b } from "~/somewhere/b";']), make('one/b.ts'), make('two/b.ts')]),
+    ['one/b.ts', 'src/a.ts', 'two/b.ts']
+  );
+
+  // Tiers + paired tests + directory contiguity
+  assert.deepEqual(
+    order([
+      make('pnpm-lock.yaml'),
+      make('src/a.test.ts'),
+      make('src/__tests__/b.ts'),
+      make('src/a.ts', ['import { b } from "./b";']),
+      make('src/b.ts'),
+      make('dist/a.js')
+    ]),
+    ['src/b.ts', 'src/a.ts', 'src/__tests__/b.ts', 'src/a.test.ts', 'dist/a.js', 'pnpm-lock.yaml']
+  );
+  assert.deepEqual(
+    order([
+      make('server/device/Host.ts'),
+      make('web/settings.ts'),
+      make('server/ws.ts'),
+      make('server/device/Host.test.ts'),
+      make('web/settings.test.ts')
+    ]),
+    ['server/device/Host.ts', 'server/device/Host.test.ts', 'server/ws.ts', 'web/settings.ts', 'web/settings.test.ts']
+  );
+  assert.deepEqual(
+    order([
+      make('src/c.browser.test.tsx'),
+      make('src/b.test.ts'),
+      make('src/a.logic.test.ts'),
+      make('src/c.tsx'),
+      make('src/b.ts'),
+      make('src/a.logic.ts')
+    ]),
+    ['src/a.logic.ts', 'src/b.ts', 'src/c.tsx', 'src/a.logic.test.ts', 'src/b.test.ts', 'src/c.browser.test.tsx']
+  );
+
+  // Duplicate path (file replaced by symlink) keeps both entries
+  const deleted = make('AGENTS.md', [], ['# Agents']);
+  const added = make('AGENTS.md', ['CLAUDE.md']);
+  assert.deepEqual(
+    r5.orderDiffFilesForReview([make('CLAUDE.md'), deleted, added], (entry) => entry.name),
+    [deleted, added, make('CLAUDE.md')]
+  );
+});
+
+test('U3: orderParsedDiffFilesForReview, filterDiffTestFiles, and Review/PR panels share t3HideTestFiles', async () => {
+  const patch = [
+    'diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml',
+    '--- a/pnpm-lock.yaml', '+++ b/pnpm-lock.yaml', '@@ -1 +1 @@', '-a', '+b',
+    'diff --git a/src/app.test.ts b/src/app.test.ts',
+    '--- a/src/app.test.ts', '+++ b/src/app.test.ts', '@@ -1 +1 @@', '-old', '+new',
+    'diff --git a/src/app.ts b/src/app.ts',
+    '--- a/src/app.ts', '+++ b/src/app.ts', '@@ -1 +1 @@', '+import { core } from "./core";',
+    'diff --git a/src/core.ts b/src/core.ts',
+    '--- a/src/core.ts', '+++ b/src/core.ts', '@@ -1 +1 @@', '+export const core = 1;'
+  ].join('\n');
+  const ordered = r5.orderParsedDiffFilesForReview(r5.parseDiff(patch));
+  assert.deepEqual(ordered.map((f) => f.path), ['src/core.ts', 'src/app.ts', 'src/app.test.ts', 'pnpm-lock.yaml']);
+
+  const shownAll = r5.filterDiffTestFiles(ordered, false);
+  assert.equal(shownAll.hiddenCount, 0);
+  assert.equal(shownAll.files.length, 4);
+
+  const hiddenTests = r5.filterDiffTestFiles(ordered, true);
+  assert.equal(hiddenTests.hiddenCount, 1);
+  assert.deepEqual(hiddenTests.files.map((f) => f.path), ['src/core.ts', 'src/app.ts', 'pnpm-lock.yaml']);
+
+  const onlyTests = r5.filterDiffTestFiles([ordered[2]], true);
+  assert.equal(onlyTests.files.length, 0);
+  assert.equal(onlyTests.hiddenCount, 1);
+
+  for (const name of ['ReviewPanel', 'PullRequestsPanel']) {
+    const src = await readFile(new URL(`../entry/src/main/ets/components/${name}.ets`, import.meta.url), 'utf8');
+    assert.match(src, /@StorageProp\('t3HideTestFiles'\)/, name);
+    assert.match(src, /orderParsedDiffFilesForReview/, name);
+    assert.match(src, /filterDiffTestFiles/, name);
+    assert.match(src, /隐藏测试文件/, name);
+    assert.match(src, /仅变更了测试文件/, name);
+    assert.match(src, /显示测试文件/, name);
+  }
+});

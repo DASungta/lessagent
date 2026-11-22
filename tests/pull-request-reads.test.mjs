@@ -7,7 +7,7 @@ const source = await readFile(new URL('../entry/src/main/ets/components/PullRequ
 const reads = source.slice(source.indexOf('  private alive:'), source.indexOf('  private async generateGuide()'));
 const { PanelHarness } = await import(data(compile(`
   import { firstPullRequestCursor, hasPullRequestCursors, mergePullRequestRows, normalizePullRequestCursors,
-    parseDiff, pullRequestPatch, pullRequestProjectChoices, pullRequestRef,
+    orderParsedDiffFilesForReview, parseDiff, pullRequestPatch, pullRequestProjectChoices, pullRequestRef,
     tagPullRequestRows } from ${JSON.stringify(r5Url)};
   export class PanelHarness {
     projectId = 'project';

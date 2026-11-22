@@ -25,6 +25,7 @@ export interface WorkspacePreferences {
   terminalFontSize: number;
   codeFontSize: number | null;
   codeWordBreak: boolean;
+  pullRequestHideTestFiles: boolean;
 }
 
 export function defaultWorkspacePreferences(): WorkspacePreferences {
@@ -32,7 +33,7 @@ export function defaultWorkspacePreferences(): WorkspacePreferences {
     schemaVersion: 1, projectGroupingMode: 'repository', environmentFilter: '', projectFilterKey: '',
     threadSortOrder: 'updated_at', archivedSortOrder: 'newest', workingShelfEnabled: true,
     useLastProjectForNewThreads: true,
-    workingShelfExpanded: false, snoozedShelfExpanded: false, settledShelfExpanded: true, followUpBehavior: 'steer', terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE, codeFontSize: null, codeWordBreak: false
+    workingShelfExpanded: false, snoozedShelfExpanded: false, settledShelfExpanded: true, followUpBehavior: 'steer', terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE, codeFontSize: null, codeWordBreak: false, pullRequestHideTestFiles: false
   };
 }
 
@@ -78,7 +79,8 @@ export function workspacePreferences(value: Object): WorkspacePreferences {
     terminalFontSize: validTerminalFontSize(row.terminalFontSize) ? row.terminalFontSize as number : DEFAULT_TERMINAL_FONT_SIZE,
     codeFontSize: typeof row.codeFontSize === 'number' && Number.isFinite(row.codeFontSize)
       ? Math.min(MAX_CODE_FONT_SIZE, Math.max(MIN_CODE_FONT_SIZE, Math.round(row.codeFontSize))) : null,
-    codeWordBreak: row.codeWordBreak === true
+    codeWordBreak: row.codeWordBreak === true,
+    pullRequestHideTestFiles: row.pullRequestHideTestFiles === true
   };
 }
 
@@ -116,6 +118,7 @@ export async function prepareWorkspacePreferences(filesDir: string): Promise<voi
   catch (_) { workspacePrefs = defaultWorkspacePreferences(); }
   AppStorage.setOrCreate('t3CodeFontSize', effectiveCodeFontSize());
   AppStorage.setOrCreate('t3CodeWordBreak', workspacePrefs.codeWordBreak);
+  AppStorage.setOrCreate('t3HideTestFiles', workspacePrefs.pullRequestHideTestFiles);
 }
 
 export function saveWorkspacePreferences(): void {
@@ -188,4 +191,18 @@ export async function setCodeWordBreak(value: boolean): Promise<void> {
   await workspacePrefsStore.save(snapshot);
   workspacePrefs.codeWordBreak = value;
   AppStorage.setOrCreate('t3CodeWordBreak', value);
+}
+
+export async function setPullRequestHideTestFiles(value: boolean): Promise<void> {
+  if (typeof value !== 'boolean') throw new Error('测试文件筛选设置无效');
+  if (!workspacePrefsStore) {
+    workspacePrefs.pullRequestHideTestFiles = value;
+    AppStorage.setOrCreate('t3HideTestFiles', value);
+    return;
+  }
+  const snapshot = workspacePreferences(JSON.parse(JSON.stringify(workspacePrefs)) as Object);
+  snapshot.pullRequestHideTestFiles = value;
+  await workspacePrefsStore.save(snapshot);
+  workspacePrefs.pullRequestHideTestFiles = value;
+  AppStorage.setOrCreate('t3HideTestFiles', value);
 }

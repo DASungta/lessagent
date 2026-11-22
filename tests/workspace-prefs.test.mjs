@@ -22,7 +22,7 @@ test('R3 preferences validate grouping, sort, filter bounds and default omitted 
     projectFilterGroupingMode: 'repository_path',
     threadSortOrder: 'created_at', archivedSortOrder: 'oldest', workingShelfEnabled: true,
     useLastProjectForNewThreads: true, lastThreadProject: undefined,
-    workingShelfExpanded: false, snoozedShelfExpanded: false, settledShelfExpanded: false, followUpBehavior: 'steer', terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE, codeFontSize: null, codeWordBreak: false
+    workingShelfExpanded: false, snoozedShelfExpanded: false, settledShelfExpanded: false, followUpBehavior: 'steer', terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE, codeFontSize: null, codeWordBreak: false, pullRequestHideTestFiles: false
   });
   assert.throws(() => P.workspacePreferences({ schemaVersion: 2 }), /版本/);
   assert.throws(() => P.workspacePreferences({ schemaVersion: 1, projectGroupingMode: 'bad',
@@ -142,4 +142,25 @@ test('code appearance publishes only successfully saved state and reset restores
   assert.deepEqual(seen, [[17, false], [17, true], [null, true]]);
   assert.equal(P.effectiveCodeFontSize(), 13);
   assert.equal(published.get('t3CodeFontSize'), 13);
+});
+
+test('U3: pullRequestHideTestFiles defaults false, migrates safely, persists and publishes t3HideTestFiles', async () => {
+  const base = P.defaultWorkspacePreferences();
+  assert.equal(base.pullRequestHideTestFiles, false);
+  assert.equal(P.workspacePreferences({ ...base, pullRequestHideTestFiles: true }).pullRequestHideTestFiles, true);
+  assert.equal(P.workspacePreferences({ ...base, pullRequestHideTestFiles: 'yes' }).pullRequestHideTestFiles, false);
+
+  await P.prepareWorkspacePreferences('/synthetic');
+  assert.equal(published.get('t3HideTestFiles'), false);
+  const saved = [];
+  P.workspacePrefsStore.save = async value => { saved.push(value.pullRequestHideTestFiles); };
+  await P.setPullRequestHideTestFiles(true);
+  assert.equal(P.workspacePrefs.pullRequestHideTestFiles, true);
+  assert.equal(published.get('t3HideTestFiles'), true);
+  assert.deepEqual(saved, [true]);
+
+  P.workspacePrefsStore.save = async () => { throw Error('disk'); };
+  await assert.rejects(P.setPullRequestHideTestFiles(false), /disk/);
+  assert.equal(P.workspacePrefs.pullRequestHideTestFiles, true);
+  assert.equal(published.get('t3HideTestFiles'), true);
 });

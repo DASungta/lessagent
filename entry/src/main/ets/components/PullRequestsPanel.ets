@@ -7,10 +7,11 @@ import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Th
 import { EnvironmentEntry } from '../protocol/Environment';
 import { ScopedProject } from '../protocol/Projects';
 import { T3Client } from '../services/T3Client';
+import { setPullRequestHideTestFiles } from '../services/WorkspacePrefs';
 import { CodeLine } from './CodeLine';
 import { DiffLineNumber } from './DiffLineNumber';
-import { DiffFile, DiffHunk, DiffRow, firstPullRequestCursor, hasPullRequestCursors, LabelCandidateView,
-  mergePullRequestRows, normalizePullRequestCursors, parseDiff, PullRequestDetailView, PullRequestGuideView,
+import { DiffFile, DiffHunk, DiffRow, filterDiffTestFiles, firstPullRequestCursor, hasPullRequestCursors, LabelCandidateView,
+  mergePullRequestRows, normalizePullRequestCursors, orderParsedDiffFilesForReview, parseDiff, PullRequestDetailView, PullRequestGuideView,
   PullRequestPage, pullRequestPatch, PullRequestProjectChoice, pullRequestProjectChoices,
   PullRequestProjectSource, pullRequestRef, PullRequestRow, pullRequestStateLabel, ReviewerCandidateView,
   reviewCommentDraft, ReviewGuideExcerpt, ReviewGuideFile, ReviewGuideNote, ReviewGuideStop,
@@ -37,6 +38,7 @@ interface PullRequestTargetFetchResult {
 @Component
 export struct PullRequestsPanel {
   @StorageProp('t3CodeFontSize') codeFontSize: number = 13;
+  @StorageProp('t3HideTestFiles') hideTestFiles: boolean = false;
   connection: T3Client | undefined = undefined;
   @Prop @Watch('scopeChanged') environments: EnvironmentEntry[] = [];
   @Prop @Watch('scopeChanged') projects: ScopedProject[] = [];
@@ -464,7 +466,7 @@ export struct PullRequestsPanel {
       try {
         const response = await connection.pullRequestDiff(ref);
         if (!current()) return;
-        this.patchFiles = parseDiff(pullRequestPatch(response).patch);
+        this.patchFiles = orderParsedDiffFilesForReview(parseDiff(pullRequestPatch(response).patch));
       } catch (_) {
         if (!current()) return;
         this.patchFiles = [];
@@ -1342,38 +1344,86 @@ export struct PullRequestsPanel {
         if (this.notice) { Text(this.notice).fontSize(FontSize.callout).fontColor($r('app.color.primary_text')).width('100%') }
       }.width('100%').layoutWeight(1).padding({ left: Space.sm, right: Space.sm, bottom: Space.sm })
     } else {
-      Column() {
-        List({ space: 0 }) {
-          ForEach(this.patchFiles, (file: DiffFile) => {
-            ListItem() {
-              Row({ space: Space.xs }) {
-                Column({ space: 3 }) {
-                  Text(file.path.slice(file.path.lastIndexOf('/') + 1)).fontSize(FontSize.body).fontWeight(Weight.medium)
-                    .fontColor($r('app.color.ink')).width('100%').wordBreak(WordBreak.BREAK_ALL)
-                  if (file.path.includes('/')) {
-                    Text(file.path.slice(0, file.path.lastIndexOf('/'))).fontSize(FontSize.caption).fontColor($r('app.color.muted'))
-                      .width('100%').wordBreak(WordBreak.BREAK_ALL).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
-                  }
-                }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-                Text('+' + file.additions).fontSize(FontSize.badge).fontColor($r('app.color.diff_add_ink'))
-                Text('-' + file.deletions).fontSize(FontSize.badge).fontColor($r('app.color.diff_del_ink'))
-              }.constraintSize({ minHeight: Sizes.formRowMin }).padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs }).width('100%')
-                .accessibilityText(file.path + '，新增 ' + file.additions + ' 行，删除 ' + file.deletions + ' 行')
-                .onClick(() => { this.selectedFile = file.path; this.selectedHunk = ''; })
-            }
-          }, (file: DiffFile) => file.path)
-          if (!this.patchFiles.length) {
-            ListItem() {
-              Text(this.diffError || (this.loading ? '正在读取文件差异…' : '没有可显示的文件差异')).fontSize(FontSize.callout)
-                .fontColor(this.diffError ? $r('app.color.danger') : $r('app.color.muted')).width('100%')
-                .textAlign(TextAlign.Center).padding(Space.lg)
-            }
+      Column({ space: Space.xs }) {
+        Row({ space: Space.xs }) {
+          Button(this.hideTestFiles ? '✓ 隐藏测试文件' : '隐藏测试文件', { type: ButtonType.Normal })
+            .fontSize(FontSize.caption)
+            .fontWeight(this.hideTestFiles ? Weight.semibold : Weight.medium)
+            .constraintSize({ minHeight: 32 }).padding({ left: Space.sm, right: Space.sm })
+            .backgroundColor(this.hideTestFiles ? $r('app.color.info_bg') : $r('app.color.card'))
+            .fontColor(this.hideTestFiles ? $r('app.color.primary_text') : $r('app.color.ink'))
+            .border({ width: Sizes.hairline, color: this.hideTestFiles ? $r('app.color.primary') : $r('app.color.border'), radius: Radius.tool })
+            .borderRadius(Radius.tool)
+            .accessibilityText(this.hideTestFiles ? '取消隐藏测试文件' : '隐藏测试文件')
+            .onClick(() => { this.updateHideTestFiles(!this.hideTestFiles); })
+          if (this.hiddenTestFileCount() > 0) {
+            Text('已隐藏 ' + this.hiddenTestFileCount() + ' 个测试文件')
+              .fontSize(FontSize.caption).fontColor($r('app.color.muted')).layoutWeight(1)
+              .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           }
-        }.width('100%').layoutWeight(1)
-          .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
-          .divider({ strokeWidth: Sizes.hairline, color: $r('app.color.separator') })
+        }.width('100%').alignItems(VerticalAlign.Center)
+        if (this.patchFiles.length > 0 && this.visiblePatchFiles().length === 0) {
+          GroupCard() {
+            Column({ space: Space.xs }) {
+              Text('仅变更了测试文件')
+                .fontSize(FontSize.headline).fontWeight(Weight.semibold).fontColor($r('app.color.ink'))
+                .width('100%').textAlign(TextAlign.Center)
+              Text('此审阅中已隐藏测试文件。')
+                .fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+                .width('100%').textAlign(TextAlign.Center)
+              AppButton({
+                label: '显示测试文件', kind: 'secondary', compact: true,
+                onTap: () => { this.updateHideTestFiles(false); }
+              })
+            }.width('100%').alignItems(HorizontalAlign.Center).padding(Space.lg)
+          }
+        } else {
+          List({ space: 0 }) {
+            ForEach(this.visiblePatchFiles(), (file: DiffFile, index: number) => {
+              ListItem() {
+                Row({ space: Space.xs }) {
+                  Column({ space: 3 }) {
+                    Text(file.path.slice(file.path.lastIndexOf('/') + 1)).fontSize(FontSize.body).fontWeight(Weight.medium)
+                      .fontColor($r('app.color.ink')).width('100%').wordBreak(WordBreak.BREAK_ALL)
+                    if (file.path.includes('/')) {
+                      Text(file.path.slice(0, file.path.lastIndexOf('/'))).fontSize(FontSize.caption).fontColor($r('app.color.muted'))
+                        .width('100%').wordBreak(WordBreak.BREAK_ALL).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
+                    }
+                  }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+                  Text('+' + file.additions).fontSize(FontSize.badge).fontColor($r('app.color.diff_add_ink'))
+                  Text('-' + file.deletions).fontSize(FontSize.badge).fontColor($r('app.color.diff_del_ink'))
+                }.constraintSize({ minHeight: Sizes.formRowMin }).padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs }).width('100%')
+                  .accessibilityText(file.path + '，新增 ' + file.additions + ' 行，删除 ' + file.deletions + ' 行')
+                  .onClick(() => { this.selectedFile = file.path; this.selectedHunk = ''; })
+              }
+            }, (file: DiffFile, index: number) => file.path + ':' + file.changeType + ':' + index)
+            if (!this.patchFiles.length) {
+              ListItem() {
+                Text(this.diffError || (this.loading ? '正在读取文件差异…' : '没有可显示的文件差异')).fontSize(FontSize.callout)
+                  .fontColor(this.diffError ? $r('app.color.danger') : $r('app.color.muted')).width('100%')
+                  .textAlign(TextAlign.Center).padding(Space.lg)
+              }
+            }
+          }.width('100%').layoutWeight(1)
+            .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
+            .divider({ strokeWidth: Sizes.hairline, color: $r('app.color.separator') })
+        }
       }.width('100%').layoutWeight(1).padding({ left: Space.sm, right: Space.sm, bottom: Space.sm })
     }
+  }
+
+  private visiblePatchFiles(): DiffFile[] {
+    return filterDiffTestFiles(this.patchFiles, this.hideTestFiles).files;
+  }
+
+  private hiddenTestFileCount(): number {
+    return filterDiffTestFiles(this.patchFiles, this.hideTestFiles).hiddenCount;
+  }
+
+  private updateHideTestFiles(next: boolean): void {
+    void setPullRequestHideTestFiles(next).catch((reason: Error) => {
+      this.onStatus(reason.message);
+    });
   }
 
   private currentFileHunks(): DiffHunk[] {

@@ -4,14 +4,16 @@ import { AppButton } from './ui/AppButton';
 import { StatusBadge } from './ui/StatusBadge';
 import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { T3Client } from '../services/T3Client';
+import { setPullRequestHideTestFiles } from '../services/WorkspacePrefs';
 import { CodeLine } from './CodeLine';
 import { DiffLineNumber } from './DiffLineNumber';
-import { DiffFile, DiffHunk, DiffRow, DiffSelection, parseDiff, reviewCommentContext, ReviewSource,
-  selectedDiff } from '../protocol/R5';
+import { DiffFile, DiffHunk, DiffRow, DiffSelection, filterDiffTestFiles, orderParsedDiffFilesForReview,
+  parseDiff, reviewCommentContext, ReviewSource, selectedDiff } from '../protocol/R5';
 
 @Component
 export struct ReviewPanel {
   @StorageProp('t3CodeFontSize') codeFontSize: number = 13;
+  @StorageProp('t3HideTestFiles') hideTestFiles: boolean = false;
   connection: T3Client | undefined = undefined;
   @Prop cwd: string = '';
   @Prop threadId: string = '';
@@ -46,7 +48,7 @@ export struct ReviewPanel {
         this.mode === 'branch-range' ? this.baseRef.trim() : '', this.mode);
       this.sources = preview.sources;
       this.sourceIndex = 0;
-      this.files = preview.sources.length ? parseDiff(preview.sources[0].diff) : [];
+      this.files = preview.sources.length ? orderParsedDiffFilesForReview(parseDiff(preview.sources[0].diff)) : [];
       if (preview.incomplete) this.error = '部分 Diff 无法读取；已显示可用文件';
     } catch (reason) { this.error = (reason as Error).message; }
     finally { this.loading = false; }
@@ -54,11 +56,27 @@ export struct ReviewPanel {
 
   private selectSource(index: number): void {
     this.sourceIndex = index; this.selectedPath = ''; this.start = -1; this.end = -1;
-    this.files = parseDiff(this.sources[index].diff);
+    this.files = orderParsedDiffFilesForReview(parseDiff(this.sources[index].diff));
+  }
+
+  private visibleFiles(): DiffFile[] {
+    return filterDiffTestFiles(this.files, this.hideTestFiles).files;
+  }
+
+  private hiddenTestFileCount(): number {
+    return filterDiffTestFiles(this.files, this.hideTestFiles).hiddenCount;
+  }
+
+  private updateHideTestFiles(next: boolean): void {
+    void setPullRequestHideTestFiles(next).catch((reason: Error) => {
+      this.onStatus(reason.message);
+    });
   }
 
   private file(): DiffFile | undefined {
-    return this.files.find((item: DiffFile) => item.path === this.selectedPath);
+    const visible = this.visibleFiles();
+    return visible.find((item: DiffFile) => (item.path || item.previousPath) === this.selectedPath) ||
+      this.files.find((item: DiffFile) => (item.path || item.previousPath) === this.selectedPath);
   }
 
   private hunks(): DiffHunk[] {
@@ -169,6 +187,23 @@ export struct ReviewPanel {
           }
         }.scrollable(ScrollDirection.Horizontal).width('100%').align(Alignment.Start)
       }
+      Row({ space: Space.xs }) {
+        Button(this.hideTestFiles ? '✓ 隐藏测试文件' : '隐藏测试文件', { type: ButtonType.Normal })
+          .fontSize(FontSize.caption)
+          .fontWeight(this.hideTestFiles ? Weight.semibold : Weight.medium)
+          .constraintSize({ minHeight: 32 }).padding({ left: Space.sm, right: Space.sm })
+          .backgroundColor(this.hideTestFiles ? $r('app.color.info_bg') : $r('app.color.card'))
+          .fontColor(this.hideTestFiles ? $r('app.color.primary_text') : $r('app.color.ink'))
+          .border({ width: Sizes.hairline, color: this.hideTestFiles ? $r('app.color.primary') : $r('app.color.border'), radius: Radius.tool })
+          .borderRadius(Radius.tool)
+          .accessibilityText(this.hideTestFiles ? '取消隐藏测试文件' : '隐藏测试文件')
+          .onClick(() => { this.updateHideTestFiles(!this.hideTestFiles); })
+        if (this.hiddenTestFileCount() > 0) {
+          Text('已隐藏 ' + this.hiddenTestFileCount() + ' 个测试文件')
+            .fontSize(FontSize.caption).fontColor($r('app.color.muted')).layoutWeight(1)
+            .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+      }.width('100%').alignItems(VerticalAlign.Center)
     }.width('100%').padding({ left: Space.sm, right: Space.sm, top: Space.xxs, bottom: Space.xs })
   }
 
@@ -189,9 +224,24 @@ export struct ReviewPanel {
             .fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%')
             .textAlign(TextAlign.Center).padding(Space.lg)
         }
+      } else if (this.visibleFiles().length === 0) {
+        GroupCard() {
+          Column({ space: Space.xs }) {
+            Text('仅变更了测试文件')
+              .fontSize(FontSize.headline).fontWeight(Weight.semibold).fontColor($r('app.color.ink'))
+              .width('100%').textAlign(TextAlign.Center)
+            Text('此审阅中已隐藏测试文件。')
+              .fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+              .width('100%').textAlign(TextAlign.Center)
+            AppButton({
+              label: '显示测试文件', kind: 'secondary', compact: true,
+              onTap: () => { this.updateHideTestFiles(false); }
+            })
+          }.width('100%').alignItems(HorizontalAlign.Center).padding(Space.lg)
+        }
       } else {
         List({ space: 0 }) {
-          ForEach(this.files, (file: DiffFile) => {
+          ForEach(this.visibleFiles(), (file: DiffFile, index: number) => {
             ListItem() {
               Column({ space: 3 }) {
                 Row({ space: Space.xs }) {
@@ -212,7 +262,7 @@ export struct ReviewPanel {
                 .constraintSize({ minHeight: Sizes.formRowMin }).justifyContent(FlexAlign.Center)
                 .onClick(() => { this.selectedPath = file.path || file.previousPath; this.start = -1; this.end = -1; })
             }
-          }, (file: DiffFile) => file.path || file.previousPath)
+          }, (file: DiffFile, index: number) => (file.path || file.previousPath) + ':' + file.changeType + ':' + index)
         }.width('100%').layoutWeight(1)
           .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
           .divider({ strokeWidth: Sizes.hairline, color: $r('app.color.separator') })
@@ -253,10 +303,10 @@ export struct ReviewPanel {
           })
           AppButton({
             label: '下一文件', kind: 'secondary', compact: true,
-            disabled: !(this.fileIndex() >= 0 && this.fileIndex() < this.files.length - 1),
+            disabled: !(this.fileIndex() >= 0 && this.fileIndex() < this.visibleFiles().length - 1),
             onTap: () => this.stepFile(1)
           })
-          Text((this.fileIndex() + 1) + ' / ' + this.files.length).fontSize(FontSize.caption)
+          Text((this.fileIndex() + 1) + ' / ' + this.visibleFiles().length).fontSize(FontSize.caption)
             .fontColor($r('app.color.muted')).layoutWeight(1).textAlign(TextAlign.End)
         }.width('100%').alignItems(VerticalAlign.Center)
         if (this.start >= 0) {
@@ -331,14 +381,15 @@ export struct ReviewPanel {
   }
 
   private fileIndex(): number {
-    return this.files.findIndex((item: DiffFile) => item.path === this.selectedPath);
+    return this.visibleFiles().findIndex((item: DiffFile) => (item.path || item.previousPath) === this.selectedPath);
   }
 
   private stepFile(delta: number): void {
+    const visible = this.visibleFiles();
     const index = this.fileIndex();
-    const next = Math.max(0, Math.min(this.files.length - 1, index + delta));
-    if (next === index) return;
-    this.selectedPath = this.files[next].path;
+    const next = Math.max(0, Math.min(visible.length - 1, index + delta));
+    if (next === index || next < 0) return;
+    this.selectedPath = visible[next].path || visible[next].previousPath;
     this.start = -1; this.end = -1; this.selectedHunk = '';
   }
 

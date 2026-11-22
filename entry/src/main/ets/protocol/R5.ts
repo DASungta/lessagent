@@ -135,6 +135,344 @@ export function diffStats(files: DiffFile[]): { additions: number; deletions: nu
   return { additions, deletions };
 }
 
+export type ChangedFileKind = 'code' | 'tests' | 'mocks' | 'generated' | 'docs';
+
+const CHANGED_GENERATED_FILES: Set<string> = new Set([
+  'bun.lock', 'bun.lockb', 'cargo.lock', 'composer.lock', 'deno.lock', 'flake.lock',
+  'gemfile.lock', 'go.sum', 'gradle.lockfile', 'mix.lock', 'npm-shrinkwrap.json',
+  'package-lock.json', 'packages.lock.json', 'pipfile.lock', 'pnpm-lock.yaml',
+  'podfile.lock', 'poetry.lock', 'pubspec.lock', 'uv.lock', 'yarn.lock'
+]);
+const CHANGED_GENERATED_NAME =
+  /(\.generated\.|\.gen\.|\.g\.dart$|\.pb\.go$|_pb2(_grpc)?\.py$|\.pb\.(cc|h)$|\.min\.(js|css)$|\.(js|css)\.map$)/;
+const CHANGED_GENERATED_DIRS: Set<string> = new Set(['__generated__', '_generated', 'generated']);
+
+const CHANGED_MOCK_NAME =
+  /(\.snap$|\.(mocks?|fixtures?|stubs?|fakes?)\.[^.]+$|^(mocks?|fixtures?|stubs?|fakes?)([-_.A-Z]|$))/;
+const CHANGED_MOCK_DIRS: Set<string> = new Set([
+  '__fixtures__', '__mocks__', '__snapshots__', 'fakes', 'fixture',
+  'fixtures', 'mock', 'mocks', 'stubs', 'testdata'
+]);
+
+const CHANGED_TEST_NAME =
+  /(\.(test|spec|e2e|eval|stories)\.[^.]+$|_(test|spec)\.[^.]+$|^test_.+\.py$|^conftest\.py$|^(vitest|jest)\.setup\.[^.]+$)/i;
+// Case-sensitive: `FooTest.java` is a test class, `Latest.java` is not.
+const CHANGED_CLASS_TEST_NAME = /(Tests?|Spec)\.(java|kt|kts|scala|groovy|cs|php|swift|m)$/;
+const CHANGED_TEST_DIRS: Set<string> = new Set([
+  '__tests__', '__test__', 'cypress', 'e2e', 'evals', 'spec', 'specs', 'test', 'tests'
+]);
+
+const CHANGED_DOCS_NAME = /\.(md|mdx|markdown|rst|adoc|txt)$/i;
+const CHANGED_NOT_DOCS_NAME = /^(requirements.*|constraints.*|CMakeLists|robots|llms)\.txt$/i;
+
+export function classifyChangedFile(path: string): ChangedFileKind {
+  const segments = path.replace(/\\/g, '/').split('/');
+  const name = segments.pop() ?? '';
+  const dirs = segments.map((segment: string) => segment.toLowerCase());
+  const inDir = (set: Set<string>): boolean => dirs.some((dir: string) => set.has(dir));
+  if (CHANGED_GENERATED_FILES.has(name.toLowerCase()) || CHANGED_GENERATED_NAME.test(name) || inDir(CHANGED_GENERATED_DIRS)) {
+    return 'generated';
+  }
+  if (CHANGED_MOCK_NAME.test(name) || inDir(CHANGED_MOCK_DIRS)) return 'mocks';
+  if (CHANGED_TEST_NAME.test(name) || CHANGED_CLASS_TEST_NAME.test(name) || inDir(CHANGED_TEST_DIRS)) return 'tests';
+  if (CHANGED_DOCS_NAME.test(name) && !CHANGED_NOT_DOCS_NAME.test(name)) return 'docs';
+  return 'code';
+}
+
+export function isTestChangedFile(path: string): boolean {
+  const kind = classifyChangedFile(path);
+  return kind === 'tests' || kind === 'mocks';
+}
+
+export interface FilteredDiffFiles {
+  files: DiffFile[];
+  hiddenCount: number;
+}
+
+export function filterDiffTestFiles(files: DiffFile[], hideTestFiles: boolean): FilteredDiffFiles {
+  if (!hideTestFiles) return { files, hiddenCount: 0 };
+  const visible: DiffFile[] = [];
+  let hiddenCount = 0;
+  for (const file of files) {
+    if (isTestChangedFile(file.path || file.previousPath)) hiddenCount += 1;
+    else visible.push(file);
+  }
+  return { files: visible, hiddenCount };
+}
+
+export interface OrderableDiffFile {
+  additionLines: string[];
+  deletionLines: string[];
+}
+
+type DiffFileTier = 'source' | 'test' | 'generated';
+
+const ORDER_GENERATED_FILE_NAMES: Set<string> = new Set([
+  'pnpm-lock.yaml', 'yarn.lock', 'package-lock.json', 'bun.lockb',
+  'Cargo.lock', 'go.sum', 'composer.lock', 'Gemfile.lock'
+]);
+const ORDER_GENERATED_DIRECTORIES: Set<string> = new Set([
+  '__snapshots__', '__generated__', 'dist', 'build', 'vendor'
+]);
+const ORDER_TEST_DIRECTORIES: Set<string> = new Set(['__tests__', 'tests', 'test']);
+const ORDER_MODULE_EXTENSIONS: string[] = ['.mts', '.cts', '.mjs', '.cjs', '.tsx', '.jsx', '.ts', '.js'];
+const ORDER_IMPORT_SPECIFIER = /(?:\bfrom|\bimport|\brequire\s*\()\s*\(?\s*["']([^"']+)["']/g;
+
+function lastPathSegment(path: string): string {
+  const slash = path.lastIndexOf('/');
+  return slash >= 0 ? path.slice(slash + 1) : path;
+}
+
+function diffFileTier(path: string): DiffFileTier {
+  const segments = path.split('/');
+  const name = segments.length > 0 ? segments[segments.length - 1] : '';
+  const dirs = segments.slice(0, -1);
+  if (
+    ORDER_GENERATED_FILE_NAMES.has(name) ||
+    name.endsWith('.snap') ||
+    name.endsWith('.min.js') ||
+    name.endsWith('.min.css') ||
+    /\.generated\./.test(name) ||
+    dirs.some((segment: string) => ORDER_GENERATED_DIRECTORIES.has(segment))
+  ) {
+    return 'generated';
+  }
+  if (
+    /\.(?:test|spec)\./.test(name) ||
+    dirs.some((segment: string) => ORDER_TEST_DIRECTORIES.has(segment))
+  ) {
+    return 'test';
+  }
+  return 'source';
+}
+
+function stripExtension(path: string): string {
+  const dot = path.lastIndexOf('.');
+  const slash = path.lastIndexOf('/');
+  return dot > slash ? path.slice(0, dot) : path;
+}
+
+function fileBaseName(path: string): string {
+  return stripExtension(lastPathSegment(path));
+}
+
+function stripModuleExtension(path: string): string {
+  const extension = ORDER_MODULE_EXTENSIONS.find((candidate: string) => path.endsWith(candidate));
+  return extension === undefined ? path : path.slice(0, -extension.length);
+}
+
+function fileModuleName(path: string): string {
+  return stripModuleExtension(lastPathSegment(path));
+}
+
+function resolveRelativePath(fromPath: string, specifier: string): string {
+  const segments = fromPath.split('/').slice(0, -1);
+  for (const part of specifier.split('/')) {
+    if (part === '.' || part === '') continue;
+    if (part === '..') segments.pop();
+    else segments.push(part);
+  }
+  return segments.join('/');
+}
+
+function collectImportedPaths(
+  path: string,
+  lines: string[],
+  byModulePath: Map<string, string>,
+  byModuleName: Map<string, string>
+): Set<string> {
+  const imported: Set<string> = new Set();
+  for (const line of lines) {
+    ORDER_IMPORT_SPECIFIER.lastIndex = 0;
+    let match = ORDER_IMPORT_SPECIFIER.exec(line);
+    while (match !== null) {
+      const specifier = (match[1] ?? '').replace(/\?.*$/, '');
+      const resolved = stripModuleExtension(
+        specifier.startsWith('.') ? resolveRelativePath(path, specifier) : specifier
+      );
+      const target =
+        byModulePath.get(resolved) ??
+        byModulePath.get(resolved + '/index') ??
+        byModuleName.get(fileModuleName(resolved));
+      if (target !== undefined && target !== path) imported.add(target);
+      match = ORDER_IMPORT_SPECIFIER.exec(line);
+    }
+  }
+  return imported;
+}
+
+function orderPathsByImports(paths: string[], imports: Map<string, Set<string>>): string[] {
+  const remaining: Set<string> = new Set(paths);
+  const ordered: string[] = [];
+  const sorted = paths.slice().sort((left: string, right: string) => left.localeCompare(right));
+  while (remaining.size > 0) {
+    const candidates = sorted.filter((path: string) => remaining.has(path));
+    let next: string | undefined = undefined;
+    for (const candidate of candidates) {
+      const deps = imports.get(candidate);
+      let ready = true;
+      if (deps !== undefined) {
+        for (const dep of Array.from(deps)) {
+          if (remaining.has(dep)) {
+            ready = false;
+            break;
+          }
+        }
+      }
+      if (ready) {
+        next = candidate;
+        break;
+      }
+    }
+    const chosen = next !== undefined ? next : candidates[0];
+    remaining.delete(chosen);
+    ordered.push(chosen);
+  }
+  return ordered;
+}
+
+function testedSourcePosition(path: string, sourcePositions: Map<string, number>): number {
+  let name = lastPathSegment(path).replace(/\.(?:test|spec)\..*$/, '');
+  while (true) {
+    const position = sourcePositions.get(name);
+    if (position !== undefined) return position;
+    const dot = name.lastIndexOf('.');
+    if (dot <= 0) return Number.MAX_SAFE_INTEGER;
+    name = name.slice(0, dot);
+  }
+}
+
+function orderByImportsAndTier<F extends OrderableDiffFile>(files: F[], pathOf: (file: F) => string): F[] {
+  const byPath: Map<string, F[]> = new Map();
+  for (const file of files) {
+    const path = pathOf(file);
+    const existing = byPath.get(path);
+    if (existing !== undefined) existing.push(file);
+    else byPath.set(path, [file]);
+  }
+  const allPaths = Array.from(byPath.keys());
+  const tiers: Map<string, DiffFileTier> = new Map();
+  for (const path of allPaths) tiers.set(path, diffFileTier(path));
+
+  const sourcePaths = allPaths.filter((path: string) => tiers.get(path) === 'source');
+  const byModulePath: Map<string, string> = new Map();
+  const ambiguousModuleNames: Set<string> = new Set();
+  const byModuleName: Map<string, string> = new Map();
+  for (const path of sourcePaths) {
+    byModulePath.set(stripModuleExtension(path), path);
+    const name = fileModuleName(path);
+    if (byModuleName.has(name)) ambiguousModuleNames.add(name);
+    byModuleName.set(name, path);
+  }
+  for (const name of Array.from(ambiguousModuleNames)) byModuleName.delete(name);
+
+  const imports: Map<string, Set<string>> = new Map();
+  for (const path of sourcePaths) {
+    const group = byPath.get(path) ?? [];
+    const lines: string[] = [];
+    for (const entry of group) {
+      for (const line of entry.additionLines) lines.push(line);
+      for (const line of entry.deletionLines) lines.push(line);
+    }
+    imports.set(path, collectImportedPaths(path, lines, byModulePath, byModuleName));
+  }
+  const orderedSource = orderPathsByImports(sourcePaths, imports);
+
+  const sourcePositions: Map<string, number> = new Map();
+  orderedSource.forEach((path: string, index: number) => {
+    const base = fileBaseName(path);
+    if (!sourcePositions.has(base)) sourcePositions.set(base, index);
+  });
+  const orderedTests = allPaths
+    .filter((path: string) => tiers.get(path) === 'test')
+    .sort((left: string, right: string) => {
+      const diff = testedSourcePosition(left, sourcePositions) - testedSourcePosition(right, sourcePositions);
+      return diff !== 0 ? diff : left.localeCompare(right);
+    });
+
+  const orderedGenerated = allPaths
+    .filter((path: string) => tiers.get(path) === 'generated')
+    .sort((left: string, right: string) => left.localeCompare(right));
+
+  const result: F[] = [];
+  for (const path of orderedSource.concat(orderedTests, orderedGenerated)) {
+    const entries = byPath.get(path);
+    if (entries !== undefined) {
+      for (const entry of entries) result.push(entry);
+    }
+  }
+  return result;
+}
+
+export function diffFileTreePositions(paths: string[]): Map<string, number> {
+  const positions: Map<string, number> = new Map();
+  paths.forEach((path: string, index: number) => {
+    positions.set(path, index);
+    let directory = '';
+    for (const segment of path.split('/').slice(0, -1)) {
+      directory += segment + '/';
+      if (!positions.has(directory)) positions.set(directory, index);
+    }
+  });
+  return positions;
+}
+
+interface TreeOrderedEntry<F> {
+  file: F;
+  key: number[];
+}
+
+function orderLikeTree<F>(files: F[], pathOf: (file: F) => string): F[] {
+  const paths = files.map(pathOf);
+  const positions = diffFileTreePositions(paths);
+  const entries: TreeOrderedEntry<F>[] = files.map((file: F, index: number): TreeOrderedEntry<F> => {
+    const path = paths[index];
+    const key: number[] = [];
+    let directory = '';
+    for (const segment of path.split('/').slice(0, -1)) {
+      directory += segment + '/';
+      key.push(positions.get(directory) ?? index);
+    }
+    key.push(positions.get(path) ?? index);
+    return { file, key };
+  });
+  entries.sort((left: TreeOrderedEntry<F>, right: TreeOrderedEntry<F>): number => {
+    const length = Math.min(left.key.length, right.key.length);
+    for (let i = 0; i < length; i += 1) {
+      const diff = left.key[i] - right.key[i];
+      if (diff !== 0) return diff;
+    }
+    return left.key.length - right.key.length;
+  });
+  return entries.map((entry: TreeOrderedEntry<F>) => entry.file);
+}
+
+export function orderDiffFilesForReview<F extends OrderableDiffFile>(files: F[], pathOf: (file: F) => string): F[] {
+  return orderLikeTree(orderByImportsAndTier(files, pathOf), pathOf);
+}
+
+interface ParsedOrderableDiffFile extends OrderableDiffFile {
+  file: DiffFile;
+  path: string;
+}
+
+export function orderParsedDiffFilesForReview(files: DiffFile[]): DiffFile[] {
+  if (files.length <= 1) return files.slice();
+  const entries: ParsedOrderableDiffFile[] = files.map((file: DiffFile): ParsedOrderableDiffFile => {
+    const additionLines: string[] = [];
+    const deletionLines: string[] = [];
+    for (const hunk of file.hunks) {
+      for (const row of hunk.rows) {
+        if (row.kind === 'add') additionLines.push(row.text);
+        else if (row.kind === 'del') deletionLines.push(row.text);
+      }
+    }
+    return { file, path: file.path || file.previousPath, additionLines, deletionLines };
+  });
+  return orderDiffFilesForReview(entries, (entry: ParsedOrderableDiffFile) => entry.path)
+    .map((entry: ParsedOrderableDiffFile) => entry.file);
+}
+
 export function reviewPreviewInput(cwd: string, baseRef: string = '', sourceKind: string = '',
   trackedOnly: boolean = false, ignoreWhitespace: boolean = false): Object {
   if (!cwd.trim()) throw new Error('缺少工作目录');
