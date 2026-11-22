@@ -329,6 +329,7 @@ export interface SubagentView {
   childThreadId: string;
   remoteThreadId: string;
   remoteEnvironmentId: string;
+  remoteLabel?: string;
   detail: string;
   canStop: boolean;
   pendingKind: string;
@@ -352,6 +353,7 @@ export function subagents(rows: Record<string, Object>[]): SubagentView[] {
       childThreadId: typeof row.childThreadId === 'string' ? row.childThreadId : '',
       remoteThreadId: remote && typeof remote.threadId === 'string' ? remote.threadId : '',
       remoteEnvironmentId: remote && typeof remote.environmentId === 'string' ? remote.environmentId : '',
+      remoteLabel: remote && typeof remote.label === 'string' ? remote.label.trim() : '',
       detail: typeof row.progress === 'string' ? row.progress : typeof row.result === 'string' ? row.result : '',
       canStop: ['pending', 'running', 'waiting', 'idle'].includes(status),
       pendingKind: '',

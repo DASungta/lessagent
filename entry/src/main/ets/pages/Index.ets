@@ -96,6 +96,14 @@ import {
   resolveWorktreeRepositorySelection,
   worktreeRepositoryChoices
 } from '../protocol/ThreadRepositories';
+import {
+  LinkedThreadTarget,
+  ParsedThreadLink,
+  parseThreadLinkHref,
+  resolveLinkedThreadOpen,
+  threadLinkCandidates
+} from '../protocol/LinkedThread';
+import { LinkedThreadPanel } from '../components/LinkedThreadPanel';
 import { WorkspaceActions, WorkspaceUndo } from '../services/Workspace';
 import { rememberThreadProject, saveWorkspacePreferences, setWorkingShelfEnabled, workspacePrefs } from '../services/WorkspacePrefs';
 import { ThreadList } from '../components/ThreadList';
@@ -297,6 +305,7 @@ struct Index {
   @State draftRepoChoicesLoaded: boolean = true;
   @State draftIsGitRepo: boolean = true;
   private draftRepoRequest: number = 0;
+  @State linkedThreadTarget: LinkedThreadTarget | undefined = undefined;
   @State commandPanel: string = '';
   @State commandQuery: string = '';
   @State mentionFiles: string[] = [];
@@ -2798,7 +2807,118 @@ struct Index {
       return false;
     }
   }
+  private async openRemoteOrLocalThread(threadId: string, remoteEnvironmentId: string, remoteLabel: string = ''): Promise<void> {
+    if (this.busy) return;
+    const tid = threadId.trim();
+    const envId = remoteEnvironmentId.trim();
+    if (!tid) return;
+    const currentEntry = this.environmentEntries.find((candidate: EnvironmentEntry) =>
+      !candidate.deleting && candidate.localId === this.selectedLocalId);
+    const viaEnvId = currentEntry?.environmentId || '';
+    if (!envId || envId === viaEnvId) {
+      this.panelOpen = false;
+      this.page = 'chat';
+      await this.watch(tid);
+      return;
+    }
+    const ownEntry = this.environmentEntries.find((candidate: EnvironmentEntry) =>
+      !candidate.deleting && candidate.enabled && candidate.environmentId === envId);
+    const resolution = resolveLinkedThreadOpen({
+      ownConnected: ownEntry !== undefined,
+      targetEnvironmentId: envId,
+      viaEnvironmentId: viaEnvId,
+      linkedEnvironmentsEnabled: client.ready && client.linkedEnvironmentsEnabled()
+    });
+    if (resolution === 'direct' && ownEntry) {
+      this.panelOpen = false;
+      this.page = 'chat';
+      if (ownEntry.localId !== this.selectedLocalId) {
+        await this.registry().select(ownEntry.localId);
+        this.bindEnvironment();
+      }
+      await this.watch(tid);
+      return;
+    }
+    if (resolution === 'linked') {
+      let label = remoteLabel.trim() || client.peerLinkLabel(envId);
+      if (!label) {
+        try {
+          const names = await client.peerLinkNames();
+          const matched = names.find((item) => item.environmentId === envId);
+          if (matched) label = matched.label;
+        } catch (_) {}
+      }
+      this.linkedThreadTarget = {
+        viaLocalId: this.selectedLocalId,
+        viaEnvironmentId: viaEnvId,
+        viaLabel: currentEntry?.label || this.server || '当前环境',
+        environmentId: envId,
+        threadId: tid,
+        label: label || envId
+      };
+      this.panel = 'linked-thread';
+      this.panelOpen = true;
+      return;
+    }
+    this.status = '目标会话所在环境未连接，且当前环境未开启链接环境';
+  }
+  private async openParsedThreadLink(parsed: ParsedThreadLink): Promise<void> {
+    if (this.busy) return;
+    const candidates = threadLinkCandidates(parsed.threadId, parsed.decodedThreadId);
+    const pickThreadId = (pool: ThreadView[]): string => {
+      for (const id of candidates) {
+        if (pool.some((t: ThreadView) => t.id === id)) return id;
+      }
+      return parsed.decodedThreadId || parsed.threadId;
+    };
+    if (parsed.environmentId) {
+      const ownEntry = this.environmentEntries.find((candidate: EnvironmentEntry) =>
+        !candidate.deleting && candidate.enabled && candidate.environmentId === parsed.environmentId);
+      if (ownEntry) {
+        this.panelOpen = false;
+        this.page = 'chat';
+        if (ownEntry.localId !== this.selectedLocalId) {
+          await this.registry().select(ownEntry.localId);
+          this.bindEnvironment();
+        }
+        await this.watch(pickThreadId(this.threads));
+        return;
+      }
+      await this.openRemoteOrLocalThread(parsed.decodedThreadId || parsed.threadId, parsed.environmentId, '');
+      return;
+    }
+    for (const id of candidates) {
+      if (this.threads.some((t: ThreadView) => t.id === id)) {
+        this.panelOpen = false;
+        this.page = 'chat';
+        await this.watch(id);
+        return;
+      }
+    }
+    const crossMatches = this.scopedThreads.filter((t: ScopedThread) =>
+      candidates.includes(t.id));
+    if (crossMatches.length === 1) {
+      const match = crossMatches[0];
+      this.panelOpen = false;
+      this.page = 'chat';
+      if (match.localId !== this.selectedLocalId) {
+        await this.registry().select(match.localId);
+        this.bindEnvironment();
+      }
+      await this.watch(match.id);
+      return;
+    }
+    this.panelOpen = false;
+    this.page = 'chat';
+    await this.watch(parsed.decodedThreadId || parsed.threadId);
+  }
   private async openLink(url: string): Promise<void> {
+    const parsedThread = parseThreadLinkHref(url);
+    if (parsedThread) {
+      try { await this.openParsedThreadLink(parsedThread); }
+      catch (error) { this.status = '无法打开会话链接：' + (error as Error).message; }
+      return;
+    }
     if (!/^(https?:\/\/|mailto:)/i.test(url)) { this.status = '已阻止非 HTTP(S)/mailto 链接'; return; }
     try {
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
@@ -3363,12 +3483,8 @@ struct Index {
         usage: this.extraUsage, guest: this.extraGuest, connected: this.ready,
         onClose: () => this.panelOpen = false,
         onCopy: (value: string) => { void this.copy(value); },
-        onOpenThread: (threadId: string, remoteEnvironmentId: string) => {
-          if (remoteEnvironmentId) {
-            const entry = this.environmentEntries.find((candidate: EnvironmentEntry) => candidate.environmentId === remoteEnvironmentId);
-            if (!entry) { this.status = '子会话所在环境未连接'; return; }
-            void this.registry().select(entry.localId).then(() => this.watch(threadId));
-          } else void this.watch(threadId);
+        onOpenThread: (threadId: string, remoteEnvironmentId: string, remoteLabel: string) => {
+          void this.openRemoteOrLocalThread(threadId, remoteEnvironmentId, remoteLabel);
         },
         onStopSubagent: (id: string) => {
           this.busy = true;
@@ -3398,14 +3514,8 @@ struct Index {
         busy: this.busy,
         connected: this.ready,
         onClose: () => { this.panelOpen = false; },
-        onOpenThread: (threadId: string, remoteEnvironmentId: string) => {
-          if (remoteEnvironmentId) {
-            const entry = this.environmentEntries.find((candidate: EnvironmentEntry) => candidate.environmentId === remoteEnvironmentId);
-            if (!entry) { this.status = '子会话所在环境未连接'; return; }
-            void this.registry().select(entry.localId).then(() => this.watch(threadId));
-          } else {
-            void this.watch(threadId);
-          }
+        onOpenThread: (threadId: string, remoteEnvironmentId: string, remoteLabel: string) => {
+          void this.openRemoteOrLocalThread(threadId, remoteEnvironmentId, remoteLabel);
         },
         onStopSubagent: (id: string) => {
           this.busy = true;
@@ -3522,6 +3632,16 @@ struct Index {
         onSignIn: () => this.cloudSignIn(), onSignOut: () => this.cloudSignOut(),
         onRefresh: () => this.cloudRefresh(), onConnect: (id: string) => this.cloudConnect(id),
         onLink: (id: string) => this.cloudLink(id), onUnlink: (id: string) => this.cloudUnlink(id) })
+    } else if (this.panel === 'linked-thread' && this.linkedThreadTarget) {
+      LinkedThreadPanel({
+        target: this.linkedThreadTarget,
+        viaClient: this.registry().connection(this.linkedThreadTarget.viaLocalId) || client,
+        viaReady: this.environmentReady[this.linkedThreadTarget.viaLocalId] === true ||
+          (this.linkedThreadTarget.viaLocalId === this.selectedLocalId && this.ready),
+        onClose: () => { this.panelOpen = false; this.linkedThreadTarget = undefined; },
+        onCopy: (value: string) => { void this.copy(value); },
+        onOpenLink: (url: string) => { void this.openLink(url); }
+      })
     } else if (this.panel === 'peer-link' && this.activeLink && this.linkOwner) {
       PeerLinkForm({ request: this.activeLink, machines: this.linkMachines, connection: this.linkOwner,
         onClose: () => { this.panelOpen = false; },

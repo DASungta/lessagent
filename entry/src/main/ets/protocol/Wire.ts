@@ -172,40 +172,60 @@ export class RpcFailure extends Error {
   known: boolean;
   errorTag: string;
   errorReason: string;
-  constructor(message: string, known: boolean, errorTag: string = '', errorReason: string = '') {
+  errorMessage: string;
+  errorLabel: string;
+  answeredAs: string;
+  constructor(message: string, known: boolean, errorTag: string = '', errorReason: string = '',
+    errorMessage: string = '', errorLabel: string = '', answeredAs: string = '') {
     super(message);
     this.known = known;
     this.errorTag = errorTag;
     this.errorReason = errorReason;
+    this.errorMessage = errorMessage;
+    this.errorLabel = errorLabel;
+    this.answeredAs = answeredAs;
   }
 }
 
-interface FailureCode { tag: string; reason: string; }
+interface FailureCode {
+  tag: string;
+  reason: string;
+  message: string;
+  label: string;
+  answeredAs: string;
+}
+
+function emptyFailureCode(): FailureCode {
+  return { tag: '', reason: '', message: '', label: '', answeredAs: '' };
+}
 
 function inspectFailureReason(entry: Object | undefined): FailureCode {
   if (entry === undefined || entry === null || typeof entry !== 'object' || Array.isArray(entry)) {
-    return { tag: '', reason: '' };
+    return emptyFailureCode();
   }
   const row = entry as Record<string, Object>;
-  if (row._tag !== 'Fail') return { tag: '', reason: '' };
+  if (row._tag !== 'Fail') return emptyFailureCode();
   const err = row.error;
   if (err === undefined || err === null || typeof err !== 'object' || Array.isArray(err)) {
-    return { tag: '', reason: '' };
+    return emptyFailureCode();
   }
   const errObj = err as Record<string, Object>;
   const tag = typeof errObj._tag === 'string' && /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(errObj._tag) ? errObj._tag : '';
   const reason = typeof errObj.reason === 'string' && /^[a-z][a-z0-9_]{0,63}$/.test(errObj.reason) ? errObj.reason : '';
-  return { tag, reason };
+  const message = typeof errObj.message === 'string' ? errObj.message.slice(0, 512) : '';
+  const label = typeof errObj.label === 'string' ? errObj.label.slice(0, 256) : '';
+  const answeredAs = typeof errObj.answeredAs === 'string' ? errObj.answeredAs.slice(0, 256) : '';
+  return { tag, reason, message, label, answeredAs };
 }
 
 function extractFailureCode(cause: Object | undefined): FailureCode {
-  if (cause === undefined || cause === null) return { tag: '', reason: '' };
+  if (cause === undefined || cause === null) return emptyFailureCode();
   if (Array.isArray(cause)) {
     for (const item of cause as Object[]) {
       const found = inspectFailureReason(item);
       if (found.tag || found.reason) return found;
     }
-    return { tag: '', reason: '' };
+    return emptyFailureCode();
   }
   if (typeof cause === 'object') {
     const obj = cause as Record<string, Object>;
@@ -214,11 +234,11 @@ function extractFailureCode(cause: Object | undefined): FailureCode {
         const found = inspectFailureReason(item);
         if (found.tag || found.reason) return found;
       }
-      return { tag: '', reason: '' };
+      return emptyFailureCode();
     }
     return inspectFailureReason(obj);
   }
-  return { tag: '', reason: '' };
+  return emptyFailureCode();
 }
 
 interface Pending {
@@ -313,7 +333,15 @@ export class RpcClient {
     if (exitTag === 'Success') pending.resolve(exit.value);
     else {
       const code = extractFailureCode(exit.cause);
-      pending.reject(new RpcFailure('服务端拒绝请求或任务失败，请在现有 T3 客户端核对详情', true, code.tag, code.reason));
+      pending.reject(new RpcFailure(
+        '服务端拒绝请求或任务失败，请在现有 T3 客户端核对详情',
+        true,
+        code.tag,
+        code.reason,
+        code.message,
+        code.label,
+        code.answeredAs
+      ));
     }
   }
 

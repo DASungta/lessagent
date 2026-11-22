@@ -16,7 +16,7 @@ export struct ThreadExtrasPanel {
   @Prop connected: boolean = false;
   onClose: () => void = () => {};
   onCopy: (text: string) => void = () => {};
-  onOpenThread: (threadId: string, remoteEnvironmentId: string) => void = () => {};
+  onOpenThread: (threadId: string, remoteEnvironmentId: string, remoteLabel: string) => void = () => {};
   onStopSubagent: (id: string) => void = () => {};
   onFork: (sideChat: boolean) => void = () => {};
   onCreateGuest: () => void = () => {};
@@ -75,6 +75,11 @@ export struct ThreadExtrasPanel {
                     .fontColor($r('app.color.ink')).layoutWeight(1).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
                   StatusBadge({ text: agent.status, tone: agent.canStop ? 'info' : 'neutral' })
                 }.width('100%').alignItems(VerticalAlign.Center)
+                if (agent.remoteEnvironmentId) {
+                  Text('远端环境：' + (agent.remoteLabel || agent.remoteEnvironmentId))
+                    .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted'))
+                    .width('100%').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+                }
                 if (agent.pendingKind) {
                   Text('子会话待处理：' + agent.pendingKind)
                     .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.primary_text')).width('100%')
@@ -93,7 +98,7 @@ export struct ThreadExtrasPanel {
                         compact: true,
                         fill: true,
                         disabled: !this.connected,
-                        onTap: () => this.onOpenThread(agent.childThreadId || agent.remoteThreadId, agent.remoteEnvironmentId)
+                        onTap: () => this.onOpenThread(agent.childThreadId || agent.remoteThreadId, agent.remoteEnvironmentId, agent.remoteLabel || '')
                       })
                     }.layoutWeight(1)
                   }
@@ -124,7 +129,7 @@ export struct ThreadExtrasPanel {
                     compact: true,
                     fill: true,
                     disabled: task.childThreadId === '',
-                    onTap: () => this.onOpenThread(task.childThreadId, '')
+                    onTap: () => this.onOpenThread(task.childThreadId, '', '')
                   })
                 }, (task: BackgroundTaskView) => task.id)
               }.padding(Space.sm).width('100%')

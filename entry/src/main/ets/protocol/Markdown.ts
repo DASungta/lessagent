@@ -221,7 +221,7 @@ export function inlineSpans(source: string): InlineSpan[] {
       const close = source.indexOf('>', index + 1);
       if (close > index) {
         const value = source.slice(index + 1, close);
-        if (/^(https?:\/\/|mailto:)/i.test(value) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        if (/^(https?:\/\/|mailto:|t3-thread:\/\/v[12]\/)/i.test(value) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
           flush();
           push('link', value, /^mailto:/i.test(value) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? 'mailto:' + value.replace(/^mailto:/i, '') : value);
           index = close + 1;

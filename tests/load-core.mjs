@@ -50,3 +50,8 @@ const threadReposSource = (await readFile(new URL('../entry/src/main/ets/protoco
   .replace("'./Wire'", JSON.stringify(wireUrl))
   .replace("'./Projects'", JSON.stringify(projectsUrl));
 export const threadRepositoriesUrl = data(compile(threadReposSource));
+
+
+const linkedThreadSource = (await readFile(new URL('../entry/src/main/ets/protocol/LinkedThread.ts', import.meta.url), 'utf8'))
+  .replace("'./Wire'", JSON.stringify(wireUrl));
+export const linkedThreadUrl = data(compile(linkedThreadSource));

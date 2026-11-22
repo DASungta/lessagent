@@ -1,5 +1,5 @@
 // Execute the actual NetworkKit adapter with a small fake kit; HAP build checks the SDK types.
-import { coreUrl, projectsUrl, composerUrl, r4Url, filesUrl, r5Url, floatingStatusUrl, markdownUrl, threadRepositoriesUrl } from './load-core.mjs';
+import { coreUrl, projectsUrl, composerUrl, r4Url, filesUrl, r5Url, floatingStatusUrl, markdownUrl, threadRepositoriesUrl, linkedThreadUrl } from './load-core.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -209,6 +209,7 @@ async function setup(options = {}) {
     .replace("'../protocol/Cloud'", JSON.stringify(cloud))
     .replace("'../protocol/Projects'", JSON.stringify(projectsUrl))
     .replace("'../protocol/ThreadRepositories'", JSON.stringify(threadRepositoriesUrl))
+    .replace("'../protocol/LinkedThread'", JSON.stringify(linkedThreadUrl))
     .replace("'../protocol/Composer'", JSON.stringify(composerUrl))
     .replace("'../protocol/FloatingStatus'", JSON.stringify(floatingStatusUrl))
     .replace("'../protocol/Files'", JSON.stringify(filesUrl))
@@ -2407,6 +2408,121 @@ test('M1: T3Client calls workspace.listFolders, workspace.scanFolders, workspace
       startFromOrigin: true,
       repositories: [{ path: '/work/hub/api' }]
     });
+  } finally {
+    s.client.disconnect();
+  }
+});
+
+test('L1: T3Client reads peerLinks.names, subscribes linked thread stream, paginates history/items, and surfaces PeerLinkThreadReadError', async () => {
+  const { linkedThreadFailure } = await import(linkedThreadUrl);
+  const s = await setup({
+    onRequest: (value, sock) => {
+      if (value.tag === 'subscribeServerConfig') {
+        sock.emit({
+          _tag: 'Chunk',
+          requestId: value.id,
+          values: [{
+            version: 1,
+            type: 'snapshot',
+            config: {
+              environment: { environmentId: 'env', capabilities: { peerLinks: true } },
+              settings: { linkedEnvironmentsEnabled: true },
+              providers: []
+            }
+          }]
+        });
+        return 'handled';
+      }
+      if (value.tag === 'peerLinks.names') {
+        sock.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Success', value: { links: [{ environmentId: 'env-b', label: 'Machine B' }] } } });
+        return 'handled';
+      }
+      if (value.tag === 'peerLinks.subscribeThread') {
+        if (value.payload.threadId === 'forbidden-thread') {
+          sock.emit({
+            _tag: 'Exit',
+            requestId: value.id,
+            exit: {
+              _tag: 'Failure',
+              cause: {
+                _id: 'Cause',
+                reasons: [{ _tag: 'Fail', error: { _tag: 'PeerLinkThreadReadError', reason: 'rejected', label: 'Machine B', message: 'read refused' } }]
+              }
+            }
+          });
+          return 'handled';
+        }
+        sock.emit({
+          _tag: 'Chunk',
+          requestId: value.id,
+          values: [{
+            kind: 'snapshot',
+            snapshotSequence: 5,
+            hasMoreHistory: true,
+            historyCursor: 'cur-1',
+            projection: {
+              thread: { id: value.payload.threadId, title: 'Remote Task' },
+              messages: [{ id: 'm1', threadId: value.payload.threadId, role: 'assistant', text: 'Hello from B', streaming: false }]
+            }
+          }]
+        });
+        return 'handled';
+      }
+      if (value.tag === 'peerLinks.threadHistoryPage') {
+        sock.emit({
+          _tag: 'Exit',
+          requestId: value.id,
+          exit: {
+            _tag: 'Success',
+            value: {
+              items: [{ item: { id: 'it-0', type: 'user_message', messageId: 'm0', text: 'Earlier prompt' }, visibility: 'visible' }],
+              nextCursor: null,
+              hasMoreHistory: false
+            }
+          }
+        });
+        return 'handled';
+      }
+      if (value.tag === 'peerLinks.threadItem') {
+        sock.emit({
+          _tag: 'Exit',
+          requestId: value.id,
+          exit: { _tag: 'Success', value: { item: { id: value.payload.itemId, type: 'command_execution', output: 'full output' } } }
+        });
+        return 'handled';
+      }
+      return undefined;
+    }
+  });
+  try {
+    await s.client.connect('https://test', 'CODE');
+    assert.equal(s.client.linkedEnvironmentsEnabled(), true);
+    const names = await s.client.peerLinkNames();
+    assert.deepEqual(names, [{ environmentId: 'env-b', label: 'Machine B' }]);
+    assert.equal(s.client.peerLinkLabel('env-b'), 'Machine B');
+
+    const received = [];
+    const cancel = s.client.subscribeLinkedThread('env-b', 'thr-b', (frame) => received.push(frame), () => {}, () => {});
+    await new Promise((r) => setTimeout(r, 30));
+    assert.equal(received.length, 1);
+    assert.equal(received[0].kind, 'snapshot');
+    cancel();
+    assert.ok(s.frames.some((f) => f._tag === 'Interrupt'));
+
+    const page = await s.client.linkedThreadHistoryPage('env-b', 'thr-b', 'cur-1');
+    assert.equal(page.hasMoreHistory, false);
+    assert.equal(page.items[0].messageId, 'm0');
+
+    const detail = await s.client.linkedThreadItem('env-b', 'thr-b', 'item-9');
+    assert.equal(detail.output, 'full output');
+
+    let readErr;
+    s.client.subscribeLinkedThread('env-b', 'forbidden-thread', () => {}, () => {}, (err) => { readErr = err; });
+    await new Promise((r) => setTimeout(r, 30));
+    const failure = linkedThreadFailure(readErr, 'Fallback');
+    assert.equal(failure.reason, 'rejected');
+    assert.equal(failure.retryable, false);
+    assert.equal(failure.label, 'Machine B');
   } finally {
     s.client.disconnect();
   }

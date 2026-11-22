@@ -32,7 +32,7 @@ export struct ThreadAgentsPanel {
   @State private nowMs: number = Date.now();
   private timerId: number = 0;
   onClose: () => void = () => {};
-  onOpenThread: (threadId: string, remoteEnvironmentId: string) => void = () => {};
+  onOpenThread: (threadId: string, remoteEnvironmentId: string, remoteLabel: string) => void = () => {};
   onStopSubagent: (id: string) => void = () => {};
 
   aboutToAppear(): void {
@@ -151,6 +151,15 @@ export struct ThreadAgentsPanel {
                   })
                 }.width('100%').alignItems(VerticalAlign.Center)
 
+                if (agent.remoteEnvironmentId) {
+                  Text('远端环境：' + (agent.remoteLabel || agent.remoteEnvironmentId))
+                    .fontSize(FontSize.caption)
+                    .lineHeight(LineHeight.caption)
+                    .fontColor($r('app.color.muted'))
+                    .width('100%')
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                }
                 if (agent.pendingKind) {
                   Text('子会话待处理：' + this.pendingLabel(agent.pendingKind))
                     .fontSize(FontSize.caption)
@@ -177,7 +186,7 @@ export struct ThreadAgentsPanel {
                           compact: true,
                           fill: true,
                           disabled: !this.connected,
-                          onTap: () => this.onOpenThread(agent.childThreadId || agent.remoteThreadId, agent.remoteEnvironmentId)
+                          onTap: () => this.onOpenThread(agent.childThreadId || agent.remoteThreadId, agent.remoteEnvironmentId, agent.remoteLabel || '')
                         })
                       }.layoutWeight(1)
                     }

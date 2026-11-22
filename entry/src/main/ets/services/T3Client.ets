@@ -52,6 +52,12 @@ import {
   WorkspaceFolder,
   WorkspaceScanResult
 } from '../protocol/ThreadRepositories';
+import {
+  LinkedThreadHistoryPage,
+  parseLinkedThreadHistoryPage,
+  parsePeerLinkNames,
+  PeerLinkName
+} from '../protocol/LinkedThread';
 
 class NativeSender implements RpcSender {
   private socket: webSocket.WebSocket;
@@ -257,6 +263,7 @@ export class T3Client {
   environmentLabel: string = '';
   private peerAccessState: Object | undefined = undefined;
   private offersPeerLinks: boolean = false;
+  private peerLinkNamesCache: PeerLinkName[] = [];
   private peerAccessGeneration: number = 0;
   private sessionAccessRevision: number = 0;
   cloud: CloudTransport | undefined = undefined;
@@ -1327,6 +1334,84 @@ export class T3Client {
     if (rpc !== this.rpc) throw new Error('连接已变更');
     return peerLinkViews(value);
   }
+  linkedEnvironmentsEnabled(): boolean {
+    return this.offersPeerLinks;
+  }
+  peerLinkLabel(environmentId: string): string {
+    const target = environmentId.trim();
+    if (!target) return '';
+    const found = this.peerLinkNamesCache.find((item: PeerLinkName) => item.environmentId === target);
+    return found ? found.label : '';
+  }
+  async peerLinkNames(): Promise<PeerLinkName[]> {
+    const rpc = this.requireRpc();
+    if (!this.offersPeerLinks) {
+      this.peerLinkNamesCache = [];
+      return [];
+    }
+    const value = await rpc.request('peerLinks.names', {}, undefined, 15000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    const links = parsePeerLinkNames(value);
+    this.peerLinkNamesCache = links;
+    return links;
+  }
+  subscribeLinkedThread(
+    environmentId: string,
+    threadId: string,
+    onItem: (value: Object) => void,
+    onEnd: () => void,
+    onError: (error: Error) => void
+  ): () => void {
+    const envId = environmentId.trim();
+    const tid = threadId.trim();
+    if (!envId || !tid) {
+      onError(new Error('目标环境或会话标识无效'));
+      return () => {};
+    }
+    const rpc = this.requireRpc();
+    const payload: Record<string, Object> = { environmentId: envId, threadId: tid };
+    let active = true;
+    const chunk = (value: Object): void => {
+      if (!active || rpc !== this.rpc) return;
+      onItem(value);
+    };
+    void rpc.request('peerLinks.subscribeThread', payload, chunk, 30000, false).then(() => {
+      if (!active) return;
+      active = false;
+      onEnd();
+    }).catch((error: Error) => {
+      if (!active) return;
+      active = false;
+      onError(error);
+    });
+    return (): void => {
+      if (!active) return;
+      active = false;
+      if (this.rpc === rpc) rpc.cancelStream(chunk);
+    };
+  }
+  async linkedThreadHistoryPage(environmentId: string, threadId: string, cursor: string): Promise<LinkedThreadHistoryPage> {
+    const rpc = this.requireRpc();
+    const envId = environmentId.trim();
+    const tid = threadId.trim();
+    const cur = cursor.trim();
+    if (!envId || !tid || !cur) throw new Error('历史翻页参数无效');
+    const payload: Record<string, Object> = { environmentId: envId, threadId: tid, cursor: cur };
+    const value = await rpc.request('peerLinks.threadHistoryPage', payload, undefined, 15000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    return parseLinkedThreadHistoryPage(value);
+  }
+  async linkedThreadItem(environmentId: string, threadId: string, itemId: string): Promise<Record<string, Object> | undefined> {
+    const rpc = this.requireRpc();
+    const envId = environmentId.trim();
+    const tid = threadId.trim();
+    const id = itemId.trim();
+    if (!envId || !tid || !id || id.length > 256) throw new Error('会话条目标识无效');
+    const payload: Record<string, Object> = { environmentId: envId, threadId: tid, itemId: id };
+    const value = record(await rpc.request('peerLinks.threadItem', payload, undefined, 15000, false));
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    return value.item === undefined || value.item === null ? undefined : record(value.item);
+  }
   stopAuthAccess(): void {
     const rpc = this.rpc;
     const chunk = this.accessChunk;
@@ -1977,6 +2062,8 @@ export class T3Client {
     this.offeredSourceControlProviders = offeredProvidersFrom(this.serverSettings.offeredSourceControlProviders);
     this.captureDirectAddresses(config);
     this.requireDeviceApproval = !!config.settings && record(config.settings).requireConnectDeviceApproval === true;
+    this.offersPeerLinks = this.capabilities.peerLinks === true &&
+      this.serverSettings.linkedEnvironmentsEnabled === true;
   }
 
   private scheduleDirectDpopRenewal(generation: number): void {
@@ -2071,7 +2158,7 @@ export class T3Client {
     this.mediaCache.clear();
     this.probing = undefined;
     this.probeInboundNotify = undefined;
-    this.ready = false; this.peerAccessState = undefined; this.offersPeerLinks = false;
+    this.ready = false; this.peerAccessState = undefined; this.offersPeerLinks = false; this.peerLinkNamesCache = [];
     this.requireDeviceApproval = false;
     this.authAccessLoaded = false;
     this.accessChunk = undefined;
