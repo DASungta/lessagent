@@ -14,8 +14,8 @@
 <p>
   <img src="https://img.shields.io/badge/HarmonyOS_NEXT-API_24%2B-0A59F7?style=flat-square" alt="HarmonyOS API 24+" />
   <img src="https://img.shields.io/badge/ArkTS_%2B_ArkUI-Native-18181B?style=flat-square" alt="ArkTS + ArkUI Native" />
-  <a href="https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.3-preview"><img src="https://img.shields.io/badge/Preview-v0.1.3--preview-2563EB?style=flat-square" alt="Preview v0.1.3-preview" /></a>
-  <img src="https://img.shields.io/badge/Tests-575_passing-16A34A?style=flat-square" alt="575 Tests Passing" />
+  <a href="https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.4-preview"><img src="https://img.shields.io/badge/Preview-v0.1.4--preview-2563EB?style=flat-square" alt="Preview v0.1.4-preview" /></a>
+  <img src="https://img.shields.io/badge/Tests-630_passing-16A34A?style=flat-square" alt="630 Tests Passing" />
   <img src="https://img.shields.io/badge/License-MIT-52525B?style=flat-square" alt="MIT License" />
 </p>
 
@@ -62,7 +62,7 @@
   - Workspace file browser and full-text search, line-selectable Diff viewer with inline review comments, and full Git workflows (status, stage, commit, branches, push/pull).
   - GitHub Pull Requests reader / review / guide tour, one-tap remote ANSI terminal in the chat top bar (with scrollback & copy), remote browser preview, and iOS Simulator / Android Emulator device preview.
 - **Design System & HarmonyOS Integration**
-  - 75 symmetric Light/Dark semantic color tokens (`base/element/color.json` & `dark/element/color.json`) guarded by automated WCAG AA (`>= 4.5:1`) contrast tests.
+  - 111 symmetric Light/Dark semantic color tokens (`base/element/color.json` & `dark/element/color.json`) guarded by automated WCAG AA (`>= 4.5:1`) contrast tests.
   - System share sheet integration (**T3 Harmony**) to import images and files into task drafts, plus a `2×2` home-screen shortcut widget and launcher quick actions.
 
 ## Quick Guide
@@ -81,7 +81,7 @@
 
 ### Download Preview Sideload Package
 
-This project is currently in **Preview**. You can download the prebuilt **unsigned debug-mode HAP** (`t3code-harmony-v0.1.3-preview-unsigned.hap`, with its `.sha256` checksum) from [GitHub Releases (`v0.1.3-preview`)](https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.3-preview).
+This project is currently in **Preview**. You can download the prebuilt **unsigned debug-mode HAP** (`t3code-harmony-v0.1.4-preview-unsigned.hap`, with its `.sha256` checksum) from [GitHub Releases (`v0.1.4-preview`)](https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.4-preview).
 
 > **HarmonyOS NEXT Sideloading Note**: HarmonyOS NEXT rejects unsigned HAPs as well as debug packages signed for another device's UDID. After downloading the `unsigned.hap`, sign it using your own HUAWEI Developer account via a HarmonyOS sideloading/signing helper (such as AutoInstaller) or `hap-sign-tool` + `hdc`, or clone the repo and build with DevEco Studio automatic signing.
 
@@ -97,7 +97,7 @@ This project is currently in **Preview**. You can download the prebuilt **unsign
 git clone https://github.com/DASungta/t3code-harmony.git
 cd t3code-harmony
 
-# Run all host unit tests and theme contrast checks (575/575)
+# Run all host unit tests and theme contrast checks (630/630)
 node --experimental-strip-types --test tests/*.test.mjs
 
 # Build the Debug HAP (override DevEco Studio path via DEVECO_HOME if needed)
