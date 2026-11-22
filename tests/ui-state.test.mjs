@@ -1,5 +1,5 @@
 import { projectsUrl } from './load-projects.mjs';
-const { projectGroupRefs } = await import(projectsUrl);
+const { attachPendingSubagentRequests, projectGroupRefs } = await import(projectsUrl);
 import { previewTabs } from '../entry/src/main/ets/protocol/Preview.ts';
 import { followUpDelivery } from '../entry/src/main/ets/protocol/Settings.ts';
 globalThis.__uiFollowUpDelivery = followUpDelivery;
@@ -90,7 +90,7 @@ test('environment binding scopes colliding thread drafts and clears displayed da
  const registry={directory:{entries,selectedLocalId:'b'},clients:new Map([['a',a],['b',b]]),entryVisible:()=>true};
  let bound;
  class Picker {constructor(owner){this.owner=owner}belongsTo(owner){return this.owner===owner}canRetry(){return false}}
- const Page=new Function('bindClient','AttachmentPicker','client','buildProjectGroups','workspacePrefs','projectGroupRefs','emptyWorkMap',compiled)(v=>bound=v,Picker,b,()=>[],{projectGroupingMode:'repository'},projectGroupRefs,emptyWorkMap);
+ const Page=new Function('bindClient','AttachmentPicker','client','attachPendingSubagentRequests','buildProjectGroups','workspacePrefs','projectGroupRefs','emptyWorkMap',compiled)(v=>bound=v,Picker,b,attachPendingSubagentRequests,()=>[],{projectGroupingMode:'repository'},projectGroupRefs,emptyWorkMap);
  const page=new Page();Object.assign(page,{registry:()=>registry,selectedLocalId:'a',prompt:'draft A',threadId:'same',draftMode:false,activeDraftId:'',
    textDrafts:new Map(),settingsDrafts:new Map(),contextDrafts:new Map(),draftRecords:[],draftContext:[{contextId:'ctx-a'}],attachments:[],drafts:new Map(),pickers:new Map(),messages:['private A'],source:{update:()=>{}},panel:'server'});
  page.bindEnvironment();assert.equal(bound,b);assert.equal(page.prompt,'');assert.deepEqual(page.messages,[]);

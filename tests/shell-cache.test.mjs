@@ -45,7 +45,13 @@ test('ShellCacheStore persists atomically, drops expired or malformed records, a
         capabilities: { threadSettlement: true, threadPinning: true },
         projects: [{ id: 'p1', label: 'Project One', projectId: 'p1', workspaceRoot: '/p1' }],
         threads: [
-          { id: 't1', label: 'Active Thread', projectId: 'p1', status: 'idle' },
+          {
+            id: 't1', label: 'Active Thread', projectId: 'p1', status: 'completed',
+            interactionMode: 'plan', creationSource: 'web', blockedOnThreadWait: true,
+            activityRunStartedAt: '2026-01-01T00:00:00.000Z', pendingUserOnly: true,
+            delegatedFromEnvironmentId: 'env-parent', delegatedFromThreadId: 'parent-1',
+            pendingBackgroundTasks: [{ taskId: 'bg-1', kind: 'subagent', childThreadId: 'c1' }]
+          },
           { id: 't-deleted', label: 'Removed', projectId: 'p1', deletedAt: '2026-01-01T00:00:00Z' }
         ]
       }
@@ -56,6 +62,13 @@ test('ShellCacheStore persists atomically, drops expired or malformed records, a
     assert.equal(loaded['env-local-1'].environmentId, 'env-1');
     assert.equal(loaded['env-local-1'].threads.length, 1);
     assert.equal(loaded['env-local-1'].threads[0].id, 't1');
+    assert.equal(loaded['env-local-1'].threads[0].interactionMode, 'plan');
+    assert.equal(loaded['env-local-1'].threads[0].creationSource, 'web');
+    assert.equal(loaded['env-local-1'].threads[0].blockedOnThreadWait, true);
+    assert.equal(loaded['env-local-1'].threads[0].activityRunStartedAt, '2026-01-01T00:00:00.000Z');
+    assert.equal(loaded['env-local-1'].threads[0].pendingUserOnly, true);
+    assert.equal(loaded['env-local-1'].threads[0].delegatedFromEnvironmentId, 'env-parent');
+    assert.deepEqual(loaded['env-local-1'].threads[0].pendingBackgroundTasks, [{ taskId: 'bg-1', kind: 'subagent', childThreadId: 'c1' }]);
     assert.equal(loaded['env-local-1'].capabilities.threadSettlement, true);
 
     // Expired entry is filtered while fresh sibling survives

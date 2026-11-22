@@ -511,3 +511,212 @@ test('projectView and scopedProjectView preserve defaultModelSelection and optio
   assert.deepEqual(scoped.defaultModelSelection, configured.defaultModelSelection);
   assert.equal(P.projectView(project('p-null', 'Null', '/work/null', { defaultModelSelection: null })).defaultModelSelection, null);
 });
+
+test('threads waiting on holding background work (subagents, background tasks, awaited commands/monitors) stay in Working as 等待', () => {
+  const now = Date.parse('2026-11-23T00:57:00.000Z');
+  const completedAt = '2026-11-23T00:40:37.320Z';
+  const visitedBefore = '2026-11-23T00:30:00.000Z';
+  const row = (id, extra) => scopedThread('a', thread(id, 'p', id, extra));
+
+  // Real-world case: main turn completed while a delegated subagent is still running
+  const subagentRunning = row('subagent-bg', {
+    status: 'completed',
+    latestRunId: 'run-7',
+    latestRunCompletedAt: completedAt,
+    lastVisitedAt: visitedBefore,
+    pendingBackgroundTasks: [{
+      taskId: 'turn-item:delegated-task:1',
+      kind: 'subagent',
+      description: 'Neon 执行第1+2批',
+      childThreadId: 'child-1'
+    }]
+  });
+  const bgTaskRunning = row('bg-task', {
+    status: 'completed',
+    latestRunId: 'run-2',
+    latestRunCompletedAt: completedAt,
+    pendingBackgroundTasks: [{ taskId: 'bg-1', kind: 'background_task' }]
+  });
+  // PR watch holds completion even on a thread that never ran
+  const prWatchNeverRan = row('pr-watch', {
+    status: 'idle',
+    latestRunId: null,
+    pendingBackgroundTasks: [{ taskId: 'pull-request-watch:github.com/org/repo#1', kind: 'monitor', awaited: true }]
+  });
+  // Unmarked command / monitor (e.g. dev server / watchdog) does NOT hold completion
+  const devServer = row('dev-server', {
+    status: 'completed',
+    latestRunId: 'run-3',
+    latestRunCompletedAt: completedAt,
+    lastVisitedAt: visitedBefore,
+    pendingBackgroundTasks: [{ taskId: 'cmd-1', kind: 'command' }]
+  });
+  const unawaitedMonitor = row('unawaited-monitor', {
+    status: 'completed',
+    latestRunId: 'run-4',
+    latestRunCompletedAt: completedAt,
+    lastVisitedAt: '2026-11-23T00:45:00.000Z',
+    pendingBackgroundTasks: [{ taskId: 'mon-1', kind: 'monitor' }]
+  });
+  // Failed run stays out of Working even with pending background tasks
+  const failedWithBg = row('failed-bg', {
+    status: 'failed',
+    latestRunId: 'run-5',
+    latestRunCompletedAt: completedAt,
+    lastVisitedAt: visitedBefore,
+    lastError: 'Provider failed',
+    pendingBackgroundTasks: [{ taskId: 'sub-2', kind: 'subagent' }]
+  });
+  // Running turn blocked on thread wait stays in Working and displays 等待
+  const blockedWait = row('blocked-wait', {
+    status: 'running',
+    activeRunId: 'run-6',
+    latestRunId: 'run-6',
+    blockedOnThreadWait: true
+  });
+  // Plan mode with actionable proposed plan surfaces in Active once run settles
+  const proposedPlan = row('proposed-plan', {
+    status: 'completed',
+    latestRunId: 'run-8',
+    interactionMode: 'plan',
+    hasActionableProposedPlan: true,
+    pendingBackgroundTasks: [{ taskId: 'sub-plan', kind: 'subagent' }]
+  });
+
+  assert.equal(P.threadIsWorking(subagentRunning), true);
+  assert.equal(P.threadStatus(subagentRunning, now), '等待');
+  assert.equal(P.threadCanArchive(subagentRunning), true);
+  assert.equal(P.threadCanSnooze(subagentRunning, now), true);
+
+  assert.equal(P.threadIsWorking(bgTaskRunning), true);
+  assert.equal(P.threadStatus(bgTaskRunning, now), '等待');
+
+  assert.equal(P.threadIsWorking(prWatchNeverRan), true);
+  assert.equal(P.threadStatus(prWatchNeverRan, now), '等待');
+
+  assert.equal(P.threadIsWorking(devServer), false);
+  assert.equal(P.threadStatus(devServer, now), '已回复');
+
+  assert.equal(P.threadIsWorking(unawaitedMonitor), false);
+  assert.equal(P.threadStatus(unawaitedMonitor, now), '');
+
+  assert.equal(P.threadIsWorking(failedWithBg), false);
+  assert.equal(P.threadStatus(failedWithBg, now), '失败');
+
+  assert.equal(P.threadIsWorking(blockedWait), true);
+  assert.equal(P.threadStatus(blockedWait, now), '等待');
+
+  assert.equal(P.threadIsWorking(proposedPlan), false);
+
+  const shelves = P.buildThreadShelves({
+    threads: [subagentRunning, bgTaskRunning, prWatchNeverRan, devServer, unawaitedMonitor, failedWithBg, blockedWait, proposedPlan],
+    environmentId: '',
+    projectRefs: [],
+    query: '',
+    searchHits: {},
+    nowMs: now,
+    capabilities: { a: caps() },
+    sortOrder: 'updated_at',
+    selectedKey: '',
+    workingShelfEnabled: true
+  });
+  const ids = rows => rows.map(item => item.id).sort();
+  assert.deepEqual(ids(shelves.working), ['bg-task', 'blocked-wait', 'pr-watch', 'subagent-bg']);
+  assert.deepEqual(ids(shelves.active), ['dev-server', 'failed-bg', 'proposed-plan', 'unawaited-monitor']);
+  assert.equal(shelves.workingCount, 4);
+});
+
+test('live subagent approvals, user-only inputs, and side-chat requests roll up to parent and pull it out of Working', () => {
+  const now = Date.parse('2026-11-23T01:00:00.000Z');
+  const row = (env, id, extra) => scopedThread(env, thread(id, 'p', id, extra));
+
+  const parentApproval = row('a', 'parent-approval', {
+    status: 'completed',
+    latestRunId: 'run-1',
+    pendingBackgroundTasks: [{ taskId: 'sub-1', kind: 'subagent', childThreadId: 'child-approval' }]
+  });
+  const childApproval = row('a', 'child-approval', {
+    status: 'waiting',
+    lineage: { parentThreadId: 'parent-approval', relationshipToParent: 'subagent' },
+    pendingRuntimeRequest: { kind: 'approval', createdAt: '2026-11-23T00:55:00.000Z' }
+  });
+
+  // Coordinator-answered subagent question (userOnly !== true) stays in Working
+  const parentCoordQ = row('a', 'parent-coord-q', {
+    status: 'completed',
+    latestRunId: 'run-2',
+    pendingBackgroundTasks: [{ taskId: 'sub-2', kind: 'subagent', childThreadId: 'child-coord-q' }]
+  });
+  const childCoordQ = row('a', 'child-coord-q', {
+    status: 'waiting',
+    lineage: { parentThreadId: 'parent-coord-q', relationshipToParent: 'subagent' },
+    pendingRuntimeRequest: { kind: 'user_input', createdAt: '2026-11-23T00:55:00.000Z' }
+  });
+
+  // User-only subagent card rolls up as input and leaves Working
+  const parentUserOnly = row('a', 'parent-user-only', {
+    status: 'completed',
+    latestRunId: 'run-3',
+    pendingBackgroundTasks: [{ taskId: 'sub-3', kind: 'subagent', childThreadId: 'child-user-only' }]
+  });
+  const childUserOnly = row('a', 'child-user-only', {
+    status: 'waiting',
+    lineage: { parentThreadId: 'parent-user-only', relationshipToParent: 'subagent' },
+    pendingRuntimeRequest: { kind: 'user_input', userOnly: true, createdAt: '2026-11-23T00:55:00.000Z' }
+  });
+
+  // Provider-native subagent is skipped from roll-up
+  const parentNative = row('a', 'parent-native', {
+    status: 'completed',
+    latestRunId: 'run-4',
+    pendingBackgroundTasks: [{ taskId: 'sub-4', kind: 'subagent', childThreadId: 'child-native' }]
+  });
+  const childNative = row('a', 'child-native', {
+    status: 'waiting',
+    creationSource: 'provider',
+    lineage: { parentThreadId: 'parent-native', relationshipToParent: 'subagent' },
+    pendingRuntimeRequest: { kind: 'approval', createdAt: '2026-11-23T00:55:00.000Z' }
+  });
+
+  // Cross-environment delegated task approval wakes parent on env-a
+  const parentDelegated = row('a', 'parent-delegated', {
+    status: 'completed',
+    latestRunId: 'run-5',
+    snoozedAt: '2026-11-23T00:50:00.000Z',
+    snoozedUntil: '2026-11-23T02:00:00.000Z',
+    pendingBackgroundTasks: [{ taskId: 'sub-5', kind: 'subagent' }]
+  });
+  const remoteChild = row('b', 'remote-child', {
+    status: 'running',
+    delegatedFrom: { environmentId: 'env-a', threadId: 'parent-delegated' },
+    pendingRuntimeRequest: { kind: 'permission', createdAt: '2026-11-23T00:55:00.000Z' }
+  });
+
+  const shelves = P.buildThreadShelves({
+    threads: [
+      parentApproval, childApproval,
+      parentCoordQ, childCoordQ,
+      parentUserOnly, childUserOnly,
+      parentNative, childNative,
+      parentDelegated, remoteChild
+    ],
+    environmentId: '',
+    projectRefs: [],
+    query: '',
+    searchHits: {},
+    nowMs: now,
+    capabilities: { a: caps(), b: caps() },
+    sortOrder: 'updated_at',
+    selectedKey: '',
+    workingShelfEnabled: true
+  });
+  const byId = Object.fromEntries(shelves.active.concat(shelves.working).map(t => [t.id, t]));
+  assert.deepEqual(shelves.working.map(t => t.id).sort(), ['parent-coord-q', 'parent-native']);
+  assert.equal(P.threadStatus(byId['parent-approval'], now), '等待批准');
+  assert.equal(P.threadCanSnooze(byId['parent-approval'], now), false);
+  assert.equal(P.threadStatus(byId['parent-user-only'], now), '等待回答');
+  assert.equal(P.threadStatus(byId['parent-coord-q'], now), '等待');
+  assert.equal(P.threadStatus(byId['parent-native'], now), '等待');
+  assert.equal(P.threadStatus(byId['parent-delegated'], now), '等待批准');
+  assert.equal(shelves.snoozedCount, 0);
+});

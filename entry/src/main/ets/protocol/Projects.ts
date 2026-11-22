@@ -46,10 +46,14 @@ export interface ThreadView {
   projectId: string;
   providerInstanceId: string;
   model: string;
+  interactionMode: string;
+  creationSource: string;
   branch: string;
   worktreePath: string;
   status: string;
   activityRunStatus: string;
+  activityRunStartedAt: string;
+  blockedOnThreadWait: boolean;
   activeRunId: string;
   latestRunId: string;
   latestRunRequestedAt: string;
@@ -74,6 +78,7 @@ export interface ThreadView {
   lastVisitedAt: string;
   pendingKind: string;
   pendingAt: string;
+  pendingUserOnly: boolean;
   pendingGuestMessageCount: number;
   hasActionableProposedPlan: boolean;
   titleRegenerationRequestId: string;
@@ -81,6 +86,7 @@ export interface ThreadView {
   lineageRelationship: string;
   lineageParentThreadId: string;
   lineageSideChat: boolean;
+  delegatedFromEnvironmentId: string;
   delegatedFromThreadId: string;
   lastSnoozeWakeAt: string;
   pendingBackgroundTasks: Record<string, Object>[];
@@ -101,6 +107,7 @@ export interface ScopedThread extends ThreadView {
   environmentLabel: string;
   projectLabel: string;
   projectIcon?: ProjectIconView;
+  pendingSubagentRequest?: string;
 }
 
 export interface ProjectRef { localId: string; environmentId: string; projectId: string; }
@@ -381,10 +388,14 @@ export function threadView(value: Object): ThreadView {
     projectId: cleanId(row.projectId, '会话项目'),
     providerInstanceId: (typeof row.providerInstanceId === 'string' ? row.providerInstanceId : '') || model.instanceId,
     model: model.model,
+    interactionMode: typeof row.interactionMode === 'string' ? row.interactionMode : '',
+    creationSource: typeof row.creationSource === 'string' ? row.creationSource : '',
     branch: optionalDisplayText(row.branch),
     worktreePath: optionalDisplayText(row.worktreePath),
     status: typeof row.status === 'string' ? row.status : '',
     activityRunStatus: typeof row.activityRunStatus === 'string' ? row.activityRunStatus : '',
+    activityRunStartedAt: optionalIso(row.activityRunStartedAt, '活动运行开始时间'),
+    blockedOnThreadWait: optionalBoolean(row.blockedOnThreadWait),
     activeRunId: optionalText(row.activeRunId, '活动运行'),
     latestRunId: optionalText(row.latestRunId, '最近运行'),
     latestRunRequestedAt: optionalIso(row.latestRunRequestedAt, '运行请求时间'),
@@ -409,6 +420,7 @@ export function threadView(value: Object): ThreadView {
     lastVisitedAt: optionalIso(row.lastVisitedAt, '最近访问时间'),
     pendingKind: pending !== undefined && typeof pending.kind === 'string' ? pending.kind : '',
     pendingAt: pending === undefined ? '' : optionalIso(pending.createdAt, '请求时间'),
+    pendingUserOnly: pending !== undefined && optionalBoolean(pending.userOnly),
     pendingGuestMessageCount: typeof row.pendingGuestMessageCount === 'number' && Number.isFinite(row.pendingGuestMessageCount) ?
       row.pendingGuestMessageCount as number : 0,
     hasActionableProposedPlan: optionalBoolean(row.hasActionableProposedPlan),
@@ -417,6 +429,7 @@ export function threadView(value: Object): ThreadView {
     lineageRelationship: lineage === undefined ? '' : optionalText(lineage.relationshipToParent, '会话关系'),
     lineageParentThreadId: lineage === undefined ? '' : optionalText(lineage.parentThreadId, '父会话'),
     lineageSideChat: lineage !== undefined && optionalBoolean(lineage.sideChat),
+    delegatedFromEnvironmentId: delegatedFrom === undefined ? '' : optionalText(delegatedFrom.environmentId, '委派来源环境'),
     delegatedFromThreadId: delegatedFrom === undefined ? '' : optionalText(delegatedFrom.threadId, '委派来源会话'),
     lastSnoozeWakeAt: optionalIso(row.lastSnoozeWakeAt, '暂缓唤醒时间'),
     pendingBackgroundTasks: compactObjects(row.pendingBackgroundTasks),
@@ -438,7 +451,26 @@ export function hasPendingUserInput(thread: ThreadView): boolean {
   return thread.pendingKind === 'user_input';
 }
 
+export function threadBackgroundWorkHoldsCompletion(tasks: Record<string, Object>[] | undefined): boolean {
+  if (!tasks || !tasks.length) return false;
+  return tasks.some((task: Record<string, Object>) => {
+    if (task.awaited === true) return true;
+    const kind = typeof task.kind === 'string' ? task.kind : '';
+    return kind === 'subagent' || kind === 'background_task';
+  });
+}
+
+export function threadParkedOnBackgroundWork(thread: ThreadView): boolean {
+  return threadBackgroundWorkHoldsCompletion(thread.pendingBackgroundTasks) && thread.status !== 'failed';
+}
+
+function threadPendingSubagentRequest(thread: ThreadView): string {
+  const scoped = thread as ScopedThread;
+  return typeof scoped.pendingSubagentRequest === 'string' ? scoped.pendingSubagentRequest : '';
+}
+
 function runtimeStatus(thread: ThreadView): string {
+  if (threadParkedOnBackgroundWork(thread)) return 'idle';
   return thread.activityRunStatus || thread.status;
 }
 
@@ -449,7 +481,7 @@ export function threadIsSettled(thread: ThreadView, caps?: ThreadCapabilities): 
 export function threadHasUnseenCompletion(thread: ThreadView): boolean {
   if (thread.settledOverride === 'settled') return false;
   if (!thread.latestRunCompletedAt || !thread.lastVisitedAt) return false;
-  const status = runtimeStatus(thread);
+  const status = thread.activityRunStatus || thread.status;
   if (status === 'interrupted' || status === 'cancelled' || status === 'failed') return false;
   const completedAtMs = Date.parse(thread.latestRunCompletedAt);
   if (!Number.isFinite(completedAtMs)) return false;
@@ -467,8 +499,21 @@ export function hasUnseenRunFailure(thread: ThreadView): boolean {
 }
 
 export function threadIsWorking(thread: ThreadView): boolean {
-  return !hasPendingApprovals(thread) && !hasPendingUserInput(thread) && thread.pendingGuestMessageCount === 0 &&
-    ['preparing', 'queued', 'starting', 'running', 'waiting'].includes(runtimeStatus(thread));
+  if (hasPendingApprovals(thread) || hasPendingUserInput(thread)) return false;
+  if (threadPendingSubagentRequest(thread) !== '') return false;
+  if (thread.pendingGuestMessageCount > 0) return false;
+  const parked = threadParkedOnBackgroundWork(thread);
+  const status = parked ? 'idle' : (thread.activityRunStatus || thread.status);
+  const active = ['preparing', 'queued', 'starting', 'running', 'waiting'].includes(status);
+  if (!active && !parked) return false;
+  const runSettled =
+    thread.latestRunId !== '' &&
+    !['preparing', 'queued', 'starting', 'running', 'waiting'].includes(thread.status) &&
+    thread.activeRunId !== thread.latestRunId;
+  if (thread.interactionMode === 'plan' && thread.hasActionableProposedPlan && runSettled) {
+    return false;
+  }
+  return true;
 }
 
 // Upstream threadRuntimeCanArchive: queued may archive only without an active run.
@@ -481,6 +526,7 @@ export function threadCanArchive(thread: ThreadView): boolean {
 export function threadCanSnooze(thread: ThreadView, nowMs: number): boolean {
   if (hasPendingApprovals(thread)) return false;
   if (thread.pendingKind && thread.pendingKind !== 'user_input') return false;
+  if (threadPendingSubagentRequest(thread) !== '') return false;
   if (thread.pendingGuestMessageCount > 0) return false;
   if (['preparing', 'queued', 'starting'].includes(runtimeStatus(thread))) return false;
   const messageAt = Date.parse(thread.latestUserMessageAt);
@@ -506,6 +552,7 @@ function failedAt(thread: ThreadView): number {
 
 export function threadRaisedHand(thread: ThreadView): boolean {
   if (hasPendingApprovals(thread)) return true;
+  if (threadPendingSubagentRequest(thread) !== '') return true;
   const snoozedAt = Date.parse(thread.snoozedAt);
   const questionAt = pendingQuestionAt(thread);
   if (hasPendingUserInput(thread) && (!Number.isFinite(snoozedAt) || !Number.isFinite(questionAt) || questionAt > snoozedAt)) return true;
@@ -757,19 +804,124 @@ export function threadInProjectRefs(thread: ScopedThread, refs: string[]): boole
   return refs.length === 0 || refs.includes(thread.localId + '\u0000' + thread.projectId);
 }
 
+function threadScopeKey(environmentId: string, threadId: string): string {
+  return environmentId + '\u0000' + threadId;
+}
+
+function isChildRunLiveForRollup(thread: ThreadView): boolean {
+  if (thread.activityRunStatus) return true;
+  return ['preparing', 'starting', 'running', 'waiting'].includes(thread.status);
+}
+
+function ownSubagentRollupRequest(thread: ThreadView): string {
+  if (!thread.pendingKind || thread.pendingKind === 'auth_refresh') return '';
+  if (thread.lineageRelationship !== 'subagent' && !thread.delegatedFromThreadId) return '';
+  if (thread.creationSource === 'provider' && thread.lineageRelationship === 'subagent') return '';
+  if (!isChildRunLiveForRollup(thread)) return '';
+  if (thread.pendingKind !== 'user_input') return 'approval';
+  return thread.pendingUserOnly ? 'user_only_input' : 'user_input';
+}
+
+function ownSideChatRollupRequest(thread: ThreadView): string {
+  if (!thread.pendingKind || thread.pendingKind === 'auth_refresh' || !thread.lineageSideChat) return '';
+  return thread.pendingKind === 'user_input' ? 'user_input' : 'approval';
+}
+
+export function attachPendingSubagentRequests(threads: ScopedThread[]): ScopedThread[] {
+  if (!threads.length) return threads;
+  const byKey = new Map<string, ScopedThread>();
+  for (const thread of threads) {
+    if (thread.archivedAt || thread.deletedAt) continue;
+    const env = thread.environmentId || thread.localId;
+    byKey.set(threadScopeKey(env, thread.id), thread);
+  }
+  const rolledUp = new Map<string, string>();
+  const mergeFlag = (targetKey: string, req: string): boolean => {
+    if (!targetKey || !req) return false;
+    const current = rolledUp.get(targetKey) || '';
+    if (current === 'approval' || current === req) return false;
+    if (current === 'user_only_input' && req === 'user_input') return false;
+    rolledUp.set(targetKey, req);
+    return true;
+  };
+  const propagateUpLineage = (firstParentKey: string, req: string, startChildKey: string): boolean => {
+    if (req === 'user_input') return false;
+    let changed = false;
+    const seen = new Set<string>(startChildKey ? [startChildKey] : []);
+    let parentKey = firstParentKey;
+    while (parentKey && !seen.has(parentKey)) {
+      seen.add(parentKey);
+      if (mergeFlag(parentKey, req)) changed = true;
+      const parent = byKey.get(parentKey);
+      if (parent && (parent.lineageRelationship === 'subagent' || parent.lineageSideChat) && parent.lineageParentThreadId) {
+        parentKey = threadScopeKey(parent.environmentId || parent.localId, parent.lineageParentThreadId);
+      } else {
+        parentKey = '';
+      }
+    }
+    return changed;
+  };
+  for (const child of threads) {
+    if (child.archivedAt || child.deletedAt) continue;
+    const env = child.environmentId || child.localId;
+    if (child.lineageSideChat) {
+      const req = ownSideChatRollupRequest(child);
+      if (req && child.lineageParentThreadId) {
+        mergeFlag(threadScopeKey(env, child.lineageParentThreadId), req);
+      }
+      continue;
+    }
+    if (child.lineageRelationship !== 'subagent' || !child.lineageParentThreadId) continue;
+    const req = ownSubagentRollupRequest(child);
+    if (req) {
+      propagateUpLineage(threadScopeKey(env, child.lineageParentThreadId), req, threadScopeKey(env, child.id));
+    }
+  }
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const child of threads) {
+      if (child.archivedAt || child.deletedAt) continue;
+      if (!child.delegatedFromThreadId || !child.delegatedFromEnvironmentId) continue;
+      const env = child.environmentId || child.localId;
+      if (child.delegatedFromEnvironmentId === env) continue;
+      const childKey = threadScopeKey(env, child.id);
+      const own = ownSubagentRollupRequest(child);
+      const nested = rolledUp.get(childKey) || '';
+      const req = own === 'approval' ? own : (nested || own);
+      if (req && req !== 'user_input') {
+        if (propagateUpLineage(threadScopeKey(child.delegatedFromEnvironmentId, child.delegatedFromThreadId), req, childKey)) {
+          changed = true;
+        }
+      }
+    }
+  }
+  if (rolledUp.size === 0) return threads;
+  return threads.map((thread: ScopedThread): ScopedThread => {
+    const key = threadScopeKey(thread.environmentId || thread.localId, thread.id);
+    const rawDerived = rolledUp.get(key) || '';
+    const derived = rawDerived === 'user_only_input' ? 'user_input' : rawDerived;
+    const existing = typeof thread.pendingSubagentRequest === 'string' ? thread.pendingSubagentRequest : '';
+    const effective = derived === 'approval' || existing === 'approval' ? 'approval' : (derived || existing);
+    if (effective === existing) return thread;
+    return { ...thread, pendingSubagentRequest: effective };
+  });
+}
+
 export function buildThreadShelves(input: {
   threads: ScopedThread[]; environmentId: string; projectRefs: string[]; query: string;
   searchHits: Record<string, string>; nowMs: number; capabilities: Record<string, ThreadCapabilities>;
   sortOrder: string; selectedKey: string; workingShelfEnabled?: boolean;
 }): ThreadShelfState {
   const workingShelfEnabled = input.workingShelfEnabled !== false;
+  const annotatedThreads = attachPendingSubagentRequests(input.threads);
   const matching: ScopedThread[] = [];
   const pinned: ScopedThread[] = [];
   const active: ScopedThread[] = [];
   const working: ScopedThread[] = [];
   const snoozed: ScopedThread[] = [];
   const settled: ScopedThread[] = [];
-  for (const thread of input.threads) {
+  for (const thread of annotatedThreads) {
     if (thread.archivedAt || !isListedThread(thread)) continue;
     if (input.environmentId && thread.localId !== input.environmentId) continue;
     if (!threadInProjectRefs(thread, input.projectRefs)) continue;
@@ -888,8 +1040,10 @@ export function scopedThreadView(thread: ThreadView, localId: string, environmen
   return {
     id: thread.id, label: thread.label, projectId: thread.projectId,
     providerInstanceId: thread.providerInstanceId, model: thread.model,
+    interactionMode: thread.interactionMode, creationSource: thread.creationSource,
     branch: thread.branch, worktreePath: thread.worktreePath,
     status: thread.status, activityRunStatus: thread.activityRunStatus,
+    activityRunStartedAt: thread.activityRunStartedAt, blockedOnThreadWait: thread.blockedOnThreadWait,
     activeRunId: thread.activeRunId, latestRunId: thread.latestRunId,
     latestRunRequestedAt: thread.latestRunRequestedAt, latestRunStartedAt: thread.latestRunStartedAt,
     latestRunCompletedAt: thread.latestRunCompletedAt, lastError: thread.lastError,
@@ -902,26 +1056,32 @@ export function scopedThreadView(thread: ThreadView, localId: string, environmen
     latestUserMessageAt: thread.latestUserMessageAt,
     latestUserAuthoredMessageAt: thread.latestUserAuthoredMessageAt,
     lastVisitedAt: thread.lastVisitedAt, pendingKind: thread.pendingKind,
-    pendingAt: thread.pendingAt, pendingGuestMessageCount: thread.pendingGuestMessageCount,
+    pendingAt: thread.pendingAt, pendingUserOnly: thread.pendingUserOnly,
+    pendingGuestMessageCount: thread.pendingGuestMessageCount,
     hasActionableProposedPlan: thread.hasActionableProposedPlan,
     titleRegenerationRequestId: thread.titleRegenerationRequestId,
     titleRegenerationStartedAt: thread.titleRegenerationStartedAt,
     lineageRelationship: thread.lineageRelationship,
     lineageParentThreadId: thread.lineageParentThreadId,
     lineageSideChat: thread.lineageSideChat,
+    delegatedFromEnvironmentId: thread.delegatedFromEnvironmentId,
     delegatedFromThreadId: thread.delegatedFromThreadId,
     lastSnoozeWakeAt: thread.lastSnoozeWakeAt,
     pendingBackgroundTasks: thread.pendingBackgroundTasks,
     goal: thread.goal,
-    deletedAt: thread.deletedAt, localId, environmentId, environmentLabel, projectLabel, projectIcon
+    deletedAt: thread.deletedAt, localId, environmentId, environmentLabel, projectLabel, projectIcon,
+    pendingSubagentRequest: ''
   };
 }
 
 export function threadStatus(thread: ScopedThread, nowMs: number): string {
-  if (hasPendingApprovals(thread)) return '等待批准';
-  if (hasPendingUserInput(thread)) return '等待回答';
+  const subagentReq = threadPendingSubagentRequest(thread);
+  if (hasPendingApprovals(thread) || subagentReq === 'approval') return '等待批准';
+  if (hasPendingUserInput(thread) || subagentReq === 'user_input') return '等待回答';
   if (thread.pendingGuestMessageCount > 0) return '访客消息';
+  if (threadParkedOnBackgroundWork(thread)) return '等待';
   const status = runtimeStatus(thread);
+  if (status === 'running' && thread.blockedOnThreadWait) return '等待';
   if (status === 'running' || status === 'starting' || status === 'preparing' || status === 'queued') return '运行中';
   if (status === 'waiting') return '等待';
   if (status === 'failed') {
