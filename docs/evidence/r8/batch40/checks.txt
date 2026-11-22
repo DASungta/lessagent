@@ -1,0 +1,70 @@
+宿主全量单测 · node --test tests/*.test.mjs (HEAD 1d22911)
+# tests 672
+# suites 0
+# pass 672
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 52305.250169
+
+签名构建 · scripts/build.sh (最终交付包，含 1d22911 D6 视觉修复)
+> hvigor BUILD SUCCESSFUL in 19 s 108 ms
+SHA-256 (entry/build/default/outputs/default/entry-default-signed.hap):
+7f48b6efb929d83a14ef9ccf32e909e783d3ab91fc3fbc5664e16d4643647939
+
+（首轮全量构建 f010d5e: > hvigor BUILD SUCCESSFUL in 51 s 315 ms, SHA-256: 96666b3a2898708a8943e37d05fe38d52be038b0b63ca6c9f6e2af4cd318b126）
+
+设备安装 · hdc install -r (Mate60Pro 23E0224122000135)
+[Info]App install path:.../entry-default-signed.hap msg:install bundle successfully.
+
+D2 直连 DPoP 配对与滚动续期核验（隔离库 /tmp/t3-harmony-b40-home/userdata/statev2.sqlite + 代理日志）
+- 配对后 auth_sessions:
+  session_id=c2506cc1-f0e4-4aa5-90da-b9af3de3d70b subject=one-time-token method=dpop-access-token
+  proof_key_thumbprint=ZDea9fLw5Y0tvipCr_Jmi7fbIqWlTN0LlvgcGBfGejA
+  issued_at=2026-11-22T17:32:03.675Z expires_at=2026-12-22T17:32:03.675Z
+- 单次 401 触发自动续期代理日志:
+  [2026-11-22T17:34:44.122Z] HTTP INJECT-401 POST /api/auth/websocket-ticket/rpc auth=DPoP:103cc188b786 dpop=true
+  [2026-11-22T17:34:44.203Z] HTTP POST /oauth/token -> 200 auth=none dpop=true
+  [2026-11-22T17:34:44.320Z] HTTP POST /api/auth/websocket-ticket/rpc -> 200 auth=DPoP:624a9d73e5fd dpop=true
+  [2026-11-22T17:34:44.371Z] WS UPGRADE /ws?orchestrationProtocol=2&...
+  [2026-11-22T17:34:44.603Z] HTTP GET /api/auth/session -> 200 auth=DPoP:624a9d73e5fd dpop=true
+- 续期后 auth_sessions:
+  expires_at=2026-12-22T17:34:44.189Z last_connected_at=2026-11-22T17:34:44.388Z
+
+D3 多字段敏感输入核验（b40-thread-secret / b40-secret-item-1）
+- 仅填邮箱: email="b40@example.com", password="", SUBMIT enabled=false
+- 两项已填: email="b40@example.com", password="***********", SUBMIT enabled=true
+- 退后台回前台: AFTER-BG: INPUT text="" | INPUT text=""
+- 提交后 SQLite: b40-secret-item-1 | completed | saved
+- 秘密文件落盘: secret-request-d52dde239b67071ef291f6c58fb6d7c2.bin (0600), secret-request-ebe4a6e4ba50557882e8ebe45db979fd.bin (0600)
+- 明文泄漏检查: messages count=0, turn_items count=0
+
+D4 C1 断线同 commandId 重放去重核验（b40-thread-c1，claudeAgent 无 CLI 零模型调用）
+- 代理帧日志:
+  [2026-11-22T18:12:45.969Z] WS#1 C->S dispatchCommand rpcId=4 type=message.dispatch threadId=b40-thread-c1 commandId=25726315-e5a1-4955-aaf9-b5db2123d631
+  [2026-11-22T18:12:45.989Z] WS#1 S->C DROP-RESPONSE rpcId=4 commandId=25726315-e5a1-4955-aaf9-b5db2123d631 exit=Success
+  [2026-11-22T18:13:05.849Z] WS#2 UPGRADE /ws?orchestrationProtocol=2&...
+  [2026-11-22T18:13:05.964Z] WS#2 C->S dispatchCommand rpcId=3 type=message.dispatch threadId=b40-thread-c1 commandId=25726315-e5a1-4955-aaf9-b5db2123d631
+  [2026-11-22T18:13:05.971Z] WS#2 S->C DELIVER-RESPONSE rpcId=3 commandId=25726315-e5a1-4955-aaf9-b5db2123d631 exit=Success
+- SQLite 去重核验:
+  orchestration_v2_command_receipts: 25726315-e5a1-4955-aaf9-b5db2123d631 | accepted (1 row)
+  orchestration_v2_projection_messages: 62e98637-e501-4733-b774-a9af6dd88638 | user | B40 C1 replay-after-drop verified (1 row)
+
+D6 长用户消息折叠/展开/收起核验（b40-thread-main）
+- 折叠态: 展开全文 bounds=[1006,947][1163,993] (气泡内右对齐)
+- 展开态: has END-MARKER-26=true, 收起 bounds=[1084,947][1163,993]
+- 收起后: RE-COLLAPSED CHECK: has 展开全文=true has 收起=false
+
+D7 审阅排序与隐藏测试文件持久化核验（b40-demo）
+- 文件序: src/core.ts -> src/app.ts -> src/core.test.ts -> src/app.test.ts -> pnpm-lock.yaml
+- 隐藏切换重开持久化: PERSIST CHECK: has 已隐藏 2 个测试文件=true has core.test.ts=false
+
+D8 定时任务默认分支与清除目标会话核验（b40-sched-unbind-1）
+- 新建「新工作树」自动基准分支: develop (仓库当前分支为 feature-demo，origin/HEAD -> origin/develop)
+- 解绑前 SQLite: b40-sched-unbind-1 | enabled=0 | thread_id=b40-thread-main | thread_mode=continue
+- 解绑后 SQLite: b40-sched-unbind-1 | enabled=0 | thread_id=NULL | thread_mode=continue
+
+D9 U1 恢复入口 A/B 对照核验
+- b40-thread-no-resume (supportsNativeResume=false): has 恢复最近的运行=false, has 任务与连接=true
+- b40-thread-yes-resume (supportsNativeResume=true): has 恢复最近的运行=true, has 任务与连接=true
