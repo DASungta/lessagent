@@ -285,14 +285,18 @@ export class EnvironmentRegistry {
       await this.commit(next);
     });
   }
-  async add(input: string, code: string): Promise<string> {
+  async add(input: string, code: string, expectedEnvironmentId: string = ''): Promise<string> {
     let added = '';
+    const pinnedEnvId = expectedEnvironmentId.trim();
     await this.write(async () => {
       const target = pairingTarget(input, code);
       const knownEntries = this.directory.entries.filter((e: EnvironmentEntry) => environmentRoutes(e).some((route: DirectRoute) => route.base === target.base));
       if (knownEntries.length > 1) throw new Error('此地址对应多个环境，请先核对连接记录');
       const known = knownEntries[0];
       if (known) {
+        if (pinnedEnvId && known.environmentId !== pinnedEnvId) {
+          throw new Error('服务器身份与链接环境不一致，未发送配对凭据');
+        }
         const entry = this.entry(known.localId);
         const client = this.clients.get(entry.localId);
         if (!client) throw new Error('环境尚未初始化');
@@ -313,6 +317,9 @@ export class EnvironmentRegistry {
       const store = this.assets.session(credentialRef);
       client.store = store;
       client.validateIdentity = (environmentId: string) => {
+        if (pinnedEnvId && environmentId !== pinnedEnvId) {
+          throw new Error('服务器身份与链接环境不一致，未发送配对凭据');
+        }
         if (this.directory.entries.some((e: EnvironmentEntry) => e.environmentId === environmentId)) {
           throw new Error('该环境已添加，请使用已有地址更新配对；更改地址须从已有环境设置操作');
         }

@@ -269,3 +269,165 @@ export function parseLinkedThreadHistoryPage(value: Object): LinkedThreadHistory
     hasMoreHistory: row.hasMoreHistory === true
   };
 }
+
+export type PeerLinkClientPairingUnsupportedReason = 'link_access' | 'version' | 'refused' | 'unreachable';
+
+export interface PeerLinkClientPairingCredentialResult {
+  type: 'credential';
+  environmentId: string;
+  label: string;
+  urls: string[];
+  credential: string;
+  expiresAt: string;
+}
+
+export interface PeerLinkClientPairingUnsupportedResult {
+  type: 'unsupported';
+  environmentId: string;
+  label: string;
+  urls: string[];
+  reason: PeerLinkClientPairingUnsupportedReason;
+}
+
+export type PeerLinkClientPairingResult =
+  | PeerLinkClientPairingCredentialResult
+  | PeerLinkClientPairingUnsupportedResult;
+
+export function parsePeerLinkClientPairingResult(value: Object): PeerLinkClientPairingResult {
+  const row = record(value);
+  const type = text(row.type);
+  const environmentId = text(row.environmentId).trim();
+  const label = typeof row.label === 'string' && row.label.trim() ? row.label.trim() : environmentId;
+  if (!environmentId) throw new Error('无效的目标环境标识');
+  const urls: string[] = [];
+  if (Array.isArray(row.urls)) {
+    for (const item of row.urls as Object[]) {
+      if (typeof item === 'string' && /^https?:\/\//i.test(item.trim())) {
+        urls.push(item.trim());
+      }
+    }
+  }
+  if (type === 'credential') {
+    const credential = text(row.credential).trim();
+    const expiresAt = typeof row.expiresAt === 'string' ? row.expiresAt : '';
+    if (!credential) throw new Error('缺少一次性配对凭据');
+    return { type: 'credential', environmentId, label, urls, credential, expiresAt };
+  }
+  if (type === 'unsupported') {
+    const rawReason = typeof row.reason === 'string' ? row.reason : 'refused';
+    const reason: PeerLinkClientPairingUnsupportedReason =
+      rawReason === 'link_access' || rawReason === 'version' || rawReason === 'refused' || rawReason === 'unreachable'
+        ? rawReason : 'refused';
+    return { type: 'unsupported', environmentId, label, urls, reason };
+  }
+  throw new Error('未知的客户端配对响应类型');
+}
+
+export interface LinkedEnvironmentPrefill {
+  environmentId: string;
+  label: string;
+  host: string;
+  credential: string;
+  manualReason: string;
+}
+
+export interface LinkedEnvironmentConnectOutcome {
+  type: 'already_connected' | 'prefill' | 'unreachable';
+  localId: string;
+  label: string;
+  prefill?: LinkedEnvironmentPrefill;
+}
+
+export interface PrepareLinkedEnvironmentInput {
+  environmentId: string;
+  label: string;
+  alreadyConnectedLocalId: string;
+  requestPairing: () => Promise<PeerLinkClientPairingResult | undefined>;
+  reaches: (url: string) => Promise<boolean>;
+}
+
+export function linkedManualReasonMessage(label: string, reason: string): string {
+  const name = label.trim() || '目标环境';
+  if (reason === 'link_access') {
+    return '当前环境链接不是完全访问权限，请在「' + name + '」手动获取一次性配对码后连接';
+  }
+  if (reason === 'version') {
+    return '「' + name + '」服务端版本较旧，不支持自动发放配对码，请手动输入配对码连接';
+  }
+  if (reason === 'refused') {
+    return '「' + name + '」拒绝了自动配对，请手动输入一次性配对码连接';
+  }
+  if (reason === 'unreachable') {
+    return '中转环境暂时联系不上「' + name + '」，若本机可直接访问，可手动输入配对码连接';
+  }
+  return '请确认「' + name + '」地址并输入一次性配对码后连接';
+}
+
+export async function prepareLinkedEnvironmentConnection(
+  input: PrepareLinkedEnvironmentInput
+): Promise<LinkedEnvironmentConnectOutcome> {
+  if (input.alreadyConnectedLocalId.trim()) {
+    return {
+      type: 'already_connected',
+      localId: input.alreadyConnectedLocalId.trim(),
+      label: input.label
+    };
+  }
+  const pairing = await input.requestPairing();
+  if (!pairing) {
+    return {
+      type: 'prefill',
+      localId: '',
+      label: input.label,
+      prefill: {
+        environmentId: input.environmentId,
+        label: input.label,
+        host: '',
+        credential: '',
+        manualReason: 'manual'
+      }
+    };
+  }
+  const urls = pairing.urls;
+  const checks = await Promise.all(urls.map((url: string) => input.reaches(url).catch(() => false)));
+  let reachableHost = '';
+  for (let i = 0; i < urls.length; i += 1) {
+    if (checks[i]) {
+      reachableHost = urls[i];
+      break;
+    }
+  }
+  if (pairing.type === 'unsupported') {
+    return {
+      type: 'prefill',
+      localId: '',
+      label: pairing.label,
+      prefill: {
+        environmentId: pairing.environmentId,
+        label: pairing.label,
+        host: reachableHost || (urls.length > 0 ? urls[0] : ''),
+        credential: '',
+        manualReason: pairing.reason
+      }
+    };
+  }
+  if (!reachableHost) {
+    return {
+      type: 'unreachable',
+      localId: '',
+      label: pairing.label
+    };
+  }
+  return {
+    type: 'prefill',
+    localId: '',
+    label: pairing.label,
+    prefill: {
+      environmentId: pairing.environmentId,
+      label: pairing.label,
+      host: reachableHost,
+      credential: pairing.credential,
+      manualReason: ''
+    }
+  };
+}

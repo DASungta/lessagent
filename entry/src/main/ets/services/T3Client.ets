@@ -55,7 +55,9 @@ import {
 import {
   LinkedThreadHistoryPage,
   parseLinkedThreadHistoryPage,
+  parsePeerLinkClientPairingResult,
   parsePeerLinkNames,
+  PeerLinkClientPairingResult,
   PeerLinkName
 } from '../protocol/LinkedThread';
 
@@ -1411,6 +1413,19 @@ export class T3Client {
     const value = record(await rpc.request('peerLinks.threadItem', payload, undefined, 15000, false));
     if (rpc !== this.rpc) throw new Error('连接已变更');
     return value.item === undefined || value.item === null ? undefined : record(value.item);
+  }
+  async requestPeerClientPairing(environmentId: string): Promise<PeerLinkClientPairingResult | undefined> {
+    const envId = environmentId.trim();
+    if (!envId || !this.ready || !this.rpc || !this.offersPeerLinks) return undefined;
+    const rpc = this.rpc;
+    const payload: Record<string, Object> = { environmentId: envId };
+    try {
+      const value = await rpc.request('peerLinks.pairClient', payload, undefined, 15000, false);
+      if (rpc !== this.rpc) return undefined;
+      return parsePeerLinkClientPairingResult(value);
+    } catch (_) {
+      return undefined;
+    }
   }
   stopAuthAccess(): void {
     const rpc = this.rpc;

@@ -97,9 +97,11 @@ import {
   worktreeRepositoryChoices
 } from '../protocol/ThreadRepositories';
 import {
+  linkedManualReasonMessage,
   LinkedThreadTarget,
   ParsedThreadLink,
   parseThreadLinkHref,
+  prepareLinkedEnvironmentConnection,
   resolveLinkedThreadOpen,
   threadLinkCandidates
 } from '../protocol/LinkedThread';
@@ -306,6 +308,10 @@ struct Index {
   @State draftIsGitRepo: boolean = true;
   private draftRepoRequest: number = 0;
   @State linkedThreadTarget: LinkedThreadTarget | undefined = undefined;
+  @State linkedConnecting: boolean = false;
+  @State linkedConnectNotice: string = '';
+  @State linkedConnectError: boolean = false;
+  @State linkedConnectTarget: LinkedThreadTarget | undefined = undefined;
   @State commandPanel: string = '';
   @State commandQuery: string = '';
   @State mentionFiles: string[] = [];
@@ -1530,10 +1536,29 @@ struct Index {
     this.pairingStatus = '正在连接与校验环境';
     try {
       const target = pairingTarget(this.address, this.credential);
+      const linkedTarget = this.linkedConnectTarget;
+      let addedLocalId = '';
       if (this.routeFor) await this.registry().addRoute(this.routeFor, target.base, target.code);
+      else if (linkedTarget) addedLocalId = await this.registry().add(target.base, target.code, linkedTarget.environmentId);
       else await this.registry().add(target.base, target.code);
       this.credential = '';
-      this.address = target.base; this.routeFor = ''; this.openPanel('server'); void this.loadLinkedEnvironments();
+      this.address = target.base; this.routeFor = '';
+      if (linkedTarget) {
+        this.linkedConnectTarget = undefined;
+        this.linkedThreadTarget = undefined;
+        this.linkedConnectNotice = '';
+        this.linkedConnectError = false;
+        this.panelOpen = false;
+        this.page = 'chat';
+        if (addedLocalId && addedLocalId !== this.selectedLocalId) {
+          await this.registry().select(addedLocalId);
+        }
+        this.bindEnvironment();
+        void this.loadLinkedEnvironments();
+        await this.watch(linkedTarget.threadId);
+      } else {
+        this.openPanel('server'); void this.loadLinkedEnvironments();
+      }
     } catch (error) {
       const message = (error as Error).message;
       if (message.includes('服务器身份')) this.credential = '';
@@ -2856,11 +2881,73 @@ struct Index {
         threadId: tid,
         label: label || envId
       };
+      this.linkedConnecting = false;
+      this.linkedConnectNotice = '';
+      this.linkedConnectError = false;
       this.panel = 'linked-thread';
       this.panelOpen = true;
       return;
     }
     this.status = '目标会话所在环境未连接，且当前环境未开启链接环境';
+  }
+  private async connectLinkedThreadEnvironment(target: LinkedThreadTarget): Promise<void> {
+    if (this.linkedConnecting || this.busy) return;
+    const existing = this.environmentEntries.find((candidate: EnvironmentEntry) =>
+      !candidate.deleting && candidate.enabled && candidate.environmentId === target.environmentId);
+    const viaOwner = this.registry().connection(target.viaLocalId) || client;
+    this.linkedConnecting = true;
+    this.linkedConnectError = false;
+    this.linkedConnectNotice = '正在获取「' + (target.label || target.environmentId) + '」的连接信息…';
+    try {
+      const outcome = await prepareLinkedEnvironmentConnection({
+        environmentId: target.environmentId,
+        label: target.label || target.environmentId,
+        alreadyConnectedLocalId: existing ? existing.localId : '',
+        requestPairing: () => viaOwner.requestPeerClientPairing(target.environmentId),
+        reaches: async (url: string): Promise<boolean> => {
+          const probe = await viaOwner.probeRoute(url, target.environmentId, 3000);
+          return probe.ok;
+        }
+      });
+      if (outcome.type === 'already_connected') {
+        this.linkedConnectNotice = '';
+        this.linkedConnectError = false;
+        this.linkedThreadTarget = undefined;
+        this.linkedConnectTarget = undefined;
+        this.panelOpen = false;
+        this.page = 'chat';
+        if (outcome.localId !== this.selectedLocalId) {
+          await this.registry().select(outcome.localId);
+          this.bindEnvironment();
+        }
+        await this.watch(target.threadId);
+        return;
+      }
+      if (outcome.type === 'unreachable') {
+        this.linkedConnectError = true;
+        this.linkedConnectNotice = '当前设备无法直接访问「' + outcome.label + '」，请加入同一局域网或 Tailscale 后重试；你仍可继续只读查看。';
+        return;
+      }
+      if (outcome.prefill) {
+        this.linkedConnectNotice = '';
+        this.linkedConnectError = false;
+        this.routeFor = '';
+        this.address = outcome.prefill.host;
+        this.credential = outcome.prefill.credential;
+        this.pairingError = false;
+        this.pairingStatus = outcome.prefill.credential
+          ? '已获取「' + outcome.prefill.label + '」的一次性配对材料，请确认目标地址后点击确认连接'
+          : linkedManualReasonMessage(outcome.prefill.label, outcome.prefill.manualReason);
+        this.linkedConnectTarget = target;
+        this.panel = 'connection-new';
+        this.panelOpen = true;
+      }
+    } catch (error) {
+      this.linkedConnectError = true;
+      this.linkedConnectNotice = '连接准备失败：' + (error as Error).message;
+    } finally {
+      this.linkedConnecting = false;
+    }
   }
   private async openParsedThreadLink(parsed: ParsedThreadLink): Promise<void> {
     if (this.busy) return;
@@ -3087,7 +3174,14 @@ struct Index {
     if (this.panelOpen && ['peer-link', 'task-settings', 'queue'].includes(this.panel) && this.busy) return true;
     if (this.panelOpen) {
       if (this.panel === 'cloud') { this.panel = this.cloudReturnPanel; return true; }
-      if (this.panel === 'connection-new') { this.panel = 'server'; this.credential = ''; this.pairingError = false; }
+      if (this.panel === 'connection-new') {
+        const backToLinked = this.linkedConnectTarget !== undefined && this.linkedThreadTarget !== undefined;
+        this.panel = backToLinked ? 'linked-thread' : 'server';
+        this.credential = '';
+        this.routeFor = '';
+        this.linkedConnectTarget = undefined;
+        this.pairingError = false;
+      }
       else {
         if (this.panel === 'snooze') this.snoozeThread = undefined;
         if (this.panel === 'rename') this.renameThread = undefined;
@@ -3638,7 +3732,16 @@ struct Index {
         viaClient: this.registry().connection(this.linkedThreadTarget.viaLocalId) || client,
         viaReady: this.environmentReady[this.linkedThreadTarget.viaLocalId] === true ||
           (this.linkedThreadTarget.viaLocalId === this.selectedLocalId && this.ready),
-        onClose: () => { this.panelOpen = false; this.linkedThreadTarget = undefined; },
+        connecting: this.linkedConnecting,
+        connectNotice: this.linkedConnectNotice,
+        connectError: this.linkedConnectError,
+        onConnect: (target: LinkedThreadTarget) => this.connectLinkedThreadEnvironment(target),
+        onClose: () => {
+          this.panelOpen = false;
+          this.linkedThreadTarget = undefined;
+          this.linkedConnectNotice = '';
+          this.linkedConnectError = false;
+        },
         onCopy: (value: string) => { void this.copy(value); },
         onOpenLink: (url: string) => { void this.openLink(url); }
       })
@@ -3652,8 +3755,8 @@ struct Index {
             deviceEnvironmentLabel: this.deviceEnvironmentLabel, pendingDevices: this.pendingDevices,
             approvedDevices: this.approvedDevices,
             onClose: () => { this.panelOpen = false; this.credential = ''; },
-            onAdd: () => { this.routeFor = ''; this.address = ''; this.credential = ''; this.pairingError = false; this.pairingStatus = '填写地址与配对码后确认'; this.panel = 'connection-new'; },
-            onAddRoute: (id: string) => { this.routeFor = id; this.address = ''; this.credential = ''; this.pairingError = false; this.pairingStatus = '为当前环境添加连接路径'; this.panel = 'connection-new'; },
+            onAdd: () => { this.routeFor = ''; this.linkedConnectTarget = undefined; this.address = ''; this.credential = ''; this.pairingError = false; this.pairingStatus = '填写地址与配对码后确认'; this.panel = 'connection-new'; },
+            onAddRoute: (id: string) => { this.routeFor = id; this.linkedConnectTarget = undefined; this.address = ''; this.credential = ''; this.pairingError = false; this.pairingStatus = '为当前环境添加连接路径'; this.panel = 'connection-new'; },
             onInitialize: () => this.restoreAddress(),
             onRetry: (id: string) => this.registry().reconnect(id),
             onEnabled: (id: string, enabled: boolean) => this.registry().setEnabled(id, enabled),
@@ -3670,10 +3773,17 @@ struct Index {
     } else if (this.panel === 'connection-new') {
       Column({ space: 0 }) {
         TopBar({
-          title: this.routeFor ? '添加路径' : '添加环境',
+          title: this.routeFor ? '添加路径' : (this.linkedConnectTarget ? '连接 ' + (this.linkedConnectTarget.label || '环境') : '添加环境'),
           showBack: true,
-          backLabel: '返回环境',
-          onBack: () => { this.panel = 'server'; this.credential = ''; this.routeFor = ''; this.pairingError = false; }
+          backLabel: this.linkedConnectTarget ? '返回只读会话' : '返回环境',
+          onBack: () => {
+            const backToLinked = this.linkedConnectTarget !== undefined && this.linkedThreadTarget !== undefined;
+            this.panel = backToLinked ? 'linked-thread' : 'server';
+            this.credential = '';
+            this.routeFor = '';
+            this.linkedConnectTarget = undefined;
+            this.pairingError = false;
+          }
         }) {
           AppButton({
             label: this.busy ? '连接中' : '确认',

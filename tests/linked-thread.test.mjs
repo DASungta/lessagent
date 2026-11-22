@@ -12,7 +12,10 @@ const {
   isLinkedThreadUnreachable,
   linkedThreadFailure,
   isLinkedThreadWorking,
-  parseLinkedThreadHistoryPage
+  parseLinkedThreadHistoryPage,
+  parsePeerLinkClientPairingResult,
+  prepareLinkedEnvironmentConnection,
+  linkedManualReasonMessage
 } = await import(linkedThreadUrl);
 
 test('parseThreadLinkHref handles v1, v2, app.t3.codes links and rejects invalid targets', () => {
@@ -134,4 +137,108 @@ test('isLinkedThreadWorking and parseLinkedThreadHistoryPage handle run status a
   assert.equal(page.items[0].id, 'i1');
   assert.equal(page.items[0].visibility, 'visible');
   assert.equal(page.items[0].sourceThreadId, 't1');
+});
+
+test('L2: parsePeerLinkClientPairingResult parses credential and unsupported payloads', () => {
+  const cred = parsePeerLinkClientPairingResult({
+    type: 'credential',
+    environmentId: 'env-b',
+    label: 'Server B',
+    urls: ['http://192.168.1.5:14882', 'ftp://ignored', 'https://b.tail.ts.net'],
+    credential: 'ONE-TIME-CODE',
+    expiresAt: '2026-11-23T12:00:00Z'
+  });
+  assert.equal(cred.type, 'credential');
+  assert.equal(cred.credential, 'ONE-TIME-CODE');
+  assert.deepEqual(cred.urls, ['http://192.168.1.5:14882', 'https://b.tail.ts.net']);
+
+  const unsupported = parsePeerLinkClientPairingResult({
+    type: 'unsupported',
+    environmentId: 'env-b',
+    label: 'Server B',
+    urls: ['http://192.168.1.5:14882'],
+    reason: 'link_access'
+  });
+  assert.equal(unsupported.type, 'unsupported');
+  assert.equal(unsupported.reason, 'link_access');
+  assert.match(linkedManualReasonMessage('Server B', 'link_access'), /完全访问权限/);
+});
+
+test('L2: prepareLinkedEnvironmentConnection switches directly if already connected, prefers first reachable URL, and handles unreachable/manual fallback', async () => {
+  let asked = 0;
+  const already = await prepareLinkedEnvironmentConnection({
+    environmentId: 'env-b',
+    label: 'Server B',
+    alreadyConnectedLocalId: 'local-b',
+    requestPairing: async () => { asked++; return undefined; },
+    reaches: async () => true
+  });
+  assert.equal(already.type, 'already_connected');
+  assert.equal(already.localId, 'local-b');
+  assert.equal(asked, 0);
+
+  const prefilled = await prepareLinkedEnvironmentConnection({
+    environmentId: 'env-b',
+    label: 'Server B',
+    alreadyConnectedLocalId: '',
+    requestPairing: async () => ({
+      type: 'credential',
+      environmentId: 'env-b',
+      label: 'Server B',
+      urls: ['http://dead.local:14882', 'http://192.168.1.5:14882', 'https://b.ts.net'],
+      credential: 'SECRET-CODE',
+      expiresAt: '2026-11-23T12:00:00Z'
+    }),
+    reaches: async (url) => url !== 'http://dead.local:14882'
+  });
+  assert.equal(prefilled.type, 'prefill');
+  assert.equal(prefilled.prefill.host, 'http://192.168.1.5:14882');
+  assert.equal(prefilled.prefill.credential, 'SECRET-CODE');
+  assert.equal(prefilled.prefill.manualReason, '');
+
+  const unreachable = await prepareLinkedEnvironmentConnection({
+    environmentId: 'env-b',
+    label: 'Server B',
+    alreadyConnectedLocalId: '',
+    requestPairing: async () => ({
+      type: 'credential',
+      environmentId: 'env-b',
+      label: 'Server B',
+      urls: ['http://dead.local:14882'],
+      credential: 'SECRET-CODE',
+      expiresAt: '2026-11-23T12:00:00Z'
+    }),
+    reaches: async () => false
+  });
+  assert.equal(unreachable.type, 'unreachable');
+  assert.equal(unreachable.label, 'Server B');
+
+  const manual = await prepareLinkedEnvironmentConnection({
+    environmentId: 'env-b',
+    label: 'Server B',
+    alreadyConnectedLocalId: '',
+    requestPairing: async () => ({
+      type: 'unsupported',
+      environmentId: 'env-b',
+      label: 'Server B',
+      urls: ['http://192.168.1.5:14882'],
+      reason: 'version'
+    }),
+    reaches: async () => false
+  });
+  assert.equal(manual.type, 'prefill');
+  assert.equal(manual.prefill.host, 'http://192.168.1.5:14882');
+  assert.equal(manual.prefill.credential, '');
+  assert.equal(manual.prefill.manualReason, 'version');
+
+  const noPermission = await prepareLinkedEnvironmentConnection({
+    environmentId: 'env-b',
+    label: 'Server B',
+    alreadyConnectedLocalId: '',
+    requestPairing: async () => undefined,
+    reaches: async () => false
+  });
+  assert.equal(noPermission.type, 'prefill');
+  assert.equal(noPermission.prefill.host, '');
+  assert.equal(noPermission.prefill.credential, '');
 });

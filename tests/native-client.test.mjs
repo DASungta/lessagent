@@ -2527,3 +2527,86 @@ test('L1: T3Client reads peerLinks.names, subscribes linked thread stream, pagin
     s.client.disconnect();
   }
 });
+
+test('L2: T3Client.requestPeerClientPairing parses credential, unsupported, and falls back to undefined on refusal', async () => {
+  let mode = 'credential';
+  const s = await setup({
+    onRequest: (value, sock) => {
+      if (value.tag === 'subscribeServerConfig') {
+        sock.emit({
+          _tag: 'Chunk',
+          requestId: value.id,
+          values: [{
+            version: 1,
+            type: 'snapshot',
+            config: {
+              environment: { environmentId: 'env', capabilities: { peerLinks: true } },
+              settings: { linkedEnvironmentsEnabled: true },
+              providers: []
+            }
+          }]
+        });
+        return 'handled';
+      }
+      if (value.tag === 'peerLinks.pairClient') {
+        if (mode === 'credential') {
+          sock.emit({
+            _tag: 'Exit',
+            requestId: value.id,
+            exit: {
+              _tag: 'Success',
+              value: {
+                type: 'credential',
+                environmentId: 'env-b',
+                label: 'Machine B',
+                urls: ['http://192.168.10.75:14882'],
+                credential: 'PAIR-B-123',
+                expiresAt: '2026-11-23T12:00:00Z'
+              }
+            }
+          });
+        } else if (mode === 'unsupported') {
+          sock.emit({
+            _tag: 'Exit',
+            requestId: value.id,
+            exit: {
+              _tag: 'Success',
+              value: {
+                type: 'unsupported',
+                environmentId: 'env-b',
+                label: 'Machine B',
+                urls: ['http://192.168.10.75:14882'],
+                reason: 'link_access'
+              }
+            }
+          });
+        } else {
+          sock.emit({
+            _tag: 'Exit',
+            requestId: value.id,
+            exit: {
+              _tag: 'Failure',
+              cause: { _id: 'Cause', reasons: [{ _tag: 'Fail', error: { _tag: 'EnvironmentAuthorizationError', message: 'denied' } }] }
+            }
+          });
+        }
+        return 'handled';
+      }
+      return undefined;
+    }
+  });
+  try {
+    await s.client.connect('https://test', 'CODE');
+    const cred = await s.client.requestPeerClientPairing('env-b');
+    assert.equal(cred.type, 'credential');
+    assert.equal(cred.credential, 'PAIR-B-123');
+    mode = 'unsupported';
+    const unsup = await s.client.requestPeerClientPairing('env-b');
+    assert.equal(unsup.type, 'unsupported');
+    assert.equal(unsup.reason, 'link_access');
+    mode = 'refused';
+    assert.equal(await s.client.requestPeerClientPairing('env-b'), undefined);
+  } finally {
+    s.client.disconnect();
+  }
+});
