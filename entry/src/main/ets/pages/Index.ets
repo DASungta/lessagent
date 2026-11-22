@@ -3799,7 +3799,7 @@ struct Index {
                 .copyOption(CopyOptions.InApp)
             }
           }.alignItems(HorizontalAlign.Start)
-            .constraintSize({ maxWidth: '84%' })
+            .constraintSize({ maxWidth: '84%' }).clip(true)
             .padding({ left: 14, right: 14, top: 10, bottom: 10 })
             .backgroundColor($r('app.color.bubble'))
             .borderRadius({ topLeft: Radius.bubble, topRight: Radius.bubble, bottomLeft: Radius.bubble, bottomRight: 6 })

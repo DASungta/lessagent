@@ -105,6 +105,10 @@
       "value": "#efeff1"
     },
     {
+      "name": "bubble_transparent",
+      "value": "#00efeff1"
+    },
+    {
       "name": "bubble_ink",
       "value": "#27272a"
     },
