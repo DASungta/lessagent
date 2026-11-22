@@ -2286,3 +2286,53 @@ test('C5: resumeLatestRun dispatches fallback continuation text for compatibilit
     s.client.disconnect();
   }
 });
+
+test('U1: T3Client tracks attempts and blocks resumeLatestRun when provider lacks native resume on delivered turn', async () => {
+  const s = await setup({
+    onSubscribeThread: (frame, sock) => {
+      sock.emit({
+        _tag: 'Chunk',
+        requestId: frame.id,
+        values: [{
+          kind: 'snapshot',
+          snapshotSequence: 10,
+          projection: {
+            thread: { id: frame.payload.threadId },
+            messages: [],
+            runs: [{ id: 'run-stop', status: 'interrupted', ordinal: 1, startedAt: '2026-01-01T00:00:00Z', completedAt: '2026-01-01T00:01:00Z', providerThreadId: 'pt-1', providerInstanceId: 'pi-1' }],
+            attempts: [{ id: 'att-1', runId: 'run-stop', attemptOrdinal: 1, reason: 'initial' }],
+            providerTurns: [{ id: 'turn-1', runAttemptId: 'att-1' }],
+            providerThreads: [{ id: 'pt-1', providerSessionId: 'ps-1' }],
+            providerSessions: [{ id: 'ps-1', providerInstanceId: 'pi-1', capabilities: { turns: { supportsNativeResume: false } } }]
+          }
+        }]
+      });
+    }
+  });
+  try {
+    await s.client.connect('https://test', 'synthetic');
+    await new Promise(setImmediate);
+    await s.client.watch('t-u1');
+    await new Promise(setImmediate);
+    assert.equal(s.client.thread.attempts.length, 1);
+    assert.equal(s.client.resumableRunId(), '');
+    await assert.rejects(() => s.client.resumeLatestRun(), /不支持恢复/);
+
+    // Receiving a run-attempt.created event for a later steering_restart makes it resumable again.
+    s.client.thread.apply({
+      kind: 'event',
+      sequence: 11,
+      event: {
+        threadId: 't-u1',
+        type: 'run-attempt.created',
+        payload: { id: 'att-2', runId: 'run-stop', attemptOrdinal: 2, reason: 'steering_restart' }
+      }
+    });
+    assert.equal(s.client.resumableRunId(), 'run-stop');
+    await s.client.resumeLatestRun();
+    const dispatch = s.frames.filter((f) => f.tag === 'orchestration.dispatchCommand').at(-1);
+    assert.equal(dispatch.payload.manualContinuationOfRunId, 'run-stop');
+  } finally {
+    s.client.disconnect();
+  }
+});

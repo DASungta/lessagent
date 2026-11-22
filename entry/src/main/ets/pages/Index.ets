@@ -86,7 +86,7 @@ import { takeCloudCallback } from '../services/CloudCallbackInbox';
 import { CloudDevice, CloudPairingLink, deviceApprovalPrompts } from '../protocol/Cloud';
 import {
   ArchiveEnvironmentEntry, ArchiveProjectGroup, ProjectGroup, ProjectView, ScopedProject, ScopedThread, ThreadCapabilities,
-  ThreadProjectRef, ThreadShelfState, ThreadView, buildArchiveGroups, buildProjectGroups, buildThreadShelves,
+  ThreadProjectRef, ThreadShelfState, ThreadView, attachPendingSubagentRequests, buildArchiveGroups, buildProjectGroups, buildThreadShelves,
   newTaskDestination, pickableProjectGroups, projectGroupRefs, samePath, scopedProjectView, scopedThreadView,
   sortProjectGroups, topOfPinnedRun
 } from '../protocol/Projects';
@@ -216,6 +216,7 @@ struct Index {
   @State environmentStatuses: Record<string, string> = {};
   @State environmentReady: Record<string, boolean> = {};
   @State loaded: boolean = false;
+  @State canResumeLatestRun: boolean = false;
   private pickers: Map<string, AttachmentPicker> = new Map();
   @State linkItems: LinkRequestView[] = [];
   @State linkMachines: LinkMachine[] = [];
@@ -423,6 +424,7 @@ struct Index {
       this.attachmentName = client.attachment?.name || '';
       this.unknown = !!client.recovery?.pendingId;
       this.canOperateChat = !this.draftMode && client.ready && !this.unknown && client.canScope('orchestration:operate') !== false;
+      this.canResumeLatestRun = !this.draftMode && !!client.thread && client.resumableRunId().length > 0;
       this.projects = client.shell.projects.slice();
       this.threads = client.shell.threads.slice();
       this.models = client.models.slice();
@@ -753,7 +755,7 @@ struct Index {
     this.anyEnvironmentLiveSynced = anyLiveSynced;
     this.reconnectingCount = reconnecting;
     this.offlineCount = offline;
-    this.scopedThreads = threads; this.scopedProjects = projects;
+    this.scopedThreads = attachPendingSubagentRequests(threads); this.scopedProjects = projects;
     this.threadCapabilities = capabilities;
     this.projectGroups = buildProjectGroups(projects, workspacePrefs.projectGroupingMode);
     this.syncProjectFilter();
@@ -3615,16 +3617,18 @@ struct Index {
                 label: '会话状态、计划与子 Agent',
                 onTap: () => this.openThreadExtras()
               })
-              FormRow({
-                label: '恢复最近的运行',
-                chevron: false,
-                disabled: !(this.ready && !this.busy && !this.unknown && !this.draftMode),
-                onTap: () => {
-                  this.busy = true;
-                  void client.resumeLatestRun().catch((error: Error) => { this.status = error.message; })
-                    .finally(() => { this.busy = false; });
-                }
-              })
+              if (this.canResumeLatestRun) {
+                FormRow({
+                  label: '恢复最近的运行',
+                  chevron: false,
+                  disabled: !(this.ready && !this.busy && !this.unknown && !this.draftMode),
+                  onTap: () => {
+                    this.busy = true;
+                    void client.resumeLatestRun().catch((error: Error) => { this.status = error.message; })
+                      .finally(() => { this.busy = false; });
+                  }
+                })
+              }
               FormRow({
                 label: '停止任务',
                 destructive: true,

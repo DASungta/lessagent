@@ -4,7 +4,8 @@ import { BranchView, branches, branchListInput, ComposerContextRecord, ComposerD
   DraftAttachment, DraftWorkspace, draftSettings, emptyWorkspace, forceStopCommand, forkThreadCommand,
   guestShare, GuestShareView, launchWorkspace, promoteCommand, refreshStatusInput, switchBranchInput,
   SubagentView, subagents, BackgroundTaskView, tokenUsage, TokenUsage, attachmentLimitError,
-  uploadAttachmentTarget, attachmentRecord, latestExecutedRun, manualContinuationText } from '../protocol/R4';
+  uploadAttachmentTarget, attachmentRecord, latestExecutedRun, manualContinuationText,
+  deriveResumableRunId } from '../protocol/R4';
 import {
   derivePendingBackgroundWork,
   deriveThreadTurnSubagents,
@@ -2881,6 +2882,18 @@ export class T3Client {
       threadId: this.thread.threadId, runId };
     await this.mutate('orchestration.dispatchCommand', command, id, 'response');
   }
+  resumableRunId(): string {
+    if (!this.thread) return '';
+    const errorClass = typeof this.thread.details.lastErrorClass === 'string' ? this.thread.details.lastErrorClass : '';
+    return deriveResumableRunId({
+      runs: this.thread.runs,
+      attempts: this.thread.attempts,
+      providerTurns: this.thread.providerTurns,
+      providerThreads: this.thread.providerThreads,
+      providerSessions: this.thread.providerSessions,
+      items: this.thread.items
+    }, errorClass);
+  }
   async resumeLatestRun(): Promise<void> {
     if (!this.thread) throw new Error('请先选择会话');
     const runs = this.thread.runs;
@@ -2891,8 +2904,9 @@ export class T3Client {
     if (status !== 'interrupted' && !(status === 'failed' && errorClass === 'usage_limit')) {
       throw new Error('最近一次运行无需恢复');
     }
+    const runId = this.resumableRunId();
+    if (!runId) throw new Error('当前 Provider 不支持恢复已停止的运行');
     const threadId = this.thread.threadId;
-    const runId = text(latest.id);
     const id = util.generateRandomUUID();
     const mode: MessageDispatchMode = { type: 'start_immediately' };
     const command: ResumeMessageCommand = { type: 'message.dispatch', commandId: id, createdBy: 'user',

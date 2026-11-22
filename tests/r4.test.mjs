@@ -99,3 +99,39 @@ test('C5: empty manual continuation sends fallback text while explicit text, att
  assert.equal(r4.manualContinuationText('',true,'run-1'),'');
  assert.equal(r4.manualContinuationText('',false,''),'');
 });
+
+test('U1: deriveResumableRunId hides resume only when provider lacks native resume and message was delivered',()=>{
+ const makeProjection=(nativeResume,delivered,extra={})=>({
+  runs:[{id:'stopped',status:'interrupted',ordinal:1,startedAt:'2026-01-01T00:00:00Z',completedAt:'2026-01-01T00:01:00Z',providerThreadId:'pt-1',providerInstanceId:'pi-1'}],
+  attempts:[{id:'att-1',runId:'stopped',attemptOrdinal:1,reason:'initial'}],
+  providerTurns:delivered?[{runAttemptId:'att-1'}]:[],
+  providerThreads:[{id:'pt-1',providerSessionId:'ps-1'}],
+  providerSessions:[{id:'ps-1',providerInstanceId:'pi-1',capabilities:{turns:nativeResume===undefined?{}:{supportsNativeResume:nativeResume}}}],
+  items:[],
+  ...extra
+ });
+ // 1. provider without native resume + delivered -> hidden ('')
+ assert.equal(r4.deriveResumableRunId(makeProjection(false,true)),'');
+ // 2. provider without native resume + undelivered -> resumable
+ assert.equal(r4.deriveResumableRunId(makeProjection(false,false)),'stopped');
+ // 3. provider without native resume + steering_restart after accepted attempt -> resumable
+ assert.equal(r4.deriveResumableRunId(makeProjection(false,true,{
+  attempts:[
+   {id:'att-1',runId:'stopped',attemptOrdinal:1,reason:'initial'},
+   {id:'att-2',runId:'stopped',attemptOrdinal:2,reason:'steering_restart'}
+  ]
+ })),'stopped');
+ // 4. provider with native resume -> resumable
+ assert.equal(r4.deriveResumableRunId(makeProjection(true,true)),'stopped');
+ // 5. older server without supportsNativeResume capability -> resumable
+ assert.equal(r4.deriveResumableRunId(makeProjection(undefined,true)),'stopped');
+ // 6. failed usage_limit respects supportsNativeResume: false + delivered
+ const usageFailed={
+  ...makeProjection(false,true),
+  runs:[{id:'u-fail',status:'failed',ordinal:1,startedAt:'2026-01-01T00:00:00Z',completedAt:'2026-01-01T00:01:00Z',providerThreadId:'pt-1',providerInstanceId:'pi-1'}],
+  attempts:[{id:'att-1',runId:'u-fail',attemptOrdinal:1,reason:'initial'}],
+  items:[{id:'err-1',type:'error',runId:'u-fail',ordinal:1,failure:{class:'usage_limit'}}]
+ };
+ assert.equal(r4.deriveResumableRunId(usageFailed,'usage_limit'),'');
+ assert.equal(r4.deriveResumableRunId({...usageFailed,providerSessions:[{id:'ps-1',capabilities:{turns:{supportsNativeResume:true}}}]},'usage_limit'),'u-fail');
+});

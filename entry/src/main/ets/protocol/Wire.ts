@@ -366,6 +366,7 @@ export class ThreadState {
   checkpoints: Record<string, Object>[] = [];
   details: Record<string, Object> = {};
   runs: Record<string, Object>[] = [];
+  attempts: Record<string, Object>[] = [];
   messageRecords: Record<string, Object>[] = [];
   plans: Record<string, Object>[] = [];
   subagents: Record<string, Object>[] = [];
@@ -397,6 +398,7 @@ export class ThreadState {
       if (text(record(projection.thread).id) !== this.threadId) throw new Error('会话身份不一致');
       this.details = record(projection.thread);
       this.runs = projection.runs ? compactObjects(projection.runs) : [];
+      this.attempts = projection.attempts ? compactObjects(projection.attempts) : [];
       this.messageRecords = compactObjects(projection.messages);
       this.plans = projection.plans ? compactObjects(projection.plans) : [];
       this.subagents = projection.subagents ? compactObjects(projection.subagents) : [];
@@ -467,6 +469,7 @@ export class ThreadState {
         (typeof run.status === 'string' ? run.status : '');
       if (runStatus) this.notices = '任务状态：' + runStatus;
     }
+    else if (type === 'run-attempt.created' || type === 'run-attempt.updated') this.merge(this.attempts, record(event.payload));
     else if (type === 'plan.updated') this.merge(this.plans, record(event.payload));
     else if (type === 'subagent.updated') {
       const payload = record(event.payload);

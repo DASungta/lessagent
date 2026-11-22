@@ -412,3 +412,133 @@ export function latestExecutedRun(runs: Record<string, Object>[]): Record<string
   return latest;
 }
 
+export interface ResumableRunProjection {
+  runs: Record<string, Object>[];
+  attempts: Record<string, Object>[];
+  providerTurns: Record<string, Object>[];
+  providerThreads: Record<string, Object>[];
+  providerSessions: Record<string, Object>[];
+  items?: Record<string, Object>[];
+}
+
+export function unsentManualContinuationSource(
+  manualContinuationOfRunId: string,
+  projection: ResumableRunProjection
+): Record<string, Object> | undefined {
+  let sourceId = manualContinuationOfRunId;
+  if (!sourceId) return undefined;
+  const runsById: Map<string, Record<string, Object>> = new Map();
+  for (const source of projection.runs) {
+    if (typeof source.id === 'string' && source.id) runsById.set(source.id, source);
+  }
+  const acceptedAttempts: Set<string> = new Set();
+  for (const turn of projection.providerTurns) {
+    if (typeof turn.runAttemptId === 'string' && turn.runAttemptId) {
+      acceptedAttempts.add(turn.runAttemptId);
+    }
+  }
+  const latestAttempt = (runId: string, matches: (attempt: Record<string, Object>) => boolean): number => {
+    let best = 0;
+    for (const attempt of projection.attempts) {
+      if (attempt.runId !== runId || !matches(attempt)) continue;
+      const ordinal = typeof attempt.attemptOrdinal === 'number' ? attempt.attemptOrdinal : 0;
+      if (ordinal > best) best = ordinal;
+    }
+    return best;
+  };
+  const visited: Set<string> = new Set();
+  while (sourceId && !visited.has(sourceId)) {
+    visited.add(sourceId);
+    const source = runsById.get(sourceId);
+    if (!source) return undefined;
+    const accepted = latestAttempt(sourceId, (attempt: Record<string, Object>) =>
+      typeof attempt.id === 'string' && acceptedAttempts.has(attempt.id));
+    // An accepted attempt delivered everything before it; only a later steering restart's message is unsent.
+    const restarted = latestAttempt(sourceId, (attempt: Record<string, Object>) =>
+      attempt.reason === 'steering_restart');
+    if (restarted > accepted) return source;
+    if (accepted > 0) return undefined;
+    const parentId = typeof source.manualContinuationOfRunId === 'string' ? source.manualContinuationOfRunId : '';
+    if (!parentId) return source;
+    sourceId = parentId;
+  }
+  return undefined;
+}
+
+function runProviderSession(
+  projection: ResumableRunProjection,
+  run: Record<string, Object>
+): Record<string, Object> | undefined {
+  const providerThreadId = typeof run.providerThreadId === 'string' ? run.providerThreadId : '';
+  let sessionId = '';
+  if (providerThreadId) {
+    for (const thread of projection.providerThreads) {
+      if (thread.id === providerThreadId && typeof thread.providerSessionId === 'string') {
+        sessionId = thread.providerSessionId;
+        break;
+      }
+    }
+  }
+  if (sessionId) {
+    for (const session of projection.providerSessions) {
+      if (session.id === sessionId) return session;
+    }
+    return undefined;
+  }
+  const instanceId = typeof run.providerInstanceId === 'string' ? run.providerInstanceId : '';
+  if (!instanceId) return undefined;
+  for (let i = projection.providerSessions.length - 1; i >= 0; i -= 1) {
+    if (projection.providerSessions[i].providerInstanceId === instanceId) {
+      return projection.providerSessions[i];
+    }
+  }
+  return undefined;
+}
+
+function sessionSupportsNativeResume(session: Record<string, Object> | undefined): boolean | undefined {
+  if (!session) return undefined;
+  const caps = session.capabilities;
+  if (caps === undefined || caps === null || typeof caps !== 'object' || Array.isArray(caps)) return undefined;
+  const turns = (caps as Record<string, Object>).turns;
+  if (turns === undefined || turns === null || typeof turns !== 'object' || Array.isArray(turns)) return undefined;
+  const value = (turns as Record<string, Object>).supportsNativeResume;
+  return typeof value === 'boolean' ? value : undefined;
+}
+
+function latestRootFailureAllowsUsageLimit(run: Record<string, Object>, items: Record<string, Object>[]): boolean {
+  const runId = typeof run.id === 'string' ? run.id : '';
+  if (!runId) return false;
+  let latestClass: string | undefined = undefined;
+  let latestOrdinal = -1;
+  for (const item of items) {
+    if (item.type !== 'error' || item.runId !== runId) continue;
+    if (item.subagentId !== undefined && item.subagentId !== null && item.subagentId !== '') continue;
+    const failure = item.failure;
+    if (failure === undefined || failure === null || typeof failure !== 'object' || Array.isArray(failure)) continue;
+    const failureClass = (failure as Record<string, Object>).class;
+    if (typeof failureClass !== 'string') continue;
+    const ordinal = typeof item.ordinal === 'number' ? item.ordinal : latestOrdinal + 1;
+    if (ordinal >= latestOrdinal) {
+      latestOrdinal = ordinal;
+      latestClass = failureClass;
+    }
+  }
+  return latestClass === undefined ? true : latestClass === 'usage_limit';
+}
+
+export function deriveResumableRunId(projection: ResumableRunProjection, lastErrorClass: string = ''): string {
+  const run = latestExecutedRun(projection.runs);
+  if (!run || typeof run.id !== 'string' || !run.id) return '';
+  const status = typeof run.status === 'string' ? run.status : '';
+  const resumable = status === 'interrupted' ||
+    (status === 'failed' && lastErrorClass === 'usage_limit' &&
+      latestRootFailureAllowsUsageLimit(run, projection.items || []));
+  if (!resumable) return '';
+  // Without native resume the server can only resend a message the provider never received.
+  if (sessionSupportsNativeResume(runProviderSession(projection, run)) === false &&
+    unsentManualContinuationSource(run.id, projection) === undefined) {
+    return '';
+  }
+  return run.id;
+}
+
