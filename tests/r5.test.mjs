@@ -241,6 +241,10 @@ test('Git and PR commands validate before sending', () => {
   assert.throws(() => r5.pullRequestListInput('bogus', ''));
   assert.deepEqual(r5.pullRequestListInput('open', 'fix', 'c1'), {
     state: 'open', involvement: 'all', limit: 30, query: 'fix', cursors: { default: 'c1' } });
+  assert.deepEqual(r5.pullRequestListInput('all', '', '', 'p1', { 'gitlab:org/repo': 'tok-1' }), {
+    state: 'all', involvement: 'all', limit: 30, cursors: { 'gitlab:org/repo': 'tok-1' }, projectId: 'p1' });
+  assert.deepEqual(r5.parsePullRequestCursors({ 'gitlab:org/repo': ' tok-1 ', empty: '' }), { 'gitlab:org/repo': 'tok-1' });
+  assert.equal(r5.firstPullRequestCursor({ 'gitlab:org/repo': 'tok-1' }), 'tok-1');
   assert.throws(() => r5.pullRequestRef('', 'repo', 1));
   assert.throws(() => r5.reviewSubmitInput({ projectId: 'p', repository: 'r', number: 1 }, 'nope', ''));
 });
@@ -266,6 +270,56 @@ test('PR list and detail parse provider status and permissions', () => {
   assert.deepEqual(detail.mergeMethods, ['squash']);
   assert.equal(r5.prActionDisabled('merge', detail), '');
   assert.match(r5.prActionDisabled('close', detail), /不允许/);
+});
+
+test('PR project filter choices exclude non-repo/scratch, disambiguate across environments, and sort pinned first', () => {
+  const choices = r5.pullRequestProjectChoices([
+    { localId: 'mac', environmentId: 'env-mac', environmentLabel: 'iMac', id: 'scratch', label: 'No project',
+      workspaceRoot: '/tmp', archivedAt: '', pinnedAt: '', isScratch: true, repository: undefined },
+    { localId: 'mac', environmentId: 'env-mac', environmentLabel: 'iMac', id: 'docs', label: '造价',
+      workspaceRoot: '/docs', archivedAt: '', pinnedAt: '', isScratch: false, repository: undefined },
+    { localId: 'mac', environmentId: 'env-mac', environmentLabel: 'iMac', id: 'p-yx-1', label: 'yxbuddy',
+      workspaceRoot: '/yx', archivedAt: '', pinnedAt: '', isScratch: false,
+      repository: { canonicalKey: 'gitlab.example/base/yxbuddy', displayName: 'base/yxbuddy' } },
+    { localId: 'ca02', environmentId: 'env-ca02', environmentLabel: 'ca02', id: 'p-yx-2', label: 'yxbuddy',
+      workspaceRoot: '/home/yx', archivedAt: '', pinnedAt: '', isScratch: false,
+      repository: { canonicalKey: 'gitlab.example/base/yxbuddy', displayName: 'base/yxbuddy' } },
+    { localId: 'mac', environmentId: 'env-mac', environmentLabel: 'iMac', id: 'p-harm', label: 't3code-harmony',
+      workspaceRoot: '/harm', archivedAt: '', pinnedAt: '2026-11-21T00:00:00Z', isScratch: false,
+      repository: { canonicalKey: 'github.com/dasungta/t3code-harmony', displayName: 'DASungta/t3code-harmony' } }
+  ]);
+  assert.deepEqual(choices.map(c => c.key), ['mac:p-harm', 'ca02:p-yx-2', 'mac:p-yx-1']);
+  assert.equal(choices[0].title, 't3code-harmony');
+  assert.equal(choices[1].title, 'yxbuddy · ca02');
+  assert.equal(choices[2].title, 'yxbuddy · iMac');
+  const onlyMac = r5.pullRequestProjectChoices([
+    { localId: 'mac', environmentId: 'env-mac', environmentLabel: 'iMac', id: 'p-yx-1', label: 'yxbuddy',
+      workspaceRoot: '/yx', archivedAt: '', pinnedAt: '', isScratch: false,
+      repository: { canonicalKey: 'gitlab.example/base/yxbuddy', displayName: 'base/yxbuddy' } },
+    { localId: 'ca02', environmentId: 'env-ca02', environmentLabel: 'ca02', id: 'p-yx-2', label: 'yxbuddy',
+      workspaceRoot: '/home/yx', archivedAt: '', pinnedAt: '', isScratch: false,
+      repository: { canonicalKey: 'gitlab.example/base/yxbuddy', displayName: 'base/yxbuddy' } }
+  ], 'mac');
+  assert.deepEqual(onlyMac.map(c => [c.key, c.title]), [['mac:p-yx-1', 'yxbuddy']]);
+});
+
+test('PR row merge deduplicates same repo across environments preferring active environment and sorts newest first', () => {
+  const make = (localId, number, updatedAt, repo = 'base/yxbuddy') => ({
+    provider: 'gitlab', host: 'gitlab.example', projectId: 'p-' + localId, projectTitle: 'yxbuddy',
+    repository: repo, number, title: 'PR #' + number, url: 'u', author: 'a', headBranch: 'h', baseBranch: 'main',
+    state: 'open', draft: false, additions: 0, deletions: 0, updatedAt, reviewDecision: '', checksState: '',
+    labels: [], stackPosition: 0, stackSize: 0, localId, environmentLabel: localId
+  });
+  const merged = r5.mergePullRequestRows(
+    [],
+    [make('ca02', 39, '2026-11-22T02:00:00Z'), make('mac', 39, '2026-11-22T02:00:00Z'), make('mac', 40, '2026-11-22T03:00:00Z', 'org/harmony')],
+    true,
+    'mac'
+  );
+  assert.equal(merged.length, 2);
+  assert.equal(merged[0].number, 40);
+  assert.equal(merged[1].number, 39);
+  assert.equal(merged[1].localId, 'mac');
 });
 
 test('PR review guide parses stops, attention, stale and running state', () => {

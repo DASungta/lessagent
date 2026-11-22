@@ -32,6 +32,27 @@ export class CloudEnvironmentTransport {
     if (!this.active()) throw new Error('T3 Connect 账号已切换，已中止旧账号连接');
   }
 
+  tokenExpiresAt(): number {
+    return this.token ? this.token.expiresAt : 0;
+  }
+
+  private async cachedToken(): Promise<CloudEnvironmentToken | undefined> {
+    this.assertActive();
+    const thumbprint = await this.signer.thumbprint();
+    const cached = this.token || await this.store.load(this.environmentId);
+    if (cached && cached.accountId === this.accountId && cached.environmentId === this.environmentId &&
+      cached.thumbprint === thumbprint && cached.expiresAt > Date.now() + refreshSkew()) {
+      this.token = cached;
+      return cached;
+    }
+    return undefined;
+  }
+
+  async cachedEndpoint(): Promise<RelayEndpoint | undefined> {
+    const cached = await this.cachedToken();
+    return cached ? cached.endpoint : undefined;
+  }
+
   async endpoint(): Promise<RelayEndpoint> {
     this.assertActive();
     this.bootstrap = await this.relay.connect(this.environmentId, this.deviceId);
@@ -140,8 +161,8 @@ export class CloudEnvironmentTransport {
   }
 
   private async ticket(usePath: string, barePath: string, token: CloudEnvironmentToken,
-    bootstrap: RelayConnect): Promise<string> {
-    const target = bootstrap.endpoint.httpBaseUrl + usePath;
+    endpoint: RelayEndpoint): Promise<string> {
+    const target = endpoint.httpBaseUrl + usePath;
     const proof = await this.signer.prove('POST', target, token.accessToken);
     try {
       const headers: Record<string, string> = {
@@ -155,7 +176,7 @@ export class CloudEnvironmentTransport {
         throw error instanceof CloudHttpFailure ?
           new Error('T3 Connect 环境未签发 WebSocket 票据') : error as Error;
       }
-      const fallback = bootstrap.endpoint.httpBaseUrl + barePath;
+      const fallback = endpoint.httpBaseUrl + barePath;
       const fallbackProof = await this.signer.prove('POST', fallback, token.accessToken);
       const headers: Record<string, string> = {
         'Authorization': 'DPoP ' + token.accessToken,
@@ -168,20 +189,49 @@ export class CloudEnvironmentTransport {
 
   async socketUrl(): Promise<string> {
     this.assertActive();
-    const bootstrap = await this.ensureBootstrap();
-    let token = await this.accessToken();
-    if (token.endpoint.httpBaseUrl !== bootstrap.endpoint.httpBaseUrl ||
-      token.endpoint.wsBaseUrl !== bootstrap.endpoint.wsBaseUrl) token = await this.accessToken(true);
-    const ticket = await this.ticket('/api/auth/websocket-ticket/rpc',
-      '/api/auth/websocket-ticket', token, bootstrap);
+    let usedCachedWithoutBootstrap = false;
+    let endpoint: RelayEndpoint;
+    let token: CloudEnvironmentToken;
+    if (this.bootstrap && this.bootstrap.expiresAt > Date.now() + refreshSkew()) {
+      endpoint = this.bootstrap.endpoint;
+      token = await this.accessToken();
+      if (token.endpoint.httpBaseUrl !== endpoint.httpBaseUrl ||
+        token.endpoint.wsBaseUrl !== endpoint.wsBaseUrl) token = await this.accessToken(true);
+    } else {
+      const cached = await this.cachedToken();
+      if (cached) {
+        token = cached;
+        endpoint = cached.endpoint;
+        usedCachedWithoutBootstrap = true;
+      } else {
+        const bootstrap = await this.ensureBootstrap();
+        endpoint = bootstrap.endpoint;
+        token = await this.accessToken();
+        if (token.endpoint.httpBaseUrl !== endpoint.httpBaseUrl ||
+          token.endpoint.wsBaseUrl !== endpoint.wsBaseUrl) token = await this.accessToken(true);
+      }
+    }
+    let ticket: string;
+    try {
+      ticket = await this.ticket('/api/auth/websocket-ticket/rpc',
+        '/api/auth/websocket-ticket', token, endpoint);
+    } catch (error) {
+      if (!usedCachedWithoutBootstrap) throw error as Error;
+      this.token = undefined;
+      this.bootstrap = undefined;
+      token = await this.accessToken(true);
+      endpoint = token.endpoint;
+      ticket = await this.ticket('/api/auth/websocket-ticket/rpc',
+        '/api/auth/websocket-ticket', token, endpoint);
+    }
     if (!ticket || ticket.length > 8192) throw new Error('T3 Connect WebSocket 票据无效');
-    const socket = new url.URL(bootstrap.endpoint.wsBaseUrl);
+    const socket = new url.URL(endpoint.wsBaseUrl);
     if (socket.pathname === '' || socket.pathname === '/') socket.pathname = '/ws';
     const proof = await this.signer.prove('GET',
       (socket.protocol === 'wss:' ? 'https:' : 'http:') + '//' + socket.host + socket.pathname, ticket);
     return socket.toString() + '?orchestrationProtocol=2&wsTicket=' + encodeURIComponent(ticket) +
       '&dpop=' + encodeURIComponent(proof) + '&clientSurface=mobile&clientOs=HarmonyOS' +
-      '&clientDeviceType=phone&connectionMethod=relay';
+      '&clientDeviceType=phone&connectionMethod=relay&frameParts=1';
   }
 
   async renew(): Promise<number> {

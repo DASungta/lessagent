@@ -1,8 +1,33 @@
 import { ChatMessage, record, text, objects } from './Wire';
 
-export interface ActivityLine { label: string; text: string; kind: string; itemId: string; }
+export interface ActivityLine { label: string; text: string; kind: string; itemId: string; status?: string; }
 
 function optional(value: Object | undefined): string { return typeof value === 'string' ? value : ''; }
+
+export function isActiveItemStatus(status: string): boolean {
+  const normalized = status.trim().toLowerCase();
+  return normalized === 'inprogress' || normalized === 'running' ||
+    normalized === 'pending' || normalized === 'waiting';
+}
+
+export function isActiveRunStatus(status: string): boolean {
+  const normalized = status.trim().toLowerCase();
+  return normalized === 'preparing' || normalized === 'starting' ||
+    normalized === 'running' || normalized === 'waiting';
+}
+
+export function isSettledRunStatus(status: string): boolean {
+  const normalized = status.trim().toLowerCase();
+  return normalized === 'completed' || normalized === 'failed' ||
+    normalized === 'interrupted' || normalized === 'cancelled' ||
+    normalized === 'rolled_back';
+}
+
+export function isActivityInProgress(line: ActivityLine): boolean {
+  const raw = (line.status || '').trim();
+  if (raw) return isActiveItemStatus(raw);
+  return /\b(inProgress|running|pending|waiting)\b/i.test(line.label);
+}
 
 export function activityLines(items: Record<string, Object>[]): ActivityLine[] {
   return items.filter((item: Record<string, Object>) =>
@@ -13,23 +38,23 @@ export function activityLines(items: Record<string, Object>[]): ActivityLine[] {
     const status = optional(item.status);
     if (type === 'command_execution') {
       const exit = typeof item.exitCode === 'number' ? ' · exit ' + item.exitCode : '';
-      return { itemId: id, kind: type, label: '命令 · ' + status + exit,
+      return { itemId: id, kind: type, status, label: '命令 · ' + status + exit,
         text: optional(item.input) + (optional(item.output) ? '\n' + optional(item.output) :
           item.outputOmitted === true ? '\n输出未随快照提供，展开后读取完整输出' : '') };
     }
     if (type === 'file_change') {
-      return { itemId: id, kind: type, label: optional(item.fileName) + ' · +' +
+      return { itemId: id, kind: type, status, label: optional(item.fileName) + ' · +' +
         String(typeof item.additions === 'number' ? item.additions : 0) + ' −' +
         String(typeof item.deletions === 'number' ? item.deletions : 0),
         text: optional(item.diffStr) || (optional(item.oldStr) + '\n→\n' + optional(item.newStr)) };
     }
     if (type === 'file_search') {
-      return { itemId: id, kind: type, label: '文件搜索 · ' + status,
+      return { itemId: id, kind: type, status, label: '文件搜索 · ' + status,
         text: optional(item.pattern) + '\n' + objects(item.results || []).map((value: Object) =>
           text(record(value).fileName)).join('\n') };
     }
     if (type === 'web_search') {
-      return { itemId: id, kind: type, label: '网络搜索 · ' + status,
+      return { itemId: id, kind: type, status, label: '网络搜索 · ' + status,
         text: objects(item.patterns || []).map((value: Object) => text(value)).join(', ') + '\n' +
           objects(item.results || []).map((value: Object) => {
             const row = record(value);
@@ -37,38 +62,44 @@ export function activityLines(items: Record<string, Object>[]): ActivityLine[] {
           }).join('\n') };
     }
     if (type === 'todo_list') {
-      return { itemId: id, kind: type, label: '计划步骤 · ' + status,
+      return { itemId: id, kind: type, status, label: '计划步骤 · ' + status,
         text: objects(item.steps || []).map((value: Object) => {
           const step = record(value);
           return '[' + optional(step.status) + '] ' + optional(step.text);
         }).join('\n') };
     }
-    if (type === 'system_notice') return { itemId: id, kind: type, label: '系统提示', text: optional(item.message) };
+    if (type === 'system_notice') return { itemId: id, kind: type, status, label: '系统提示', text: optional(item.message) };
     if (type === 'error') {
       const failure = item.failure !== undefined ? record(item.failure) : {};
-      return { itemId: id, kind: type, label: '错误 · ' + optional(failure.class),
+      return { itemId: id, kind: type, status, label: '错误 · ' + optional(failure.class),
         text: optional(failure.message) + (typeof failure.code === 'string' ? '\n' + failure.code : '') };
     }
     if (type === 'run_interrupt_request' || type === 'run_interrupt_result') {
-      return { itemId: id, kind: type, label: '停止运行', text: optional(item.message) };
+      return { itemId: id, kind: type, status, label: '停止运行', text: optional(item.message) };
     }
     if (type === 'reasoning') {
-      return { itemId: id, kind: type, label: '思考过程' + (status ? ' · ' + status : ''),
+      return { itemId: id, kind: type, status, label: '思考过程' + (status ? ' · ' + status : ''),
         text: typeof item.text === 'string' ? item.text :
           typeof item.summary === 'string' ? item.summary : '' };
     }
     if (type === 'compaction') {
-      return { itemId: id, kind: type, label: '压缩上下文',
+      return { itemId: id, kind: type, status, label: '压缩上下文',
         text: optional(item.summary) + (typeof item.afterTokenCount === 'number' ? '\n' + String(item.afterTokenCount) + ' tokens' : '') };
     }
-    if (type === 'handoff') return { itemId: id, kind: type, label: '上下文交接', text: optional(item.summary) };
+    if (type === 'handoff') return { itemId: id, kind: type, status, label: '上下文交接', text: optional(item.summary) };
     if (type === 'checkpoint') {
-      return { itemId: id, kind: type, label: '检查点',
+      return { itemId: id, kind: type, status, label: '检查点',
         text: objects(item.files || []).map((value: Object) => optional(record(value).path)).join('\n') };
     }
-    if (type === 'notification') return { itemId: id, kind: type, label: '通知', text: optional(item.summary) || optional(item.text) };
+    if (type === 'notification') return { itemId: id, kind: type, status, label: '通知', text: optional(item.summary) || optional(item.text) };
+    if (type === 'dynamic_tool') {
+      const toolTitle = optional(item.title).trim() || optional(item.toolName).trim();
+      return { itemId: id, kind: type, status,
+        label: type + (toolTitle ? ' · ' + toolTitle : '') + (status ? ' · ' + status : ''),
+        text: optional(item.input) + (optional(item.output) ? '\n' + optional(item.output) : '') };
+    }
     const title = optional(item.title);
-    return { itemId: id, kind: type, label: type + (title ? ' · ' + title : '') + (status ? ' · ' + status : ''),
+    return { itemId: id, kind: type, status, label: type + (title ? ' · ' + title : '') + (status ? ' · ' + status : ''),
       text: optional(item.input) + (optional(item.output) ? '\n' + optional(item.output) : '') };
   });
 }
@@ -97,10 +128,19 @@ function firstLine(value: string): string {
   return '';
 }
 
-function statusBadge(label: string, inProgressText: string): { badge: string; tone: 'success' | 'danger' | 'neutral' } {
+function statusBadge(label: string, inProgressText: string, explicitStatus?: string): { badge: string; tone: 'success' | 'danger' | 'neutral' } {
+  const raw = (explicitStatus || '').trim();
+  if (raw) {
+    if (/^completed$/i.test(raw)) return { badge: '完成', tone: 'success' };
+    if (isActiveItemStatus(raw)) return { badge: inProgressText, tone: 'neutral' };
+    if (/^failed$/i.test(raw)) return { badge: '失败', tone: 'danger' };
+    if (/^(cancelled|interrupted)$/i.test(raw)) return { badge: '已停止', tone: 'neutral' };
+    return { badge: '', tone: 'neutral' };
+  }
   if (/\bcompleted\b/i.test(label)) return { badge: '完成', tone: 'success' };
-  if (/\binProgress\b/i.test(label)) return { badge: inProgressText, tone: 'neutral' };
+  if (/\b(inProgress|running|pending|waiting)\b/i.test(label)) return { badge: inProgressText, tone: 'neutral' };
   if (/\bfailed\b/i.test(label)) return { badge: '失败', tone: 'danger' };
+  if (/\b(cancelled|interrupted)\b/i.test(label)) return { badge: '已停止', tone: 'neutral' };
   return { badge: '', tone: 'neutral' };
 }
 
@@ -112,24 +152,34 @@ export function activitySummary(line: ActivityLine): ActivitySummary {
       const code = exitMatch[1];
       return { icon: 'cmd', title, badge: 'exit ' + code, badgeTone: code === '0' ? 'success' : 'danger', additions: '', deletions: '' };
     }
-    const status = statusBadge(line.label, '运行中');
+    const status = statusBadge(line.label, '运行中', line.status);
     return { icon: 'cmd', title, badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
   }
   if (line.kind === 'file_change') {
+    const activeBadge = isActiveItemStatus(line.status || '') ? '进行中' : '';
     const match = /^(.*?)\s*·\s*(\+\d+)\s*([−-]\d+)$/.exec(line.label);
     if (match) {
-      return { icon: 'file', title: match[1].trim() || '文件变更', badge: '', badgeTone: 'neutral', additions: match[2], deletions: match[3] };
+      return { icon: 'file', title: match[1].trim() || '文件变更', badge: activeBadge, badgeTone: 'neutral', additions: match[2], deletions: match[3] };
     }
-    return { icon: 'file', title: line.label || '文件变更', badge: '', badgeTone: 'neutral', additions: '', deletions: '' };
+    return { icon: 'file', title: line.label || '文件变更', badge: activeBadge, badgeTone: 'neutral', additions: '', deletions: '' };
   }
   if (line.kind === 'file_search') {
     const pattern = firstLine(line.text);
-    const status = statusBadge(line.label, '进行中');
+    const status = statusBadge(line.label, '进行中', line.status);
     return { icon: 'file', title: pattern ? '搜索 ' + pattern : '文件搜索', badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
   }
+  if (line.kind === 'web_search') {
+    const pattern = firstLine(line.text);
+    const status = statusBadge(line.label, '进行中', line.status);
+    return { icon: 'info', title: pattern ? '搜索 ' + pattern : '网络搜索', badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
+  }
   if (line.kind === 'reasoning') {
-    const status = statusBadge(line.label, '思考中');
+    const status = statusBadge(line.label, '思考中', line.status);
     return { icon: 'info', title: '思考过程', badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
+  }
+  if (line.kind === 'compaction') {
+    const status = statusBadge(line.label, '进行中', line.status);
+    return { icon: 'info', title: '压缩上下文', badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
   }
   if (line.kind === 'checkpoint') {
     return { icon: 'info', title: '检查点', badge: '', badgeTone: 'neutral', additions: '', deletions: '' };
@@ -138,9 +188,9 @@ export function activitySummary(line: ActivityLine): ActivitySummary {
     return { icon: 'info', title: line.label || '错误', badge: '失败', badgeTone: 'danger', additions: '', deletions: '' };
   }
   if (line.kind === 'dynamic_tool') {
-    const status = statusBadge(line.label, '进行中');
-    let title = line.label.replace(/^dynamic_tool\s*·\s*/, '')
-      .replace(/\s*·\s*(completed|failed|inProgress|running)\s*$/i, '').trim();
+    const status = statusBadge(line.label, '进行中', line.status);
+    let title = line.label.replace(/^dynamic_tool(?:\s*·\s*)?/, '')
+      .replace(/(?:^|\s*·\s*)(completed|failed|inProgress|running|pending|waiting|cancelled|interrupted|idle)\s*$/i, '').trim();
     if (title.startsWith('Read ')) {
       const rawPath = title.slice(5).trim().replace(/\\/g, '/');
       const slash = rawPath.lastIndexOf('/');
@@ -152,7 +202,10 @@ export function activitySummary(line: ActivityLine): ActivitySummary {
     }
     return { icon: 'info', title: title || '工具调用', badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
   }
-  return { icon: 'info', title: line.label || line.kind, badge: '', badgeTone: 'neutral', additions: '', deletions: '' };
+  const fallbackStatus = statusBadge(line.label, '进行中', line.status);
+  const fallbackBadge = fallbackStatus.badge === '进行中' || fallbackStatus.tone === 'danger' ? fallbackStatus.badge : '';
+  const fallbackTone = fallbackBadge ? fallbackStatus.tone : 'neutral';
+  return { icon: 'info', title: line.label || line.kind, badge: fallbackBadge, badgeTone: fallbackTone, additions: '', deletions: '' };
 }
 
 export function isPlainUserText(value: string): boolean {
@@ -258,7 +311,7 @@ export function isHiddenWorkItem(item: Record<string, Object>): boolean {
   const status = optional(item.status);
   if (type === 'command_execution' && optional(item.input).trim() === 'Preparing workspace') {
     if (item.deferredWork === true) return false;
-    if (status === 'failed' || status === 'inProgress') return false;
+    if (status === 'failed' || isActiveItemStatus(status)) return false;
     if (typeof item.exitCode === 'number' && item.exitCode !== 0) return false;
     return true;
   }
@@ -395,14 +448,24 @@ export function formatWorkDuration(ms: number): string {
   return mins > 0 ? hours + ' 小时 ' + mins + ' 分' : hours + ' 小时';
 }
 
-export function buildRunMeta(run: Record<string, Object> | undefined, stepCount: number): RunMeta | undefined {
+export interface RunMetaOptions {
+  groupRunning?: boolean;
+  groupInterrupted?: boolean;
+  includeRunDuration?: boolean;
+}
+
+export function buildRunMeta(
+  run: Record<string, Object> | undefined,
+  stepCount: number,
+  options?: RunMetaOptions
+): RunMeta | undefined {
   if (!run) return undefined;
   const runId = text(run.id);
   const status = optional(run.status);
   const startIso = optional(run.startedAt) || optional(run.requestedAt);
   const endIso = optional(run.completedAt);
   let durationMs = 0;
-  if (startIso && endIso) {
+  if (startIso && endIso && options?.includeRunDuration !== false) {
     const startMs = Date.parse(startIso);
     const endMs = Date.parse(endIso);
     if (Number.isFinite(startMs) && Number.isFinite(endMs) && endMs >= startMs) {
@@ -410,8 +473,10 @@ export function buildRunMeta(run: Record<string, Object> | undefined, stepCount:
     }
   }
   const durationText = formatWorkDuration(durationMs);
-  const interrupted = status === 'interrupted' || status === 'cancelled';
-  const running = status === 'preparing' || status === 'starting' || status === 'running' || status === 'waiting';
+  const runInterrupted = status === 'interrupted' || status === 'cancelled';
+  const runRunning = isActiveRunStatus(status) && !endIso;
+  const interrupted = options?.groupInterrupted !== undefined ? options.groupInterrupted : runInterrupted;
+  const running = options?.groupRunning !== undefined ? options.groupRunning : runRunning;
   let headerLabel = '';
   if (interrupted) {
     headerLabel = durationText ? '你在 ' + durationText + '后停止了' : '已停止运行';
@@ -452,6 +517,7 @@ export function summarizeWork(lines: ActivityLine[]): WorkSummary {
       files += 1;
       additions += parseIntSafe(summary.additions);
       deletions += parseIntSafe(summary.deletions);
+      if (summary.badge === '进行中') running = true;
     } else if (line.kind === 'file_search' || line.kind === 'web_search') {
       searches += 1;
       if (summary.badgeTone === 'danger') failures += 1;
@@ -487,32 +553,81 @@ export function summarizeWork(lines: ActivityLine[]): WorkSummary {
   };
 }
 
-function buildWorkGroup(groupId: string, runId: string, workItems: Record<string, Object>[],
-  prominentItems: Record<string, Object>[], checkpoint: CheckpointBadge | undefined,
-  runRecord: Record<string, Object> | undefined): TurnWorkGroup | undefined {
-  const lines = activityLines(workItems);
+function normalizeGroupWorkItems(
+  workItems: Record<string, Object>[],
+  prominentItems: Record<string, Object>[],
+  runRecord: Record<string, Object> | undefined,
+  isTail: boolean
+): Record<string, Object>[] {
+  const runStatus = runRecord ? optional(runRecord.status) : '';
+  const runSettled = runRecord !== undefined && (isSettledRunStatus(runStatus) || !!optional(runRecord.completedAt));
+  const settledStatus = (runStatus === 'interrupted' || runStatus === 'cancelled') ? runStatus : 'completed';
+  return workItems.map((item: Record<string, Object>, index: number): Record<string, Object> => {
+    const status = optional(item.status);
+    if (!isActiveItemStatus(status)) return item;
+    const type = text(item.type);
+    if (type === 'reasoning') {
+      const isTrailingActiveReasoning = isTail && !runSettled &&
+        index === workItems.length - 1 && prominentItems.length === 0;
+      return isTrailingActiveReasoning ? item : Object.assign({}, item, { status: settledStatus });
+    }
+    if (runSettled && type !== 'subagent') {
+      return Object.assign({}, item, { status: settledStatus });
+    }
+    return item;
+  });
+}
+
+function buildWorkGroup(
+  groupId: string,
+  runId: string,
+  workItems: Record<string, Object>[],
+  prominentItems: Record<string, Object>[],
+  checkpoint: CheckpointBadge | undefined,
+  runRecord: Record<string, Object> | undefined,
+  isTail: boolean,
+  isLastOfRun: boolean
+): TurnWorkGroup | undefined {
+  const normalizedWork = normalizeGroupWorkItems(workItems, prominentItems, runRecord, isTail);
+  const lines = activityLines(normalizedWork);
   const summary = summarizeWork(lines);
-  const runMeta = buildRunMeta(runRecord, lines.length + prominentItems.length);
+  const runStatus = runRecord ? optional(runRecord.status) : '';
+  const runEnded = runRecord !== undefined && !!optional(runRecord.completedAt);
+  const runActivelyWorking = runRecord !== undefined && !runEnded &&
+    (runStatus === 'preparing' || runStatus === 'starting' || runStatus === 'running');
+  const runInterrupted = runRecord !== undefined && (runStatus === 'interrupted' || runStatus === 'cancelled');
+  const hasInterruptItem = prominentItems.some((item: Record<string, Object>) => text(item.type) === 'run_interrupt_result') ||
+    normalizedWork.some((item: Record<string, Object>) => {
+      const st = optional(item.status);
+      return st === 'interrupted' || st === 'cancelled';
+    });
+  const groupRunning = summary.running;
+  const groupInterrupted = runInterrupted && (isLastOfRun || hasInterruptItem);
+  const runMeta = buildRunMeta(runRecord, lines.length + prominentItems.length, {
+    groupRunning,
+    groupInterrupted,
+    includeRunDuration: isLastOfRun
+  });
   const hasVisible = lines.length > 0 || prominentItems.length > 0 || checkpoint !== undefined ||
     (runMeta !== undefined && runMeta.interrupted);
   if (!hasVisible) return undefined;
 
-  const defaultExpanded = (runMeta !== undefined && (runMeta.running || runMeta.interrupted)) || summary.running;
+  const defaultExpanded = groupRunning || groupInterrupted || (isTail && runActivelyWorking);
   const revParts: string[] = [];
-  for (const item of workItems) {
+  for (const item of normalizedWork) {
     revParts.push(text(item.id) + ':' + optional(item.status) + ':' + String(item.exitCode ?? ''));
   }
   for (const item of prominentItems) {
     revParts.push(text(item.id) + ':' + optional(item.status));
   }
   if (checkpoint) revParts.push('cp:' + checkpoint.checkpointId + ':' + checkpoint.fileCount + ':' + checkpoint.diffLabel);
-  if (runMeta) revParts.push('run:' + runMeta.status + ':' + runMeta.headerLabel);
+  if (runMeta) revParts.push('run:' + runMeta.status + ':' + (runMeta.running ? '1' : '0') + ':' + runMeta.headerLabel);
   const revision = revParts.join('|');
 
   return {
     groupId,
     runId,
-    items: workItems.slice(),
+    items: normalizedWork,
     prominent: prominentItems.slice(),
     checkpoint,
     runMeta,
@@ -520,6 +635,18 @@ function buildWorkGroup(groupId: string, runId: string, workItems: Record<string
     defaultExpanded,
     revision
   };
+}
+
+interface PendingWorkGroupSpec {
+  slot: 'before' | 'afterUser' | 'afterAssistant' | 'tail';
+  slotKey: string;
+  groupId: string;
+  runId: string;
+  workItems: Record<string, Object>[];
+  prominentItems: Record<string, Object>[];
+  checkpoint?: CheckpointBadge;
+  runRecord?: Record<string, Object>;
+  intrinsicallyVisible: boolean;
 }
 
 export function groupWorkByMessage(items: Record<string, Object>[],
@@ -536,6 +663,8 @@ export function groupWorkByMessage(items: Record<string, Object>[],
   const afterUser: Record<string, TurnWorkGroup> = {};
   const afterAssistant: Record<string, TurnWorkGroup> = {};
   const attachedCheckpointIds: Record<string, boolean> = {};
+  const hasBeforeSpec: Record<string, boolean> = {};
+  const specs: PendingWorkGroupSpec[] = [];
 
   let pendingWork: Record<string, Object>[] = [];
   let pendingProminent: Record<string, Object>[] = [];
@@ -553,26 +682,38 @@ export function groupWorkByMessage(items: Record<string, Object>[],
     const firstItemId = pendingWork.length ? text(pendingWork[0].id) :
       pendingProminent.length ? text(pendingProminent[0].id) : '';
     let gId = '';
+    let slot: 'afterUser' | 'afterAssistant' | 'tail' = 'tail';
+    let slotKey = '';
     if (target === 'afterUser' && lastUserMessageId) {
+      slot = 'afterUser';
+      slotKey = lastUserMessageId;
       gId = (pendingRunId || 'user') + ':u:' + lastUserMessageId + ':' + String(groupCounter);
     } else if (target === 'afterAssistant' && lastAssistantMessageId) {
+      slot = 'afterAssistant';
+      slotKey = lastAssistantMessageId;
       gId = (pendingRunId || 'asst') + ':a:' + lastAssistantMessageId + ':' + String(groupCounter);
     } else {
+      slot = 'tail';
       gId = pendingRunId || (lastUserMessageId ? 'user:' + lastUserMessageId : '') ||
         (firstItemId ? 'item:' + firstItemId : 'tail:' + String(groupCounter));
     }
-    const cp = pendingCheckpoint || (pendingRunId && !derived.byAssistantMessage[pendingRunId] ? derived.byRun[pendingRunId] : undefined);
-    const group = buildWorkGroup(gId, pendingRunId, pendingWork, pendingProminent, cp, runRecord);
-    if (group) {
+    let cp = pendingCheckpoint || (pendingRunId && !derived.byAssistantMessage[pendingRunId] ? derived.byRun[pendingRunId] : undefined);
+    if (cp && attachedCheckpointIds[cp.checkpointId]) cp = undefined;
+    const intrinsicallyVisible = pendingWork.length > 0 || pendingProminent.length > 0 || cp !== undefined;
+    if (intrinsicallyVisible) {
+      specs.push({
+        slot,
+        slotKey,
+        groupId: gId,
+        runId: pendingRunId,
+        workItems: pendingWork.slice(),
+        prominentItems: pendingProminent.slice(),
+        checkpoint: cp,
+        runRecord,
+        intrinsicallyVisible: true
+      });
       groupCounter += 1;
       if (cp) attachedCheckpointIds[cp.checkpointId] = true;
-      if (target === 'afterUser' && lastUserMessageId) {
-        afterUser[lastUserMessageId] = group;
-      } else if (target === 'afterAssistant' && lastAssistantMessageId) {
-        afterAssistant[lastAssistantMessageId] = group;
-      } else if (target === 'tail') {
-        tailGroup = group;
-      }
     }
     pendingWork = [];
     pendingProminent = [];
@@ -612,11 +753,26 @@ export function groupWorkByMessage(items: Record<string, Object>[],
       if (!cp) cp = pendingCheckpoint;
       if (cp && attachedCheckpointIds[cp.checkpointId]) cp = undefined;
 
-      const gId = (effectiveRunId ? effectiveRunId + ':' : 'msg:') + (msgId || String(groupCounter));
-      const group = buildWorkGroup(gId, effectiveRunId, pendingWork, pendingProminent, cp, runRecord);
-      if (group && msgId) {
-        before[msgId] = group;
-        groupCounter += 1;
+      const intrinsicallyVisible = pendingWork.length > 0 || pendingProminent.length > 0 || cp !== undefined;
+      const runStatus = runRecord ? optional(runRecord.status) : '';
+      const runInterrupted = runStatus === 'interrupted' || runStatus === 'cancelled';
+      if (msgId && (intrinsicallyVisible || runInterrupted)) {
+        const gId = (effectiveRunId ? effectiveRunId + ':' : 'msg:') + (msgId || String(groupCounter));
+        specs.push({
+          slot: 'before',
+          slotKey: msgId,
+          groupId: gId,
+          runId: effectiveRunId,
+          workItems: pendingWork.slice(),
+          prominentItems: pendingProminent.slice(),
+          checkpoint: cp,
+          runRecord,
+          intrinsicallyVisible
+        });
+        if (intrinsicallyVisible) {
+          groupCounter += 1;
+          hasBeforeSpec[msgId] = true;
+        }
         if (cp) attachedCheckpointIds[cp.checkpointId] = true;
       }
       pendingWork = [];
@@ -646,15 +802,61 @@ export function groupWorkByMessage(items: Record<string, Object>[],
 
   // Ensure any ready checkpoint with changed files mapped to an assistant message without tools still surfaces.
   for (const msg of messages) {
-    if (msg.role !== 'assistant' || before[msg.id]) continue;
+    if (msg.role !== 'assistant' || hasBeforeSpec[msg.id]) continue;
     const cp = derived.byAssistantMessage[msg.id];
     if (!cp || attachedCheckpointIds[cp.checkpointId]) continue;
     const runRecord = msg.runId ? runById[msg.runId] : (cp.runId ? runById[cp.runId] : undefined);
     const effectiveRunId = msg.runId || cp.runId;
-    const group = buildWorkGroup(effectiveRunId || ('msg:' + msg.id), effectiveRunId, [], [], cp, runRecord);
-    if (group) {
-      before[msg.id] = group;
-      attachedCheckpointIds[cp.checkpointId] = true;
+    specs.push({
+      slot: 'before',
+      slotKey: msg.id,
+      groupId: effectiveRunId || ('msg:' + msg.id),
+      runId: effectiveRunId,
+      workItems: [],
+      prominentItems: [],
+      checkpoint: cp,
+      runRecord,
+      intrinsicallyVisible: true
+    });
+    hasBeforeSpec[msg.id] = true;
+    attachedCheckpointIds[cp.checkpointId] = true;
+  }
+
+  const lastVisibleIndexByRun: Record<string, number> = {};
+  const lastAnyIndexByRun: Record<string, number> = {};
+  for (let index = 0; index < specs.length; index += 1) {
+    const spec = specs[index];
+    if (!spec.runId) continue;
+    lastAnyIndexByRun[spec.runId] = index;
+    if (spec.intrinsicallyVisible) lastVisibleIndexByRun[spec.runId] = index;
+  }
+
+  for (let index = 0; index < specs.length; index += 1) {
+    const spec = specs[index];
+    const isTail = spec.slot === 'tail';
+    const targetLastIndex = spec.runId
+      ? (lastVisibleIndexByRun[spec.runId] !== undefined ? lastVisibleIndexByRun[spec.runId] : lastAnyIndexByRun[spec.runId])
+      : index;
+    const isLastOfRun = !spec.runId || index === targetLastIndex;
+    const group = buildWorkGroup(
+      spec.groupId,
+      spec.runId,
+      spec.workItems,
+      spec.prominentItems,
+      spec.checkpoint,
+      spec.runRecord,
+      isTail,
+      isLastOfRun
+    );
+    if (!group) continue;
+    if (spec.slot === 'before' && spec.slotKey) {
+      before[spec.slotKey] = group;
+    } else if (spec.slot === 'afterUser' && spec.slotKey) {
+      afterUser[spec.slotKey] = group;
+    } else if (spec.slot === 'afterAssistant' && spec.slotKey) {
+      afterAssistant[spec.slotKey] = group;
+    } else if (spec.slot === 'tail') {
+      tailGroup = group;
     }
   }
 

@@ -1,4 +1,4 @@
-import { record, text, objects } from './Wire';
+import { parseOptionSelections, record, text, objects } from './Wire';
 import { ModelSelection, TaskSettings } from './Composer';
 
 export const R4_MAX_INPUT_CHARS = 120000;
@@ -39,6 +39,7 @@ export interface ComposerDraft {
   projectId: string;
   text: string;
   modelSelection: ModelSelection;
+  modelCustomized?: boolean;
   runtimeMode: string;
   interactionMode: string;
   workspace: DraftWorkspace;
@@ -172,6 +173,10 @@ export function composerDraft(value: Object): ComposerDraft {
   if (row.version !== 1) throw new Error('草稿版本无效');
   const draftId = safeToken(text(row.draftId), '草稿标识', 128);
   const model = record(row.modelSelection);
+  const options = parseOptionSelections(model.options);
+  const modelSelection: ModelSelection = options.length > 0
+    ? { instanceId: text(model.instanceId), model: text(model.model), options }
+    : { instanceId: text(model.instanceId), model: text(model.model) };
   const workspace = record(row.workspace);
   const mode = text(workspace.mode);
   if (mode !== 'local' && mode !== 'worktree') throw new Error('工作区模式无效');
@@ -180,7 +185,8 @@ export function composerDraft(value: Object): ComposerDraft {
     environmentId: safeToken(text(row.environmentId), '环境标识', 128),
     projectId: safeToken(text(row.projectId), '项目标识', 128),
     text: text(row.text).slice(0, R4_MAX_INPUT_CHARS),
-    modelSelection: { instanceId: text(model.instanceId), model: text(model.model) },
+    modelSelection,
+    ...(row.modelCustomized === true ? { modelCustomized: true } : {}),
     runtimeMode: text(row.runtimeMode), interactionMode: text(row.interactionMode),
     workspace: { mode, branch: text(workspace.branch), worktreePath: text(workspace.worktreePath),
       startFromOrigin: workspace.startFromOrigin !== false },
@@ -272,18 +278,42 @@ export function tokenUsage(details: Record<string, Object>): TokenUsage | undefi
     toolUses: count(usage.toolUses), durationMs: count(usage.durationMs) };
 }
 
-export interface SubagentView { id: string; title: string; status: string; childThreadId: string;
-  remoteThreadId: string; remoteEnvironmentId: string; detail: string; canStop: boolean; pendingKind: string; }
+export interface SubagentView {
+  id: string;
+  title: string;
+  status: string;
+  childThreadId: string;
+  remoteThreadId: string;
+  remoteEnvironmentId: string;
+  detail: string;
+  canStop: boolean;
+  pendingKind: string;
+  runId: string;
+  startedAt: string;
+  completedAt: string;
+  updatedAt: string;
+  isWorkflow: boolean;
+}
 export function subagents(rows: Record<string, Object>[]): SubagentView[] {
   return rows.map((row: Record<string, Object>): SubagentView => {
     const remote = row.remoteChild !== undefined && row.remoteChild !== null ? record(row.remoteChild) : undefined;
-    return { id: text(row.id), title: typeof row.title === 'string' && row.title.trim() ? row.title :
-      (typeof row.prompt === 'string' ? row.prompt.slice(0, 80) : 'Subagent'), status: text(row.status),
+    return {
+      id: text(row.id),
+      title: typeof row.title === 'string' && row.title.trim() ? row.title :
+        (typeof row.prompt === 'string' ? row.prompt.slice(0, 80) : 'Subagent'),
+      status: text(row.status),
       childThreadId: typeof row.childThreadId === 'string' ? row.childThreadId : '',
       remoteThreadId: remote && typeof remote.threadId === 'string' ? remote.threadId : '',
       remoteEnvironmentId: remote && typeof remote.environmentId === 'string' ? remote.environmentId : '',
       detail: typeof row.progress === 'string' ? row.progress : typeof row.result === 'string' ? row.result : '',
-      canStop: ['pending', 'running', 'waiting', 'idle'].includes(text(row.status)), pendingKind: '' };
+      canStop: ['pending', 'running', 'waiting', 'idle'].includes(text(row.status)),
+      pendingKind: '',
+      runId: typeof row.runId === 'string' ? row.runId : '',
+      startedAt: typeof row.startedAt === 'string' ? row.startedAt : '',
+      completedAt: typeof row.completedAt === 'string' ? row.completedAt : '',
+      updatedAt: typeof row.updatedAt === 'string' ? row.updatedAt : '',
+      isWorkflow: row.workflow !== undefined && row.workflow !== null
+    };
   });
 }
 

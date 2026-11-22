@@ -4,7 +4,7 @@ import { FormRow } from './ui/FormRow';
 import { AppButton } from './ui/AppButton';
 import { ProjectMonogram } from './ui/ProjectMonogram';
 import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
-import { ProjectGroup, ScopedProject } from '../protocol/Projects';
+import { ProjectGroup, ScopedProject, groupProjectIcon } from '../protocol/Projects';
 
 @Component
 export struct ProjectOverviewPanel {
@@ -61,6 +61,7 @@ export struct ProjectOverviewPanel {
                 ProjectMonogram({
                   projectId: this.group()?.representative.id || this.group()?.key || '',
                   name: this.group()?.label || '',
+                  icon: groupProjectIcon(this.group()),
                   boxSize: 36
                 })
                 Column({ space: 2 }) {

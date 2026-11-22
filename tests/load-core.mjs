@@ -39,3 +39,9 @@ export const filesUrl = data(compile(filesSource));
 const r5Source = (await readFile(new URL('../entry/src/main/ets/protocol/R5.ts', import.meta.url), 'utf8'))
   .replace("'./Wire'", JSON.stringify(wireUrl));
 export const r5Url = data(compile(r5Source));
+
+const floatingStatusSource = (await readFile(new URL('../entry/src/main/ets/protocol/FloatingStatus.ts', import.meta.url), 'utf8'))
+  .replace("'./Wire'", JSON.stringify(wireUrl))
+  .replace("'./Projects'", JSON.stringify(projectsUrl))
+  .replace("'./R4'", JSON.stringify(r4Url));
+export const floatingStatusUrl = data(compile(floatingStatusSource));

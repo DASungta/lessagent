@@ -90,6 +90,7 @@ test('cloud socket URL uses DPoP RPC ticket, upgrade proof and relay connection 
   assert.equal(url.searchParams.get('wsTicket'), 'WS_TICKET');
   assert.equal(url.searchParams.get('connectionMethod'), 'relay');
   assert.equal(url.searchParams.get('orchestrationProtocol'), '2');
+  assert.equal(url.searchParams.get('frameParts'), '1');
   assert.match(url.searchParams.get('dpop'), /^proof:GET:https:\/\/env\.example\.test\/ws:WS_TICKET$/);
   assert.ok(ctx.proofs.some(proof => proof.url.endsWith('/api/auth/websocket-ticket/rpc') &&
     proof.token === 'ENV_DPOP'));
@@ -127,5 +128,32 @@ test('environment 401 invalidates the cached token and obtains a new relay boots
   assert.deepEqual(await ctx.transport.requestJson('/api/auth/session', 'GET'), { ok: true });
   assert.equal(exchanges, 2);
   assert.equal(attempts, 2);
+  assert.equal(ctx.bootstrap(), 2);
+});
+
+test('cachedEndpoint and tokenExpiresAt reuse valid cached token across reconnects and fall back on ticket failure', async () => {
+  let ticketCalls = 0;
+  const ctx = await load(async (url) => {
+    if (url.endsWith('/oauth/token')) return { value: { access_token: 'ENV_CACHED', token_type: 'DPoP', expires_in: 600 } };
+    if (url.endsWith('/api/auth/websocket-ticket/rpc')) {
+      ticketCalls++;
+      if (ticketCalls === 2) return { error: { status: 401, value: {} } };
+      return { value: { ticket: 'TICKET_' + ticketCalls } };
+    }
+    throw Error('unexpected ' + url);
+  });
+  // First socketUrl performs bootstrap + token exchange
+  await ctx.transport.socketUrl();
+  assert.equal(ctx.bootstrap(), 1);
+  assert.ok(ctx.transport.tokenExpiresAt() > Date.now() + 500000);
+  const cachedEp = await ctx.transport.cachedEndpoint();
+  assert.equal(cachedEp?.httpBaseUrl, 'https://env.example.test');
+
+  // Clear in-memory bootstrap to simulate reconnect after expiry while DPoP token is still cached;
+  // ticket failure (401) transparently falls back to a fresh relay bootstrap + token exchange.
+  ctx.transport.bootstrap = undefined;
+  const recoveredUrl = new URL(await ctx.transport.socketUrl());
+  assert.equal(recoveredUrl.searchParams.get('wsTicket'), 'TICKET_3');
+  assert.equal(recoveredUrl.searchParams.get('frameParts'), '1');
   assert.equal(ctx.bootstrap(), 2);
 });

@@ -338,3 +338,60 @@ test('inlineSpans strips backticks for code nested inside bold and keeps bold st
   assert.equal(linkSpan?.text, '/Users/a');
   assert.equal(spans.some((span) => span.text.includes('`')), false);
 });
+
+test('socketUrl enables frameParts=1 and ThreadState restores deduped bodies, tolerates unknown kinds, and supports incremental resume', () => {
+  const wsUrl = new URL(socketUrl('https://test', 'tok'));
+  assert.equal(wsUrl.searchParams.get('frameParts'), '1');
+
+  const state = new ThreadState('t-dedup');
+  state.apply({
+    kind: 'snapshot',
+    snapshotSequence: 20,
+    projection: {
+      thread: { id: 't-dedup' },
+      messages: [
+        { id: 'u1', role: 'user', text: 'Full user prompt', streaming: false, runId: 'r1' },
+        { id: 'a1', role: 'assistant', text: 'Full assistant answer', streaming: false, runId: 'r1' }
+      ],
+      checkpoints: [
+        { id: 'cp-1', runId: 'r1', files: [{ path: 'a.ts', kind: 'modified' }] }
+      ],
+      subagents: [
+        { id: 'sub-1', runId: 'r1', prompt: 'Sub prompt', result: 'Sub result', status: 'completed' }
+      ],
+      visibleTurnItems: [
+        { id: 'i-u1', type: 'user_message', messageId: 'u1', text: '', textOmitted: true, runId: 'r1' },
+        { id: 'i-a1', type: 'assistant_message', messageId: 'a1', text: '', bodyDeduped: true, runId: 'r1' },
+        { id: 'i-cp', type: 'checkpoint', checkpointId: 'cp-1', files: [], filesOmitted: true, runId: 'r1' },
+        { id: 'i-sub', type: 'subagent', subagentId: 'sub-1', prompt: '', promptOmitted: true, result: '', resultOmitted: true, runId: 'r1' }
+      ]
+    }
+  });
+  assert.equal(state.messages.find((m) => m.id === 'u1')?.text, 'Full user prompt');
+  assert.equal(state.messages.find((m) => m.id === 'a1')?.text, 'Full assistant answer');
+  assert.equal(state.items.find((i) => i.id === 'i-cp')?.files.length, 1);
+  assert.equal(state.items.find((i) => i.id === 'i-sub')?.prompt, 'Sub prompt');
+  assert.equal(state.items.find((i) => i.id === 'i-sub')?.result, 'Sub result');
+
+  // Unknown future stream envelope kind is ignored without throwing
+  state.apply({ kind: 'heartbeat_hint', snapshotSequence: 21 });
+  assert.equal(state.cursor, 20);
+
+  // Reconnect reset keeps resumeCursor while allowing incremental synchronized or lower-sequence fallback snapshot
+  state.resetForReconnect();
+  assert.equal(state.cursor, -1);
+  assert.equal(state.resumeCursor, 20);
+  state.apply({ kind: 'synchronized' });
+  assert.equal(state.cursor, 20);
+
+  // Lower-sequence fallback snapshot after server restart is accepted after resetForReconnect
+  state.resetForReconnect();
+  state.apply({
+    kind: 'snapshot',
+    snapshotSequence: 3,
+    projection: { thread: { id: 't-dedup' }, messages: [{ id: 'u2', threadId: 't-dedup', role: 'user', text: 'restarted', streaming: false }] }
+  });
+  assert.equal(state.cursor, 3);
+  assert.equal(state.resumeCursor, 3);
+  assert.deepEqual(state.messages.map((m) => m.id), ['u2']);
+});

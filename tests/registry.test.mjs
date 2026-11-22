@@ -11,22 +11,40 @@ const environmentModule=await import(environment);
 const hosts=data(compile(await readFile(new URL('../entry/src/main/ets/protocol/Hosts.ts',import.meta.url),'utf8')));
 const original=await readFile(new URL('../entry/src/main/ets/services/EnvironmentRegistry.ets',import.meta.url),'utf8');
 async function setup(){
- const records=new Map(),offline=new Set(),attempts=[];let directory,failCommit=false,serial=0;let identity='env-a';
+ const records=new Map(),offline=new Set(),slowRoutes=new Map(),attempts=[],probes=[],backgrounds=[];
+ let directory,failCommit=false,serial=0,shellCacheData={};let identity='env-a';
  class Store {constructor(alias){this.alias=alias}async load(){return structuredClone(records.get(this.alias))}async save(v){records.set(this.alias,structuredClone(v))}async clear(){records.delete(this.alias)}}
  class Directory {async load(){return structuredClone(directory)}async save(v){if(failCommit)throw Error('disk');directory=structuredClone(v)}}
+ class ShellCache {async loadAll(){return structuredClone(shellCacheData)}async saveAll(v){shellCacheData=structuredClone(v)}}
  class Assets{session(alias){return new Store(alias)}recovery(alias){return new Store(alias)}}
  class Client {
   ready=false;mutationPending=false;status='offline';server='test';validateIdentity=()=>{};
+  shell={projects:[],threads:[],archived:[],hasSnapshot:false,liveSynced:false};
+  shellSynced=false;
+  onShellUpdated=undefined;
+  hydratedCache=undefined;
+  async probeRoute(base,expectedEnvironmentId){
+   probes.push(base);
+   const delay=slowRoutes.get(base)||0;
+   if(delay>0)await new Promise(r=>setTimeout(r,delay));
+   if(offline.has(base))return {ok:false,base,error:'offline',checkedAt:Date.now()};
+   if(expectedEnvironmentId&&expectedEnvironmentId!==identity)return {ok:false,base,error:'identity',checkedAt:Date.now()};
+   return {ok:true,base,descriptor:{environmentId:identity,label:'Test',serverVersion:'test',orchestrationProtocolVersion:2},checkedAt:Date.now()};
+  }
   async connect(base,code){attempts.push(base);try{if(offline.has(base))throw Error('offline');if(this.expectedEnvironmentId&&this.expectedEnvironmentId!==identity)throw Error('identity');this.validateIdentity(identity);if(code==='bad')throw Error('invalid');const saved=code?{base,environmentId:identity,token:'synthetic-'+identity,expiresAt:1}:await this.store.load(base);if(!saved)throw Error('missing');await this.store.save(saved);this.connectedBase=base;this.ready=true}catch(e){this.ready=false;this.status=e.message}}
   async verifyIdentity(){if(this.expectedEnvironmentId!==identity)throw Error('identity')}
-  disconnect(){this.ready=false}
+  enterBackground(){backgrounds.push(this.connectedBase||this.expectedEnvironmentId||'unknown')}
+  async resume(){}
+  hydrateShellCache(cached){this.hydratedCache=structuredClone(cached);this.shell.projects=cached.projects.slice();this.shell.threads=cached.threads.slice();this.shell.hasSnapshot=true}
+  exportShellCache(){if(!this.shellSynced)return undefined;return {environmentId:this.expectedEnvironmentId||identity,savedAt:Date.now(),scratchWorkspaceRoot:'',capabilities:{threadSettlement:true},projects:this.shell.projects.slice(),threads:this.shell.threads.slice()}}
+  disconnect(msg,recover,clearShell){this.ready=false;if(msg)this.status=msg;if(clearShell){this.shell.projects=[];this.shell.threads=[];this.shell.hasSnapshot=false;this.shell.liveSynced=false;this.shellSynced=false}}
  }
- globalThis.__registryKit={T3Client:Client,SessionStore:Store,EnvironmentStore:Directory,ProtectedEnvironmentAssets:Assets,url:{URL},util:{generateRandomUUID:()=>String(++serial)},pairingTarget:(base,code)=>({base,code})};
+ globalThis.__registryKit={T3Client:Client,SessionStore:Store,EnvironmentStore:Directory,ShellCacheStore:ShellCache,ProtectedEnvironmentAssets:Assets,url:{URL},util:{generateRandomUUID:()=>String(++serial)},pairingTarget:(base,code)=>({base,code})};
  const source=original.replace(/^import .*? from .*?;\n/gm,line=>line.includes("'../protocol/Environment'")?line.replace("'../protocol/Environment'",JSON.stringify(environment)):line.includes("'../protocol/Core'")?line.replace("'../protocol/Core'",JSON.stringify(coreUrl)):line.includes("'../protocol/Hosts'")?line.replace("'../protocol/Hosts'",JSON.stringify(hosts)):'')
- .replace('class ScopedRecovery','const {T3Client,SessionStore,EnvironmentStore,ProtectedEnvironmentAssets,util,url,pairingTarget}=globalThis.__registryKit;\nclass ScopedRecovery');
+ .replace('class ScopedRecovery','const {T3Client,SessionStore,EnvironmentStore,ShellCacheStore,ProtectedEnvironmentAssets,util,url,pairingTarget}=globalThis.__registryKit;\nclass ScopedRecovery');
  const {EnvironmentRegistry}=await import(data(compile(source)+'\n//'+Math.random()));
  const registry=new EnvironmentRegistry('/synthetic');await registry.initialize();
- return {registry,records,Store,Assets,Directory,offline,attempts,getDirectory:()=>structuredClone(directory),setIdentity:v=>identity=v,fail:v=>failCommit=v};
+ return {registry,records,Store,Assets,Directory,offline,slowRoutes,attempts,probes,backgrounds,getShellCache:()=>structuredClone(shellCacheData),setShellCache:v=>shellCacheData=structuredClone(v),getDirectory:()=>structuredClone(directory),setIdentity:v=>identity=v,fail:v=>failCommit=v};
 }
 test('directory reuses known addresses, rejects duplicate identities at new addresses, and survives initialization',async()=>{
  const s=await setup();const a=await s.registry.add('https://a','code');
@@ -136,9 +154,64 @@ test('a failed credential cleanup leaves a route tombstone and restart removes o
  await s.registry.reload();assert.equal(s.registry.entry(id).retiredCredentialRefs,undefined);assert.equal(s.records.has(retired),false);assert.ok(s.records.has(live));
  await s.registry.removeRoute(id,live);assert.equal(s.registry.directory.entries.length,0);
 });
-test('reconnect tries only saved routes in priority order with each routes own credential',async()=>{
+test('reconnect probes saved routes concurrently in priority order with head-start fallback and per-route credentials',async()=>{
  const s=await setup(),id=await s.registry.add('https://a','code');await s.registry.addRoute(id,'https://peer.ts.net','code');
- s.offline.add('https://a');s.attempts.length=0;await s.registry.reconnect(id);assert.deepEqual(s.attempts,['https://a','https://peer.ts.net']);assert.equal(s.registry.clients.get(id).connectedBase,'https://peer.ts.net');
+ // Fast offline primary immediately yields to reachable alternate without waiting for full connect timeout
+ s.offline.add('https://a');s.attempts.length=0;s.probes.length=0;
+ await s.registry.reconnect(id);
+ assert.deepEqual(s.probes,['https://a','https://peer.ts.net']);
+ assert.deepEqual(s.attempts,['https://peer.ts.net']);
+ assert.equal(s.registry.clients.get(id).connectedBase,'https://peer.ts.net');
+
+ // Slow hanging primary (>500ms head start) falls over to fast alternate without waiting for primary to settle
+ s.offline.clear();
+ s.slowRoutes.set('https://a', 1500);
+ s.attempts.length=0;s.probes.length=0;
+ const started=Date.now();
+ await s.registry.reconnect(id);
+ const elapsed=Date.now()-started;
+ assert.equal(s.registry.clients.get(id).connectedBase,'https://peer.ts.net');
+ assert.ok(elapsed < 1100, `expected head-start failover <1100ms, got ${elapsed}ms`);
+
+ // Fast reachable primary still wins over fast reachable alternate
+ s.slowRoutes.clear();
+ s.attempts.length=0;s.probes.length=0;
+ await s.registry.reconnect(id);
+ assert.equal(s.registry.clients.get(id).connectedBase,'https://a');
+ assert.deepEqual(s.attempts,['https://a']);
+});
+
+test('shell cache persists on live updates, hydrates immediately on reload, and respects disable/remove/background lifecycle',async()=>{
+ const s=await setup(),id=await s.registry.add('https://a','code');
+ const client=s.registry.clients.get(id);
+ client.shell.projects=[{id:'p1',label:'Repo',projectId:'p1',workspaceRoot:'/repo'}];
+ client.shell.threads=[{id:'t1',label:'Cached thread',projectId:'p1'}];
+ client.shellSynced=true;
+ client.onShellUpdated();
+ await s.registry.flushShellCache();
+ assert.equal(s.getShellCache()[id].threads[0].id,'t1');
+
+ // Background keeps client alive via enterBackground and foreground passes duration to resume
+ let receivedDuration=-1;
+ client.resume=async(ms)=>{receivedDuration=ms};
+ s.registry.suspend();
+ assert.equal(client.ready,true);
+ assert.equal(s.backgrounds.length,1);
+ await s.registry.resume();
+ assert.ok(receivedDuration >= 0);
+
+ // Reload hydrates cached shell before reconnect
+ await s.registry.reload();
+ const reloaded=s.registry.clients.get(id);
+ assert.equal(reloaded.ready,false);
+ assert.equal(reloaded.shell.hasSnapshot,true);
+ assert.equal(reloaded.shell.threads[0].label,'Cached thread');
+
+ // Disable clears in-memory shell and drops cache entry
+ await s.registry.setEnabled(id,false);
+ await s.registry.flushShellCache();
+ assert.equal(reloaded.shell.threads.length,0);
+ assert.equal(s.getShellCache()[id],undefined);
 });
 test('one environment resume failure does not stop another environment from resuming',async()=>{
  const s=await setup(),a=await s.registry.add('https://a','code');s.setIdentity('env-b');const b=await s.registry.add('https://b','code');let resumed=false;

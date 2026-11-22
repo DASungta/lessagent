@@ -2,6 +2,7 @@ import { http, webSocket } from '@kit.NetworkKit';
 import { image } from '@kit.ImageKit';
 import { util } from '@kit.ArkTS';
 import { record } from '../protocol/Wire';
+import { shouldBypassSystemProxy } from '../protocol/Hosts';
 import { DeviceStreamAccess, DeviceScreen, DeviceMjpegParser, deviceScreen, deviceRotation } from '../protocol/DevicePreview';
 
 export class DevicePreviewStream {
@@ -66,12 +67,20 @@ export class DevicePreviewStream {
     });
     socket.on('error', (): void => { if (generation === this.generation) this.fail('设备控制连接失败，请重新取得访问票据'); });
     socket.on('close', (): void => { if (generation === this.generation) this.fail('设备控制已断开；不会重发触控或按键'); });
-    void request.requestInStream(access.mjpegUrl, { method: http.RequestMethod.GET, usingCache: false,
-      maxRedirects: 0, connectTimeout: 10000, readTimeout: 60000 }).then((status: number): void => {
+    const streamOptions: http.HttpRequestOptions = { method: http.RequestMethod.GET, usingCache: false,
+      maxRedirects: 0, connectTimeout: 10000, readTimeout: 60000 };
+    if (shouldBypassSystemProxy(access.mjpegUrl)) streamOptions.usingProxy = false;
+    void request.requestInStream(access.mjpegUrl, streamOptions).then((status: number): void => {
       if (generation === this.generation && status !== 200) this.fail(status === 401 || status === 403 ?
         '设备访问票据失效，请重新连接' : status === 409 ? '设备仅支持 WebRTC，当前 MJPEG 路径不可用' : '设备画面请求失败');
     }).catch(() => { if (generation === this.generation) this.fail('设备画面接收失败，请重新连接'); });
-    try { if (!await socket.connect(access.inputUrl)) throw new Error('connect'); }
+    try {
+      const socketOptions: webSocket.WebSocketRequestOptions | undefined =
+        shouldBypassSystemProxy(access.inputUrl) ? { proxy: 'no-proxy' } : undefined;
+      if (!(socketOptions ? await socket.connect(access.inputUrl, socketOptions) : await socket.connect(access.inputUrl))) {
+        throw new Error('connect');
+      }
+    }
     catch (_) { if (generation === this.generation) this.fail('设备控制连接失败'); }
   }
   private current(generation: number): boolean {

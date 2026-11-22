@@ -9,6 +9,7 @@ import { T3Client } from '../services/T3Client';
 import { ContentMatch, directEntries, fileLines, FileLine, isAudio, isImage, isMarkdown, matchesContentSearchLine,
   isPdf, isVideo, WorkspaceEntry, WorkspaceFile } from '../protocol/Files';
 import { MarkdownView } from './MarkdownView';
+import { ResolvedMarkdownMedia, resolveRelativeMarkdownPath } from '../protocol/Markdown';
 import { CodeLine } from './CodeLine';
 import { DiffLineNumber } from './DiffLineNumber';
 import { fileCommentContext, fileSelectionContext } from '../protocol/R5';
@@ -549,9 +550,14 @@ export struct FilesPanel {
           if (this.selectionStart >= 0) { this.selectionBar() }
           Scroll() {
             Column() {
-              MarkdownView({ markdown: this.file.contents, selectable: true, onCopy: this.onCopy,
+              MarkdownView({ markdown: this.file.contents, selectable: true,
+                mediaScopeKey: this.cacheScope + ':' + this.selectedPath + ':' + (this.connection ? this.connection.generationValue() : 0),
+                mediaReady: !!this.connection && this.connection.ready,
+                onCopy: this.onCopy,
                 onOpenLink: () => this.reportStatus('请从会话消息打开链接'),
-                onOpenImage: (path: string) => { void this.openFile(path); } })
+                onOpenImage: (path: string) => { void this.openFile(resolveRelativeMarkdownPath(this.selectedPath, path)); },
+                resolveMedia: this.connection ? (source: string, refresh: boolean): Promise<ResolvedMarkdownMedia> =>
+                  this.connection!.markdownMediaUrl(resolveRelativeMarkdownPath(this.selectedPath, source), this.cwd, refresh) : undefined })
             }.padding(14)
           }.width('100%').layoutWeight(1).align(Alignment.TopStart)
             .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)

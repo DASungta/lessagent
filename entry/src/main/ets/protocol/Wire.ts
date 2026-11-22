@@ -23,6 +23,53 @@ export function objects(value: Object): Object[] {
   return value as Object[];
 }
 
+export interface OptionSelection { id: string; value: string | boolean; }
+export interface ModelSelection { instanceId: string; model: string; options?: OptionSelection[]; }
+
+export function parseOptionSelections(value: Object | undefined): OptionSelection[] {
+  if (value === undefined || value === null || typeof value !== 'object') return [];
+  const entries: OptionSelection[] = [];
+  const upsert = (rawId: string, rawValue: Object | undefined): void => {
+    const id = rawId.trim();
+    if (!id || id.length > 256 || /[\u0000-\u001f\u007f]/.test(id)) return;
+    let parsed: string | boolean | undefined = undefined;
+    if (typeof rawValue === 'boolean') parsed = rawValue;
+    else if (typeof rawValue === 'string') {
+      const trimmed = rawValue.trim();
+      if (trimmed && trimmed.length <= 256 && !/[\u0000-\u001f\u007f]/.test(trimmed)) parsed = trimmed;
+    }
+    if (parsed === undefined) return;
+    const existing = entries.findIndex((item: OptionSelection) => item.id === id);
+    if (existing >= 0) entries[existing] = { id, value: parsed };
+    else entries.push({ id, value: parsed });
+  };
+  if (Array.isArray(value)) {
+    for (const item of value as Object[]) {
+      if (item === null || typeof item !== 'object' || Array.isArray(item)) continue;
+      const option = item as Record<string, Object>;
+      if (typeof option.id === 'string') upsert(option.id, option.value);
+    }
+    return entries;
+  }
+  const legacy = value as Record<string, Object>;
+  for (const key of Object.keys(legacy)) upsert(key, legacy[key]);
+  return entries;
+}
+
+export function parseModelSelection(value: Object | undefined): ModelSelection | undefined {
+  if (value === undefined || value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const row = value as Record<string, Object>;
+  const instanceId = typeof row.instanceId === 'string' ? row.instanceId.trim() :
+    (typeof row.provider === 'string' ? row.provider.trim() : '');
+  const model = typeof row.model === 'string' ? row.model.trim() : '';
+  if (!instanceId || !model || instanceId.length > 256 || model.length > 256 ||
+    /[\u0000-\u001f\u007f]/.test(instanceId) || /[\u0000-\u001f\u007f]/.test(model)) {
+    return undefined;
+  }
+  const options = parseOptionSelections(row.options);
+  return options.length > 0 ? { instanceId, model, options } : { instanceId, model };
+}
+
 export function serverBase(input: string): string {
   const base = input.trim().replace(/\/+$/, '');
   // Explicit HTTP matches upstream direct pairing, including LAN/tailnet; never relax TLS or redirects.
@@ -55,7 +102,7 @@ export function validateDescriptor(value: Object): Record<string, Object> {
 
 export function socketUrl(base: string, ticket: string): string {
   return base.replace(/^http/, 'ws') + '/ws?orchestrationProtocol=2&wsTicket=' +
-    encodeURIComponent(ticket) + '&clientSurface=mobile&clientOs=HarmonyOS&connectionMethod=direct';
+    encodeURIComponent(ticket) + '&clientSurface=mobile&clientOs=HarmonyOS&connectionMethod=direct&frameParts=1';
 }
 
 export interface RpcSender {
@@ -201,6 +248,7 @@ export interface ChatMessage {
 export class ThreadState {
   threadId: string;
   cursor: number = -1;
+  resumeCursor: number = -1;
   messages: ChatMessage[] = [];
   notices: string = '';
   requests: Record<string, Object>[] = [];
@@ -212,15 +260,26 @@ export class ThreadState {
   plans: Record<string, Object>[] = [];
   subagents: Record<string, Object>[] = [];
   providerTurns: Record<string, Object>[] = [];
+  providerThreads: Record<string, Object>[] = [];
+  providerSessions: Record<string, Object>[] = [];
+  nodes: Record<string, Object>[] = [];
   historyCursor: string = '';
   hasMoreHistory: boolean = false;
 
   constructor(threadId: string) { this.threadId = threadId; }
 
+  resetForReconnect(): void {
+    if (this.cursor >= 0) this.resumeCursor = this.cursor;
+    this.cursor = -1;
+  }
+
   apply(value: Object): void {
     const item = record(value);
     const kind = text(item.kind);
-    if (kind === 'synchronized') return;
+    if (kind === 'synchronized') {
+      if (this.cursor < 0 && this.resumeCursor >= 0) this.cursor = this.resumeCursor;
+      return;
+    }
     if (kind === 'snapshot') {
       const cursor = sequence(item.snapshotSequence);
       if (cursor < this.cursor) return;
@@ -232,6 +291,9 @@ export class ThreadState {
       this.plans = projection.plans ? objects(projection.plans).map(record) : [];
       this.subagents = projection.subagents ? objects(projection.subagents).map(record) : [];
       this.providerTurns = projection.providerTurns ? objects(projection.providerTurns).map(record) : [];
+      this.providerThreads = projection.providerThreads ? objects(projection.providerThreads).map(record) : [];
+      this.providerSessions = projection.providerSessions ? objects(projection.providerSessions).map(record) : [];
+      this.nodes = projection.nodes ? objects(projection.nodes).map(record) : [];
       const visible = projection.visibleTurnItems === undefined ? [] :
         objects(projection.visibleTurnItems).map((value: Object) => {
           const row = record(value);
@@ -242,7 +304,8 @@ export class ThreadState {
         });
       this.requests = projection.runtimeRequests ? objects(projection.runtimeRequests).map(record) : [];
       this.checkpoints = projection.checkpoints ? objects(projection.checkpoints).map(record) : [];
-      this.items = visible.length ? visible : (projection.turnItems ? objects(projection.turnItems).map(record) : []);
+      const rawItems = visible.length ? visible : (projection.turnItems ? objects(projection.turnItems).map(record) : []);
+      this.items = rawItems.map((entry: Record<string, Object>) => this.restoreDedupedTurnItem(entry));
       this.messages = [];
       const hasItemMessages = this.items.some((entry: Record<string, Object>) =>
         entry.type === 'user_message' || entry.type === 'assistant_message');
@@ -258,11 +321,13 @@ export class ThreadState {
       this.historyCursor = typeof item.historyCursor === 'string' ? item.historyCursor : '';
       this.hasMoreHistory = item.hasMoreHistory === true;
       this.cursor = cursor;
+      this.resumeCursor = cursor;
       return;
     }
-    if (kind !== 'event') throw new Error('未知会话流类型');
+    if (kind !== 'event') return;
     const cursor = sequence(item.sequence);
-    if (cursor <= this.cursor) return;
+    const floor = this.cursor >= 0 ? this.cursor : this.resumeCursor;
+    if (cursor <= floor) return;
     // Sequences are global; gaps do not imply a missing event in this thread.
     const event = record(item.event);
     if (text(event.threadId) !== this.threadId) throw new Error('会话事件身份不一致');
@@ -277,7 +342,7 @@ export class ThreadState {
       }
     }
     else if (type === 'turn-item.updated') {
-      const payload = record(event.payload);
+      const payload = this.restoreDedupedTurnItem(record(event.payload));
       this.mergeItemByOrdinal(payload);
       this.upsertItemMessage(payload);
     }
@@ -287,17 +352,83 @@ export class ThreadState {
       const run = record(event.payload);
       this.merge(this.runs, run);
       const active = this.runs.find((row: Record<string, Object>) =>
-        ['preparing', 'starting', 'running', 'waiting'].includes(text(row.status)));
-      this.notices = '任务状态：' + (active ? text(active.status) : text(run.status));
+        typeof row.status === 'string' && ['preparing', 'starting', 'running', 'waiting'].includes(row.status));
+      const runStatus = active && typeof active.status === 'string' ? active.status :
+        (typeof run.status === 'string' ? run.status : '');
+      if (runStatus) this.notices = '任务状态：' + runStatus;
     }
     else if (type === 'plan.updated') this.merge(this.plans, record(event.payload));
-    else if (type === 'subagent.updated') this.merge(this.subagents, record(event.payload));
+    else if (type === 'subagent.updated') {
+      const payload = record(event.payload);
+      const existing = this.subagents.find((row: Record<string, Object>) => row.id === text(payload.id));
+      if (existing !== undefined) {
+        if (payload.promptOmitted === true && existing.prompt !== undefined) payload.prompt = existing.prompt;
+        if (payload.resultOmitted === true && existing.result !== undefined) payload.result = existing.result;
+      }
+      this.merge(this.subagents, payload);
+    }
     else if (type === 'provider-turn.updated') this.merge(this.providerTurns, record(event.payload));
-    else if (['thread.metadata-updated', 'thread.model-selection-updated', 'thread.runtime-mode-updated', 'thread.interaction-mode-updated'].includes(type)) {
+    else if (type === 'provider-thread.updated') {
+      const payload = record(event.payload);
+      this.merge(this.providerThreads, payload);
+      const isQueuedPlaceholder = payload.status === 'not_loaded' &&
+        (payload.nativeThreadRef === undefined || payload.nativeThreadRef === null) &&
+        (payload.firstRunOrdinal === undefined || payload.firstRunOrdinal === null);
+      if (payload.appThreadId === this.threadId && !isQueuedPlaceholder) {
+        this.details = Object.assign({}, this.details, { activeProviderThreadId: payload.id });
+      }
+    }
+    else if (type === 'provider-session.attached' || type === 'provider-session.updated') {
+      this.merge(this.providerSessions, record(event.payload));
+    }
+    else if (type === 'provider-session.detached') {
+      const payload = record(event.payload);
+      const detachedId = typeof payload.providerSessionId === 'string' ? payload.providerSessionId : text(payload.id);
+      this.providerSessions = this.providerSessions.filter((session: Record<string, Object>) => session.id !== detachedId);
+    }
+    else if (type === 'node.updated') this.merge(this.nodes, record(event.payload));
+    else if (type === 'thread.visit-recorded') {
+      const payload = record(event.payload);
+      const patch: Record<string, Object> = {};
+      if (payload.lastVisitedAt !== undefined) patch.lastVisitedAt = payload.lastVisitedAt;
+      if (payload.opens !== undefined) patch.opens = payload.opens;
+      this.details = Object.assign({}, this.details, patch);
+    }
+    else if (type === 'thread.pull-request-link-updated') {
+      const payload = record(event.payload);
+      if (Array.isArray(payload.pullRequests)) {
+        this.details = Object.assign({}, this.details, { pullRequests: payload.pullRequests });
+      } else if (typeof payload.host === 'string' && typeof payload.repository === 'string' && typeof payload.number === 'number') {
+        const current = Array.isArray(this.details.pullRequests) ? objects(this.details.pullRequests).map(record) : [];
+        const host = String(payload.host).toLowerCase();
+        const repo = String(payload.repository).toLowerCase();
+        const num = payload.number as number;
+        const filtered = current.filter((link: Record<string, Object>) =>
+          !(String(link.host || '').toLowerCase() === host &&
+            String(link.repository || '').toLowerCase() === repo &&
+            link.number === num));
+        if (payload.action !== 'unlinked') {
+          const nextLink = payload.link !== undefined && payload.link !== null ? record(payload.link) : payload;
+          filtered.push(nextLink);
+        }
+        this.details = Object.assign({}, this.details, { pullRequests: filtered });
+      }
+    }
+    else if ([
+      'thread.metadata-updated', 'thread.model-selection-updated', 'thread.runtime-mode-updated',
+      'thread.interaction-mode-updated', 'thread.updated',
+      'thread.settled', 'thread.unsettled', 'thread.snoozed', 'thread.unsnoozed',
+      'thread.auto-settle-set', 'thread.pinned', 'thread.unpinned',
+      'thread.pin-reordered', 'thread.active-reordered',
+      'thread.archived', 'thread.unarchived', 'thread.deleted',
+      'thread.provider-switched', 'thread.guest-share-updated', 'thread.pull-request-synced',
+      'thread.visited', 'thread.tags-updated', 'thread.marked-unread'
+    ].includes(type)) {
       const payload = record(event.payload);
       this.details = Object.assign({}, this.details, payload);
-    } else if (type === 'thread.updated') this.details = Object.assign({}, this.details, record(event.payload));
+    }
     this.cursor = cursor;
+    this.resumeCursor = cursor;
   }
 
   private isHiddenContinuationMessage(payload: Record<string, Object>): boolean {
@@ -310,6 +441,70 @@ export class ThreadState {
       if (this.messageRecords[index].id === id) return this.messageRecords[index];
     }
     return undefined;
+  }
+
+  private findCheckpointRecord(id: string): Record<string, Object> | undefined {
+    for (let index = this.checkpoints.length - 1; index >= 0; index -= 1) {
+      if (this.checkpoints[index].id === id) return this.checkpoints[index];
+    }
+    return undefined;
+  }
+
+  private findSubagentRecord(id: string): Record<string, Object> | undefined {
+    for (let index = this.subagents.length - 1; index >= 0; index -= 1) {
+      if (this.subagents[index].id === id) return this.subagents[index];
+    }
+    return undefined;
+  }
+
+  private restoreDedupedTurnItem(payload: Record<string, Object>): Record<string, Object> {
+    if ((payload.type === 'user_message' || payload.type === 'assistant_message') &&
+      (payload.textOmitted === true || payload.bodyDeduped === true) && typeof payload.messageId === 'string') {
+      const matched = this.findMessageRecord(payload.messageId);
+      if (matched && typeof matched.text === 'string') {
+        payload.text = matched.text;
+        delete payload.textOmitted;
+        delete payload.bodyDeduped;
+      }
+      return payload;
+    }
+    if (payload.type === 'checkpoint' && payload.filesOmitted === true && typeof payload.checkpointId === 'string') {
+      const matched = this.findCheckpointRecord(payload.checkpointId);
+      if (matched && Array.isArray(matched.files)) {
+        payload.files = matched.files;
+        delete payload.filesOmitted;
+      }
+      return payload;
+    }
+    if (payload.type === 'subagent' && (payload.promptOmitted === true || payload.resultOmitted === true) &&
+      typeof payload.subagentId === 'string') {
+      const matched = this.findSubagentRecord(payload.subagentId);
+      if (matched) {
+        if (payload.promptOmitted === true && matched.promptOmitted !== true && matched.prompt !== undefined) {
+          payload.prompt = matched.prompt;
+          delete payload.promptOmitted;
+        }
+        if (payload.resultOmitted === true && matched.resultOmitted !== true && matched.result !== undefined) {
+          payload.result = matched.result;
+          delete payload.resultOmitted;
+        }
+      }
+    }
+    return payload;
+  }
+
+  private extractAttachmentNames(source: Object | undefined): string[] {
+    if (!Array.isArray(source)) return [];
+    const names: string[] = [];
+    for (const entry of source as Object[]) {
+      if (typeof entry === 'string') {
+        if (entry) names.push(entry);
+      } else if (entry !== null && typeof entry === 'object' && !Array.isArray(entry)) {
+        const name = (entry as Record<string, Object>).name;
+        if (typeof name === 'string' && name) names.push(name);
+      }
+    }
+    return names;
   }
 
   private mergeItemByOrdinal(payload: Record<string, Object>): void {
@@ -340,7 +535,8 @@ export class ThreadState {
     if (payload.type === 'user_message' && this.isHiddenContinuationMessage(payload)) return;
     if (typeof payload.messageId !== 'string') return;
     const matched = this.findMessageRecord(payload.messageId);
-    const textValue = typeof payload.text === 'string' && (payload.text.length > 0 || payload.bodyDeduped !== true)
+    const bodyOmitted = payload.textOmitted === true || payload.bodyDeduped === true;
+    const textValue = typeof payload.text === 'string' && (payload.text.length > 0 || !bodyOmitted)
       ? payload.text
       : (matched && typeof matched.text === 'string' ? matched.text : undefined);
     if (typeof textValue !== 'string') return;
@@ -361,7 +557,7 @@ export class ThreadState {
     };
     if (createdAt) msgRecord.createdAt = createdAt;
     if (Array.isArray(attachmentsSource)) {
-      msgRecord.attachmentNames = objects(attachmentsSource).map((a: Object) => text(record(a).name));
+      msgRecord.attachmentNames = this.extractAttachmentNames(attachmentsSource);
     }
     this.upsert(msgRecord);
   }
@@ -437,8 +633,8 @@ export class ThreadState {
     }
     const index = this.messages.findIndex((entry: ChatMessage) => entry.id === text(message.id));
     const existing = index >= 0 ? this.messages[index] : undefined;
-    const attachmentNames = message.attachments ? objects(message.attachments).map((a: Object) => text(record(a).name)) :
-      Array.isArray(message.attachmentNames) ? (message.attachmentNames as Object[]).map((name: Object) => text(name)) :
+    const attachmentNames = message.attachments !== undefined ? this.extractAttachmentNames(message.attachments) :
+      Array.isArray(message.attachmentNames) ? this.extractAttachmentNames(message.attachmentNames) :
       (existing?.attachmentNames || []);
     const next: ChatMessage = {
       id: text(message.id),

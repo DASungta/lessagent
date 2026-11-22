@@ -351,6 +351,7 @@ export interface PullRequestPage {
   errors: string[];
   truncated: boolean;
   nextCursor: string;
+  nextCursors?: Record<string, string>;
 }
 
 export interface ReviewerSelection {
@@ -391,6 +392,7 @@ export function refs(value: Object): RefView[] {
 
 export interface PullRequestRow {
   provider: string;
+  host: string;
   projectId: string;
   projectTitle: string;
   repository: string;
@@ -404,11 +406,257 @@ export interface PullRequestRow {
   draft: boolean;
   additions: number;
   deletions: number;
+  updatedAt: string;
   reviewDecision: string;
   checksState: string;
   labels: string[];
   stackPosition: number;
   stackSize: number;
+  localId?: string;
+  environmentLabel?: string;
+}
+
+export interface PullRequestProjectRepository {
+  canonicalKey: string;
+  displayName: string;
+}
+
+export interface PullRequestProjectSource {
+  localId: string;
+  environmentId: string;
+  environmentLabel: string;
+  id: string;
+  label: string;
+  workspaceRoot: string;
+  archivedAt: string;
+  pinnedAt: string;
+  isScratch: boolean;
+  repository: PullRequestProjectRepository | undefined;
+}
+
+export interface PullRequestProjectChoice {
+  key: string;
+  localId: string;
+  environmentId: string;
+  environmentLabel: string;
+  projectId: string;
+  label: string;
+  title: string;
+  repository: string;
+  canonicalKey: string;
+  pinned: boolean;
+  duplicateLabel: boolean;
+}
+
+export function pullRequestProjectKey(localId: string, projectId: string): string {
+  return localId + ':' + projectId;
+}
+
+export function normalizePullRequestCursors(cursors: Record<string, string> | undefined): Record<string, string> {
+  const result: Record<string, string> = {};
+  if (!cursors) return result;
+  for (const key of Object.keys(cursors)) {
+    const trimmedKey = key.trim();
+    const value = cursors[key];
+    if (trimmedKey && typeof value === 'string' && value.trim()) {
+      result[trimmedKey] = value.trim();
+    }
+  }
+  return result;
+}
+
+export function parsePullRequestCursors(value: Object | undefined | null): Record<string, string> {
+  const result: Record<string, string> = {};
+  if (value === undefined || value === null || typeof value !== 'object' || Array.isArray(value)) return result;
+  const source = record(value);
+  for (const key of Object.keys(source)) {
+    const trimmedKey = key.trim();
+    const entry = source[key];
+    if (trimmedKey && typeof entry === 'string' && entry.trim()) {
+      result[trimmedKey] = entry.trim();
+    }
+  }
+  return result;
+}
+
+export function hasPullRequestCursors(cursors: Record<string, string> | undefined): boolean {
+  if (!cursors) return false;
+  for (const key of Object.keys(cursors)) {
+    if (cursors[key]) return true;
+  }
+  return false;
+}
+
+export function firstPullRequestCursor(cursors: Record<string, string> | undefined): string {
+  if (!cursors) return '';
+  if (cursors.default) return cursors.default;
+  for (const key of Object.keys(cursors)) {
+    if (cursors[key]) return cursors[key];
+  }
+  return '';
+}
+
+function distinguishChoiceTitles(choices: PullRequestProjectChoice[],
+  suffix: (choice: PullRequestProjectChoice) => string): PullRequestProjectChoice[] {
+  const counts = new Map<string, number>();
+  for (const choice of choices) {
+    const key = choice.title.toLowerCase();
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  return choices.map((choice: PullRequestProjectChoice): PullRequestProjectChoice => {
+    const count = counts.get(choice.title.toLowerCase()) || 0;
+    const extra = count > 1 ? suffix(choice).trim() : '';
+    const title = extra ? choice.title + ' · ' + extra : choice.title;
+    return {
+      key: choice.key,
+      localId: choice.localId,
+      environmentId: choice.environmentId,
+      environmentLabel: choice.environmentLabel,
+      projectId: choice.projectId,
+      label: choice.label,
+      title,
+      repository: choice.repository,
+      canonicalKey: choice.canonicalKey,
+      pinned: choice.pinned,
+      duplicateLabel: choice.duplicateLabel || count > 1
+    };
+  });
+}
+
+export function pullRequestProjectChoices(projects: PullRequestProjectSource[],
+  envLocalId: string = '', selectedKey: string = ''): PullRequestProjectChoice[] {
+  const byRepo = new Map<string, PullRequestProjectSource>();
+  for (const project of projects) {
+    if (project.isScratch) continue;
+    const key = pullRequestProjectKey(project.localId, project.id);
+    const isSelected = !!selectedKey && key === selectedKey;
+    if (project.archivedAt && !isSelected) continue;
+    if (envLocalId && project.localId !== envLocalId && !isSelected) continue;
+    const canonical = project.repository && project.repository.canonicalKey ?
+      project.repository.canonicalKey.toLowerCase() : '';
+    const dedupeKey = canonical ? project.localId + ':repo:' + canonical : project.localId + ':project:' + project.id;
+    if (!byRepo.has(dedupeKey) || isSelected) {
+      byRepo.set(dedupeKey, project);
+    }
+  }
+  const unique: PullRequestProjectSource[] = [];
+  byRepo.forEach((project: PullRequestProjectSource) => { unique.push(project); });
+  const hasAnyRepo = unique.some((project: PullRequestProjectSource) =>
+    !!(project.repository && project.repository.canonicalKey));
+  const filtered = hasAnyRepo ? unique.filter((project: PullRequestProjectSource) =>
+    !!(project.repository && project.repository.canonicalKey) ||
+      (!!selectedKey && pullRequestProjectKey(project.localId, project.id) === selectedKey)) : unique;
+  const rawChoices = filtered.map((project: PullRequestProjectSource): PullRequestProjectChoice => ({
+    key: pullRequestProjectKey(project.localId, project.id),
+    localId: project.localId,
+    environmentId: project.environmentId,
+    environmentLabel: project.environmentLabel,
+    projectId: project.id,
+    label: project.label,
+    title: project.label,
+    repository: project.repository ? (project.repository.displayName || project.repository.canonicalKey) : '',
+    canonicalKey: project.repository ? project.repository.canonicalKey : '',
+    pinned: !!project.pinnedAt,
+    duplicateLabel: false
+  }));
+  const byEnv = distinguishChoiceTitles(rawChoices, (choice: PullRequestProjectChoice) =>
+    choice.environmentLabel || choice.environmentId || choice.localId);
+  const byRepoName = distinguishChoiceTitles(byEnv, (choice: PullRequestProjectChoice) =>
+    choice.repository || choice.projectId);
+  return byRepoName.sort((left: PullRequestProjectChoice, right: PullRequestProjectChoice) => {
+    if (left.pinned !== right.pinned) return left.pinned ? -1 : 1;
+    return left.title.localeCompare(right.title);
+  });
+}
+
+export function tagPullRequestRows(rows: PullRequestRow[], localId: string, environmentLabel: string): PullRequestRow[] {
+  return rows.map((row: PullRequestRow): PullRequestRow => ({
+    provider: row.provider,
+    host: row.host,
+    projectId: row.projectId,
+    projectTitle: row.projectTitle,
+    repository: row.repository,
+    number: row.number,
+    title: row.title,
+    url: row.url,
+    author: row.author,
+    headBranch: row.headBranch,
+    baseBranch: row.baseBranch,
+    state: row.state,
+    draft: row.draft,
+    additions: row.additions,
+    deletions: row.deletions,
+    updatedAt: row.updatedAt,
+    reviewDecision: row.reviewDecision,
+    checksState: row.checksState,
+    labels: row.labels,
+    stackPosition: row.stackPosition,
+    stackSize: row.stackSize,
+    localId,
+    environmentLabel
+  }));
+}
+
+export function pullRequestRowIdentity(row: PullRequestRow, crossEnvironment: boolean): string {
+  const hostOrProvider = (row.host || row.provider || '').toLowerCase();
+  const repo = (row.repository || '').toLowerCase();
+  if (crossEnvironment) {
+    return hostOrProvider + ':' + repo + ':' + row.number;
+  }
+  return (row.localId || '') + ':' + hostOrProvider + ':' + row.projectId + ':' + repo + ':' + row.number;
+}
+
+function comparePullRequestRows(left: PullRequestRow, right: PullRequestRow): number {
+  const leftTime = left.updatedAt ? Date.parse(left.updatedAt) : NaN;
+  const rightTime = right.updatedAt ? Date.parse(right.updatedAt) : NaN;
+  if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
+    return rightTime - leftTime;
+  }
+  if (Number.isFinite(leftTime) !== Number.isFinite(rightTime)) {
+    return Number.isFinite(rightTime) ? 1 : -1;
+  }
+  if (left.updatedAt && right.updatedAt && left.updatedAt !== right.updatedAt) {
+    return right.updatedAt.localeCompare(left.updatedAt);
+  }
+  return right.number - left.number;
+}
+
+export function mergePullRequestRows(existing: PullRequestRow[], incoming: PullRequestRow[],
+  crossEnvironment: boolean = false, preferredLocalId: string = ''): PullRequestRow[] {
+  const merged = new Map<string, PullRequestRow>();
+  const insert = (row: PullRequestRow, fromIncoming: boolean): void => {
+    const key = pullRequestRowIdentity(row, crossEnvironment);
+    const held = merged.get(key);
+    if (!held) {
+      merged.set(key, row);
+      return;
+    }
+    if (!crossEnvironment) {
+      if (fromIncoming) merged.set(key, row);
+      return;
+    }
+    const heldPreferred = !!preferredLocalId && held.localId === preferredLocalId;
+    const rowPreferred = !!preferredLocalId && row.localId === preferredLocalId;
+    if (rowPreferred && !heldPreferred) {
+      merged.set(key, row);
+      return;
+    }
+    if (heldPreferred && !rowPreferred) {
+      return;
+    }
+    if (fromIncoming && comparePullRequestRows(row, held) <= 0) {
+      merged.set(key, row);
+    }
+  };
+  for (const row of existing) insert(row, false);
+  for (const row of incoming) insert(row, true);
+  const result: PullRequestRow[] = [];
+  merged.forEach((row: PullRequestRow) => { result.push(row); });
+  const hasTimestamps = result.some((row: PullRequestRow) => !!row.updatedAt);
+  if (hasTimestamps || crossEnvironment) {
+    result.sort(comparePullRequestRows);
+  }
+  return result;
 }
 
 function actor(value: Object | undefined | null): string {
@@ -428,12 +676,15 @@ export function pullRequestRows(value: Object): { rows: PullRequestRow[]; errors
     const row = record(entry);
     const stack = row.stack === undefined || row.stack === null ? undefined : record(row.stack);
     return {
-      provider: text(row.provider), projectId: text(row.projectId), projectTitle: text(row.projectTitle),
+      provider: text(row.provider),
+      host: typeof row.host === 'string' ? row.host : '',
+      projectId: text(row.projectId), projectTitle: text(row.projectTitle),
       repository: text(row.repository), number: Number(row.number), title: text(row.title), url: text(row.url),
       author: actor(row.author), headBranch: text(row.headBranch), baseBranch: text(row.baseBranch),
       state: text(row.state), draft: row.isDraft === true,
       additions: typeof row.additions === 'number' ? row.additions : 0,
       deletions: typeof row.deletions === 'number' ? row.deletions : 0,
+      updatedAt: typeof row.updatedAt === 'string' ? row.updatedAt : '',
       reviewDecision: typeof row.reviewDecision === 'string' ? row.reviewDecision : '',
       checksState: typeof row.checksState === 'string' ? row.checksState : '',
       labels: objects(row.labels).map((label: Object) => text(record(label).name)),
@@ -450,11 +701,17 @@ export function pullRequestRows(value: Object): { rows: PullRequestRow[]; errors
   return { rows, errors, truncated: result.truncated === true, providers };
 }
 
-export function pullRequestListInput(state: string, query: string, cursor: string = '', projectId: string = ''): Object {
+export function pullRequestListInput(state: string, query: string, cursor: string = '', projectId: string = '',
+  cursors?: Record<string, string>): Object {
   if (!['all', 'open', 'closed', 'merged'].includes(state)) throw new Error('PR 状态无效');
   const input: Record<string, Object> = { state, involvement: 'all', limit: 30 };
   if (query.trim()) input.query = query.trim().slice(0, 200);
-  if (cursor) input.cursors = { default: cursor };
+  const normalizedCursors = normalizePullRequestCursors(cursors);
+  if (hasPullRequestCursors(normalizedCursors)) {
+    input.cursors = normalizedCursors;
+  } else if (cursor) {
+    input.cursors = { default: cursor };
+  }
   if (projectId) input.projectId = projectId;
   return input;
 }

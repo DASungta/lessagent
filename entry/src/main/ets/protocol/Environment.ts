@@ -70,23 +70,29 @@ function checkedRecovery(value: Object, base: string, environmentId: string): Re
   return state;
 }
 async function verifyAssets(directory: EnvironmentDirectory, assets: EnvironmentAssets): Promise<void> {
+  const checks: Promise<void>[] = [];
   for (const entry of directory.entries) {
     if (entry.deleting || entry.pendingBase) continue;
     if (entry.kind !== 'cloud') {
       for (const route of environmentRoutes(entry)) {
-        const value = await assets.session(route.credentialRef).load();
-        if (!value) throw new Error('环境凭据记录缺失，未覆盖目录');
-        const session = savedSession(value);
-        if (session.base !== route.base || session.environmentId !== entry.environmentId) throw new Error('环境凭据身份不一致');
+        checks.push((async (): Promise<void> => {
+          const value = await assets.session(route.credentialRef).load();
+          if (!value) throw new Error('环境凭据记录缺失，未覆盖目录');
+          const session = savedSession(value);
+          if (session.base !== route.base || session.environmentId !== entry.environmentId) throw new Error('环境凭据身份不一致');
+        })());
       }
     }
     for (const ref of entry.recovery) {
-      const value = await assets.recovery(ref.alias).load();
-      if (!value || checkedRecovery(value, entry.recoveryBase || entry.base, entry.environmentId).threadId !== ref.threadId) {
-        throw new Error('环境恢复记录缺失或不一致');
-      }
+      checks.push((async (): Promise<void> => {
+        const value = await assets.recovery(ref.alias).load();
+        if (!value || checkedRecovery(value, entry.recoveryBase || entry.base, entry.environmentId).threadId !== ref.threadId) {
+          throw new Error('环境恢复记录缺失或不一致');
+        }
+      })());
     }
   }
+  await Promise.all(checks);
 }
 export function environmentDirectory(value: Object): EnvironmentDirectory {
   const row = record(value);

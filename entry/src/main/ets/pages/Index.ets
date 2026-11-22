@@ -29,6 +29,21 @@ import { BranchView, branches, ComposerContextRecord, ComposerDraft, composerDra
 import { draftStore } from '../storage/DraftStore';
 import { ComposerCommandPanel } from '../components/ComposerCommandPanel';
 import { ThreadExtrasPanel } from '../components/ThreadExtrasPanel';
+import { FloatingStatusCapsule } from '../components/FloatingStatusCapsule';
+import { ThreadAgentsPanel } from '../components/ThreadAgentsPanel';
+import { ThreadBackgroundWorkPanel } from '../components/ThreadBackgroundWorkPanel';
+import {
+  BACKGROUND_WORK_STOP_RETRY_AFTER_MS,
+  BackgroundStopRequest,
+  DelayedConnectionUiState,
+  deriveFloatingCapsuleModel,
+  emptyFloatingCapsule,
+  FloatingCapsuleModel,
+  initialDelayedConnectionUiState,
+  isBackgroundWorkStopPending,
+  PendingBackgroundTaskView,
+  stepDelayedConnectionUi
+} from '../protocol/FloatingStatus';
 import { MessageWorkSlot, ThreadActivity } from '../components/ThreadActivity';
 import {
   ActivityLine, emptyWorkMap, groupWorkByMessage, isPlainUserText,
@@ -50,7 +65,7 @@ import { PairingScanCard } from '../components/PairingScanCard';
 import { PairingTarget } from '../protocol/Pairing';
 import { ChatMessage, objects, record, text } from '../protocol/Wire';
 import { MarkdownView } from '../components/MarkdownView';
-import { imageSource, workspacePath } from '../protocol/Markdown';
+import { classifyMarkdownMediaSource, ResolvedMarkdownMedia } from '../protocol/Markdown';
 import { FilesPanel } from '../components/FilesPanel';
 import { ReviewPanel } from '../components/ReviewPanel';
 import { GitPanel } from '../components/GitPanel';
@@ -84,13 +99,14 @@ import { SettingsPanel } from '../components/SettingsPanel';
 import { UsagePanel } from '../components/UsagePanel';
 import { SnoozePanel } from '../components/SnoozePanel';
 import { ThreadRenamePanel } from '../components/ThreadRenamePanel';
-import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
+import { FontSize, LineHeight, Opacity, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { TopBar } from '../components/ui/TopBar';
 import { GroupCard } from '../components/ui/GroupCard';
 import { FormRow } from '../components/ui/FormRow';
 import { IconButton } from '../components/ui/IconButton';
 import { providerLogoKind, shortModelDisplayName } from '../protocol/ThreadRow';
 import { AppButton } from '../components/ui/AppButton';
+import { ProjectMonogram } from '../components/ui/ProjectMonogram';
 import { ProviderLogo } from '../components/ui/ProviderLogo';
 import { HomeBottomBar, HomeTab } from '../components/ui/HomeBottomBar';
 
@@ -172,6 +188,7 @@ struct Index {
   @State pickerQuery: string = '';
   @State addProjectEnvironmentId: string = '';
   @State addProjectReturn: string = 'choose-project';
+  @State projectPickerReturn: string = 'sessions';
   @State overviewGroupKey: string = '';
   @State archiveGroups: ArchiveProjectGroup[] = [];
   @State archiveEnvironmentId: string = '';
@@ -217,6 +234,11 @@ struct Index {
   private terminalThreadId: string = '';
   private terminalCwd: string = '';
   @State restoringEnvironments: boolean = false;
+  @State anyEnvironmentReady: boolean = false;
+  @State anyEnvironmentHasShell: boolean = false;
+  @State anyEnvironmentLiveSynced: boolean = false;
+  @State reconnectingCount: number = 0;
+  @State offlineCount: number = 0;
   @State settingsSection: string = '';
   @State page: string = 'sessions';
   @State searchOpen: boolean = false;
@@ -241,6 +263,7 @@ struct Index {
   @State credential: string = '';
   @State routeFor: string = '';
   @State pairingStatus: string = '填写地址与配对码后确认';
+  @State pairingError: boolean = false;
   @State projectId: string = '';
   @State modelIndex: number = 0;
   @State draftMode: boolean = false;
@@ -250,6 +273,7 @@ struct Index {
   @State activeModelSlug: string = '';
   @State activeModelLabel: string = '';
   @State activeDraftId: string = '';
+  private draftModelCustomized: boolean = false;
   @State draftRecords: ComposerDraft[] = [];
   @State draftWorkspace: DraftWorkspace = emptyWorkspace();
   @State draftContext: ComposerContextRecord[] = [];
@@ -265,11 +289,18 @@ struct Index {
   @State extraBackground: BackgroundTaskView[] = [];
   @State extraGuest: GuestShareView | undefined = undefined;
   @State extraUsage: TokenUsage | undefined = undefined;
+  @State floatingCapsule: FloatingCapsuleModel = emptyFloatingCapsule();
+  @State turnSubagents: SubagentView[] = [];
+  @State pendingBackgroundItems: PendingBackgroundTaskView[] = [];
+  @State forceStoppingKey: string = '';
+  @State backgroundStopRequest: BackgroundStopRequest | undefined = undefined;
+  private backgroundStopTimer: number = 0;
   @State worktreeSetup: Record<string, Object> | undefined = undefined;
   @State selectedAttachment: DraftAttachment | undefined = undefined;
   @State attachmentPreviewUrl: string = '';
   @State attachmentStatus: string = '';
   @State markdownImageUrl: string = '';
+  @State markdownImageKind: string = 'image';
   @State markdownImagePath: string = '';
   @State promptSuggestion: string = '';
   @State draftEnvironmentError: string = '';
@@ -282,6 +313,12 @@ struct Index {
   @State status: string = '未连接';
   @State server: string = '';
   @State ready: boolean = false;
+  private connUiState: DelayedConnectionUiState = initialDelayedConnectionUiState();
+  private connUiTimer: number = 0;
+  private connUiKey: string = '';
+  @State suppressReconnectUi: boolean = false;
+  @State showDelayedConnError: boolean = false;
+  @State clientOffline: boolean = false;
   @State settingsWriteAllowed: boolean | undefined = undefined;
   @State scheduledConnectionKey: string = '';
   @State busy: boolean = false;
@@ -293,6 +330,9 @@ struct Index {
   @State tools: string[] = [];
   private picker: AttachmentPicker = new AttachmentPicker();
   @State attachmentName: string = '';
+  @State uploadingAttachment: boolean = false;
+  @State canRetryAttachment: boolean = false;
+  private attachmentUploadCancelled: boolean = false;
   private source: MessageSource = new MessageSource();
   private scroller: Scroller = new Scroller();
   @State unknown: boolean = false;
@@ -449,6 +489,8 @@ struct Index {
       this.ensureDeviceWatch();
       this.refreshLinkedWhenChanged();
       this.rebuildWorkspace();
+      this.syncDelayedConnectionUi();
+      this.refreshFloatingCapsule();
       this.updateTaskNotifications();
       void this.openNotificationTarget();
       void this.openShortcut();
@@ -464,6 +506,7 @@ struct Index {
       if (!this.alive) return;
       this.nowMs = Date.now();
       this.rebuildWorkspace();
+      this.refreshFloatingCapsule();
     }, 30000) as number;
   }
 
@@ -472,10 +515,11 @@ struct Index {
     const target = takePairingLink();
     if (target) {
       this.address = target.base; this.credential = target.code;
+      this.pairingError = false;
       this.pairingStatus = '请确认目标后添加环境'; this.openPanel('connection-new');
     } else {
       const error = AppStorage.get<string>('t3PairingError');
-      if (error) { this.credential = ''; this.pairingStatus = error; this.status = error; AppStorage.setOrCreate('t3PairingError', ''); }
+      if (error) { this.credential = ''; this.pairingError = true; this.pairingStatus = error; this.status = error; AppStorage.setOrCreate('t3PairingError', ''); }
     }
   }
 
@@ -648,9 +692,24 @@ struct Index {
     const threads: ScopedThread[] = [];
     const projects: ScopedProject[] = [];
     const capabilities: Record<string, ThreadCapabilities> = {};
+    let anyReady = false;
+    let anyHasShell = false;
+    let anyLiveSynced = false;
+    let reconnecting = 0;
+    let offline = 0;
     registry.clients.forEach((value: T3Client, id: string) => {
       const entry = registry.directory.entries.find((e: EnvironmentEntry) => e.localId === id);
-      if (!entry || entry.deleting || !registry.entryVisible(entry)) return;
+      if (!entry || entry.deleting || entry.enabled === false || !registry.entryVisible(entry)) return;
+      const isReady = Boolean(value.ready);
+      const liveSynced = value.shell.liveSynced === true;
+      const hasShell = value.shell.hasSnapshot === true || value.shell.threads.length > 0 || value.shell.projects.length > 0;
+      const isPending = Boolean(value.connectionPending) || Boolean(value.reconnectPending) ||
+        (isReady && value.shell.liveSynced === false);
+      if (isReady) anyReady = true;
+      if (hasShell) anyHasShell = true;
+      if (isReady && liveSynced) anyLiveSynced = true;
+      if (isPending) reconnecting++;
+      else if (!isReady) offline++;
       const caps: ThreadCapabilities = {
         settlement: value.supports('threadSettlement'), snooze: value.supports('threadSnooze'),
         pinning: value.supports('threadPinning'), pinReorder: value.supports('threadPinReorder'),
@@ -664,10 +723,16 @@ struct Index {
           !!value.scratchWorkspaceRoot && samePath(project.workspaceRoot, value.scratchWorkspaceRoot)));
       });
       value.shell.threads.forEach((thread: ThreadView) => {
+        const project = value.shell.projects.find((p: ProjectView) => p.id === thread.projectId);
         threads.push(scopedThreadView(thread, id, entry.environmentId, entry.label,
-          value.shell.projects.find((p: ProjectView) => p.id === thread.projectId)?.label || '项目'));
+          project?.label || '项目', project?.projectIcon));
       });
     });
+    this.anyEnvironmentReady = anyReady;
+    this.anyEnvironmentHasShell = anyHasShell;
+    this.anyEnvironmentLiveSynced = anyLiveSynced;
+    this.reconnectingCount = reconnecting;
+    this.offlineCount = offline;
     this.scopedThreads = threads; this.scopedProjects = projects;
     this.threadCapabilities = capabilities;
     this.projectGroups = buildProjectGroups(projects, workspacePrefs.projectGroupingMode);
@@ -683,6 +748,7 @@ struct Index {
       }
       this.selectedLocalId = localId;
       this.draftMode = false;
+      this.draftModelCustomized = false;
       if (next) next.draftScope = '';
       this.messages = []; this.source.update([]); this.actions = []; this.tools = [];
       this.workMap = emptyWorkMap();
@@ -711,6 +777,7 @@ struct Index {
     let picker = this.pickers.get(localId);
     if (!picker || !picker.belongsTo(client)) { picker = new AttachmentPicker(client); this.pickers.set(localId, picker); }
     this.picker = picker;
+    this.canRetryAttachment = this.picker.canRetry();
   }
   private workspace(): WorkspaceActions {
     if (!this.workspaceActions) this.workspaceActions = new WorkspaceActions(this.registry());
@@ -960,9 +1027,15 @@ struct Index {
       if (!current()) throw new Error('分享或目标连接已变化，请重试');
       this.uploadingShare = false;
       const model = owner.models[0];
+      const preferredModel = defaults.modelSelection;
+      const modelSelection: ModelSelection = preferredModel && preferredModel.instanceId && preferredModel.model
+        ? (preferredModel.options && preferredModel.options.length > 0
+          ? { instanceId: preferredModel.instanceId, model: preferredModel.model, options: preferredModel.options.slice() }
+          : { instanceId: preferredModel.instanceId, model: preferredModel.model })
+        : { instanceId: model?.instanceId || '', model: model?.model || '' };
       const draft: ComposerDraft = { version: 1, draftId: plan.draftId, localId: project.localId,
         environmentId: project.environmentId, projectId: project.id, text: value,
-        modelSelection: { instanceId: model?.instanceId || '', model: model?.model || '' },
+        modelSelection,
         runtimeMode: defaults.runtimeMode, interactionMode: 'default', workspace: defaults.workspace,
         attachments, context: [], updatedAt: Date.now() };
       const next = [draft].concat(this.draftRecords.filter((item: ComposerDraft) => item.draftId !== draft.draftId));
@@ -1022,7 +1095,7 @@ struct Index {
     if (project) rememberThreadProject({ environmentId: project.environmentId, projectId: project.id });
   }
 
-  private openProjectPicker(forShare: boolean = false): void {
+  private openProjectPicker(forShare: boolean = false, fromDraft: boolean = false): void {
     this.keyboard.reset();
     if (this.busy || this.unknown) { this.status = '请先等待提交完成或核对上次结果'; return; }
     if (!forShare && !this.ready && !this.environmentEntries.some((entry: EnvironmentEntry) =>
@@ -1030,10 +1103,23 @@ struct Index {
       this.openPanel('server');
       return;
     }
+    this.panelOpen = false;
     this.threadQuery = ''; this.threadSearchHits = {};
     this.pickerQuery = '';
     this.pickerEnvironmentId = '';
-    this.pendingDraftId = '';
+    if (fromDraft && this.draftMode && this.activeDraftId) {
+      if (this.draftSaveTimer) { clearTimeout(this.draftSaveTimer); this.draftSaveTimer = 0; }
+      const current = this.draftRecord();
+      if (current) {
+        this.draftRecords = [current].concat(this.draftRecords.filter((item: ComposerDraft) => item.draftId !== current.draftId));
+      }
+      void this.persistDraft().catch(() => {});
+      this.pendingDraftId = this.activeDraftId;
+      this.projectPickerReturn = 'chat';
+    } else {
+      this.pendingDraftId = '';
+      this.projectPickerReturn = forShare ? 'share' : 'sessions';
+    }
     this.choosingShare = forShare; this.page = 'choose-project';
   }
   private pickerGroups(): ProjectGroup[] {
@@ -1047,30 +1133,35 @@ struct Index {
       !!environment.scratchWorkspaceRoot || this.scopedProjects.some((project: ScopedProject) =>
         project.environmentId === environment.environmentId && !project.isScratch));
   }
+  private closeProjectPicker(): void {
+    const next = this.choosingShare ? 'share' : (this.projectPickerReturn === 'chat' && this.draftMode ? 'chat' : 'sessions');
+    this.choosingShare = false;
+    this.pendingDraftId = '';
+    this.projectPickerReturn = 'sessions';
+    this.page = next;
+  }
   private async chooseProject(project: ScopedProject): Promise<void> {
     if (this.choosingShare) {
       if (this.shareLocalId !== project.localId || this.shareProjectId !== project.id) this.resetShareUploads();
       this.shareLocalId = project.localId; this.shareProjectId = project.id;
       this.shareDestination = project.environmentLabel + ' · ' + project.label; this.shareError = '';
-      this.choosingShare = false; this.page = 'share'; return;
+      this.choosingShare = false; this.projectPickerReturn = 'sessions'; this.page = 'share'; return;
     }
+    const pending = this.pendingDraftId;
     try {
       await this.registry().select(project.localId);
-      const pending = this.pendingDraftId;
       this.pendingDraftId = '';
-      if (pending) {
-        const found = this.draftRecords.find((draft: ComposerDraft) => draft.draftId === pending);
-        if (found) {
-          found.localId = project.localId; found.environmentId = project.environmentId; found.projectId = project.id;
-          found.updatedAt = Date.now();
-          if (draftStore) await draftStore.save(this.draftRecords);
-          await this.beginDraft(project.id, pending);
-          return;
-        }
+      if (pending && await this.retargetDraft(project, pending)) {
+        this.projectPickerReturn = 'sessions';
+        return;
       }
+      this.projectPickerReturn = 'sessions';
       await this.beginDraft(project.id);
     }
-    catch (error) { this.status = (error as Error).message; }
+    catch (error) {
+      if (pending && this.page === 'choose-project') this.pendingDraftId = pending;
+      this.status = (error as Error).message;
+    }
   }
   private async startScratch(environmentId: string): Promise<void> {
     if (this.busy) return;
@@ -1078,6 +1169,7 @@ struct Index {
       entry.environmentId === environmentId && !!entry.scratchWorkspaceRoot && entry.ready);
     if (!environment) { this.status = '此环境未启用 No project'; return; }
     this.busy = true;
+    const pending = this.pendingDraftId;
     try {
       const projectId = await this.workspace().ensureScratch(environment);
       this.registry().clients.get(environment.localId)?.refreshShell();
@@ -1085,9 +1177,24 @@ struct Index {
       const project = this.scopedProjects.find((entry: ScopedProject) => entry.localId === environment.localId && entry.id === projectId);
       await this.registry().select(environment.localId);
       this.busy = false;
+      this.pendingDraftId = '';
+      this.projectPickerReturn = 'sessions';
+      if (pending && project && await this.retargetDraft(project, pending)) {
+        if (!found) this.rebuildWorkspace();
+        return;
+      }
+      if (pending) {
+        const oldDraft = this.draftRecords.find((item: ComposerDraft) => item.draftId === pending);
+        if (oldDraft && !oldDraft.text.trim() && oldDraft.attachments.length === 0 && oldDraft.context.length === 0) {
+          await this.deleteDraft(pending);
+        }
+      }
       await this.beginDraft(projectId);
       if (!found || !project) this.rebuildWorkspace();
-    } catch (error) { this.status = (error as Error).message; }
+    } catch (error) {
+      if (pending && this.page === 'choose-project') this.pendingDraftId = pending;
+      this.status = (error as Error).message;
+    }
     finally { this.busy = false; this.rebuildWorkspace(); }
   }
   private openAddProject(returnTo: string): void {
@@ -1345,7 +1452,10 @@ struct Index {
       if (!this.alive) return;
       this.loaded = true; registry.onUpdate();
       await Promise.all(registry.directory.entries.filter((e: EnvironmentEntry) => e.enabled && !e.deleting && registry.entryVisible(e))
-        .map((e: EnvironmentEntry) => registry.reconnect(e.localId)));
+        .map(async (e: EnvironmentEntry) => {
+          try { await registry.reconnect(e.localId); }
+          catch (_) {}
+        }));
     } catch (error) { if (this.alive) this.status = (error as Error).message; }
     finally { this.restoringEnvironments = false; }
   }
@@ -1357,21 +1467,30 @@ struct Index {
     if (this.snoozeTimer) clearTimeout(this.snoozeTimer);
     if (this.searchTimer) clearTimeout(this.searchTimer);
     if (this.undoTimer) clearTimeout(this.undoTimer);
+    if (this.backgroundStopTimer) clearTimeout(this.backgroundStopTimer);
+    if (this.connUiTimer) clearTimeout(this.connUiTimer);
     this.clockTimer = 0; this.snoozeTimer = 0; this.searchTimer = 0; this.undoTimer = 0;
+    this.backgroundStopTimer = 0; this.connUiTimer = 0;
     this.registry().onUpdate = () => {};
   }
 
   private async connect(): Promise<void> {
     if (!this.loaded || this.busy) return;
     this.busy = true;
-    const credential = this.credential; this.credential = '';
+    this.pairingError = false;
     this.pairingStatus = '正在连接与校验环境';
     try {
-      const target = pairingTarget(this.address, credential);
+      const target = pairingTarget(this.address, this.credential);
       if (this.routeFor) await this.registry().addRoute(this.routeFor, target.base, target.code);
       else await this.registry().add(target.base, target.code);
+      this.credential = '';
       this.address = target.base; this.routeFor = ''; this.openPanel('server'); void this.loadLinkedEnvironments();
-    } catch (error) { this.pairingStatus = (error as Error).message; }
+    } catch (error) {
+      const message = (error as Error).message;
+      if (message.includes('服务器身份')) this.credential = '';
+      this.pairingError = true;
+      this.pairingStatus = message;
+    }
     finally { this.busy = false; this.incomingPairing(); }
   }
   private draftKey(): string {
@@ -1385,11 +1504,13 @@ struct Index {
 
   private draftRecord(): ComposerDraft | undefined {
     if (!this.draftMode || !this.activeDraftId) return undefined;
-    return { version: 1, draftId: this.activeDraftId, localId: this.selectedLocalId,
+    const draft: ComposerDraft = { version: 1, draftId: this.activeDraftId, localId: this.selectedLocalId,
       environmentId: this.draftEnvironment(), projectId: this.projectId, text: this.prompt,
       modelSelection: this.taskSettings.modelSelection, runtimeMode: this.taskSettings.runtimeMode,
       interactionMode: this.taskSettings.interactionMode, workspace: this.draftWorkspace,
       attachments: client.attachments.slice(), context: this.draftContext.slice(), updatedAt: Date.now() };
+    if (this.draftModelCustomized) draft.modelCustomized = true;
+    return draft;
   }
 
   private scheduleDraftSave(): void {
@@ -1438,12 +1559,70 @@ struct Index {
     const project = this.projectForDraft(draft);
     if (!project) {
       this.pendingDraftId = draft.draftId;
+      this.projectPickerReturn = 'sessions';
       this.status = '原项目已移除，请为草稿重新选择项目';
       this.page = 'choose-project';
       return;
     }
+    if (this.pendingDraftId && this.pendingDraftId !== draft.draftId) {
+      const oldDraft = this.draftRecords.find((item: ComposerDraft) => item.draftId === this.pendingDraftId);
+      if (oldDraft && !oldDraft.text.trim() && oldDraft.attachments.length === 0 && oldDraft.context.length === 0) {
+        await this.deleteDraft(this.pendingDraftId);
+      }
+    }
+    this.pendingDraftId = '';
+    this.projectPickerReturn = 'sessions';
     await this.registry().select(draft.localId);
     await this.beginDraft(project.id, draft.draftId);
+  }
+
+  private resolveDraftModelChoice(preferred: ModelSelection | undefined, fallback: ModelChoice | undefined): ModelSelection {
+    if (preferred && preferred.instanceId && preferred.model) {
+      return preferred.options && preferred.options.length > 0
+        ? { instanceId: preferred.instanceId, model: preferred.model, options: preferred.options.slice() }
+        : { instanceId: preferred.instanceId, model: preferred.model };
+    }
+    return { instanceId: fallback?.instanceId || '', model: fallback?.model || '' };
+  }
+
+  private isDraftModelSelectableForProject(selection: ModelSelection, projectId: string): boolean {
+    if (!selection.instanceId || !selection.model) return false;
+    if (!this.models.some((item: ModelChoice) => item.instanceId === selection.instanceId && item.model === selection.model)) {
+      return false;
+    }
+    const rawConfig = client ? (client as Object as Record<string, Object>).config : undefined;
+    if (rawConfig !== undefined && rawConfig !== null && typeof rawConfig === 'object' && !Array.isArray(rawConfig)) {
+      const root = rawConfig as Record<string, Object>;
+      const settings = root.settings !== undefined && root.settings !== null && typeof root.settings === 'object' && !Array.isArray(root.settings)
+        ? root.settings as Record<string, Object> : undefined;
+      const overridesMap = settings && settings.projectSettingsOverrides !== undefined && settings.projectSettingsOverrides !== null &&
+        typeof settings.projectSettingsOverrides === 'object' && !Array.isArray(settings.projectSettingsOverrides)
+        ? settings.projectSettingsOverrides as Record<string, Object> : undefined;
+      const projectOverride = overridesMap && overridesMap[projectId] !== undefined && overridesMap[projectId] !== null &&
+        typeof overridesMap[projectId] === 'object' && !Array.isArray(overridesMap[projectId])
+        ? overridesMap[projectId] as Record<string, Object> : undefined;
+      const projectProviders = projectOverride && projectOverride.providerInstances !== undefined && projectOverride.providerInstances !== null &&
+        typeof projectOverride.providerInstances === 'object' && !Array.isArray(projectOverride.providerInstances)
+        ? projectOverride.providerInstances as Record<string, Object> : undefined;
+      const providerOverride = projectProviders && projectProviders[selection.instanceId] !== undefined && projectProviders[selection.instanceId] !== null &&
+        typeof projectProviders[selection.instanceId] === 'object' && !Array.isArray(projectProviders[selection.instanceId])
+        ? projectProviders[selection.instanceId] as Record<string, Object> : undefined;
+      if (providerOverride && providerOverride.enabled === false) return false;
+      const policy = root.managedPolicy !== undefined && root.managedPolicy !== null && typeof root.managedPolicy === 'object' && !Array.isArray(root.managedPolicy)
+        ? root.managedPolicy as Record<string, Object> : undefined;
+      const limits = policy && policy.limits !== undefined && policy.limits !== null && typeof policy.limits === 'object' && !Array.isArray(policy.limits)
+        ? policy.limits as Record<string, Object> : undefined;
+      const providerLimits = limits && limits.providers !== undefined && limits.providers !== null && typeof limits.providers === 'object' && !Array.isArray(limits.providers)
+        ? limits.providers as Record<string, Object> : undefined;
+      if (providerLimits && Array.isArray(providerLimits.allowedDrivers) && Array.isArray(root.providers)) {
+        const providerRow = (root.providers as Object[]).find((entry: Object) =>
+          entry !== null && typeof entry === 'object' && !Array.isArray(entry) &&
+          (entry as Record<string, Object>).instanceId === selection.instanceId) as Record<string, Object> | undefined;
+        const driver = providerRow && typeof providerRow.driver === 'string' ? providerRow.driver as string : '';
+        if (!driver || !(providerLimits.allowedDrivers as Object[]).includes(driver)) return false;
+      }
+    }
+    return true;
   }
 
   private async newDraftDefaults(projectId: string): Promise<DraftDefaults> {
@@ -1458,7 +1637,8 @@ struct Index {
     const defaults = await readDraftDefaults(owner, environmentId, {
       id: project.id, workspaceRoot: project.workspaceRoot, isScratch: project.isScratch,
       hasThreads: this.scopedThreads.some((item: ScopedThread) => item.localId === localId && item.projectId === projectId),
-      defaultThreadEnvMode: project.defaultThreadEnvMode
+      defaultThreadEnvMode: project.defaultThreadEnvMode,
+      defaultModelSelection: project.defaultModelSelection
     });
     const current = this.scopedProjects.find((item: ScopedProject) => item.localId === localId && item.id === projectId);
     if (client !== owner || !owner.ready || owner.generationValue() !== generation || this.selectedLocalId !== localId ||
@@ -1469,7 +1649,7 @@ struct Index {
 
   private async beginDraft(projectId: string, draftId: string = ''): Promise<void> {
     if (this.busy || this.unknown) { this.status = '请先等待提交完成或核对上次结果'; return; }
-    if (this.draftMode && this.activeDraftId) void this.persistDraft().catch(() => {});
+    if (this.draftMode && this.activeDraftId && this.activeDraftId !== draftId) void this.persistDraft().catch(() => {});
     else if (this.threadId) {
       this.textDrafts.set(this.draftKey(), this.prompt);
       this.contextDrafts.set(this.draftKey(), this.draftContext.slice());
@@ -1489,12 +1669,13 @@ struct Index {
     }
     this.activeDraftId = existing?.draftId || util.generateRandomUUID();
     this.draftMode = true; this.projectId = projectId; this.threadId = ''; this.modelIndex = 0;
+    this.draftModelCustomized = existing?.modelCustomized === true;
     client.draftScope = 'draft:' + this.activeDraftId;
-    this.picker.clear(); this.attachmentName = ''; client.attachments = []; client.attachment = undefined;
+    this.picker.clear(); this.canRetryAttachment = false; this.attachmentName = ''; client.attachments = []; client.attachment = undefined;
     client.worktreeSetup = undefined; this.worktreeSetup = undefined;
     const model = this.models[0];
     this.taskSettings = existing ? draftSettings(existing) : {
-      modelSelection: { instanceId: model?.instanceId || '', model: model?.model || '' },
+      modelSelection: this.resolveDraftModelChoice(defaults?.modelSelection, model),
       runtimeMode: defaults!.runtimeMode, interactionMode: 'default' };
     this.prompt = existing?.text || '';
     this.draftWorkspace = existing?.workspace || defaults!.workspace;
@@ -1516,6 +1697,9 @@ struct Index {
     this.expandedWorkGroups = {}; this.canOpenDiff = false;
     this.queued = []; this.extraPlans = []; this.extraSubagents = []; this.extraBackground = [];
     this.extraGuest = undefined; this.extraUsage = undefined;
+    this.floatingCapsule = emptyFloatingCapsule();
+    this.turnSubagents = [];
+    this.pendingBackgroundItems = [];
     this.page = 'chat'; this.panelOpen = false; this.sendMode = 'auto';
     this.activeModelInstanceId = this.taskSettings.modelSelection.instanceId;
     this.activeModelDriver = '';
@@ -1530,6 +1714,7 @@ struct Index {
   private refreshAttachments(): void {
     this.attachments = client.attachments.slice();
     this.attachmentName = this.attachments.map((item: DraftAttachment) => item.name).join('、');
+    this.canRetryAttachment = this.picker.canRetry();
   }
 
   private draftCwd(): string {
@@ -1614,17 +1799,69 @@ struct Index {
     } finally { this.busy = false; }
   }
 
+  private async retargetDraft(project: ScopedProject, draftId: string): Promise<boolean> {
+    const found = draftId ? this.draftRecords.find((draft: ComposerDraft) => draft.draftId === draftId) : undefined;
+    if (!found) return false;
+    const sameTarget = found.localId === project.localId && found.projectId === project.id;
+    const envChanged = found.localId !== project.localId ||
+      (!!found.environmentId && !!project.environmentId && found.environmentId !== project.environmentId);
+    if (!sameTarget) {
+      let defaults: DraftDefaults;
+      this.busy = true;
+      try { defaults = await this.newDraftDefaults(project.id); }
+      finally { this.busy = false; }
+      const droppedAttachments = envChanged && found.attachments.length > 0;
+      const fallbackModel = this.models[0];
+      const explicitKeep = found.modelCustomized === true && this.isDraftModelSelectableForProject(found.modelSelection, project.id);
+      found.localId = project.localId;
+      found.environmentId = project.environmentId;
+      found.projectId = project.id;
+      found.workspace = defaults.workspace;
+      if (envChanged || found.modelCustomized !== true) {
+        found.runtimeMode = defaults.runtimeMode;
+      }
+      if (envChanged) found.attachments = [];
+      if (!explicitKeep) {
+        if (defaults.modelSelection && defaults.modelSelection.instanceId && defaults.modelSelection.model) {
+          found.modelSelection = this.resolveDraftModelChoice(defaults.modelSelection, fallbackModel);
+          found.modelCustomized = undefined;
+        } else if (envChanged && !this.models.some((item: ModelChoice) =>
+          item.instanceId === found.modelSelection.instanceId && item.model === found.modelSelection.model)) {
+          found.modelSelection = { instanceId: fallbackModel?.instanceId || '', model: fallbackModel?.model || '' };
+          found.modelCustomized = undefined;
+        }
+      }
+      found.context = found.context.filter((item: ComposerContextRecord) => item.kind !== 'mention');
+      found.updatedAt = Date.now();
+      if (draftStore) await draftStore.save(this.draftRecords);
+      await this.beginDraft(project.id, draftId);
+      this.status = droppedAttachments ? '已切换项目与环境；原环境附件未带入' : '已切换项目：' + project.label;
+      return true;
+    }
+    await this.beginDraft(project.id, draftId);
+    return true;
+  }
+
   private async switchDraftEnvironment(environmentId: string): Promise<void> {
     const target = this.environmentEntries.find((entry: EnvironmentEntry) =>
       entry.environmentId === environmentId && !entry.deleting);
     if (!target) throw new Error('环境不可用');
-    const project = this.scopedProjects.find((item: ScopedProject) =>
-      item.localId === target.localId && item.id === this.projectId) ||
+    const currentProject = this.scopedProjects.find((item: ScopedProject) =>
+      item.localId === this.selectedLocalId && item.id === this.projectId);
+    const repoKey = currentProject?.repository?.groupingKey || '';
+    const project = (repoKey ? this.scopedProjects.find((item: ScopedProject) =>
+      item.localId === target.localId && !item.archivedAt && item.repository?.groupingKey === repoKey) : undefined) ||
+      this.scopedProjects.find((item: ScopedProject) =>
+        item.localId === target.localId && item.id === this.projectId && !item.archivedAt) ||
+      this.scopedProjects.find((item: ScopedProject) =>
+        item.localId === target.localId && !item.archivedAt && !item.isScratch) ||
       this.scopedProjects.find((item: ScopedProject) => item.localId === target.localId && !item.archivedAt);
     if (!project) throw new Error('该环境没有可用项目');
     await this.persistDraft();
     await this.registry().select(target.localId);
-    await this.beginDraft(project.id, this.activeDraftId);
+    this.panelOpen = false;
+    if (this.activeDraftId && await this.retargetDraft(project, this.activeDraftId)) return;
+    await this.beginDraft(project.id);
   }
 
   private addFileContext(path: string): void {
@@ -1744,6 +1981,232 @@ struct Index {
     this.extraBackground = client.threadBackgroundTasks();
     this.extraGuest = client.threadGuestShare();
     this.extraUsage = client.currentUsage();
+  }
+
+  private syncDelayedConnectionUi(): void {
+    if (this.selectedLocalId !== this.connUiKey) {
+      this.connUiKey = this.selectedLocalId;
+      this.connUiState = initialDelayedConnectionUiState();
+    }
+    const result = stepDelayedConnectionUi(this.connUiState, {
+      ready: this.ready,
+      connecting: client.reconnectPending,
+      offline: client.networkOffline,
+      error: client.lastConnectionError,
+      nowMs: Date.now()
+    });
+    this.connUiState = result.state;
+    this.suppressReconnectUi = result.suppressConnecting;
+    this.showDelayedConnError = result.showError;
+    this.clientOffline = client.networkOffline;
+    if (this.connUiTimer) {
+      clearTimeout(this.connUiTimer);
+      this.connUiTimer = 0;
+    }
+    if (result.nextTickMs > 0 && this.alive) {
+      this.connUiTimer = setTimeout(() => {
+        this.connUiTimer = 0;
+        if (!this.alive) return;
+        this.syncDelayedConnectionUi();
+        this.refreshFloatingCapsule();
+      }, Math.max(50, result.nextTickMs)) as number;
+    }
+  }
+
+  private refreshFloatingCapsule(): void {
+    if (this.draftMode || !this.threadId) {
+      this.turnSubagents = [];
+      this.pendingBackgroundItems = [];
+      this.floatingCapsule = emptyFloatingCapsule();
+      return;
+    }
+    const thread = client.thread && client.thread.threadId === this.threadId ? client.thread : undefined;
+    const synced = !!thread && thread.cursor >= 0;
+    const shellThread = this.threads.find((row: ThreadView) => row.id === this.threadId);
+    const entry = this.environmentEntries.find((candidate: EnvironmentEntry) => candidate.localId === this.selectedLocalId);
+    const threadKey = this.selectedLocalId + ':' + this.threadId;
+    const turn = thread ? client.threadTurnSubagents() : undefined;
+    const bgTasks = thread ? client.threadPendingBackgroundTasks() : [];
+    this.turnSubagents = turn ? turn.subagents : [];
+    this.pendingBackgroundItems = bgTasks;
+    const stopPending = isBackgroundWorkStopPending(this.backgroundStopRequest, threadKey, bgTasks, this.nowMs);
+    if (!stopPending && this.backgroundStopRequest && this.backgroundStopRequest.threadKey === threadKey &&
+      this.backgroundStopRequest.retryAt > 0) {
+      this.backgroundStopRequest = undefined;
+    }
+    const caps = this.threadCapabilities[this.selectedLocalId];
+    const effectiveReady = this.ready || this.suppressReconnectUi;
+    const connectionError = !effectiveReady && this.showDelayedConnError
+      ? (client.lastConnectionError || (client.status && client.status !== '未连接' ? client.status : ''))
+      : '';
+    this.floatingCapsule = deriveFloatingCapsuleModel({
+      draftMode: false,
+      ready: effectiveReady,
+      connecting: client.reconnectPending,
+      offline: this.clientOffline,
+      environmentLabel: entry?.label || client.environmentLabel || '',
+      connectionError,
+      unknown: this.unknown,
+      pendingActionCount: this.actions.length,
+      canOperateThread: this.ready && client.canScope('orchestration:operate') !== false,
+      canForceStop: this.ready && client.supports('threadForceStop') && client.canScope('orchestration:operate') !== false,
+      forceStopping: this.forceStoppingKey === threadKey,
+      backgroundStopPending: stopPending,
+      nowMs: this.nowMs,
+      threadSynced: synced,
+      runs: thread ? thread.runs : [],
+      turnItems: thread ? thread.items : [],
+      messages: this.messages,
+      subagents: thread ? thread.subagents : [],
+      providerThreads: thread ? thread.providerThreads : [],
+      nodes: thread ? thread.nodes : [],
+      details: thread ? thread.details : {},
+      shellThread,
+      allThreads: this.threads,
+      selectedLocalId: this.selectedLocalId,
+      queuedCount: this.queued.length,
+      hasWorktreeSetupCard: this.worktreeSetup !== undefined,
+      supportsSnooze: caps === undefined || caps.snooze,
+      supportsSettlement: caps === undefined || caps.settlement
+    });
+  }
+
+  private openCapsuleStatus(): void {
+    const status = this.floatingCapsule.status;
+    if (!status) return;
+    if (status.kind === 'connection') {
+      const entry = this.environmentEntries.find((candidate: EnvironmentEntry) => candidate.localId === this.selectedLocalId);
+      if (entry && entry.enabled && !client.connectionPending) {
+        void this.registry().reconnect(entry.localId).catch((error: Error) => {
+          this.status = error.message;
+          this.openPanel('server');
+        });
+      } else {
+        this.openPanel('server');
+      }
+      return;
+    }
+    if (status.kind === 'action-needed') {
+      this.scroller.scrollEdge(Edge.Bottom);
+      this.chatAwayFromBottom = false;
+      return;
+    }
+    if (status.kind === 'child-input' && status.targetThreadId) {
+      void this.watch(status.targetThreadId);
+      return;
+    }
+    if (status.kind === 'background') {
+      this.refreshFloatingCapsule();
+      this.openPanel('background-work');
+    }
+  }
+
+  private triggerCapsuleAction(): void {
+    const status = this.floatingCapsule.status;
+    if (!status || status.actionDisabled || !status.actionKind) return;
+    if (status.actionKind === 'stop-background') {
+      this.stopBackgroundWork();
+      return;
+    }
+    if (status.actionKind === 'force-stop') {
+      const runId = status.targetRunId;
+      const threadKey = this.selectedLocalId + ':' + this.threadId;
+      AlertDialog.show({
+        title: '强制停止任务？',
+        message: '任务未响应停止请求。强制停止会立即终止当前运行并结束相关进程（若其他会话未共用）。',
+        primaryButton: { value: '取消', action: () => {} },
+        secondaryButton: {
+          value: '强制停止',
+          fontColor: $r('app.color.danger'),
+          action: () => {
+            this.forceStoppingKey = threadKey;
+            this.refreshFloatingCapsule();
+            void client.forceStop(runId)
+              .catch((error: Error) => { this.status = error.message; })
+              .finally(() => {
+                if (this.forceStoppingKey === threadKey) {
+                  this.forceStoppingKey = '';
+                  this.refreshFloatingCapsule();
+                }
+              });
+          }
+        }
+      });
+      return;
+    }
+    const scoped = this.scopedThreads.find((row: ScopedThread) =>
+      row.localId === this.selectedLocalId && row.id === this.threadId);
+    if (!scoped) return;
+    if (status.actionKind === 'wake') {
+      const details = client.thread?.details;
+      const recovery = details && details.limitRecovery !== undefined && details.limitRecovery !== null
+        ? record(details.limitRecovery) : undefined;
+      const recoveryOwns = !!recovery && recovery.snooze === true &&
+        typeof details?.latestRunId === 'string' && recovery.runId === details.latestRunId &&
+        typeof details?.usageLimitResetAt === 'string' && recovery.resetAt === details.usageLimitResetAt &&
+        Date.parse(scoped.snoozedUntil) === Date.parse(String(recovery.resetAt));
+      this.busy = true;
+      const work = recoveryOwns
+        ? client.setLimitRecovery(undefined, false)
+        : this.workspace().unsnooze(scoped);
+      void work.catch((error: Error) => { this.status = error.message; })
+        .finally(() => { this.busy = false; this.rebuildWorkspace(); this.refreshFloatingCapsule(); });
+      return;
+    }
+    if (status.actionKind === 'unsettle') {
+      this.busy = true;
+      void this.workspace().unsettle(scoped)
+        .catch((error: Error) => { this.status = error.message; })
+        .finally(() => { this.busy = false; this.rebuildWorkspace(); this.refreshFloatingCapsule(); });
+      return;
+    }
+    if (status.actionKind === 'dismiss-woke') {
+      this.busy = true;
+      void this.workspace().visit(scoped, false, '')
+        .catch((error: Error) => { this.status = error.message; })
+        .finally(() => { this.busy = false; this.rebuildWorkspace(); this.refreshFloatingCapsule(); });
+    }
+  }
+
+  private stopBackgroundWork(): void {
+    if (!this.threadId || !client.thread) return;
+    const threadKey = this.selectedLocalId + ':' + this.threadId;
+    const taskIds = this.pendingBackgroundItems.map((task: PendingBackgroundTaskView) => task.taskId);
+    if (this.backgroundStopTimer) {
+      clearTimeout(this.backgroundStopTimer);
+      this.backgroundStopTimer = 0;
+    }
+    const req: BackgroundStopRequest = { threadKey, taskIds, retryAt: 0 };
+    this.backgroundStopRequest = req;
+    this.nowMs = Date.now();
+    this.refreshFloatingCapsule();
+    void client.stop().then(() => {
+      if (!this.alive || this.backgroundStopRequest !== req) return;
+      const withRetry: BackgroundStopRequest = {
+        threadKey: req.threadKey,
+        taskIds: req.taskIds,
+        retryAt: Date.now() + BACKGROUND_WORK_STOP_RETRY_AFTER_MS
+      };
+      this.backgroundStopRequest = withRetry;
+      this.nowMs = Date.now();
+      this.refreshFloatingCapsule();
+      this.backgroundStopTimer = setTimeout(() => {
+        this.backgroundStopTimer = 0;
+        if (!this.alive) return;
+        if (this.backgroundStopRequest === withRetry) {
+          this.backgroundStopRequest = undefined;
+          this.nowMs = Date.now();
+          this.refreshFloatingCapsule();
+        }
+      }, BACKGROUND_WORK_STOP_RETRY_AFTER_MS + 50) as number;
+    }).catch((error: Error) => {
+      if (this.backgroundStopRequest === req) {
+        this.backgroundStopRequest = undefined;
+      }
+      this.status = error.message;
+      this.nowMs = Date.now();
+      this.refreshFloatingCapsule();
+    });
   }
 
   private threadAttachments(): DraftAttachment[] {
@@ -1868,6 +2331,9 @@ struct Index {
     } catch (error) { failure = (error as Error).message; }
     if (owner === client) {
       const partial = JSON.stringify(applied) !== JSON.stringify(this.taskSettings);
+      if (this.draftMode && !failure && JSON.stringify(applied.modelSelection) !== JSON.stringify(this.taskSettings.modelSelection)) {
+        this.draftModelCustomized = true;
+      }
       this.taskSettings = applied;
       this.activeModelInstanceId = applied.modelSelection.instanceId;
       this.activeModelDriver = '';
@@ -1932,6 +2398,7 @@ struct Index {
       this.contextDrafts.set(previousKey, this.draftContext.slice());
     }
     this.draftMode = false; client.draftScope = '';
+    this.canRetryAttachment = this.picker.canRetry();
     const targetKey = this.selectedLocalId + ':' + id;
     if (targetKey !== this.renderedThreadKey) {
       this.messages = [];
@@ -1946,6 +2413,9 @@ struct Index {
       this.activeModelDriver = '';
       this.activeModelSlug = matched?.model || '';
       this.activeModelLabel = '';
+      this.turnSubagents = [];
+      this.pendingBackgroundItems = [];
+      this.floatingCapsule = emptyFloatingCapsule();
     }
     this.chatAwayFromBottom = false;
     this.composerToolsOpen = false;
@@ -1955,6 +2425,7 @@ struct Index {
     this.prompt = this.textDrafts.get(this.draftKey()) || '';
     this.draftContext = (this.contextDrafts.get(this.draftKey()) || []).slice();
     this.page = 'chat'; this.showTools = false; this.panelOpen = false;
+    this.refreshFloatingCapsule();
     this.busy = true;
     try {
       await client.watch(id);
@@ -2029,6 +2500,7 @@ struct Index {
   private async forget(localId: string): Promise<void> {
     await this.registry().remove(localId);
     this.pickers.get(localId)?.clear(); this.pickers.delete(localId);
+    if (localId === this.selectedLocalId) this.canRetryAttachment = false;
     const prefix = localId + '\n';
     this.textDrafts.forEach((value: string, key: string) => { if (key.startsWith(prefix)) this.textDrafts.delete(key); });
     this.settingsDrafts.forEach((value: TaskSettings, key: string) => { if (key.startsWith(prefix)) this.settingsDrafts.delete(key); });
@@ -2038,15 +2510,67 @@ struct Index {
     if (draftStore) await draftStore.save(kept);
   }
 
-  private async attach(retry: boolean): Promise<void> {
+  private async attach(mode: 'file' | 'photo' | 'retry'): Promise<void> {
+    if (!this.ready || this.busy || this.unknown) return;
     this.busy = true;
+    this.uploadingAttachment = true;
+    this.attachmentUploadCancelled = false;
     try {
-      if (retry) await this.picker.retry(); else await this.picker.choose();
+      const uploaded = mode === 'retry' ? await this.picker.retry() :
+        mode === 'photo' ? await this.picker.choosePhotos() : await this.picker.choose();
       this.refreshAttachments();
-      this.scheduleDraftSave();
-      this.status = '附件已上传，发送指令时附带';
-    } catch (error) { this.status = (error as Error).message || '附件选择失败，请重试'; }
-    finally { this.busy = false; this.incomingPairing(); }
+      if (uploaded) {
+        this.scheduleDraftSave();
+        this.status = '附件已上传，发送指令时附带';
+      }
+    } catch (error) {
+      this.refreshAttachments();
+      if (this.attachmentUploadCancelled) this.status = '附件上传已取消';
+      else this.status = (error as Error).message || '附件选择失败，请重试';
+    }
+    finally {
+      this.uploadingAttachment = false;
+      this.busy = false;
+      this.canRetryAttachment = this.picker.canRetry();
+      this.incomingPairing();
+    }
+  }
+
+  private cancelAttachmentUpload(): void {
+    this.attachmentUploadCancelled = true;
+    this.picker.cancel();
+    this.canRetryAttachment = false;
+    this.status = '附件上传已取消';
+  }
+
+  private clearAttachments(): void {
+    if (this.busy || this.unknown) return;
+    client.attachments = [];
+    client.attachment = undefined;
+    this.picker.clear();
+    this.refreshAttachments();
+    this.scheduleDraftSave();
+  }
+
+  private composerAttachmentMenu(uploading: boolean, canRetry: boolean, hasAttachments: boolean): MenuElement[] {
+    if (uploading) {
+      return [
+        { value: '取消上传', action: () => { this.cancelAttachmentUpload(); } },
+        { value: '粘贴结构化上下文', action: () => { this.openPanel('paste-context'); } }
+      ];
+    }
+    const items: MenuElement[] = [
+      { value: '从图库选择', action: () => { void this.attach('photo'); } },
+      { value: '选择文件', action: () => { void this.attach('file'); } }
+    ];
+    if (canRetry) {
+      items.push({ value: '重试上传', action: () => { void this.attach('retry'); } });
+    }
+    items.push({ value: '粘贴结构化上下文', action: () => { this.openPanel('paste-context'); } });
+    if (hasAttachments) {
+      items.push({ value: '清空附件', action: () => { this.clearAttachments(); } });
+    }
+    return items;
   }
 
   private async acknowledge(): Promise<void> {
@@ -2065,19 +2589,31 @@ struct Index {
       await context.startAbility({ action: 'ohos.want.action.viewData', uri: url });
     } catch (error) { this.status = '无法打开链接：' + (error as Error).message; }
   }
+  private markdownMediaScopeKey(): string {
+    return this.selectedLocalId + ':' + this.threadId + ':' + client.generationValue() + ':' + (this.ready ? '1' : '0');
+  }
+  private resolveMarkdownMedia(source: string, refresh: boolean): Promise<ResolvedMarkdownMedia> {
+    return client.markdownMediaUrl(source, this.currentWorkspace(), refresh);
+  }
   private async openMarkdownImage(value: string): Promise<void> {
-    const direct = imageSource(value);
-    if (direct) {
-      this.markdownImageUrl = direct; this.markdownImagePath = '';
+    const cwd = this.currentWorkspace();
+    const classified = classifyMarkdownMediaSource(value, cwd);
+    if (classified.access === 'direct') {
+      this.markdownImageUrl = classified.uri;
+      this.markdownImageKind = classified.kind;
+      this.markdownImagePath = '';
       this.openPanel('markdown-image');
       return;
     }
+    if (classified.access === 'blocked') {
+      this.status = '不支持打开此媒体路径';
+      return;
+    }
     try {
-      const path = workspacePath(value);
-      const cwd = client.threadCwd();
-      if (!cwd) throw new Error('会话没有工作目录');
-      this.markdownImageUrl = await client.workspaceFileUrl(cwd, path, true);
-      this.markdownImagePath = path;
+      const resolved = await client.markdownMediaUrl(value, cwd, true);
+      this.markdownImageUrl = resolved.url;
+      this.markdownImageKind = resolved.kind;
+      this.markdownImagePath = resolved.displayPath;
       this.openPanel('markdown-image');
     } catch (error) { this.status = (error as Error).message; }
   }
@@ -2217,7 +2753,7 @@ struct Index {
     if (this.panelOpen && ['peer-link', 'task-settings', 'queue'].includes(this.panel) && this.busy) return true;
     if (this.panelOpen) {
       if (this.panel === 'cloud') { this.panel = this.cloudReturnPanel; return true; }
-      if (this.panel === 'connection-new') { this.panel = 'server'; this.credential = ''; }
+      if (this.panel === 'connection-new') { this.panel = 'server'; this.credential = ''; this.pairingError = false; }
       else {
         if (this.panel === 'snooze') this.snoozeThread = undefined;
         if (this.panel === 'rename') this.renameThread = undefined;
@@ -2237,7 +2773,13 @@ struct Index {
       return true;
     }
     if (this.page === 'chat') { this.page = 'sessions'; return true; }
-    if (this.page === 'settings' || this.page === 'choose-project') { this.page = 'sessions'; return true; }
+    if (this.page === 'settings') { this.page = 'sessions'; return true; }
+    if (this.page === 'choose-project') {
+      const next = this.choosingShare ? 'share' : (this.projectPickerReturn === 'chat' && this.draftMode ? 'chat' : 'sessions');
+      this.choosingShare = false; this.pendingDraftId = ''; this.projectPickerReturn = 'sessions';
+      this.page = next;
+      return true;
+    }
     if (this.page === 'add-project') { this.page = this.addProjectReturn; return true; }
     if (this.page === 'project-overview' || this.page === 'archive') { this.page = 'settings'; return true; }
     if (this.page === 'android-device') { this.page = 'device-picker'; return true; }
@@ -2303,8 +2845,20 @@ struct Index {
     try {
       await this.registry().select(thread.localId);
       this.projectId = thread.projectId;
-      await this.workspace().visit(thread, true, this.threadQuery);
-      await this.watch(thread.id);
+      const owner = this.registry().clients.get(thread.localId);
+      if (owner?.ready) {
+        await this.workspace().visit(thread, true, this.threadQuery);
+        await this.watch(thread.id);
+      } else {
+        this.draftMode = false;
+        this.threadId = thread.id;
+        this.cachedChatTitle = thread.label;
+        this.cachedChatProject = thread.projectLabel;
+        this.page = 'chat';
+        if (owner && !owner.connectionPending) {
+          void this.registry().reconnect(thread.localId).catch(() => {});
+        }
+      }
     } catch (error) { this.status = (error as Error).message; }
   }
 
@@ -2367,6 +2921,67 @@ struct Index {
     const visible: LinkedEnvironmentGroup[] = [];
     for (const group of groups) if (group) visible.push(group);
     this.linkedGroups = visible;
+  }
+
+  private hasEnabledEnvironment(): boolean {
+    return this.environmentEntries.some((entry: EnvironmentEntry) => !entry.deleting && entry.enabled !== false);
+  }
+  private homeWaitingForFirstSnapshot(): boolean {
+    return this.loaded && this.hasEnabledEnvironment() && this.scopedThreads.length === 0 &&
+      !this.anyEnvironmentHasShell &&
+      (this.restoringEnvironments || this.reconnectingCount > 0 || this.anyEnvironmentReady);
+  }
+  private homeAllOfflineWithoutCache(): boolean {
+    return this.loaded && this.hasEnabledEnvironment() && this.scopedThreads.length === 0 &&
+      !this.anyEnvironmentHasShell && !this.anyEnvironmentReady &&
+      !this.restoringEnvironments && this.reconnectingCount === 0;
+  }
+  private homeThreadListLoading(): boolean {
+    return !this.loaded || (this.scopedThreads.length === 0 && !this.anyEnvironmentLiveSynced &&
+      (this.restoringEnvironments || this.reconnectingCount > 0));
+  }
+  private homeShowReconnectingHeader(): boolean {
+    if (this.clientOffline) return false;
+    return this.scopedThreads.length > 0 && (this.restoringEnvironments || this.reconnectingCount > 0);
+  }
+  private homeShowOfflineHeader(): boolean {
+    if (this.clientOffline && this.scopedThreads.length > 0) return true;
+    return this.scopedThreads.length > 0 && !this.restoringEnvironments &&
+      this.reconnectingCount === 0 && this.offlineCount > 0;
+  }
+  private homeConnectionLabel(): string {
+    if (this.clientOffline) return '当前离线';
+    if (this.restoringEnvironments || this.reconnectingCount > 0) {
+      const count = this.reconnectingCount > 0 ? this.reconnectingCount : 1;
+      return count > 1 ? ('正在重连 ' + count + ' 个环境') : '正在重连环境';
+    }
+    return this.offlineCount > 1 ? (this.offlineCount + ' 个环境离线') : '工作环境离线';
+  }
+  private showChatStatusBanner(): boolean {
+    if (!this.status || this.status === '会话已同步' || this.status === '已连接' || this.status === '未连接') {
+      return false;
+    }
+    if (!this.draftMode && !this.ready && (client.reconnectPending || this.clientOffline || this.suppressReconnectUi)) {
+      return false;
+    }
+    if (this.status === '正在鉴权' || this.status === '正在连接与校验服务器' ||
+      this.status === '正在通过 T3 Connect 授权' || this.status === '正在连接中继环境' ||
+      this.status === '正在同步会话' || this.status === '正在重新连接' ||
+      this.status === '后台已暂停连接，任务在服务端继续') {
+      return false;
+    }
+    return true;
+  }
+  private showHomeStatusBanner(): boolean {
+    if (!this.status || this.homeShowReconnectingHeader() || this.homeWaitingForFirstSnapshot()) return false;
+    if (this.status === '会话已同步' || this.status === '已连接' || this.status === '未连接' ||
+      this.status === '正在鉴权' || this.status === '正在连接与校验服务器' ||
+      this.status === '正在通过 T3 Connect 授权' || this.status === '正在连接中继环境' ||
+      this.status === '正在同步会话' || this.status === '正在重新连接' ||
+      this.status === '后台已暂停连接，任务在服务端继续' || this.status.startsWith('任务状态')) {
+      return false;
+    }
+    return true;
   }
 
   @Builder
@@ -2445,8 +3060,11 @@ struct Index {
         })
         Column({ space: Space.sm }) {
           Column({ space: Space.sm }) {
-            if (this.markdownImageUrl) {
-              Image(this.markdownImageUrl).width('100%').constraintSize({ maxHeight: 420 })
+            if (this.markdownImageUrl && this.markdownImageKind === 'video') {
+              Video({ src: this.markdownImageUrl }).width('100%').height(320).controls(true)
+                .backgroundColor(Color.Black).borderRadius(Radius.tool)
+            } else if (this.markdownImageUrl) {
+              Image(this.markdownImageUrl).width('100%').constraintSize({ maxHeight: 460 })
                 .objectFit(ImageFit.Contain).borderRadius(Radius.tool)
             } else {
               Text('没有可显示的图片').fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%')
@@ -2553,7 +3171,39 @@ struct Index {
         },
         onUsage: () => { this.panel = 'thread'; }
       })
-    } else if (this.panel === 'task-settings') {
+    } else if (this.panel === 'agents') {
+      ThreadAgentsPanel({
+        subagents: this.turnSubagents.length ? this.turnSubagents : this.extraSubagents,
+        busy: this.busy,
+        connected: this.ready,
+        onClose: () => { this.panelOpen = false; },
+        onOpenThread: (threadId: string, remoteEnvironmentId: string) => {
+          if (remoteEnvironmentId) {
+            const entry = this.environmentEntries.find((candidate: EnvironmentEntry) => candidate.environmentId === remoteEnvironmentId);
+            if (!entry) { this.status = '子会话所在环境未连接'; return; }
+            void this.registry().select(entry.localId).then(() => this.watch(threadId));
+          } else {
+            void this.watch(threadId);
+          }
+        },
+        onStopSubagent: (id: string) => {
+          this.busy = true;
+          void client.stopSubagent(id).then(() => { this.status = '已请求停止子 Agent'; })
+            .catch((error: Error) => { this.status = error.message; })
+            .finally(() => { this.busy = false; this.refreshExtras(); this.refreshFloatingCapsule(); });
+        }
+      })
+    } else if (this.panel === 'background-work') {
+      ThreadBackgroundWorkPanel({
+        tasks: this.pendingBackgroundItems,
+        canOperate: this.ready && client.canScope('orchestration:operate') !== false,
+        stopPending: isBackgroundWorkStopPending(this.backgroundStopRequest, this.selectedLocalId + ':' + this.threadId, this.pendingBackgroundItems, this.nowMs),
+        busy: this.busy,
+        onClose: () => { this.panelOpen = false; },
+        onOpenThread: (threadId: string) => { void this.watch(threadId); },
+        onStopAll: () => { this.stopBackgroundWork(); }
+      })
+    } else if (this.panelOpen && this.panel === 'task-settings') {
       TaskSettingsPanel({ models: this.models, config: client.config, settings: this.taskSettings, busy: this.busy || this.unknown, status: this.status,
         onSave: (settings: TaskSettings) => { void this.saveTaskSettings(settings); }, onClose: () => this.panelOpen = false,
         onInstall: (id: string) => { void this.installProvider(id); },
@@ -2661,8 +3311,8 @@ struct Index {
             deviceEnvironmentLabel: this.deviceEnvironmentLabel, pendingDevices: this.pendingDevices,
             approvedDevices: this.approvedDevices,
             onClose: () => { this.panelOpen = false; this.credential = ''; },
-            onAdd: () => { this.routeFor = ''; this.address = ''; this.credential = ''; this.pairingStatus = '填写地址与配对码后确认'; this.panel = 'connection-new'; },
-            onAddRoute: (id: string) => { this.routeFor = id; this.address = ''; this.credential = ''; this.pairingStatus = '为当前环境添加连接路径'; this.panel = 'connection-new'; },
+            onAdd: () => { this.routeFor = ''; this.address = ''; this.credential = ''; this.pairingError = false; this.pairingStatus = '填写地址与配对码后确认'; this.panel = 'connection-new'; },
+            onAddRoute: (id: string) => { this.routeFor = id; this.address = ''; this.credential = ''; this.pairingError = false; this.pairingStatus = '为当前环境添加连接路径'; this.panel = 'connection-new'; },
             onInitialize: () => this.restoreAddress(),
             onRetry: (id: string) => this.registry().reconnect(id),
             onEnabled: (id: string, enabled: boolean) => this.registry().setEnabled(id, enabled),
@@ -2682,7 +3332,7 @@ struct Index {
           title: this.routeFor ? '添加路径' : '添加环境',
           showBack: true,
           backLabel: '返回环境',
-          onBack: () => { this.panel = 'server'; this.credential = ''; this.routeFor = ''; }
+          onBack: () => { this.panel = 'server'; this.credential = ''; this.routeFor = ''; this.pairingError = false; }
         }) {
           AppButton({
             label: this.busy ? '连接中' : '确认',
@@ -2695,7 +3345,7 @@ struct Index {
         Scroll() {
           Column({ space: 0 }) {
             PairingScanCard({ active: this.panelOpen && this.panel === 'connection-new' && !this.busy,
-              onTarget: (target: PairingTarget) => { this.address = target.base; this.credential = target.code; this.pairingStatus = this.routeFor ? '请确认目标后添加连接路径' : '请确认目标后添加环境'; } })
+              onTarget: (target: PairingTarget) => { this.address = target.base; this.credential = target.code; this.pairingError = false; this.pairingStatus = this.routeFor ? '请确认目标后添加连接路径' : '请确认目标后添加环境'; } })
 
             GroupCard({
               title: '或在这里输入',
@@ -2728,7 +3378,8 @@ struct Index {
 
             if (this.pairingStatus) {
               Text(this.pairingStatus).fontSize(FontSize.caption).lineHeight(LineHeight.caption)
-                .fontColor($r('app.color.muted')).padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
+                .fontColor(this.pairingError ? $r('app.color.danger') : $r('app.color.muted'))
+                .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
             }
 
             if (this.cloudConfigured) {
@@ -2757,6 +3408,17 @@ struct Index {
         })
         Scroll() {
           Column({ space: Space.xs }) {
+            if (this.draftMode) {
+              GroupCard({ title: '新任务' }) {
+                FormRow({
+                  label: '切换项目',
+                  subtitle: this.projects.find((p: ProjectView) => p.id === this.projectId)?.label || '选择目标项目',
+                  isFirst: true,
+                  disabled: this.busy || this.unknown,
+                  onTap: () => this.openProjectPicker(false, true)
+                })
+              }
+            }
             GroupCard({ title: '工作区工具' }) {
               FormRow({
                 label: '文件与源码',
@@ -2870,7 +3532,8 @@ struct Index {
 
   @Builder
   sessionsPage() {
-    if (!this.ready && this.scopedThreads.length === 0) {
+    if (!this.loaded || this.environmentEntries.length === 0 || !this.hasEnabledEnvironment() ||
+      this.homeWaitingForFirstSnapshot() || this.homeAllOfflineWithoutCache()) {
       Column() {
         Blank()
         if (!this.loaded) {
@@ -2878,13 +3541,23 @@ struct Index {
             this.restoringEnvironments ? '正在安全读取已保存的连接。' : this.status)
           if (this.restoringEnvironments) { LoadingProgress().width(28).height(28) }
           else { AppButton({ label: '重试恢复', kind: 'primary', onTap: () => { void this.restoreAddress(); } }) }
-        } else if (this.environmentEntries.length > 0) {
-          this.emptyState(this.restoringEnvironments ? '正在连接工作环境' : '工作环境尚未连接',
-            '已保留你的环境和会话，连接恢复后继续工作。')
-          AppButton({ label: '管理连接', kind: 'secondary', onTap: () => this.openPanel('server') })
-        } else {
+        } else if (this.environmentEntries.length === 0) {
           this.emptyState('添加你的工作环境', '连接 T3 Code，在手机上继续工作。')
           AppButton({ label: '＋ 添加环境', kind: 'primary', onTap: () => this.openPanel('server') })
+        } else if (!this.hasEnabledEnvironment()) {
+          this.emptyState('工作环境已停用', '启用已保存的环境后继续工作。')
+          AppButton({ label: '管理连接', kind: 'secondary', onTap: () => this.openPanel('server') })
+        } else if (this.homeWaitingForFirstSnapshot()) {
+          this.emptyState(this.anyEnvironmentReady ? '正在同步会话' : '正在连接工作环境',
+            '已保留你的环境和会话，连接恢复后继续工作。')
+          LoadingProgress().width(28).height(28).margin({ bottom: Space.md })
+          AppButton({ label: '管理连接', kind: 'secondary', onTap: () => this.openPanel('server') })
+        } else {
+          this.emptyState('工作环境尚未连接', '已保留你的环境和会话，连接恢复后继续工作。')
+          Row({ space: Space.sm }) {
+            AppButton({ label: '重试连接', kind: 'primary', onTap: () => { void this.restoreAddress(); } })
+            AppButton({ label: '管理连接', kind: 'secondary', onTap: () => this.openPanel('server') })
+          }
         }
         Blank()
       }.layoutWeight(1).width('100%').padding({ bottom: 88 })
@@ -2895,7 +3568,7 @@ struct Index {
         selectedKey: this.selectedLocalId + ':' + this.threadId,
         nowMs: this.nowMs, environmentEntries: this.environmentEntries,
         environmentFilter: this.environmentFilter, projectFiltered: !!this.projectFilterKey, projectFilterLabel: this.projectFilterLabel,
-        loading: !this.loaded, workingShelfExpanded: this.workingExpanded,
+        loading: this.homeThreadListLoading(), workingShelfExpanded: this.workingExpanded,
         snoozedShelfExpanded: this.snoozedExpanded, settledShelfExpanded: this.settledExpanded,
         settledLimit: this.settledLimit,
         searchOpen: this.searchOpen,
@@ -2969,9 +3642,13 @@ struct Index {
         } else {
           Column({ space: Space.xs }) {
             MarkdownView({ markdown: message.text, selectable: true,
+              mediaScopeKey: this.markdownMediaScopeKey(),
+              mediaReady: this.ready,
               onCopy: (value: string) => { void this.copy(value); },
               onOpenLink: (url: string) => { void this.openLink(url); },
-              onOpenImage: (url: string) => { void this.openMarkdownImage(url); } })
+              onOpenImage: (url: string) => { void this.openMarkdownImage(url); },
+              resolveMedia: (source: string, refresh: boolean): Promise<ResolvedMarkdownMedia> =>
+                this.resolveMarkdownMedia(source, refresh) })
           }.alignItems(HorizontalAlign.Start)
             .width('84%').clip(true)
             .padding({ left: 14, right: 14, top: 10, bottom: 10 })
@@ -2997,9 +3674,13 @@ struct Index {
           .onClick(() => { void this.openAttachment(name); })
       })
       MarkdownView({ markdown: message.text, selectable: true,
+        mediaScopeKey: this.markdownMediaScopeKey(),
+        mediaReady: this.ready,
         onCopy: (value: string) => { void this.copy(value); },
         onOpenLink: (url: string) => { void this.openLink(url); },
-        onOpenImage: (url: string) => { void this.openMarkdownImage(url); } })
+        onOpenImage: (url: string) => { void this.openMarkdownImage(url); },
+        resolveMedia: (source: string, refresh: boolean): Promise<ResolvedMarkdownMedia> =>
+          this.resolveMarkdownMedia(source, refresh) })
     }.width('100%').alignItems(HorizontalAlign.Start)
       .accessibilityText('回复：' + message.text)
   }
@@ -3041,19 +3722,45 @@ struct Index {
     })
   }
 
+  private draftProject(): ProjectView | undefined {
+    return this.projects.find((project: ProjectView) => project.id === this.projectId);
+  }
+
   @Builder
   chatPage() {
     if (this.draftMode) {
-      Row({ space: Space.xs }) {
-        Button({ type: ButtonType.Normal }) {
-          Row({ space: 4 }) {
-            Text(this.environmentEntries.find((entry: EnvironmentEntry) => entry.localId === this.selectedLocalId)?.label || '环境')
-              .fontSize(FontSize.callout).fontColor($r('app.color.ink')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
-            Image($r('app.media.ui_chevron_right')).width(12).height(12).accessibilityLevel('no')
-          }.width('100%').alignItems(VerticalAlign.Center)
-        }.constraintSize({ minHeight: 38 }).padding({ left: Space.sm, right: Space.xs })
-          .backgroundColor($r('app.color.group')).borderRadius(Radius.button).layoutWeight(1).enabled(!this.busy)
-          .accessibilityDescription('选择环境').onClick(() => this.openComposerCommand('environment'))
+      Column({ space: Space.xs }) {
+        Row({ space: Space.xs }) {
+          Button({ type: ButtonType.Normal }) {
+            Row({ space: 6 }) {
+              if (this.draftProject()) {
+                ProjectMonogram({
+                  projectId: this.draftProject()!.id,
+                  name: this.draftProject()!.label,
+                  icon: this.draftProject()!.projectIcon,
+                  boxSize: 18
+                })
+              } else {
+                Image($r('app.media.ui_folder')).width(14).height(14).opacity(0.75).accessibilityLevel('no')
+              }
+              Text(this.draftProject()?.label || '选择项目')
+                .fontSize(FontSize.callout).fontColor($r('app.color.ink')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
+              Image($r('app.media.ui_chevron_right')).width(12).height(12).accessibilityLevel('no')
+            }.width('100%').alignItems(VerticalAlign.Center)
+          }.constraintSize({ minHeight: 38 }).padding({ left: Space.sm, right: Space.xs })
+            .backgroundColor($r('app.color.group')).borderRadius(Radius.button).layoutWeight(1).enabled(!this.busy && !this.unknown)
+            .accessibilityDescription('切换项目').onClick(() => this.openProjectPicker(false, true))
+          Button({ type: ButtonType.Normal }) {
+            Row({ space: 6 }) {
+              Image($r('app.media.ui_env_desktop')).width(14).height(14).opacity(0.75).accessibilityLevel('no')
+              Text(this.environmentEntries.find((entry: EnvironmentEntry) => entry.localId === this.selectedLocalId)?.label || '环境')
+                .fontSize(FontSize.callout).fontColor($r('app.color.ink')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
+              Image($r('app.media.ui_chevron_right')).width(12).height(12).accessibilityLevel('no')
+            }.width('100%').alignItems(VerticalAlign.Center)
+          }.constraintSize({ minHeight: 38 }).padding({ left: Space.sm, right: Space.xs })
+            .backgroundColor($r('app.color.group')).borderRadius(Radius.button).layoutWeight(1).enabled(!this.busy && !this.unknown)
+            .accessibilityDescription('选择环境').onClick(() => this.openComposerCommand('environment'))
+        }.width('100%')
         Button({ type: ButtonType.Normal }) {
           Row({ space: 4 }) {
             Text((this.draftWorkspace.mode === 'worktree' ? '新工作树' :
@@ -3062,8 +3769,8 @@ struct Index {
               .fontSize(FontSize.callout).fontColor($r('app.color.ink')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
             Image($r('app.media.ui_chevron_right')).width(12).height(12).accessibilityLevel('no')
           }.width('100%').alignItems(VerticalAlign.Center)
-        }.constraintSize({ minHeight: 38 }).padding({ left: Space.sm, right: Space.xs })
-          .backgroundColor($r('app.color.group')).borderRadius(Radius.button).layoutWeight(1).enabled(!this.busy)
+        }.width('100%').constraintSize({ minHeight: 36 }).padding({ left: Space.sm, right: Space.xs })
+          .backgroundColor($r('app.color.group')).borderRadius(Radius.button).enabled(!this.busy)
           .accessibilityDescription('选择分支与工作区').onClick(() => this.openComposerCommand('branch'))
       }.width('100%').padding({ left: Space.md, right: Space.md, top: Space.xxs, bottom: Space.xs })
     }
@@ -3305,7 +4012,10 @@ struct Index {
           }.padding(Space.md).width('100%').backgroundColor($r('app.color.card')).border({ width: 1, color: $r('app.color.border') }).borderRadius(Radius.card)
         }
       }
-      }.width('100%').height('100%').cachedCount(2).padding({ left: Space.md, right: Space.md, top: Space.xs, bottom: Space.sm })
+      }.width('100%').height('100%').cachedCount(2)
+        .padding({ left: Space.md, right: Space.md })
+        .contentStartOffset(Space.xs)
+        .contentEndOffset(this.floatingCapsule.visible ? 56 : Space.sm)
         .scrollBar(BarState.Off)
         .onDidScroll((): void => {
           this.chatAwayFromBottom = this.messages.length > 0 && !this.scroller.isAtEnd();
@@ -3313,29 +4023,23 @@ struct Index {
         .onReachEnd((): void => {
           this.chatAwayFromBottom = false;
         })
-      if (this.unknown || this.actions.length || (this.chatAwayFromBottom && this.messages.length > 0)) {
-        Row() {
-          if (this.unknown || this.actions.length) {
-            Button(this.unknown ? '核对提交结果' : this.actions.length + ' 个请求待处理', { type: ButtonType.Normal })
-              .height(30).padding({ left: Space.sm, right: Space.sm }).borderRadius(Radius.full)
-              .fontSize(FontSize.caption).fontColor($r('app.color.warning')).backgroundColor($r('app.color.warning_bg'))
-              .border({ width: 1, color: $r('app.color.warning_border') })
-              .shadow({ radius: 8, color: '#1a000000', offsetY: 2 })
-              .onClick((): void => { this.scroller.scrollEdge(Edge.Bottom); this.chatAwayFromBottom = false; })
-          }
-          Blank()
-          if (this.chatAwayFromBottom && this.messages.length > 0) {
-            Button({ type: ButtonType.Circle, stateEffect: true }) {
-              Image($r('app.media.ui_down')).width(16).height(16).accessibilityLevel('no')
-            }.width(32).height(32).backgroundColor($r('app.color.card'))
-              .border({ width: 0.5, color: $r('app.color.border') })
-              .shadow({ radius: 8, color: '#1a000000', offsetY: 2 })
-              .accessibilityText('滚动到最新消息')
-              .onClick((): void => { this.scroller.scrollEdge(Edge.Bottom); this.chatAwayFromBottom = false; })
-          }
-        }.width('100%').padding({ left: Space.md, right: Space.md, bottom: Space.xs })
-          .hitTestBehavior(HitTestMode.Transparent)
-      }
+      FloatingStatusCapsule({
+        model: this.floatingCapsule,
+        showScrollToEnd: this.chatAwayFromBottom && this.messages.length > 0,
+        onStatusTap: () => this.openCapsuleStatus(),
+        onActionTap: () => this.triggerCapsuleAction(),
+        onOpenAgents: () => {
+          this.refreshExtras();
+          this.refreshFloatingCapsule();
+          this.openPanel('agents');
+        },
+        onOpenQueue: () => this.openPanel('queue'),
+        onScrollToEnd: () => {
+          this.scroller.scrollEdge(Edge.Bottom);
+          this.chatAwayFromBottom = false;
+        }
+      })
+        .hitTestBehavior(HitTestMode.Transparent)
     }.width('100%').layoutWeight(1)
     Column({ space: 0 }) {
       if (this.draftContext.length) {
@@ -3378,13 +4082,15 @@ struct Index {
         }.width(32).height(32)
           .backgroundColor($r('app.color.card')).border({ width: 0.5, color: $r('app.color.border') })
           .accessibilityText('添加附件')
-          .bindMenu([
-            { value: '选择文件', action: () => { if (this.ready && !this.busy && !this.unknown) void this.attach(false); } },
-            { value: '重试上传', action: () => { if (this.ready && !this.busy && !this.unknown) void this.attach(true); } },
-            { value: '粘贴结构化上下文', action: () => { this.openPanel('paste-context'); } },
-            { value: '取消上传', action: () => { this.picker.cancel(); this.status = '附件上传已取消'; } },
-            { value: '移除附件', action: () => { if (!this.busy && !this.unknown) { client.attachments = []; client.attachment = undefined; this.picker.clear(); this.refreshAttachments(); this.scheduleDraftSave(); } } }
-          ])
+          .bindMenu(this.composerAttachmentMenu(this.uploadingAttachment, this.canRetryAttachment, this.attachments.length > 0))
+        Button({ type: ButtonType.Circle, stateEffect: true }) {
+          Image($r('app.media.ui_image')).width(15).height(15).accessibilityLevel('no')
+        }.width(32).height(32)
+          .backgroundColor($r('app.color.card')).border({ width: 0.5, color: $r('app.color.border') })
+          .opacity(this.ready && !this.busy && !this.unknown ? 1 : Opacity.disabled)
+          .enabled(this.ready && !this.busy && !this.unknown)
+          .accessibilityText('从图库选择图片')
+          .onClick(() => { void this.attach('photo'); })
         TextArea({ placeholder: this.draftMode ? '描述要完成的任务…' : '继续追问…', text: this.prompt })
           .fontSize(FontSize.body).lineHeight(LineHeight.body)
           .fontColor($r('app.color.ink')).placeholderColor($r('app.color.placeholder'))
@@ -3672,7 +4378,12 @@ struct Index {
               this.rebuildWorkspace();
             } })
         } else if (this.page === 'home-pulls') {
-          PullRequestsPanel({ connection: client, projectId: '', projectLabel: '',
+          PullRequestsPanel({ connection: client,
+            environments: this.environmentEntries,
+            projects: this.scopedProjects,
+            activeLocalId: this.selectedLocalId,
+            connectionFor: (localId: string): T3Client | undefined => this.registry().clients.get(localId),
+            projectId: '', projectLabel: '',
             embedded: true, bottomInset: 88,
             onDetailChange: (open: boolean) => { this.homeTabDetailOpen = open; },
             onBack: () => { this.homeTabDetailOpen = false; this.page = 'sessions'; },
@@ -3686,10 +4397,12 @@ struct Index {
             onBack: () => { this.homeTabDetailOpen = false; this.page = 'sessions'; } })
         } else if (this.page === 'choose-project') {
         ProjectPicker({ groups: this.pickerGroups(), environments: this.pickerEnvironments(), shareTarget: this.choosingShare,
-          drafts: this.choosingShare ? [] : this.draftRecords.filter((draft: ComposerDraft) => !draft.localId || this.environmentEntries.some((entry: EnvironmentEntry) => entry.localId === draft.localId)),
+          drafts: this.choosingShare ? [] : this.draftRecords.filter((draft: ComposerDraft) =>
+            draft.draftId !== this.pendingDraftId &&
+            (!draft.localId || this.environmentEntries.some((entry: EnvironmentEntry) => entry.localId === draft.localId))),
           environmentId: this.pickerEnvironmentId, query: this.pickerQuery,
           scratchAvailable: !this.choosingShare && this.pickerEnvironments().some((environment) => !!environment.scratchWorkspaceRoot && environment.ready),
-          busy: this.busy, onBack: () => { this.page = this.choosingShare ? 'share' : 'sessions'; this.choosingShare = false; },
+          busy: this.busy, onBack: () => this.closeProjectPicker(),
           onAddProject: () => { if (this.choosingShare) this.openPanel('server'); else this.openAddProject('choose-project'); },
           onSelect: (project: ScopedProject) => { void this.chooseProject(project); },
           onScratch: (environmentId: string) => { void this.startScratch(environmentId); },
@@ -3886,12 +4599,20 @@ struct Index {
               Text(this.draftMode ? '新任务' : this.threads.find((t: ThreadView) => t.id === this.threadId)?.label || this.cachedChatTitle || '会话')
                 .fontSize(FontSize.headline).lineHeight(LineHeight.headline).fontWeight(Weight.semibold)
                 .fontColor($r('app.color.ink')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-              Text((this.projects.find((p: ProjectView) => p.id === this.projectId)?.label || this.cachedChatProject || 'No project') + ' · ' +
-                (this.environmentEntries.find((e: EnvironmentEntry) => e.localId === this.selectedLocalId)?.label || '环境'))
-                .fontSize(FontSize.caption).lineHeight(LineHeight.caption)
-                .fontColor($r('app.color.muted')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+              Row({ space: 3 }) {
+                Text((this.projects.find((p: ProjectView) => p.id === this.projectId)?.label || this.cachedChatProject || 'No project') + ' · ' +
+                  (this.environmentEntries.find((e: EnvironmentEntry) => e.localId === this.selectedLocalId)?.label || '环境'))
+                  .fontSize(FontSize.caption).lineHeight(LineHeight.caption)
+                  .fontColor($r('app.color.muted')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .constraintSize({ maxWidth: '92%' })
+                if (this.draftMode) {
+                  Image($r('app.media.ui_chevron_right')).width(10).height(10).opacity(0.6).accessibilityLevel('no')
+                }
+              }.alignItems(VerticalAlign.Center)
             }.layoutWeight(1).alignItems(HorizontalAlign.Start).justifyContent(FlexAlign.Center)
               .padding({ left: Space.xxs }).accessibilityGroup(true)
+              .accessibilityDescription(this.draftMode ? '点击切换项目' : '')
+              .onClick(() => { if (this.draftMode) this.openProjectPicker(false, true); })
             if (!this.draftMode) {
               IconButton({
                 icon: $r('app.media.ui_terminal'),
@@ -3909,7 +4630,7 @@ struct Index {
             IconButton({ icon: $r('app.media.ui_more'), label: '会话操作', onTap: () => this.openPanel('thread') })
           }.width('100%').constraintSize({ minHeight: Sizes.topBar }).padding({ left: Space.xs, right: Space.xs })
             .alignItems(VerticalAlign.Center)
-          if (this.status !== '会话已同步' && this.status !== '已连接' && this.status !== '未连接') {
+          if (this.showChatStatusBanner()) {
             Text(this.status).fontSize(FontSize.caption).lineHeight(LineHeight.caption)
               .fontColor($r('app.color.muted')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
               .width('100%').padding({ left: Space.md, right: Space.md, bottom: Space.xxs })
@@ -3919,12 +4640,30 @@ struct Index {
         } else {
           Row({ space: 4 }) {
             Button({ type: ButtonType.Normal }) {
-              Row({ space: 5 }) {
-                Text('T3').fontSize(FontSize.title).fontWeight(Weight.bold).fontColor($r('app.color.ink'))
-                Text('Code').fontSize(FontSize.title).fontWeight(Weight.regular).fontColor($r('app.color.muted'))
-              }.alignItems(VerticalAlign.Center)
+              if (this.homeShowReconnectingHeader()) {
+                Row({ space: 6 }) {
+                  LoadingProgress().width(16).height(16).color($r('app.color.muted'))
+                  Text(this.homeConnectionLabel())
+                    .fontSize(FontSize.headline).fontWeight(Weight.semibold).fontColor($r('app.color.muted'))
+                    .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+                }.alignItems(VerticalAlign.Center)
+              } else if (this.homeShowOfflineHeader()) {
+                Row({ space: 6 }) {
+                  Circle().width(7).height(7).fill($r('app.color.warning'))
+                  Text(this.homeConnectionLabel())
+                    .fontSize(FontSize.headline).fontWeight(Weight.semibold).fontColor($r('app.color.muted'))
+                    .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+                }.alignItems(VerticalAlign.Center)
+              } else {
+                Row({ space: 5 }) {
+                  Text('T3').fontSize(FontSize.title).fontWeight(Weight.bold).fontColor($r('app.color.ink'))
+                  Text('Code').fontSize(FontSize.title).fontWeight(Weight.regular).fontColor($r('app.color.muted'))
+                }.alignItems(VerticalAlign.Center)
+              }
             }.constraintSize({ minHeight: Sizes.iconHit }).padding({ left: Space.xxs, right: Space.xs })
-              .backgroundColor(Color.Transparent).accessibilityText('T3 Code，管理环境')
+              .backgroundColor(Color.Transparent)
+              .accessibilityText((this.homeShowReconnectingHeader() || this.homeShowOfflineHeader())
+                ? (this.homeConnectionLabel() + '，管理环境') : 'T3 Code，管理环境')
               .onClick(() => this.openPanel('server'))
             Blank()
             IconButton({ icon: $r('app.media.ui_search'), label: '搜索会话', onTap: () => this.toggleHomeSearch() })
@@ -3939,7 +4678,7 @@ struct Index {
             }
           }.width('100%').constraintSize({ minHeight: Sizes.topBar }).padding({ left: Space.md, right: Space.sm })
           Column() {
-            if (this.status && this.status !== '会话已同步' && this.status !== '已连接' && this.status !== '未连接') {
+            if (this.showHomeStatusBanner()) {
               Text(this.status).fontSize(FontSize.caption).lineHeight(LineHeight.caption)
                 .fontColor($r('app.color.muted')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
                 .width('100%').padding({ left: Space.md, right: Space.md, top: Space.sm, bottom: Space.xxs })
@@ -3978,7 +4717,9 @@ struct Index {
       .foregroundColor($r('app.color.ink'))
       .bindSheet($$this.panelOpen, this.panelContent(), { height: this.panel === 'thread' ? '66%' :
         this.panel === 'attachment' ? '80%' :
-        this.panel === 'extras' ? '62%' : this.panel === 'composer-command' ? '78%' :
+        this.panel === 'extras' || this.panel === 'agents' ? '62%' :
+        this.panel === 'background-work' ? '52%' :
+        this.panel === 'composer-command' ? '78%' :
         this.panel === 'paste-context' ? '48%' : this.panel === 'markdown-image' ? '80%' :
         this.panel === 'rename' ? '36%' : this.panel === 'filter' ? '58%' :
         this.panel === 'cloud' || this.panel === 'snooze' ? '85%' : '70%',

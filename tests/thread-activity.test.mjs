@@ -10,7 +10,7 @@ const {
   activityLines, activitySummary, isPlainUserText,
   isHiddenWorkItem, isProminentWorkItem, summarizeWork,
   formatWorkDuration, deriveCheckpointBadges, groupWorkByMessage,
-  parseDiffPreviewLines, resolveExpandedActivityBody
+  parseDiffPreviewLines, resolveExpandedActivityBody, isActivityInProgress
 } = await import(data(compile(source)));
 
 test('command_execution summarizes first command line and exit tone', () => {
@@ -289,4 +289,149 @@ test('resolveExpandedActivityBody tracks live reasoning deltas and fetched histo
     ),
     'ls\nfull output'
   );
+});
+
+test('completed work groups inside a still-running run do not show 正在执行', () => {
+  const res = groupWorkByMessage(
+    [
+      { id: 'u1', type: 'user_message', messageId: 'u1', runId: 'r1', text: 'monitor' },
+      { id: 'dt1', type: 'dynamic_tool', runId: 'r1', status: 'completed', toolName: 't3_thread_read', title: null },
+      { id: 'dt2', type: 'dynamic_tool', runId: 'r1', status: 'completed', toolName: 'schedule', title: 'Run schedule' },
+      { id: 'a1', type: 'assistant_message', messageId: 'a1', runId: 'r1', text: '其余 3 个会话仍在运行中，90 秒后继续复查。' },
+      { id: 'rs1', type: 'reasoning', runId: 'r1', status: 'running', text: 'checking status' },
+      { id: 'dt3', type: 'dynamic_tool', runId: 'r1', status: 'completed', title: null },
+      { id: 'a2', type: 'assistant_message', messageId: 'a2', runId: 'r1', text: '其余 3 个会话仍在运行中，90 秒后继续复查。' },
+      { id: 'rs2', type: 'reasoning', runId: 'r1', status: 'running', text: 'preparing next check' },
+      { id: 'cmd1', type: 'command_execution', runId: 'r1', status: 'running', input: 'npm test' }
+    ],
+    [{ id: 'r1', status: 'running', startedAt: '2026-11-22T03:48:00Z', completedAt: null }],
+    [],
+    [
+      { id: 'u1', role: 'user', text: 'monitor', streaming: false, runId: 'r1' },
+      { id: 'a1', role: 'assistant', text: '其余 3 个会话仍在运行中，90 秒后继续复查。', streaming: false, runId: 'r1' },
+      { id: 'a2', role: 'assistant', text: '其余 3 个会话仍在运行中，90 秒后继续复查。', streaming: false, runId: 'r1' }
+    ]
+  );
+
+  // Earlier completed groups before assistant messages must NOT show 正在执行 or stay auto-expanded
+  assert.equal(res.before['a1'].runMeta.running, false);
+  assert.equal(res.before['a1'].summary.running, false);
+  assert.equal(res.before['a1'].runMeta.headerLabel, '2 步执行过程');
+  assert.equal(res.before['a1'].defaultExpanded, false);
+
+  // Superseded reasoning in an earlier group must be settled to completed
+  assert.equal(res.before['a2'].runMeta.running, false);
+  assert.equal(res.before['a2'].summary.running, false);
+  assert.equal(res.before['a2'].runMeta.headerLabel, '2 步执行过程');
+  assert.equal(res.before['a2'].defaultExpanded, false);
+  assert.equal(res.before['a2'].items[0].status, 'completed');
+
+  // Active tail with a running command DOES show 正在执行, while superseded reasoning before it is settled
+  assert.equal(res.tail.runMeta.running, true);
+  assert.equal(res.tail.summary.running, true);
+  assert.equal(res.tail.runMeta.headerLabel, '正在执行 · 2 步');
+  assert.equal(res.tail.defaultExpanded, true);
+  assert.equal(res.tail.items[0].status, 'completed');
+  assert.equal(res.tail.items[1].status, 'running');
+});
+
+test('tail group with all steps completed does not falsely show 正在执行', () => {
+  const runningWait = groupWorkByMessage(
+    [
+      { id: 'u1', type: 'user_message', messageId: 'u1', runId: 'r1', text: 'check' },
+      { id: 'dt1', type: 'dynamic_tool', runId: 'r1', status: 'completed', title: 'Read App.ets' },
+      { id: 'dt2', type: 'dynamic_tool', runId: 'r1', status: 'completed', title: 'Run schedule' }
+    ],
+    [{ id: 'r1', status: 'running', startedAt: '2026-11-22T03:48:00Z', completedAt: null }],
+    [],
+    [{ id: 'u1', role: 'user', text: 'check', streaming: false, runId: 'r1' }]
+  );
+  assert.equal(runningWait.tail.runMeta.running, false);
+  assert.equal(runningWait.tail.summary.running, false);
+  assert.equal(runningWait.tail.runMeta.headerLabel, '2 步执行过程');
+  assert.equal(runningWait.tail.defaultExpanded, true);
+
+  const waitingRun = groupWorkByMessage(
+    [
+      { id: 'u1', type: 'user_message', messageId: 'u1', runId: 'r1', text: 'check' },
+      { id: 'dt1', type: 'dynamic_tool', runId: 'r1', status: 'completed', title: 'Run schedule' }
+    ],
+    [{ id: 'r1', status: 'waiting', startedAt: '2026-11-22T03:48:00Z', completedAt: null }],
+    [],
+    [{ id: 'u1', role: 'user', text: 'check', streaming: false, runId: 'r1' }]
+  );
+  assert.equal(waitingRun.tail.runMeta.running, false);
+  assert.equal(waitingRun.tail.runMeta.headerLabel, '1 步执行过程');
+  assert.equal(waitingRun.tail.defaultExpanded, false);
+});
+
+test('settled run clears stale running items and multi-group interrupted run marks only final group', () => {
+  const settled = groupWorkByMessage(
+    [
+      { id: 'u1', type: 'user_message', messageId: 'u1', runId: 'r1', text: 'go' },
+      { id: 'c1', type: 'command_execution', runId: 'r1', status: 'running', input: 'ls' },
+      { id: 'a1', type: 'assistant_message', messageId: 'a1', runId: 'r1', text: 'done' }
+    ],
+    [{ id: 'r1', status: 'completed', startedAt: '2026-11-22T04:00:00Z', completedAt: '2026-11-22T04:00:10Z' }],
+    [],
+    [
+      { id: 'u1', role: 'user', text: 'go', streaming: false, runId: 'r1' },
+      { id: 'a1', role: 'assistant', text: 'done', streaming: false, runId: 'r1' }
+    ]
+  );
+  assert.equal(settled.before['a1'].runMeta.running, false);
+  assert.equal(settled.before['a1'].summary.running, false);
+  assert.equal(settled.before['a1'].runMeta.headerLabel, '已工作 10 秒 · 1 步');
+  assert.equal(settled.before['a1'].items[0].status, 'completed');
+
+  const multiInterrupted = groupWorkByMessage(
+    [
+      { id: 'u1', type: 'user_message', messageId: 'u1', runId: 'r2', text: 'loop' },
+      { id: 'dt1', type: 'dynamic_tool', runId: 'r2', status: 'completed', title: 'Run schedule' },
+      { id: 'a1', type: 'assistant_message', messageId: 'a1', runId: 'r2', text: 'step 1' },
+      { id: 'c2', type: 'command_execution', runId: 'r2', status: 'running', input: 'sleep 10' },
+      { id: 'int1', type: 'run_interrupt_result', runId: 'r2', status: 'completed', message: 'stopped' }
+    ],
+    [{ id: 'r2', status: 'interrupted', startedAt: '2026-11-22T04:00:00Z', completedAt: '2026-11-22T04:00:25Z' }],
+    [],
+    [
+      { id: 'u1', role: 'user', text: 'loop', streaming: false, runId: 'r2' },
+      { id: 'a1', role: 'assistant', text: 'step 1', streaming: false, runId: 'r2' }
+    ]
+  );
+  assert.equal(multiInterrupted.before['a1'].runMeta.interrupted, false);
+  assert.equal(multiInterrupted.before['a1'].runMeta.headerLabel, '1 步执行过程');
+  assert.equal(multiInterrupted.before['a1'].defaultExpanded, false);
+  assert.equal(multiInterrupted.tail.runMeta.interrupted, true);
+  assert.equal(multiInterrupted.tail.runMeta.headerLabel, '你在 25 秒后停止了');
+  assert.equal(multiInterrupted.tail.defaultExpanded, true);
+  assert.equal(multiInterrupted.tail.items[0].status, 'interrupted');
+});
+
+test('wire v2 statuses (running/pending/waiting) and untitled dynamic_tool summarize cleanly', () => {
+  const lines = activityLines([
+    { id: 'c1', type: 'command_execution', status: 'running', input: 'npm test' },
+    { id: 'r1', type: 'reasoning', status: 'running', text: 'thinking' },
+    { id: 'd1', type: 'dynamic_tool', status: 'completed', title: null, toolName: 't3_thread_read' },
+    { id: 'd2', type: 'dynamic_tool', status: 'completed', title: null, toolName: null },
+    { id: 'd3', type: 'dynamic_tool', status: 'pending', title: 'Run schedule' },
+    { id: 'w1', type: 'web_search', status: 'running', patterns: ['harmony'] }
+  ]);
+  const summaries = lines.map(activitySummary);
+
+  assert.equal(summaries[0].badge, '运行中');
+  assert.equal(isActivityInProgress(lines[0]), true);
+  assert.equal(summaries[1].badge, '思考中');
+  assert.equal(isActivityInProgress(lines[1]), true);
+  assert.equal(summaries[2].title, 't3_thread_read');
+  assert.equal(summaries[2].badge, '完成');
+  assert.equal(isActivityInProgress(lines[2]), false);
+  assert.equal(summaries[3].title, '工具调用');
+  assert.equal(summaries[3].title.includes('completed'), false);
+  assert.equal(summaries[4].title, '执行 schedule');
+  assert.equal(summaries[4].badge, '进行中');
+  assert.equal(summaries[5].title, '搜索 harmony');
+  assert.equal(summaries[5].badge, '进行中');
+
+  assert.equal(isHiddenWorkItem({ id: 'prep-run', type: 'command_execution', status: 'running', input: 'Preparing workspace' }), false);
 });

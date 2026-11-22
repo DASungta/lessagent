@@ -148,3 +148,99 @@ test('late checkout response cannot save a branch or origin into a different dra
   await panel.selectBranch(branchRef('ignored'));
   assert.equal(switches, 1);
 });
+
+const modelCatalogConfig = (extraSettings = {}, extraRoot = {}) => ({
+  environment: { environmentId: 'e' },
+  providers: [
+    {
+      instanceId: 'codex', driver: 'codex', enabled: true, installed: true, auth: { status: 'authenticated' },
+      supportedRuntimeModes: ['approval-required', 'auto-accept-edits', 'full-access'],
+      models: [
+        { slug: 'legacy-gpt', name: 'Legacy GPT', isLegacy: true },
+        { slug: 'gpt-5', name: 'GPT 5', capabilities: { optionDescriptors: [{ id: 'reasoningEffort', type: 'select', options: [{ id: 'high' }, { id: 'max' }] }, { id: 'fast', type: 'boolean' }] } },
+        { slug: 'gpt-default', name: 'GPT Default', isDefault: true }
+      ]
+    },
+    {
+      instanceId: 'antigravity', driver: 'antigravity', enabled: true, installed: true, auth: { status: 'authenticated' },
+      models: [
+        { slug: 'gemini-4-neon', name: 'Gemini 4 Neon', capabilities: { optionDescriptors: [{ id: 'thought_level', type: 'select', options: [{ id: 'high' }, { id: 'xhigh' }] }] } },
+        { slug: 'gemini-custom', name: 'Custom', isCustom: true }
+      ]
+    }
+  ],
+  settings: extraSettings,
+  ...extraRoot
+});
+
+test('model defaults resolve project override > unfolded legacy > environment default > catalog default and normalize options', () => {
+  const proj = { ...project, defaultModelSelection: { instanceId: 'codex', model: 'gpt-5', options: [{ id: 'reasoningEffort', value: 'high' }] } };
+  const overrideCfg = modelCatalogConfig({
+    defaultModelSelection: { instanceId: 'codex', model: 'gpt-default' },
+    projectSettingsOverrides: {
+      p: { defaultModelSelection: { instanceId: 'antigravity', model: 'gemini-4-neon', options: [{ id: 'thought_level', value: 'xhigh' }, { id: 'stale', value: 'x' }] } }
+    }
+  });
+  assert.deepEqual(resolve(overrideCfg, 'e', proj).modelSelection, {
+    instanceId: 'antigravity', model: 'gemini-4-neon', options: [{ id: 'thought_level', value: 'xhigh' }]
+  });
+
+  // Unfolded legacy applies when override is absent, including legacy object options; folded ignores legacy.
+  const legacyCfg = modelCatalogConfig({ defaultModelSelection: { instanceId: 'codex', model: 'gpt-default' } });
+  const legacyProj = { ...project, defaultModelSelection: { provider: 'codex', model: 'gpt-5', options: { reasoningEffort: 'max', fast: true, invalid: 'bad' } } };
+  assert.deepEqual(resolve(legacyCfg, 'e', legacyProj).modelSelection, {
+    instanceId: 'codex', model: 'gpt-5', options: [{ id: 'reasoningEffort', value: 'max' }, { id: 'fast', value: true }]
+  });
+  legacyCfg.settings.projectSettingsFolded = true;
+  assert.deepEqual(resolve(legacyCfg, 'e', legacyProj).modelSelection, { instanceId: 'codex', model: 'gpt-default' });
+
+  // Explicit null override suppresses environment default and falls back to catalog default.
+  const nullOverrideCfg = modelCatalogConfig({
+    defaultModelSelection: { instanceId: 'codex', model: 'gpt-5' },
+    projectSettingsOverrides: { p: { defaultModelSelection: null } }
+  });
+  assert.deepEqual(resolve(nullOverrideCfg, 'e', proj).modelSelection, { instanceId: 'codex', model: 'gpt-default' });
+});
+
+test('model defaults skip disabled, disallowed, hidden, legacy, and unauthenticated selections and narrow runtimeMode', () => {
+  const disabledCfg = modelCatalogConfig({
+    defaultModelSelection: { instanceId: 'antigravity', model: 'gemini-4-neon' },
+    providerModelPreferences: { codex: { hiddenModels: ['gpt-default'], modelOrder: ['gpt-5'] } },
+    projectSettingsOverrides: {
+      p: {
+        providerInstances: { antigravity: { enabled: false } },
+        defaultModelSelection: { instanceId: 'antigravity', model: 'gemini-4-neon' }
+      }
+    }
+  });
+  // antigravity disabled for project p -> env default also antigravity -> catalog skips antigravity and hidden gpt-default -> gpt-5
+  assert.deepEqual(resolve(disabledCfg, 'e', project).modelSelection, { instanceId: 'codex', model: 'gpt-5' });
+
+  // Custom model stays selectable even if listed in hiddenModels
+  const customHiddenCfg = modelCatalogConfig({
+    providerModelPreferences: { antigravity: { hiddenModels: ['gemini-custom'] } },
+    projectSettingsOverrides: { p: { defaultModelSelection: { instanceId: 'antigravity', model: 'gemini-custom' } } }
+  });
+  assert.deepEqual(resolve(customHiddenCfg, 'e', project).modelSelection, { instanceId: 'antigravity', model: 'gemini-custom' });
+
+  // Legacy non-antigravity default is rejected; disallowed driver is skipped; provider supportedRuntimeModes narrows runtimeMode
+  const policyCfg = modelCatalogConfig({
+    defaultRuntimeMode: 'auto',
+    projectSettingsOverrides: { p: { defaultModelSelection: { instanceId: 'codex', model: 'legacy-gpt' } } },
+    defaultModelSelection: { instanceId: 'antigravity', model: 'gemini-4-neon' }
+  }, {
+    managedPolicy: { limits: { providers: { allowedDrivers: ['codex'] } } }
+  });
+  const resolvedPolicy = resolve(policyCfg, 'e', project);
+  assert.deepEqual(resolvedPolicy.modelSelection, { instanceId: 'codex', model: 'gpt-default' });
+  assert.equal(resolvedPolicy.runtimeMode, 'approval-required');
+
+  // Exhausted usage window falls back to fallbackModelSelection
+  const futureReset = new Date(Date.now() + 600000).toISOString();
+  const exhaustedCfg = modelCatalogConfig({
+    defaultModelSelection: { instanceId: 'antigravity', model: 'gemini-4-neon' },
+    fallbackModelSelection: { instanceId: 'codex', model: 'gpt-5' }
+  });
+  exhaustedCfg.providers[1].usageLimits = { windows: [{ id: 'gemini-pro', usedPercent: 100, resetsAt: futureReset }] };
+  assert.deepEqual(resolve(exhaustedCfg, 'e', project).modelSelection, { instanceId: 'codex', model: 'gpt-5' });
+});

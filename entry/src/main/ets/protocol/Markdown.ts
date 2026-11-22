@@ -59,6 +59,7 @@ function isBlockStart(line: string, next: string | undefined): boolean {
   if (LIST.test(line)) return true;
   if (/^\s*\$\$/.test(line)) return true;
   if (isTableHeader(line, next)) return true;
+  if (standaloneImage(line) !== undefined) return true;
   if (next !== undefined && /^ {0,3}(=+|-+)\s*$/.test(next) && line.trim()) return true;
   return false;
 }
@@ -123,8 +124,31 @@ function findClosing(value: string, marker: string, from: number): number {
   return -1;
 }
 
+function parseLinkDestination(raw: string): string {
+  let trimmed = raw.trim();
+  const withTitle = /^(.+?)\s+(?:"[^"]*"|'[^']*')\s*$/.exec(trimmed);
+  if (withTitle) trimmed = withTitle[1].trim();
+  if (trimmed.startsWith('<')) {
+    const close = trimmed.indexOf('>');
+    if (close > 1) return trimmed.slice(1, close).trim();
+  }
+  if (/^(?:\/|file:|~\/|[A-Za-z]:[\\/])/i.test(trimmed)) return trimmed;
+  const space = trimmed.search(/\s/);
+  return space >= 0 ? trimmed.slice(0, space) : trimmed;
+}
+
 function scanLink(value: string, start: number): { text: string; url: string; end: number } | undefined {
-  const close = value.indexOf(']', start + 1);
+  let close = -1;
+  let brackets = 0;
+  for (let pos = start + 1; pos < value.length; pos += 1) {
+    const ch = value[pos];
+    if (ch === '\\' && pos + 1 < value.length) { pos += 1; continue; }
+    if (ch === '[') { brackets += 1; continue; }
+    if (ch === ']') {
+      if (brackets === 0) { close = pos; break; }
+      brackets -= 1;
+    }
+  }
   if (close < 0 || value[close + 1] !== '(') return undefined;
   let depth = 1;
   let index = close + 2;
@@ -138,8 +162,16 @@ function scanLink(value: string, start: number): { text: string; url: string; en
     index += 1;
   }
   if (depth !== 0) return undefined;
-  const destination = url.trim().replace(/^<|>$/g, '').split(/\s+/)[0];
+  const destination = parseLinkDestination(url);
   return { text: value.slice(start + 1, close), url: destination, end: index + 1 };
+}
+
+function standaloneImage(line: string): { alt: string; url: string } | undefined {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith('![')) return undefined;
+  const parsed = scanLink(trimmed, 1);
+  if (!parsed || parsed.end !== trimmed.length || !parsed.url) return undefined;
+  return { alt: plainInline(parsed.text), url: parsed.url };
 }
 
 export function inlineSpans(source: string): InlineSpan[] {
@@ -300,7 +332,8 @@ function parseItems(lines: string[], start: number): { items: MarkdownListItem[]
     if (task) { checked = task[1].toLowerCase() === 'x'; text = task[2]; }
     index += 1;
     while (index < lines.length && !isBlank(lines[index]) && !LIST.test(lines[index]) &&
-      /^\s{2,}|^\t/.test(lines[index]) && !FENCE.test(lines[index])) {
+      /^\s{2,}|^\t/.test(lines[index]) && !FENCE.test(lines[index]) &&
+      standaloneImage(lines[index]) === undefined) {
       text += ' ' + lines[index].trim();
       index += 1;
     }
@@ -437,11 +470,11 @@ export function markdownDocument(source: string): MarkdownBlock[] {
       blocks.push(table);
       continue;
     }
-    const image = /^\s*!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)\s*$/.exec(line);
+    const image = standaloneImage(line);
     if (image) {
       const imageBlock = block('image');
-      imageBlock.alt = plainInline(image[1]);
-      imageBlock.url = image[2];
+      imageBlock.alt = image.alt;
+      imageBlock.url = image.url;
       blocks.push(imageBlock);
       index += 1;
       continue;
@@ -556,6 +589,213 @@ export function workspacePath(value: string): string {
 
 export function imageSource(value: string): string {
   return /^(https?:\/\/|data:image\/)/i.test(value) ? value : '';
+}
+
+export interface MarkdownMediaSource {
+  access: string; // 'direct' | 'environment' | 'blocked'
+  kind: string; // 'image' | 'video'
+  uri: string;
+  path: string;
+  relative: boolean;
+  displayPath: string;
+}
+
+export interface ResolvedMarkdownMedia {
+  url: string;
+  kind: string; // 'image' | 'video'
+  displayPath: string;
+  expiresAt: number;
+  width: number;
+  height: number;
+}
+
+export interface MediaFileAssetResource {
+  _tag: string;
+  threadId: string;
+  path: string;
+  disposition?: string;
+  hostOnly?: boolean;
+}
+
+export interface DraftWorkspaceAssetResource {
+  _tag: string;
+  cwd: string;
+  path: string;
+}
+
+const DIRECT_MEDIA_PATTERN = /^(?:https?:\/\/|data:(?:image|video)\/)/i;
+const URI_SCHEME_PATTERN = /^[A-Za-z][A-Za-z0-9+.-]*:/;
+const VIDEO_EXT_PATTERN = /\.(?:mp4|webm|mov|m4v|ogv)$/i;
+const AUDIO_EXT_PATTERN = /\.(?:mp3|wav|ogg|oga|flac|aac|m4a|opus|aiff|weba)$/i;
+
+function safeDecodeUriPart(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function isWindowsDrivePath(value: string): boolean {
+  return /^[A-Za-z]:[\\/]/.test(value);
+}
+
+function stripLeadingWindowsDriveSlash(value: string): string {
+  return /^\/[A-Za-z]:[\\/]/.test(value) ? value.slice(1) : value;
+}
+
+function stripQueryAndHash(value: string): string {
+  const hash = value.indexOf('#');
+  const withoutHash = hash >= 0 ? value.slice(0, hash) : value;
+  const query = withoutHash.indexOf('?');
+  return query >= 0 ? withoutHash.slice(0, query) : withoutHash;
+}
+
+function parseLocalFileUrl(source: string): string {
+  const match = /^file:\/\/([^/?#]*)(\/[^?#]*)/i.exec(source);
+  if (!match) return '';
+  const authority = match[1].toLowerCase();
+  if (authority && authority !== 'localhost') return '';
+  return stripLeadingWindowsDriveSlash(safeDecodeUriPart(match[2]));
+}
+
+function joinWorkspaceMediaPath(workspaceRoot: string, relativePath: string): string {
+  const windows = isWindowsDrivePath(workspaceRoot);
+  const sep = windows ? '\\' : '/';
+  const root = workspaceRoot.replace(/[\\/]+$/, '');
+  const clean = relativePath.replace(/[\\/]/g, sep).replace(/^[\\/]+/, '');
+  return root + sep + clean;
+}
+
+function blockedMedia(): MarkdownMediaSource {
+  return { access: 'blocked', kind: 'image', uri: '', path: '', relative: false, displayPath: '' };
+}
+
+function classifyMediaKind(pathOrUrl: string): string {
+  if (/^data:video\//i.test(pathOrUrl)) return 'video';
+  if (/^data:image\//i.test(pathOrUrl)) return 'image';
+  const clean = safeDecodeUriPart(stripQueryAndHash(pathOrUrl));
+  if (AUDIO_EXT_PATTERN.test(clean)) return 'audio';
+  return VIDEO_EXT_PATTERN.test(clean) ? 'video' : 'image';
+}
+
+/**
+ * Classifies a Markdown image/media destination following upstream
+ * `classifyMarkdownImageSource` + `resolveMediaSource`.
+ */
+export function classifyMarkdownMediaSource(value: string, workspaceRoot: string = ''): MarkdownMediaSource {
+  const trimmed = (value || '').trim();
+  const source = trimmed.startsWith('<') && trimmed.endsWith('>') ? trimmed.slice(1, -1).trim() : trimmed;
+  if (!source || source.startsWith('#') || source.startsWith('?') || /[\x00-\x1f]/.test(source)) {
+    return blockedMedia();
+  }
+  if (DIRECT_MEDIA_PATTERN.test(source)) {
+    const kind = classifyMediaKind(source);
+    if (kind === 'audio') return blockedMedia();
+    return { access: 'direct', kind, uri: source, path: '', relative: false, displayPath: source };
+  }
+  if (source.startsWith('//') || source.startsWith('\\\\')) {
+    return blockedMedia();
+  }
+  if (/^file:/i.test(source)) {
+    const filePath = parseLocalFileUrl(source);
+    if (!filePath || filePath.length > 1024 || /[\x00-\x1f]/.test(filePath)) return blockedMedia();
+    const kind = classifyMediaKind(filePath);
+    if (kind === 'audio') return blockedMedia();
+    return { access: 'environment', kind, uri: '', path: filePath, relative: false, displayPath: filePath };
+  }
+  const hostPath = stripLeadingWindowsDriveSlash(safeDecodeUriPart(stripQueryAndHash(source)));
+  if (!hostPath || hostPath.length > 1024 || /[\x00-\x1f]/.test(hostPath)) return blockedMedia();
+  if (hostPath.startsWith('/') || isWindowsDrivePath(hostPath)) {
+    if (hostPath.startsWith('//') || hostPath.startsWith('\\\\')) return blockedMedia();
+    const kind = classifyMediaKind(hostPath);
+    if (kind === 'audio') return blockedMedia();
+    return { access: 'environment', kind, uri: '', path: hostPath, relative: false, displayPath: hostPath };
+  }
+  if (URI_SCHEME_PATTERN.test(hostPath) || hostPath.startsWith('~/') || hostPath.startsWith('~\\')) {
+    return blockedMedia();
+  }
+  const normalized = hostPath.replace(/\\/g, '/').replace(/^(?:\.\/)+/, '');
+  const parts = normalized.split('/').filter((segment: string) => segment.length > 0);
+  if (!parts.length || parts.some((segment: string) => segment === '..' || segment === '.')) {
+    return blockedMedia();
+  }
+  const kind = classifyMediaKind(normalized);
+  if (kind === 'audio') return blockedMedia();
+  const root = workspaceRoot.trim();
+  if (!root) return blockedMedia();
+  const joined = joinWorkspaceMediaPath(root, parts.join('/'));
+  if (joined.length > 1024) return blockedMedia();
+  return {
+    access: 'environment',
+    kind,
+    uri: '',
+    path: joined,
+    relative: true,
+    displayPath: parts.join('/')
+  };
+}
+
+/** Resolves a Markdown relative image link against the directory of the currently viewed `.md` file. */
+export function resolveRelativeMarkdownPath(markdownFilePath: string, href: string): string {
+  const trimmed = (href || '').trim();
+  const raw = trimmed.startsWith('<') && trimmed.endsWith('>') ? trimmed.slice(1, -1).trim() : trimmed;
+  if (!raw || raw.startsWith('/') || raw.startsWith('#') || raw.startsWith('?') ||
+    DIRECT_MEDIA_PATTERN.test(raw) || URI_SCHEME_PATTERN.test(raw) || isWindowsDrivePath(raw)) {
+    return href;
+  }
+  const docParts = markdownFilePath.replace(/\\/g, '/').split('/').filter((part: string) => part.length > 0);
+  docParts.pop();
+  const clean = safeDecodeUriPart(stripQueryAndHash(raw)).replace(/\\/g, '/');
+  const stack: string[] = docParts.slice();
+  for (const part of clean.split('/')) {
+    if (!part || part === '.') continue;
+    if (part === '..') {
+      if (!stack.length) return href;
+      stack.pop();
+    } else {
+      stack.push(part);
+    }
+  }
+  return stack.length ? stack.join('/') : href;
+}
+
+/** Builds an upstream `assets.createUrl` resource payload for a classified Markdown media source. */
+export function markdownMediaAssetResource(threadId: string, cwd: string, source: MarkdownMediaSource,
+  download: boolean = false): Object {
+  if (source.access !== 'environment' || !source.path.trim() || source.path.length > 1024 ||
+    /[\x00-\x1f]/.test(source.path)) {
+    throw new Error('媒体路径无效');
+  }
+  if (threadId.trim()) {
+    const resource: MediaFileAssetResource = {
+      _tag: 'media-file',
+      threadId: threadId.trim(),
+      path: source.path
+    };
+    if (download) resource.disposition = 'attachment';
+    if (source.relative) resource.hostOnly = true;
+    return resource;
+  }
+  if (cwd.trim()) {
+    const resource: DraftWorkspaceAssetResource = {
+      _tag: 'draft-workspace-file',
+      cwd: cwd.trim(),
+      path: source.path
+    };
+    return resource;
+  }
+  throw new Error('缺少会话或工作目录');
+}
+
+/** Safely combines an active server base URL and an `assets.createUrl` `relativeUrl`. */
+export function safeAssetUrl(base: string, relativeUrl: string): string {
+  const root = base.trim().replace(/\/+$/, '');
+  const relative = relativeUrl.trim();
+  if (!root || !relative.startsWith('/') || relative.startsWith('//') || /[\x00-\x1f\s]/.test(relative)) {
+    throw new Error('资源链接无效');
+  }
+  return root + relative;
 }
 
 export interface CodeToken {

@@ -1,6 +1,7 @@
 import { webSocket } from '@kit.NetworkKit';
 import { image } from '@kit.ImageKit';
 import { record, text } from '../protocol/Wire';
+import { shouldBypassSystemProxy } from '../protocol/Hosts';
 import { PreviewViewport, PreviewControl, previewStreamViewport, previewControl, previewCanSend,
   previewJpeg, previewSourceOversized, previewDecodeSize, previewOutputSize,
   PREVIEW_MAX_MESSAGE_CHARS, PREVIEW_MAX_CONSECUTIVE_OVERSIZE_FRAMES } from '../protocol/Preview';
@@ -54,7 +55,11 @@ export class PreviewStream {
     });
     this.onStatus('正在连接远端画面…');
     try {
-      if (!await socket.connect(target)) throw new Error('connect');
+      const socketOptions: webSocket.WebSocketRequestOptions | undefined =
+        shouldBypassSystemProxy(target) ? { proxy: 'no-proxy' } : undefined;
+      if (!(socketOptions ? await socket.connect(target, socketOptions) : await socket.connect(target))) {
+        throw new Error('connect');
+      }
       if (generation === this.generation) this.onStatus('已连接，等待画面');
     } catch (_) { if (generation === this.generation) this.fail('预览连接失败，请检查服务和访问权限'); }
   }

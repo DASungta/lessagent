@@ -446,3 +446,68 @@ test('settled detection, unseen completion badge, and visited failure clearing m
   }));
   assert.equal(P.threadStatus(seenLimited, now), '用量受限');
 });
+
+test('projectView parses server projectIcon variants safely and propagates them to groups and threads', () => {
+  const globe = P.projectView(project('p1', 'NetworkOps', '/work/ops', {
+    projectIcon: { kind: 'lucide', name: 'globe-2', color: 'indigo' }
+  }));
+  assert.deepEqual(globe.projectIcon, { kind: 'lucide', name: 'globe-2', color: 'indigo', emoji: '', text: '' });
+
+  const emoji = P.projectView(project('p2', 'Tools', '/work/tools', {
+    projectIcon: { kind: 'emoji', emoji: '🚀' }
+  }));
+  assert.deepEqual(emoji.projectIcon, { kind: 'emoji', name: '', color: '', emoji: '🚀', text: '' });
+
+  const mono = P.projectView(project('p3', 'Core', '/work/core', {
+    projectIcon: { kind: 'monogram', text: 'CR', color: 'emerald' }
+  }));
+  assert.deepEqual(mono.projectIcon, { kind: 'monogram', name: '', color: 'emerald', emoji: '', text: 'CR' });
+
+  const legacy = P.projectView(project('p4', 'Legacy', '/work/legacy', {
+    projectIcon: { kind: 'lucide', name: 'folder-code', color: 'rose', monogramText: 'LG' }
+  }));
+  assert.deepEqual(legacy.projectIcon, { kind: 'monogram', name: '', color: 'rose', emoji: '', text: 'LG' });
+
+  const invalid = P.projectView(project('p5', 'Plain', '/work/plain', {
+    projectIcon: { kind: 'lucide', name: 'bad icon!!', color: 'nope' }
+  }));
+  assert.equal(invalid.projectIcon, undefined);
+
+  const scopedA = P.scopedProjectView(
+    P.projectView(project('p6', 'Shared', '/work/shared', { repositoryIdentity: repo('github:org/shared') })),
+    'a', 'env-a', 'Mac A', false
+  );
+  const scopedB = P.scopedProjectView(
+    P.projectView(project('p6b', 'Shared', '/work/shared', {
+      repositoryIdentity: repo('github:org/shared'),
+      projectIcon: { kind: 'lucide', name: 'wrench', color: 'fuchsia' }
+    })),
+    'b', 'env-b', 'Mac B', false
+  );
+  const group = P.buildProjectGroups([scopedA, scopedB], 'repository')[0];
+  assert.deepEqual(P.groupProjectIcon(group), { kind: 'lucide', name: 'wrench', color: 'fuchsia', emoji: '', text: '' });
+
+  const st = P.scopedThreadView(P.threadView(thread('t1', 'p1', 'Hello')), 'a', 'env-a', 'Mac A', 'NetworkOps', globe.projectIcon);
+  assert.deepEqual(st.projectIcon, globe.projectIcon);
+});
+
+test('ProjectPicker uses pin icon instead of text badge and clean multi-environment filter chips', async () => {
+  const pickerSource = await readFile(new URL('../entry/src/main/ets/components/ProjectPicker.ets', import.meta.url), 'utf8');
+  assert.equal(pickerSource.includes("StatusBadge({ text: '固定'"), false);
+  assert.equal(pickerSource.includes("app.media.ui_pin"), true);
+  assert.equal(pickerSource.includes("this.environments.length > 1"), true);
+  assert.equal(pickerSource.includes("this.envChip('所有环境', !this.environmentId, () => this.onEnvironment(''))"), true);
+  assert.equal(pickerSource.includes("icon: this.groupIcon(group)"), true);
+});
+
+test('projectView and scopedProjectView preserve defaultModelSelection and options', () => {
+  const configured = P.projectView(project('p-def', 'Configured', '/work/cfg', {
+    defaultModelSelection: { instanceId: 'antigravity', model: 'gemini-4-neon', options: [{ id: 'thought_level', value: 'xhigh' }] }
+  }));
+  assert.deepEqual(configured.defaultModelSelection, {
+    instanceId: 'antigravity', model: 'gemini-4-neon', options: [{ id: 'thought_level', value: 'xhigh' }]
+  });
+  const scoped = P.scopedProjectView(configured, 'a', 'env-a', 'Mac', false);
+  assert.deepEqual(scoped.defaultModelSelection, configured.defaultModelSelection);
+  assert.equal(P.projectView(project('p-null', 'Null', '/work/null', { defaultModelSelection: null })).defaultModelSelection, null);
+});

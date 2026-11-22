@@ -21,3 +21,10 @@ test('a custom answer wins over multi-select values and is submitted as text',as
  await card.submit('');
  assert.deepEqual(submitted,{q:'written answer'});
 });
+test('input question options render as multi-line selectable cards without single-line Button truncation',()=>{
+ assert.ok(source.includes('questionDisplays(this.card.questions)'));
+ assert.ok(source.includes('ForEach(display.question.optionItems'));
+ assert.ok(source.includes('Text(opt.label)'));
+ assert.ok(!source.includes('ForEach(q.options'));
+ assert.ok(!source.includes("Button((this.selected(q"));
+});

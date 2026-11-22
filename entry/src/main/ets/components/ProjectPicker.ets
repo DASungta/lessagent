@@ -3,12 +3,20 @@ import { IconButton } from './ui/IconButton';
 import { GroupCard } from './ui/GroupCard';
 import { FormRow } from './ui/FormRow';
 import { AppButton } from './ui/AppButton';
-import { StatusBadge } from './ui/StatusBadge';
 import { ProjectMonogram } from './ui/ProjectMonogram';
 import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { AddProjectEnvironment } from '../services/Workspace';
-import { ProjectGroup, ScopedProject, projectMatchesQuery } from '../protocol/Projects';
+import { ProjectGroup, ProjectIconView, ScopedProject, groupProjectIcon, projectMatchesQuery } from '../protocol/Projects';
+import { projectIconSignature } from '../protocol/Monogram';
 import { ComposerDraft, composerDraftLabel } from '../protocol/R4';
+
+const SCRATCH_ICON: ProjectIconView = {
+  kind: 'lucide',
+  name: 'message-square-dashed',
+  color: 'gray',
+  emoji: '',
+  text: ''
+};
 
 @Component
 export struct ProjectPicker {
@@ -40,10 +48,37 @@ export struct ProjectPicker {
     return group.projects.find((project: ScopedProject) => project.environmentId === this.environmentId) ||
       group.representative;
   }
+  private groupIcon(group: ProjectGroup): ProjectIconView | undefined {
+    return this.target(group).projectIcon || groupProjectIcon(group);
+  }
+  private groupRowKey(group: ProjectGroup): string {
+    return [group.key, group.label, group.pinned ? '1' : '0', projectIconSignature(this.groupIcon(group))].join('|');
+  }
   private scratchEnvironment(): AddProjectEnvironment | undefined {
     return this.environments.find((environment: AddProjectEnvironment) =>
       environment.environmentId === this.environmentId && environment.scratchWorkspaceRoot && environment.ready) ||
       this.environments.find((environment: AddProjectEnvironment) => environment.scratchWorkspaceRoot && environment.ready);
+  }
+
+  @Builder
+  envChip(label: string, selected: boolean, onTap: () => void) {
+    Button({ type: ButtonType.Normal }) {
+      Text(label)
+        .fontSize(FontSize.caption)
+        .lineHeight(LineHeight.caption)
+        .fontWeight(selected ? Weight.semibold : Weight.medium)
+        .fontColor(selected ? $r('app.color.on_prominent') : $r('app.color.ink'))
+        .maxLines(1)
+    }
+    .constraintSize({ minHeight: 32 })
+    .padding({ left: 12, right: 12 })
+    .backgroundColor(selected ? $r('app.color.prominent') : $r('app.color.card'))
+    .border({
+      width: selected ? 0 : Sizes.hairline,
+      color: $r('app.color.border')
+    })
+    .borderRadius(Radius.full)
+    .onClick(onTap)
   }
 
   build() {
@@ -66,33 +101,60 @@ export struct ProjectPicker {
             .layoutWeight(1).height(40).fontSize(FontSize.body).fontColor($r('app.color.ink'))
             .placeholderColor($r('app.color.placeholder')).backgroundColor(Color.Transparent).padding(0)
             .onChange((value: string) => this.onQuery(value)).accessibilityText('搜索项目')
-          if (this.environments.length > 0) {
-            Select(this.environments.map((environment: AddProjectEnvironment) => {
-              return { value: environment.label } as SelectOption;
-            }))
-              .value(this.environments.find((environment: AddProjectEnvironment) => environment.environmentId === this.environmentId)?.label || '所有环境')
-              .constraintSize({ minHeight: 34, maxWidth: 140 }).font({ size: FontSize.caption })
-              .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink'))
-              .onSelect((index: number) => this.onEnvironment(this.environments[index]?.environmentId || ''))
+          if (this.query.length > 0) {
+            Button({ type: ButtonType.Normal }) {
+              Text('清除').fontSize(FontSize.callout).fontWeight(Weight.medium).fontColor($r('app.color.muted'))
+            }
+            .constraintSize({ minHeight: 32 }).padding({ left: Space.xs, right: Space.xs })
+            .backgroundColor(Color.Transparent).accessibilityText('清除搜索')
+            .onClick(() => this.onQuery(''))
           }
         }
-        .width('100%').padding({ left: Space.sm, right: Space.xs }).backgroundColor($r('app.color.card'))
+        .width('100%').padding({ left: Space.sm, right: Space.sm }).backgroundColor($r('app.color.card'))
         .borderRadius(Radius.button).alignItems(VerticalAlign.Center)
+
+        if (this.environments.length > 1) {
+          Scroll() {
+            Row({ space: Space.xs }) {
+              this.envChip('所有环境', !this.environmentId, () => this.onEnvironment(''))
+              ForEach(this.environments, (environment: AddProjectEnvironment) => {
+                this.envChip(
+                  environment.label,
+                  this.environmentId === environment.environmentId,
+                  () => this.onEnvironment(environment.environmentId)
+                )
+              }, (environment: AddProjectEnvironment) => environment.environmentId)
+            }.alignItems(VerticalAlign.Center)
+          }
+          .width('100%')
+          .scrollable(ScrollDirection.Horizontal)
+          .scrollBar(BarState.Off)
+        }
       }.width('100%').padding({ left: Space.sm, right: Space.sm, top: Space.xxs, bottom: Space.xs })
 
       Scroll() {
         Column({ space: 0 }) {
           if (this.scratchAvailable && this.scratchEnvironment()) {
             GroupCard() {
-              FormRow({
-                kind: 'value',
-                label: '临时任务',
-                subtitle: '不选择项目，直接开始任务',
-                value: '',
-                disabled: this.busy,
-                isFirst: true,
-                onTap: () => this.onScratch(this.scratchEnvironment()?.environmentId || '')
-              })
+              Button({ type: ButtonType.Normal }) {
+                Row({ space: Space.sm }) {
+                  ProjectMonogram({ projectId: 'scratch', name: '临时任务', icon: SCRATCH_ICON, boxSize: 28 })
+                  Column({ space: 2 }) {
+                    Text('临时任务').fontSize(FontSize.body).lineHeight(LineHeight.body).fontWeight(Weight.medium)
+                      .fontColor($r('app.color.ink')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%')
+                    Text('不选择项目，直接开始任务')
+                      .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted'))
+                      .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%')
+                  }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+                  Image($r('app.media.ui_chevron_right')).width(Sizes.chevron).height(Sizes.chevron).opacity(0.6).accessibilityLevel('no')
+                }.width('100%').alignItems(VerticalAlign.Center)
+              }
+              .width('100%')
+              .backgroundColor(Color.Transparent)
+              .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+              .constraintSize({ minHeight: Sizes.formRowMin })
+              .enabled(!this.busy)
+              .onClick(() => this.onScratch(this.scratchEnvironment()?.environmentId || ''))
             }
           }
           if (this.drafts.length && !this.query.trim() && !this.environmentId) {
@@ -158,7 +220,12 @@ export struct ProjectPicker {
               ForEach(this.visible(), (group: ProjectGroup, index: number) => {
                 Button({ type: ButtonType.Normal }) {
                   Row({ space: Space.sm }) {
-                    ProjectMonogram({ projectId: group.representative.id || group.key, name: group.label })
+                    ProjectMonogram({
+                      projectId: group.representative.id || group.key,
+                      name: group.label,
+                      icon: this.groupIcon(group),
+                      boxSize: 28
+                    })
                     Column({ space: 2 }) {
                       Text(group.label).fontSize(FontSize.body).lineHeight(LineHeight.body).fontWeight(Weight.medium)
                         .fontColor($r('app.color.ink')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%')
@@ -167,7 +234,11 @@ export struct ProjectPicker {
                         .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%')
                     }.layoutWeight(1).alignItems(HorizontalAlign.Start)
                     if (group.pinned) {
-                      StatusBadge({ text: '固定', tone: 'info' })
+                      Image($r('app.media.ui_pin'))
+                        .width(15)
+                        .height(15)
+                        .flexShrink(0)
+                        .accessibilityText('已固定')
                     }
                     Image($r('app.media.ui_chevron_right')).width(Sizes.chevron).height(Sizes.chevron).opacity(0.6).accessibilityLevel('no')
                   }.width('100%').alignItems(VerticalAlign.Center)
@@ -179,7 +250,7 @@ export struct ProjectPicker {
                 .border({ width: { top: index === 0 ? 0 : Sizes.hairline }, color: { top: $r('app.color.separator') } })
                 .enabled(!this.busy)
                 .onClick(() => this.onSelect(this.target(group)))
-              }, (group: ProjectGroup) => group.key)
+              }, (group: ProjectGroup) => this.groupRowKey(group))
             }
           }
         }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: Space.sm, right: Space.sm, bottom: Space.lg })

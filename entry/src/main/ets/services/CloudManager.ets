@@ -183,11 +183,11 @@ export class CloudManager {
     if (generation !== this.generation) return;
     const entries = (environments?.directory.entries || []).filter((entry: EnvironmentEntry) => entry.kind === 'cloud' &&
       entry.cloudAccountId === session.accountId && entry.enabled && !entry.deleting);
-    for (const entry of entries) {
-      try { await environments?.reconnect(entry.localId); }
-      catch (error) { this.error = errorText(error as Object); this.notify(); }
+    await Promise.all(entries.map(async (entry: EnvironmentEntry) => {
       if (generation !== this.generation) return;
-    }
+      try { await environments?.reconnect(entry.localId); }
+      catch (error) { if (generation === this.generation) { this.error = errorText(error as Object); this.notify(); } }
+    }));
   }
 
   async beginSignIn(context: common.UIAbilityContext): Promise<void> {
@@ -290,10 +290,10 @@ export class CloudManager {
         traceId: ''
       }));
       this.notify();
-      for (const environment of listed) {
+      await Promise.all(listed.map(async (environment: RelayEnvironmentRecord) => {
         if (generation !== this.refreshGeneration || this.sessionValue?.accountId !== session.accountId) return;
         const view = this.environments.find((row: CloudEnvironmentView) => row.environmentId === environment.environmentId);
-        if (!view) continue;
+        if (!view) return;
         try {
           const status: RelayStatus = await relay.status(environment);
           if (generation !== this.refreshGeneration) return;
@@ -309,7 +309,7 @@ export class CloudManager {
           view.statusText = view.error;
         }
         this.notify();
-      }
+      }));
     } catch (error) {
       if (generation === this.refreshGeneration) {
         this.error = errorText(error as Object);

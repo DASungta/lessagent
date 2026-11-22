@@ -299,6 +299,150 @@
     {
       "name": "usage_track",
       "value": "#2a2a2e"
+    },
+    {
+      "name": "proj_icon_gray_fg",
+      "value": "#a1a1aa"
+    },
+    {
+      "name": "proj_icon_gray_bg",
+      "value": "#27272a"
+    },
+    {
+      "name": "proj_icon_red_fg",
+      "value": "#f87171"
+    },
+    {
+      "name": "proj_icon_red_bg",
+      "value": "#3b1619"
+    },
+    {
+      "name": "proj_icon_orange_fg",
+      "value": "#fb923c"
+    },
+    {
+      "name": "proj_icon_orange_bg",
+      "value": "#3b1f10"
+    },
+    {
+      "name": "proj_icon_amber_fg",
+      "value": "#fbbf24"
+    },
+    {
+      "name": "proj_icon_amber_bg",
+      "value": "#38260c"
+    },
+    {
+      "name": "proj_icon_yellow_fg",
+      "value": "#facc15"
+    },
+    {
+      "name": "proj_icon_yellow_bg",
+      "value": "#352a0c"
+    },
+    {
+      "name": "proj_icon_lime_fg",
+      "value": "#a3e635"
+    },
+    {
+      "name": "proj_icon_lime_bg",
+      "value": "#21300e"
+    },
+    {
+      "name": "proj_icon_green_fg",
+      "value": "#4ade80"
+    },
+    {
+      "name": "proj_icon_green_bg",
+      "value": "#132e1c"
+    },
+    {
+      "name": "proj_icon_emerald_fg",
+      "value": "#34d399"
+    },
+    {
+      "name": "proj_icon_emerald_bg",
+      "value": "#102d24"
+    },
+    {
+      "name": "proj_icon_teal_fg",
+      "value": "#2dd4bf"
+    },
+    {
+      "name": "proj_icon_teal_bg",
+      "value": "#0f2d2c"
+    },
+    {
+      "name": "proj_icon_cyan_fg",
+      "value": "#22d3ee"
+    },
+    {
+      "name": "proj_icon_cyan_bg",
+      "value": "#102d35"
+    },
+    {
+      "name": "proj_icon_sky_fg",
+      "value": "#38bdf8"
+    },
+    {
+      "name": "proj_icon_sky_bg",
+      "value": "#112a3b"
+    },
+    {
+      "name": "proj_icon_blue_fg",
+      "value": "#60a5fa"
+    },
+    {
+      "name": "proj_icon_blue_bg",
+      "value": "#152542"
+    },
+    {
+      "name": "proj_icon_indigo_fg",
+      "value": "#818cf8"
+    },
+    {
+      "name": "proj_icon_indigo_bg",
+      "value": "#1e2046"
+    },
+    {
+      "name": "proj_icon_violet_fg",
+      "value": "#a78bfa"
+    },
+    {
+      "name": "proj_icon_violet_bg",
+      "value": "#281d46"
+    },
+    {
+      "name": "proj_icon_purple_fg",
+      "value": "#c084fc"
+    },
+    {
+      "name": "proj_icon_purple_bg",
+      "value": "#2e1b44"
+    },
+    {
+      "name": "proj_icon_fuchsia_fg",
+      "value": "#e879f9"
+    },
+    {
+      "name": "proj_icon_fuchsia_bg",
+      "value": "#3b1742"
+    },
+    {
+      "name": "proj_icon_pink_fg",
+      "value": "#f472b6"
+    },
+    {
+      "name": "proj_icon_pink_bg",
+      "value": "#3e172c"
+    },
+    {
+      "name": "proj_icon_rose_fg",
+      "value": "#fb7185"
+    },
+    {
+      "name": "proj_icon_rose_bg",
+      "value": "#3f1621"
     }
   ]
 }

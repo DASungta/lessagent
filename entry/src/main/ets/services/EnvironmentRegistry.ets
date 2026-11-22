@@ -1,11 +1,16 @@
 import { util, url } from '@kit.ArkTS';
 import { directHostKind } from '../protocol/Hosts';
-import { T3Client, CloudTransport } from './T3Client';
+import { T3Client, CloudTransport, RouteProbeResult } from './T3Client';
 import { SessionStore } from '../storage/SessionStore';
 import { EnvironmentStore, ProtectedEnvironmentAssets } from '../storage/EnvironmentStore';
+import { ShellCacheStore, ShellCacheStorage } from '../storage/ShellCacheStore';
 import { EnvironmentDirectory, EnvironmentEntry, EnvironmentAssets, RecoveryReference, DirectRoute, environmentRoutes, environmentDirectory, migrateLegacy, savedSession, pullRequestRoutingAllowed } from '../protocol/Environment';
-import { RecoveryState, RecoveryStorage, SessionStorage, recoveryState, SavedSession } from '../protocol/Core';
+import { CachedShellEntry, RecoveryState, RecoveryStorage, SessionStorage, recoveryState, SavedSession } from '../protocol/Core';
 import { pairingTarget } from '../protocol/Pairing';
+
+const ROUTE_PROBE_TIMEOUT_MS = 2500;
+const ROUTE_HEAD_START_MS = 500;
+const SHELL_CACHE_SAVE_DEBOUNCE_MS = 400;
 
 class ScopedSession implements SessionStorage {
   private registry: EnvironmentRegistry;
@@ -41,6 +46,21 @@ class ScopedRecovery implements RecoveryStorage {
   async clear(): Promise<void> { throw new Error('恢复记录仅能随已核对的环境移除'); }
 }
 
+class ProbeHandle {
+  route: DirectRoute;
+  done: boolean = false;
+  result: RouteProbeResult | undefined = undefined;
+  promise: Promise<RouteProbeResult>;
+  constructor(route: DirectRoute, promise: Promise<RouteProbeResult>) {
+    this.route = route;
+    this.promise = promise.then((value: RouteProbeResult): RouteProbeResult => {
+      this.done = true;
+      this.result = value;
+      return value;
+    });
+  }
+}
+
 export class EnvironmentRegistry {
   directory: EnvironmentDirectory = { schemaVersion: 2, generation: 0, selectedLocalId: '', entries: [] };
   clients: Map<string, T3Client> = new Map();
@@ -53,12 +73,19 @@ export class EnvironmentRegistry {
   initialized: boolean = false;
   private initializing: Promise<void> | undefined = undefined;
   private store: EnvironmentStore;
+  private shellCache: ShellCacheStorage;
+  private cachedShells: Record<string, CachedShellEntry> = {};
+  private cacheSaveTimer: number = 0;
+  private cacheDirty: boolean = false;
+  private backgroundedAt: number = 0;
   private writes: Promise<void> = Promise.resolve();
   constructor(filesDir: string, assets: EnvironmentAssets = new ProtectedEnvironmentAssets(),
     legacySession: SessionStorage = new SessionStore(),
-    legacyRecovery: RecoveryStorage = new SessionStore<RecoveryState>('t3-harmony-recovery-v1')) {
+    legacyRecovery: RecoveryStorage = new SessionStore<RecoveryState>('t3-harmony-recovery-v1'),
+    shellCache: ShellCacheStorage = new ShellCacheStore(filesDir)) {
     this.store = new EnvironmentStore(filesDir); this.assets = assets;
     this.legacySession = legacySession; this.legacyRecovery = legacyRecovery;
+    this.shellCache = shellCache;
   }
   private write(action: () => Promise<void>): Promise<void> {
     const result = this.writes.then(action);
@@ -99,16 +126,54 @@ export class EnvironmentRegistry {
   }
   private async initializeOnce(): Promise<void> {
     this.directory = await migrateLegacy(this.store, this.assets, this.legacySession, this.legacyRecovery);
+    try { this.cachedShells = await this.shellCache.loadAll(); }
+    catch (_) { this.cachedShells = {}; }
     for (const entry of this.directory.entries.slice()) {
       if (entry.deleting) await this.finishRemoval(entry.localId);
       else {
         if (entry.pendingBase) await this.finishEdit(entry.localId);
         if (entry.retiredCredentialRefs?.length) await this.finishRetiredCredentials(entry.localId);
         if (entry.retiredCredentialRefs?.length) await this.finishRetiredCredentials(entry.localId);
-        this.bind(this.entry(entry.localId));
+        const current = this.entry(entry.localId);
+        const client = this.bind(current);
+        this.hydrateClientShellCache(current, client);
       }
     }
     this.initialized = true;
+  }
+  private hydrateClientShellCache(entry: EnvironmentEntry, client: T3Client): void {
+    if (!entry.enabled || entry.deleting || entry.pendingBase || !this.entryVisible(entry)) return;
+    const cached = this.cachedShells[entry.localId];
+    if (cached && cached.environmentId === entry.environmentId) {
+      client.hydrateShellCache(cached);
+    }
+  }
+  private scheduleShellCacheSave(): void {
+    this.cacheDirty = true;
+    if (this.cacheSaveTimer) return;
+    this.cacheSaveTimer = setTimeout(() => {
+      this.cacheSaveTimer = 0;
+      void this.flushShellCache();
+    }, SHELL_CACHE_SAVE_DEBOUNCE_MS);
+  }
+  async flushShellCache(): Promise<void> {
+    clearTimeout(this.cacheSaveTimer);
+    this.cacheSaveTimer = 0;
+    this.cacheDirty = false;
+    const next: Record<string, CachedShellEntry> = {};
+    for (const entry of this.directory.entries) {
+      if (!entry.enabled || entry.deleting || entry.pendingBase || !this.entryVisible(entry)) continue;
+      const client = this.clients.get(entry.localId);
+      const live = client?.exportShellCache();
+      if (live && live.environmentId === entry.environmentId) {
+        next[entry.localId] = live;
+      } else {
+        const prior = this.cachedShells[entry.localId];
+        if (prior && prior.environmentId === entry.environmentId) next[entry.localId] = prior;
+      }
+    }
+    this.cachedShells = next;
+    try { await this.shellCache.saveAll(next); } catch (_) {}
   }
   entryVisible(entry: EnvironmentEntry): boolean {
     return entry.kind !== 'cloud' || (!!this.cloudAccountId && entry.cloudAccountId === this.cloudAccountId);
@@ -128,14 +193,16 @@ export class EnvironmentRegistry {
         const active = !!accountId && entry.cloudAccountId === accountId && !!factory;
         const existing = this.clients.get(entry.localId);
         if (!active) {
-          existing?.disconnect('T3 Connect 账号已退出');
+          existing?.disconnect('T3 Connect 账号已退出', false, true);
           this.clients.delete(entry.localId);
         } else if (existing) {
-          existing.disconnect('T3 Connect 账号凭证已更新');
+          existing.disconnect('T3 Connect 账号凭证已更新', false, false);
           existing.cloud = factory?.(entry);
           existing.status = existing.cloud ? '未连接' : 'T3 Connect 未登录';
+          this.hydrateClientShellCache(entry, existing);
         } else {
-          this.bind(entry);
+          const bound = this.bind(entry);
+          this.hydrateClientShellCache(entry, bound);
         }
       }
       const selected = this.directory.entries.find((entry: EnvironmentEntry) => entry.localId === this.directory.selectedLocalId);
@@ -195,6 +262,7 @@ export class EnvironmentRegistry {
     client.reconnectSavedRoutes = () => this.reconnect(entry.localId);
     client.recoveryStore = new ScopedRecovery(this, entry.localId);
     client.onUpdate = () => this.notify();
+    client.onShellUpdated = () => this.scheduleShellCacheSave();
     if (entry.kind === 'cloud') {
       client.cloud = this.cloudFactory && entry.cloudAccountId === this.cloudAccountId ? this.cloudFactory(entry) : undefined;
       client.status = client.cloud ? '未连接' : 'T3 Connect 未登录';
@@ -265,7 +333,9 @@ export class EnvironmentRegistry {
         client.reconnectSavedRoutes = () => this.reconnect(localId);
         client.recoveryStore = new ScopedRecovery(this, localId);
         client.onUpdate = () => this.notify();
+        client.onShellUpdated = () => this.scheduleShellCacheSave();
         this.clients.set(localId, client);
+        if (client.shellSynced) this.scheduleShellCacheSave();
         added = localId;
       } catch (error) {
         client.disconnect(); this.clients.delete(localId); await store.clear(); throw error as Error;
@@ -281,13 +351,29 @@ export class EnvironmentRegistry {
       const next = this.copy(); next.selectedLocalId = localId; await this.commit(next);
     });
   }
+  private async raceHeadStart(handle: ProbeHandle,
+    headStart: Promise<void>): Promise<RouteProbeResult | undefined> {
+    if (handle.done) return handle.result;
+    return new Promise<RouteProbeResult | undefined>((resolve) => {
+      let settled = false;
+      void handle.promise.then((result: RouteProbeResult) => {
+        if (!settled) { settled = true; resolve(result); }
+      });
+      void headStart.then(() => {
+        if (!settled) { settled = true; resolve(undefined); }
+      });
+    });
+  }
   async setEnabled(localId: string, enabled: boolean): Promise<void> {
     await this.write(async () => {
       this.entry(localId);
       const next = this.copy();
       const entry = next.entries.find((e: EnvironmentEntry) => e.localId === localId) as EnvironmentEntry;
       entry.enabled = enabled; await this.commit(next);
-      if (!enabled) this.clients.get(localId)?.disconnect('环境已停用，服务端任务继续');
+      if (!enabled) {
+        this.clients.get(localId)?.disconnect('环境已停用，服务端任务继续', false, true);
+        this.scheduleShellCacheSave();
+      }
     });
     if (enabled) await this.reconnect(localId);
   }
@@ -303,6 +389,42 @@ export class EnvironmentRegistry {
       throw new Error(client.status);
     }
     const routes = code ? environmentRoutes(entry).slice(0, 1) : environmentRoutes(entry);
+    if (!code && routes.length > 1) {
+      const handles: ProbeHandle[] = routes.map((route: DirectRoute) =>
+        new ProbeHandle(route, client.probeRoute(route.base, entry.environmentId, ROUTE_PROBE_TIMEOUT_MS)));
+      const headStart = new Promise<void>((resolve) => { setTimeout(resolve, ROUTE_HEAD_START_MS); });
+      const deferred: ProbeHandle[] = [];
+      let lastError = '';
+      for (const handle of handles) {
+        const result = await this.raceHeadStart(handle, headStart);
+        if (result === undefined) {
+          deferred.push(handle);
+          continue;
+        }
+        if (!result.ok) {
+          if (result.error && !lastError) lastError = result.error;
+          continue;
+        }
+        await client.connect(handle.route.base, '', result);
+        if (client.ready) return;
+        if (client.status) lastError = client.status;
+      }
+      for (const handle of deferred) {
+        const result = await handle.promise;
+        if (!result.ok) {
+          if (result.error && !lastError) lastError = result.error;
+          continue;
+        }
+        await client.connect(handle.route.base, '', result);
+        if (client.ready) return;
+        if (client.status) lastError = client.status;
+      }
+      const message = lastError || '所有已保存的连接路径当前均不可达';
+      const nonRecoverable = message.includes('服务器身份') || message.includes('协议不兼容') ||
+        message.includes('没有此服务器的有效会话') || message.includes('DPoP');
+      client.disconnect(message, !nonRecoverable, false);
+      throw new Error(client.status || message);
+    }
     for (const route of routes) {
       await client.connect(route.base, code);
       if (client.ready) return;
@@ -497,19 +619,47 @@ export class EnvironmentRegistry {
     const next = this.copy(); next.entries = next.entries.filter((e: EnvironmentEntry) => e.localId !== localId);
     if (next.selectedLocalId === localId) next.selectedLocalId = next.entries.find((e: EnvironmentEntry) => !e.deleting)?.localId || '';
     await this.commit(next);
+    this.scheduleShellCacheSave();
   }
-  suspend(): void { this.clients.forEach((client: T3Client) => client.suspend()); }
+  suspend(): void {
+    this.backgroundedAt = Date.now();
+    if (this.cacheDirty) void this.flushShellCache();
+    this.clients.forEach((client: T3Client) => client.enterBackground());
+  }
+  shutdown(): void {
+    clearTimeout(this.cacheSaveTimer);
+    this.cacheSaveTimer = 0;
+    if (this.cacheDirty) void this.flushShellCache();
+    this.clients.forEach((client: T3Client) => client.suspend());
+  }
+  handleNetworkStatus(offline: boolean): void {
+    for (const entry of this.directory.entries) {
+      if (!entry.enabled || entry.deleting || !this.entryVisible(entry)) continue;
+      this.clients.get(entry.localId)?.handleNetworkStatus(offline);
+    }
+  }
+  handleNetworkPathChange(): void {
+    for (const entry of this.directory.entries) {
+      if (!entry.enabled || entry.deleting || !this.entryVisible(entry)) continue;
+      const client = this.clients.get(entry.localId);
+      if (client) void client.handleNetworkPathChange().catch(() => {});
+    }
+  }
   async resume(): Promise<void> {
-    await Promise.all(this.directory.entries.filter((entry: EnvironmentEntry) => entry.enabled && !entry.deleting)
+    const backgroundDurationMs = this.backgroundedAt > 0 ? Math.max(0, Date.now() - this.backgroundedAt) : 0;
+    this.backgroundedAt = 0;
+    await Promise.all(this.directory.entries.filter((entry: EnvironmentEntry) =>
+      entry.enabled && !entry.deleting && this.entryVisible(entry))
       .map(async (entry: EnvironmentEntry) => {
         const client = this.clients.get(entry.localId);
-        try { await client?.resume(); } catch (error) { if (client) { client.status = (error as Error).message || '该环境连接恢复失败'; this.notify(); } }
+        try { await client?.resume(backgroundDurationMs); }
+        catch (error) { if (client) { client.status = (error as Error).message || '该环境连接恢复失败'; this.notify(); } }
       }));
   }
 }
 
 export let environments: EnvironmentRegistry | undefined = undefined;
 export function prepareEnvironments(filesDir: string): void {
-  environments?.suspend();
+  environments?.shutdown();
   environments = new EnvironmentRegistry(filesDir);
 }

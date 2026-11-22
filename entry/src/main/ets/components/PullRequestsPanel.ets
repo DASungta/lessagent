@@ -1,23 +1,47 @@
 import { TopBar } from './ui/TopBar';
 import { GroupCard } from './ui/GroupCard';
 import { AppButton } from './ui/AppButton';
+import { IconButton } from './ui/IconButton';
 import { StatusBadge } from './ui/StatusBadge';
 import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
+import { EnvironmentEntry } from '../protocol/Environment';
+import { ScopedProject } from '../protocol/Projects';
 import { T3Client } from '../services/T3Client';
 import { CodeLine } from './CodeLine';
 import { DiffLineNumber } from './DiffLineNumber';
-import { DiffFile, DiffHunk, DiffRow, LabelCandidateView, parseDiff, PullRequestDetailView,
-  PullRequestGuideView, pullRequestPatch, pullRequestRef, PullRequestRow, pullRequestStateLabel, ReviewerCandidateView,
+import { DiffFile, DiffHunk, DiffRow, firstPullRequestCursor, hasPullRequestCursors, LabelCandidateView,
+  mergePullRequestRows, normalizePullRequestCursors, parseDiff, PullRequestDetailView, PullRequestGuideView,
+  PullRequestPage, pullRequestPatch, PullRequestProjectChoice, pullRequestProjectChoices,
+  PullRequestProjectSource, pullRequestRef, PullRequestRow, pullRequestStateLabel, ReviewerCandidateView,
   reviewCommentDraft, ReviewGuideExcerpt, ReviewGuideFile, ReviewGuideNote, ReviewGuideStop,
   PullRequestActivityView, PullRequestCommentView, PullRequestThreadCommentView, PullRequestThreadView,
-  PullRequestCheckView } from '../protocol/R5';
+  PullRequestCheckView, tagPullRequestRows } from '../protocol/R5';
 import { record, text } from '../protocol/Wire';
 import { MarkdownView } from './MarkdownView';
+
+interface PullRequestListTarget {
+  key: string;
+  localId: string;
+  label: string;
+  client: T3Client;
+  generation: number;
+  projectId: string;
+}
+
+interface PullRequestTargetFetchResult {
+  target: PullRequestListTarget;
+  page?: PullRequestPage;
+  errorMessage: string;
+}
 
 @Component
 export struct PullRequestsPanel {
   @StorageProp('t3CodeFontSize') codeFontSize: number = 13;
   connection: T3Client | undefined = undefined;
+  @Prop @Watch('scopeChanged') environments: EnvironmentEntry[] = [];
+  @Prop @Watch('scopeChanged') projects: ScopedProject[] = [];
+  @Prop activeLocalId: string = '';
+  connectionFor: (localId: string) => T3Client | undefined = () => undefined;
   @Prop projectId: string = '';
   @Prop projectLabel: string = '';
   @Prop embedded: boolean = false;
@@ -35,6 +59,9 @@ export struct PullRequestsPanel {
   @State errors: string[] = [];
   @State loading: boolean = false;
   @State error: string = '';
+  @State selectedEnvLocalId: string = '';
+  @State selectedProjectKey: string = '';
+  @State filterSheetOpen: boolean = false;
   @State @Watch('selectedChanged') selected: PullRequestRow | undefined = undefined;
   @State detail: PullRequestDetailView | undefined = undefined;
   @State activity: PullRequestActivityView | undefined = undefined;
@@ -70,11 +97,15 @@ export struct PullRequestsPanel {
   private alive: boolean = false;
   private readRevision: number = 0;
   private readingDetail: boolean = false;
+  private nextCursorsByTarget: Map<string, Record<string, string>> = new Map<string, Record<string, string>>();
+  private lastTargetsSignature: string = '';
+  private detailConnection: T3Client | undefined = undefined;
 
   aboutToAppear(): void { this.alive = true; void this.loadList(); }
   aboutToDisappear(): void {
     this.alive = false;
     this.readRevision++;
+    this.detailConnection = undefined;
     this.finishDetailRead();
   }
 
@@ -83,15 +114,187 @@ export struct PullRequestsPanel {
     this.readingDetail = false;
     this.loading = false;
   }
+
+  private enabledEnvironments(): EnvironmentEntry[] {
+    const entries = this.environments || [];
+    return entries.filter((entry: EnvironmentEntry) => entry.enabled && !entry.deleting && !entry.pendingBase);
+  }
+
+  private canFilterScope(): boolean {
+    return !this.projectId && (this.enabledEnvironments().length > 0 || (this.projects || []).length > 0);
+  }
+
+  private projectChoices(envLocalId?: string): PullRequestProjectChoice[] {
+    const enabled = this.enabledEnvironments();
+    const enabledIds = new Set<string>(enabled.map((entry: EnvironmentEntry) => entry.localId));
+    const rawProjects = this.projects || [];
+    const sources: PullRequestProjectSource[] = [];
+    for (const project of rawProjects) {
+      if (enabled.length > 0 && !enabledIds.has(project.localId)) continue;
+      sources.push({
+        localId: project.localId,
+        environmentId: project.environmentId,
+        environmentLabel: project.environmentLabel,
+        id: project.id,
+        label: project.label,
+        workspaceRoot: project.workspaceRoot,
+        archivedAt: project.archivedAt,
+        pinnedAt: project.pinnedAt,
+        isScratch: project.isScratch,
+        repository: project.repository ? {
+          canonicalKey: project.repository.canonicalKey,
+          displayName: project.repository.displayName
+        } : undefined
+      });
+    }
+    const targetEnv = envLocalId !== undefined ? envLocalId : (this.selectedEnvLocalId || '');
+    return pullRequestProjectChoices(sources, targetEnv, this.selectedProjectKey || '');
+  }
+
+  private selectedProjectChoice(): PullRequestProjectChoice | undefined {
+    const key = this.selectedProjectKey || '';
+    if (!key) return undefined;
+    return this.projectChoices('').find((choice: PullRequestProjectChoice) => choice.key === key);
+  }
+
+  private selectedEnvironmentEntry(): EnvironmentEntry | undefined {
+    const localId = this.selectedEnvLocalId || '';
+    if (!localId) return undefined;
+    return this.enabledEnvironments().find((entry: EnvironmentEntry) => entry.localId === localId);
+  }
+
+  private resolveClient(localId: string): T3Client | undefined {
+    if (localId && this.connectionFor) {
+      const found = this.connectionFor(localId);
+      if (found) return found;
+    }
+    if (!localId || localId === (this.activeLocalId || '')) return this.connection;
+    return undefined;
+  }
+
+  private clientForRow(row: PullRequestRow | undefined): T3Client | undefined {
+    if (row && row.localId) {
+      const found = this.resolveClient(row.localId);
+      if (found) return found;
+    }
+    return this.connection;
+  }
+
+  private activeDetailClient(): T3Client | undefined {
+    return this.detailConnection || this.clientForRow(this.selected) || this.connection;
+  }
+
+  private listTargets(): PullRequestListTarget[] {
+    const enabled = this.enabledEnvironments();
+    if (this.projectId || enabled.length === 0) {
+      if (!this.connection) return [];
+      return [{
+        key: 'default',
+        localId: '',
+        label: '',
+        client: this.connection,
+        generation: this.connection.generationValue(),
+        projectId: this.projectId
+      }];
+    }
+    const choice = this.selectedProjectChoice();
+    if (choice) {
+      const client = this.resolveClient(choice.localId);
+      if (client && client.ready !== false) {
+        return [{
+          key: choice.localId,
+          localId: choice.localId,
+          label: choice.environmentLabel,
+          client,
+          generation: client.generationValue(),
+          projectId: choice.projectId
+        }];
+      }
+      return [];
+    }
+    const envEntry = this.selectedEnvironmentEntry();
+    if (envEntry) {
+      const client = this.resolveClient(envEntry.localId);
+      if (client && client.ready !== false) {
+        return [{
+          key: envEntry.localId,
+          localId: envEntry.localId,
+          label: envEntry.label || envEntry.environmentId,
+          client,
+          generation: client.generationValue(),
+          projectId: ''
+        }];
+      }
+      return [];
+    }
+    const targets: PullRequestListTarget[] = [];
+    const seen = new Set<string>();
+    for (const entry of enabled) {
+      if (seen.has(entry.localId)) continue;
+      seen.add(entry.localId);
+      const client = this.resolveClient(entry.localId);
+      if (client && client.ready !== false) {
+        targets.push({
+          key: entry.localId,
+          localId: entry.localId,
+          label: entry.label || entry.environmentId,
+          client,
+          generation: client.generationValue(),
+          projectId: ''
+        });
+      }
+    }
+    if (targets.length === 0 && this.connection && this.connection.ready !== false) {
+      const fallbackLocal = this.activeLocalId || '';
+      targets.push({
+        key: fallbackLocal || 'default',
+        localId: fallbackLocal,
+        label: '',
+        client: this.connection,
+        generation: this.connection.generationValue(),
+        projectId: ''
+      });
+    }
+    return targets;
+  }
+
+  private targetsSignature(targets: PullRequestListTarget[]): string {
+    return targets.map((target: PullRequestListTarget) =>
+      target.key + ':' + target.projectId + ':' + target.generation).join('|');
+  }
+
+  private scopeChanged(): void {
+    if (!this.alive || this.selected) return;
+    if (this.selectedEnvLocalId && !this.selectedEnvironmentEntry()) {
+      this.selectedEnvLocalId = '';
+    }
+    if (this.selectedProjectKey && !this.selectedProjectChoice()) {
+      this.selectedProjectKey = '';
+    }
+    const sig = this.targetsSignature(this.listTargets());
+    if (sig !== this.lastTargetsSignature) {
+      void this.loadList();
+    }
+  }
+
+  private firstPendingCursor(): string {
+    let first = '';
+    this.nextCursorsByTarget.forEach((cursors: Record<string, string>) => {
+      if (!first) first = firstPullRequestCursor(cursors);
+    });
+    return first;
+  }
+
   private readCurrent(connection: T3Client, generation: number, revision: number, projectId: string): boolean {
-    return this.alive && this.readRevision === revision && this.connection === connection &&
+    const expected = this.detailConnection || this.connection;
+    return this.alive && this.readRevision === revision && expected === connection &&
       connection.generationValue() === generation && this.projectId === projectId;
   }
 
   private ref(): Object {
     const row = this.selected;
     if (!row) throw new Error('未选择 PR');
-    return pullRequestRef(row.projectId || this.projectId, row.repository, row.number);
+    return pullRequestRef(row.projectId || this.projectId, row.repository, row.number, row.host || '');
   }
 
   private async loadList(): Promise<void> {
@@ -104,32 +307,127 @@ export struct PullRequestsPanel {
   }
 
   private async readListPage(append: boolean): Promise<void> {
-    const connection = this.connection;
-    if (!this.alive || !connection || this.selected) return;
+    if (!this.alive || this.selected) return;
+    const targets = this.listTargets();
+    const signature = this.targetsSignature(targets);
+    this.lastTargetsSignature = signature;
+    if (targets.length === 0) {
+      if (!append) {
+        this.readRevision++;
+        this.rows = [];
+        this.errors = [];
+        this.nextCursor = '';
+        this.nextCursorsByTarget.clear();
+        this.loading = false;
+        this.error = (this.selectedProjectKey || this.selectedEnvLocalId) ? '所选环境尚未连接，请连接后重试' : '';
+      }
+      return;
+    }
+    const fetchTargets = append ? targets.filter((target: PullRequestListTarget) => {
+      const saved = this.nextCursorsByTarget.get(target.key);
+      return hasPullRequestCursors(saved) || (targets.length === 1 && !!this.nextCursor);
+    }) : targets;
+    if (fetchTargets.length === 0) return;
+
     const revision = ++this.readRevision;
-    const generation = connection.generationValue();
     const projectId = this.projectId;
     const filter = this.filter;
     const query = this.query;
+    const selectedEnv = this.selectedEnvLocalId || '';
+    const selectedProject = this.selectedProjectKey || '';
     this.requestedQuery = query;
-    const cursor = append ? this.nextCursor : '';
-    const current = (): boolean => this.readCurrent(connection, generation, revision, projectId) &&
-      !this.selected && this.filter === filter && this.query === query;
+    const legacyCursor = append && targets.length === 1 ? this.nextCursor : '';
+    const cursorSnapshot = new Map<string, Record<string, string>>();
+    if (append) {
+      for (const target of fetchTargets) {
+        const saved = this.nextCursorsByTarget.get(target.key);
+        if (saved) cursorSnapshot.set(target.key, saved);
+      }
+    }
+    const current = (): boolean => {
+      if (!this.alive || this.readRevision !== revision || !!this.selected) return false;
+      if (this.projectId !== projectId || this.filter !== filter || this.query !== query) return false;
+      if ((this.selectedEnvLocalId || '') !== selectedEnv || (this.selectedProjectKey || '') !== selectedProject) return false;
+      for (const target of fetchTargets) {
+        if (target.client.generationValue() !== target.generation) return false;
+      }
+      if (this.enabledEnvironments().length === 0 && this.connection !== fetchTargets[0].client) return false;
+      return true;
+    };
+
     this.loading = true;
-    if (!append) { this.error = ''; this.errors = []; this.rows = []; this.nextCursor = ''; }
+    if (!append) {
+      this.error = '';
+      this.errors = [];
+      this.rows = [];
+      this.nextCursor = '';
+      this.nextCursorsByTarget.clear();
+    }
     try {
-      const page = await connection.listPullRequests(filter, query, cursor, projectId);
+      const multiTarget = targets.length > 1;
+      const results: PullRequestTargetFetchResult[] = await Promise.all(
+        fetchTargets.map(async (target: PullRequestListTarget): Promise<PullRequestTargetFetchResult> => {
+          try {
+            const savedCursors = append ? cursorSnapshot.get(target.key) : undefined;
+            const useMap = hasPullRequestCursors(savedCursors) ? savedCursors : undefined;
+            const cursorArg = append ? (firstPullRequestCursor(useMap) || legacyCursor) : '';
+            const page = await target.client.listPullRequests(filter, query, cursorArg, target.projectId, useMap);
+            return { target, page, errorMessage: '' };
+          } catch (reason) {
+            const message = (reason as Error).message || '读取失败';
+            return { target, errorMessage: multiTarget && target.label ? target.label + '：' + message : message };
+          }
+        })
+      );
       if (!current()) return;
-      this.rows = append ? this.rows.concat(page.rows) : page.rows;
-      this.nextCursor = page.nextCursor;
-      this.errors = append ? this.errors.concat(page.errors) : page.errors;
+
+      let incomingRows: PullRequestRow[] = [];
+      const pageErrors: string[] = [];
+      const failureErrors: string[] = [];
+      let succeededCount = 0;
+
+      for (const item of results) {
+        if (item.page) {
+          succeededCount++;
+          const tagged = item.target.localId ?
+            tagPullRequestRows(item.page.rows, item.target.localId, item.target.label) : item.page.rows;
+          incomingRows = incomingRows.concat(tagged);
+          for (const err of item.page.errors) {
+            pageErrors.push(multiTarget && item.target.label ? item.target.label + '：' + err : err);
+          }
+          const parsedNext = normalizePullRequestCursors(item.page.nextCursors);
+          if (hasPullRequestCursors(parsedNext)) {
+            this.nextCursorsByTarget.set(item.target.key, parsedNext);
+          } else if (item.page.nextCursor) {
+            const fallback: Record<string, string> = {};
+            fallback['default'] = item.page.nextCursor;
+            this.nextCursorsByTarget.set(item.target.key, fallback);
+          } else {
+            this.nextCursorsByTarget.delete(item.target.key);
+          }
+        } else if (item.errorMessage) {
+          failureErrors.push(item.errorMessage);
+          if (!append) this.nextCursorsByTarget.delete(item.target.key);
+        }
+      }
+
+      if (succeededCount === 0 && failureErrors.length > 0) {
+        this.error = failureErrors.join('\n');
+        this.nextCursor = this.firstPendingCursor();
+        return;
+      }
+
+      this.rows = mergePullRequestRows(append ? this.rows : [], incomingRows, multiTarget, this.activeLocalId || '');
+      const combinedErrors = pageErrors.concat(failureErrors);
+      this.errors = append ? this.errors.concat(combinedErrors) : combinedErrors;
+      this.nextCursor = this.firstPendingCursor();
     } catch (reason) {
       if (current()) this.error = (reason as Error).message;
     } finally { if (this.readRevision === revision) this.loading = false; }
   }
 
   private async open(row: PullRequestRow): Promise<void> {
-    const connection = this.connection;
+    const connection = this.clientForRow(row);
     if (!this.alive || !connection || (this.busy && !this.readingDetail)) return;
     const revision = ++this.readRevision;
     const generation = connection.generationValue();
@@ -137,6 +435,7 @@ export struct PullRequestsPanel {
     const rowProjectId = row.projectId || projectId;
     const repository = row.repository;
     const number = row.number;
+    this.detailConnection = connection;
     const current = (): boolean => this.readCurrent(connection, generation, revision, projectId) &&
       !!this.selected && (this.selected.projectId || this.projectId) === rowProjectId &&
       this.selected.repository === repository && this.selected.number === number;
@@ -147,7 +446,7 @@ export struct PullRequestsPanel {
     this.liveChecks = []; this.liveChecksState = '';
     this.readingDetail = true; this.busy = true; this.loading = true;
     try {
-      const ref = pullRequestRef(rowProjectId, repository, number);
+      const ref = pullRequestRef(rowProjectId, repository, number, row.host || '');
       const detail = await connection.pullRequestDetail(ref);
       if (!current()) return;
       if (detail.number !== number || detail.repository !== repository ||
@@ -186,12 +485,13 @@ export struct PullRequestsPanel {
       }
       this.editTitle = detail.title; this.editBody = detail.body;
     } catch (reason) {
-      if (current()) { this.error = (reason as Error).message; this.selected = undefined; }
+      if (current()) { this.error = (reason as Error).message; this.selected = undefined; this.detailConnection = undefined; }
     } finally { if (this.readRevision === revision) this.finishDetailRead(); }
   }
 
   private closeDetail(): void {
     this.readRevision++;
+    this.detailConnection = undefined;
     this.finishDetailRead();
     this.selected = undefined; this.detail = undefined; this.activity = undefined;
     this.patchFiles = []; this.panelMode = ''; this.notice = ''; this.error = '';
@@ -201,7 +501,7 @@ export struct PullRequestsPanel {
   }
 
   private async loadGuide(): Promise<void> {
-    const connection = this.connection;
+    const connection = this.activeDetailClient();
     if (!this.alive || !connection || !this.selected || this.guideBusy || this.readingDetail) return;
     const revision = this.readRevision;
     const generation = connection.generationValue();
@@ -216,7 +516,7 @@ export struct PullRequestsPanel {
   }
 
   private async generateGuide(): Promise<void> {
-    const connection = this.connection;
+    const connection = this.activeDetailClient();
     if (!connection || this.guideBusy) return;
     this.guideBusy = true; this.guideError = ''; this.notice = '正在请求 Agent 生成评审向导…';
     try {
@@ -231,7 +531,7 @@ export struct PullRequestsPanel {
   }
 
   private async runAction(action: string, mergeMethod: string = ''): Promise<void> {
-    const connection = this.connection;
+    const connection = this.activeDetailClient();
     if (!connection || this.busy) return;
     this.busy = true; this.error = ''; this.notice = '正在执行 ' + action + '…';
     try {
@@ -246,7 +546,7 @@ export struct PullRequestsPanel {
   }
 
   private async submitComment(): Promise<void> {
-    const connection = this.connection;
+    const connection = this.activeDetailClient();
     if (!connection || !this.commentBody.trim() || this.busy) return;
     this.busy = true; this.error = '';
     try {
@@ -259,7 +559,7 @@ export struct PullRequestsPanel {
   }
 
   private async submitReview(verdict: string): Promise<void> {
-    const connection = this.connection;
+    const connection = this.activeDetailClient();
     if (!connection || this.busy) return;
     this.busy = true; this.error = '';
     try {
@@ -284,7 +584,7 @@ export struct PullRequestsPanel {
   }
 
   private async saveEdit(): Promise<void> {
-    const connection = this.connection;
+    const connection = this.activeDetailClient();
     if (!connection || this.busy) return;
     this.busy = true; this.error = '';
     try {
@@ -297,7 +597,7 @@ export struct PullRequestsPanel {
   }
 
   private async loadLabels(): Promise<void> {
-    const connection = this.connection;
+    const connection = this.activeDetailClient();
     if (!connection) return;
     this.panelMode = 'labels'; this.busy = true; this.error = '';
     try {
@@ -311,7 +611,7 @@ export struct PullRequestsPanel {
   }
 
   private async toggleLabel(name: string, applied: boolean): Promise<void> {
-    const connection = this.connection;
+    const connection = this.activeDetailClient();
     if (!connection) return;
     this.busy = true;
     try {
@@ -323,7 +623,7 @@ export struct PullRequestsPanel {
   }
 
   private async loadReviewers(): Promise<void> {
-    const connection = this.connection;
+    const connection = this.activeDetailClient();
     if (!connection) return;
     this.panelMode = 'reviewers'; this.busy = true; this.error = '';
     try {
@@ -339,7 +639,7 @@ export struct PullRequestsPanel {
   }
 
   private async toggleReviewer(id: string, kind: string, requested: boolean): Promise<void> {
-    const connection = this.connection;
+    const connection = this.activeDetailClient();
     if (!connection) return;
     this.busy = true;
     try {
@@ -351,7 +651,7 @@ export struct PullRequestsPanel {
   }
 
   private async reply(threadId: string): Promise<void> {
-    const connection = this.connection;
+    const connection = this.activeDetailClient();
     if (!connection || !this.replyBody.trim()) return;
     this.busy = true;
     try {
@@ -364,7 +664,7 @@ export struct PullRequestsPanel {
   }
 
   private async react(subjectId: string, content: string): Promise<void> {
-    const connection = this.connection;
+    const connection = this.activeDetailClient();
     if (!connection || this.busy) return;
     this.busy = true;
     try {
@@ -377,7 +677,7 @@ export struct PullRequestsPanel {
   }
 
   private async resolveThread(threadId: string, resolved: boolean): Promise<void> {
-    const connection = this.connection;
+    const connection = this.activeDetailClient();
     if (!connection || this.busy) return;
     this.busy = true;
     try {
@@ -389,12 +689,217 @@ export struct PullRequestsPanel {
     finally { this.busy = false; }
   }
 
+  private hasActiveScopeFilter(): boolean {
+    return !!this.selectedProjectKey || !!this.selectedEnvLocalId;
+  }
+
+  private scopeSummary(): string {
+    if (this.projectLabel) return this.projectLabel;
+    if (this.projectId) return '当前项目';
+    const choice = this.selectedProjectChoice();
+    if (choice) return choice.title;
+    const env = this.selectedEnvironmentEntry();
+    if (env) return (env.label || env.environmentId) + ' · 所有项目';
+    return '所有项目';
+  }
+
+  private projectFilterChipLabel(): string {
+    const choice = this.selectedProjectChoice();
+    if (choice) return choice.title;
+    return '所有项目';
+  }
+
+  private environmentFilterChipLabel(): string {
+    const env = this.selectedEnvironmentEntry();
+    if (env) return env.label || env.environmentId;
+    return '全部环境';
+  }
+
+  private projectChoiceSubtitle(choice: PullRequestProjectChoice): string {
+    const parts: string[] = [];
+    if (choice.repository) parts.push(choice.repository);
+    if (this.enabledEnvironments().length > 1 && choice.environmentLabel && !choice.duplicateLabel) {
+      parts.push(choice.environmentLabel);
+    }
+    return parts.join(' · ');
+  }
+
+  private rowSubtitle(row: PullRequestRow): string {
+    if (row.repository && row.author) return row.repository + ' · ' + row.author;
+    return row.repository || row.author;
+  }
+
+  private selectEnvironment(localId: string): void {
+    this.selectedEnvLocalId = localId;
+    if (localId && this.selectedProjectKey) {
+      const choice = this.selectedProjectChoice();
+      if (!choice || choice.localId !== localId) {
+        this.selectedProjectKey = '';
+      }
+    }
+    void this.loadList();
+  }
+
+  private selectProject(key: string): void {
+    this.selectedProjectKey = key;
+    if (key) {
+      const choice = this.selectedProjectChoice();
+      if (choice && this.selectedEnvLocalId && this.selectedEnvLocalId !== choice.localId) {
+        this.selectedEnvLocalId = choice.localId;
+      }
+    }
+    this.filterSheetOpen = false;
+    void this.loadList();
+  }
+
+  private resetScopeFilters(): void {
+    this.selectedEnvLocalId = '';
+    this.selectedProjectKey = '';
+    this.filterSheetOpen = false;
+    void this.loadList();
+  }
+
+  private emptyHint(): string {
+    if (this.query.trim()) return '';
+    const hasScopedProject = !!this.projectId || !!this.selectedProjectKey;
+    if (!hasScopedProject) return '';
+    if (this.filter !== 'all') {
+      return '可切换到“全部”查看已关闭或已合并的 PR，或确认远端仓库已有 Pull Request。';
+    }
+    return '该项目远端仓库目前没有 Pull Request 记录（仅展示 PR/MR，不含普通 Git 提交）。';
+  }
+
+  @Builder
+  scopeFilterSheet() {
+    Column({ space: 0 }) {
+      TopBar({
+        title: '筛选拉取请求',
+        showBack: true,
+        closeStyle: true,
+        backLabel: '关闭筛选',
+        onBack: () => { this.filterSheetOpen = false; }
+      })
+      Scroll() {
+        Column({ space: Space.md }) {
+          if (this.enabledEnvironments().length > 1) {
+            GroupCard({ title: '环境' }) {
+              Row({ space: Space.sm }) {
+                Text('全部环境')
+                  .fontSize(FontSize.body).fontColor($r('app.color.ink')).layoutWeight(1)
+                if (!this.selectedEnvLocalId) {
+                  Text('✓')
+                    .fontSize(FontSize.headline).fontWeight(Weight.semibold).fontColor($r('app.color.primary_text'))
+                }
+              }
+              .width('100%').constraintSize({ minHeight: Sizes.formRowMin })
+              .padding({ left: Space.md, right: Space.md, top: Space.xs, bottom: Space.xs })
+              .alignItems(VerticalAlign.Center)
+              .onClick(() => { this.selectEnvironment(''); })
+
+              ForEach(this.enabledEnvironments(), (env: EnvironmentEntry) => {
+                Row({ space: Space.sm }) {
+                  Column({ space: 2 }) {
+                    Text(env.label || env.environmentId)
+                      .fontSize(FontSize.body).fontColor($r('app.color.ink'))
+                      .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%')
+                    Text(this.resolveClient(env.localId)?.ready ? '已连接' : '未连接')
+                      .fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
+                  }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+                  if (this.selectedEnvLocalId === env.localId) {
+                    Text('✓')
+                      .fontSize(FontSize.headline).fontWeight(Weight.semibold).fontColor($r('app.color.primary_text'))
+                  }
+                }
+                .width('100%').constraintSize({ minHeight: Sizes.formRowMin })
+                .padding({ left: Space.md, right: Space.md, top: Space.xs, bottom: Space.xs })
+                .alignItems(VerticalAlign.Center)
+                .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+                .onClick(() => { this.selectEnvironment(env.localId); })
+              }, (env: EnvironmentEntry) => env.localId + ':' + (this.selectedEnvLocalId === env.localId ? '1' : '0') + ':' +
+                (this.resolveClient(env.localId)?.ready ? '1' : '0'))
+            }
+          }
+
+          GroupCard({ title: '项目' }) {
+            Row({ space: Space.sm }) {
+              Text('所有项目')
+                .fontSize(FontSize.body).fontColor($r('app.color.ink')).layoutWeight(1)
+              if (!this.selectedProjectKey) {
+                Text('✓')
+                  .fontSize(FontSize.headline).fontWeight(Weight.semibold).fontColor($r('app.color.primary_text'))
+              }
+            }
+            .width('100%').constraintSize({ minHeight: Sizes.formRowMin })
+            .padding({ left: Space.md, right: Space.md, top: Space.xs, bottom: Space.xs })
+            .alignItems(VerticalAlign.Center)
+            .onClick(() => { this.selectProject(''); })
+
+            ForEach(this.projectChoices(), (choice: PullRequestProjectChoice) => {
+              Row({ space: Space.sm }) {
+                Column({ space: 2 }) {
+                  Text(choice.title)
+                    .fontSize(FontSize.body).fontColor($r('app.color.ink'))
+                    .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%')
+                  if (this.projectChoiceSubtitle(choice)) {
+                    Text(this.projectChoiceSubtitle(choice))
+                      .fontSize(FontSize.caption).fontColor($r('app.color.muted'))
+                      .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%')
+                  }
+                }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+                if (this.selectedProjectKey === choice.key) {
+                  Text('✓')
+                    .fontSize(FontSize.headline).fontWeight(Weight.semibold).fontColor($r('app.color.primary_text'))
+                }
+              }
+              .width('100%').constraintSize({ minHeight: Sizes.formRowMin })
+              .padding({ left: Space.md, right: Space.md, top: Space.xs, bottom: Space.xs })
+              .alignItems(VerticalAlign.Center)
+              .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+              .onClick(() => { this.selectProject(choice.key); })
+            }, (choice: PullRequestProjectChoice) => choice.key + ':' + choice.title + ':' +
+              (this.selectedProjectKey === choice.key ? '1' : '0'))
+
+            if (this.projectChoices().length === 0) {
+              Text('当前范围内没有可筛选的项目')
+                .fontSize(FontSize.caption).fontColor($r('app.color.muted'))
+                .width('100%').padding({ left: Space.md, right: Space.md, top: Space.sm, bottom: Space.sm })
+                .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+            }
+          }
+
+          Column({ space: Space.xs }) {
+            if (this.hasActiveScopeFilter()) {
+              AppButton({
+                label: '清除项目与环境筛选',
+                kind: 'secondary',
+                fill: true,
+                onTap: () => { this.resetScopeFilters(); }
+              })
+            }
+            AppButton({
+              label: '立即刷新',
+              kind: 'secondary',
+              fill: true,
+              onTap: () => {
+                this.filterSheetOpen = false;
+                void this.loadList();
+              }
+            })
+          }.width('100%')
+        }
+        .width('100%').padding({ left: Space.sm, right: Space.sm, top: Space.xs, bottom: Space.lg })
+      }.width('100%').layoutWeight(1).align(Alignment.TopStart)
+    }
+    .width('100%').height('100%')
+    .backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
+  }
+
   @Builder
   header() {
     if (!this.embedded || !!this.selected) {
       TopBar({
         title: this.detail ? '#' + this.detail.number : this.selected ? '#' + this.selected.number : '拉取请求',
-        subtitle: this.detail?.repository || this.selected?.repository || this.projectLabel || (this.projectId ? '当前项目' : '所有项目'),
+        subtitle: this.detail?.repository || this.selected?.repository || this.scopeSummary(),
         showBack: true,
         closeStyle: !this.selected,
         backLabel: this.selected ? '返回 PR 列表' : '关闭拉取请求',
@@ -411,19 +916,42 @@ export struct PullRequestsPanel {
         }
       }
     } else {
-      Row() {
+      Row({ space: Space.xs }) {
         Column({ space: 2 }) {
           Text('拉取请求')
             .fontSize(FontSize.title).lineHeight(LineHeight.title).fontWeight(Weight.semibold)
             .fontColor($r('app.color.ink')).width('100%')
-          Text(this.projectLabel || (this.projectId ? '当前项目' : '所有项目'))
-            .fontSize(FontSize.caption).lineHeight(LineHeight.caption)
-            .fontColor($r('app.color.muted')).width('100%')
+          Row({ space: 4 }) {
+            Text(this.scopeSummary())
+              .fontSize(FontSize.caption).lineHeight(LineHeight.caption)
+              .fontColor(this.hasActiveScopeFilter() ? $r('app.color.primary_text') : $r('app.color.muted'))
+              .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+              .constraintSize({ maxWidth: '88%' })
+            if (this.canFilterScope()) {
+              Image($r('app.media.ui_chevron_down')).width(10).height(10).opacity(0.6).accessibilityLevel('no')
+            }
+          }.alignItems(VerticalAlign.Center)
         }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+          .onClick(() => { if (this.canFilterScope()) this.filterSheetOpen = true; })
+        if (this.canFilterScope()) {
+          Stack({ alignContent: Alignment.TopEnd }) {
+            IconButton({
+              icon: $r('app.media.ui_filter'),
+              label: this.hasActiveScopeFilter() ? '筛选项目与环境（已启用）' : '筛选项目与环境',
+              onTap: () => { this.filterSheetOpen = true; }
+            })
+            if (this.hasActiveScopeFilter()) {
+              Circle()
+                .width(6).height(6).fill($r('app.color.primary'))
+                .margin({ top: 7, right: 7 })
+                .hitTestBehavior(HitTestMode.None)
+            }
+          }
+        }
       }
       .width('100%')
       .constraintSize({ minHeight: Sizes.topBar })
-      .padding({ left: Space.page, right: Space.page, top: Space.xs, bottom: Space.xs })
+      .padding({ left: Space.page, right: Space.sm, top: Space.xs, bottom: Space.xs })
       .alignItems(VerticalAlign.Center)
     }
   }
@@ -443,6 +971,59 @@ export struct PullRequestsPanel {
         }, (state: string) => state)
       }.width('100%').padding(2).backgroundColor($r('app.color.group'))
         .border({ width: Sizes.hairline, color: $r('app.color.border') }).borderRadius(9)
+
+      if (this.canFilterScope()) {
+        Scroll() {
+          Row({ space: Space.xs }) {
+            Row({ space: 5 }) {
+              Image($r('app.media.ui_folder')).width(13).height(13).opacity(0.75).accessibilityLevel('no')
+              Text(this.projectFilterChipLabel())
+                .fontSize(FontSize.caption)
+                .fontWeight(this.selectedProjectKey ? Weight.semibold : Weight.medium)
+                .fontColor(this.selectedProjectKey ? $r('app.color.primary_text') : $r('app.color.ink'))
+                .maxLines(1)
+              Image($r('app.media.ui_chevron_down')).width(10).height(10).opacity(0.6).accessibilityLevel('no')
+            }
+            .height(32).padding({ left: 10, right: 10 })
+            .backgroundColor(this.selectedProjectKey ? $r('app.color.info_bg') : $r('app.color.card'))
+            .border({ width: Sizes.hairline, color: this.selectedProjectKey ? $r('app.color.primary') : $r('app.color.border') })
+            .borderRadius(Radius.full).alignItems(VerticalAlign.Center)
+            .accessibilityText('按项目筛选：' + this.projectFilterChipLabel())
+            .onClick(() => { this.filterSheetOpen = true; })
+
+            if (this.enabledEnvironments().length > 1) {
+              Row({ space: 5 }) {
+                Image($r('app.media.ui_env_desktop')).width(13).height(13).opacity(0.75).accessibilityLevel('no')
+                Text(this.environmentFilterChipLabel())
+                  .fontSize(FontSize.caption)
+                  .fontWeight(this.selectedEnvLocalId ? Weight.semibold : Weight.medium)
+                  .fontColor(this.selectedEnvLocalId ? $r('app.color.primary_text') : $r('app.color.ink'))
+                  .maxLines(1)
+                Image($r('app.media.ui_chevron_down')).width(10).height(10).opacity(0.6).accessibilityLevel('no')
+              }
+              .height(32).padding({ left: 10, right: 10 })
+              .backgroundColor(this.selectedEnvLocalId ? $r('app.color.info_bg') : $r('app.color.card'))
+              .border({ width: Sizes.hairline, color: this.selectedEnvLocalId ? $r('app.color.primary') : $r('app.color.border') })
+              .borderRadius(Radius.full).alignItems(VerticalAlign.Center)
+              .accessibilityText('按环境筛选：' + this.environmentFilterChipLabel())
+              .onClick(() => { this.filterSheetOpen = true; })
+            }
+
+            if (this.hasActiveScopeFilter()) {
+              Row() {
+                Text('清除')
+                  .fontSize(FontSize.caption).fontWeight(Weight.medium).fontColor($r('app.color.muted'))
+              }
+              .height(32).padding({ left: 10, right: 10 })
+              .backgroundColor($r('app.color.card'))
+              .border({ width: Sizes.hairline, color: $r('app.color.border') })
+              .borderRadius(Radius.full).alignItems(VerticalAlign.Center)
+              .accessibilityText('清除项目与环境筛选')
+              .onClick(() => { this.resetScopeFilters(); })
+            }
+          }.alignItems(VerticalAlign.Center)
+        }.scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).align(Alignment.Start).width('100%')
+      }
 
       Row({ space: Space.xs }) {
         Image($r('app.media.ui_search')).width(16).height(16).opacity(0.6).accessibilityLevel('no')
@@ -481,7 +1062,7 @@ export struct PullRequestsPanel {
                   }
                 }.width('100%').alignItems(VerticalAlign.Top)
                 Row({ space: Space.xs }) {
-                  Text(row.repository + ' · ' + row.author)
+                  Text(this.rowSubtitle(row))
                     .fontSize(FontSize.caption).fontColor($r('app.color.muted')).layoutWeight(1).maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                   StatusBadge({
@@ -496,7 +1077,7 @@ export struct PullRequestsPanel {
                 .constraintSize({ minHeight: Sizes.formRowMin })
                 .onClick(() => { void this.open(row); })
             }
-          }, (row: PullRequestRow) => row.provider + ':' + row.projectId + ':' + row.repository + ':' + row.number)
+          }, (row: PullRequestRow) => (row.localId || '') + ':' + (row.host || row.provider) + ':' + row.projectId + ':' + row.repository + ':' + row.number)
           if (this.nextCursor && this.query === this.requestedQuery) {
             ListItem() {
               Column() {
@@ -517,8 +1098,14 @@ export struct PullRequestsPanel {
         }
       } else if (!this.error && this.errors.length === 0) {
         GroupCard() {
-          Text('没有符合当前筛选条件的拉取请求').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
-            .width('100%').textAlign(TextAlign.Center).padding(Space.lg)
+          Column({ space: Space.xs }) {
+            Text('没有符合当前筛选条件的拉取请求').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+              .width('100%').textAlign(TextAlign.Center)
+            if (this.emptyHint()) {
+              Text(this.emptyHint()).fontSize(FontSize.caption).lineHeight(LineHeight.caption)
+                .fontColor($r('app.color.muted')).width('100%').textAlign(TextAlign.Center)
+            }
+          }.width('100%').padding(Space.lg)
         }
       }
     }.width('100%').layoutWeight(1).padding({ left: Space.sm, right: Space.sm, top: Space.xxs, bottom: Space.sm })
@@ -1045,5 +1632,10 @@ export struct PullRequestsPanel {
       this.header()
       if (this.selected) { this.detailView() } else { this.listView() }
     }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
+      .bindSheet($$this.filterSheetOpen, this.scopeFilterSheet(), {
+        height: '66%',
+        showClose: false,
+        backgroundColor: $r('app.color.group')
+      })
   }
 }

@@ -5,6 +5,7 @@ import {
   threadIsSettled, threadStatus
 } from '../protocol/Projects';
 import { compactTime, threadSubline, threadTone } from '../protocol/ThreadRow';
+import { projectIconSignature } from '../protocol/Monogram';
 import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { ProjectMonogram } from './ui/ProjectMonogram';
 import { ProviderLogo } from './ui/ProviderLogo';
@@ -106,6 +107,8 @@ export struct ThreadList {
       thread.snoozedUntil,
       thread.pinnedAt,
       thread.label,
+      thread.projectLabel,
+      projectIconSignature(thread.projectIcon),
       thread.lastError,
       this.searchSnippet(thread)
     ].join('|');
@@ -210,7 +213,7 @@ export struct ThreadList {
       Column({ space: 3 }) {
         Row({ space: Space.xs }) {
           Column() {
-            ProjectMonogram({ projectId: thread.projectId, name: thread.projectLabel })
+            ProjectMonogram({ projectId: thread.projectId, name: thread.projectLabel, icon: thread.projectIcon })
           }.constraintSize({ minHeight: LineHeight.body }).justifyContent(FlexAlign.Center).opacity(0.4)
           Text(thread.label).fontSize(FontSize.body).lineHeight(LineHeight.body)
             .fontWeight(Weight.regular)
@@ -243,7 +246,7 @@ export struct ThreadList {
       Column({ space: 3 }) {
         Row({ space: Space.xs }) {
           Column() {
-            ProjectMonogram({ projectId: thread.projectId, name: thread.projectLabel })
+            ProjectMonogram({ projectId: thread.projectId, name: thread.projectLabel, icon: thread.projectIcon })
           }.constraintSize({ minHeight: LineHeight.body }).justifyContent(FlexAlign.Center)
           Text(thread.label).fontSize(FontSize.body).lineHeight(LineHeight.body)
             .fontWeight(Weight.medium)
@@ -376,7 +379,7 @@ export struct ThreadList {
         ListItem() {
           Row({ space: 8 }) {
             LoadingProgress().width(18).height(18).color($r('app.color.muted'))
-            Text('正在同步环境列表').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+            Text('正在同步会话列表').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
           }.padding(Space.lg)
         }
       } else if (this.query.trim()) {

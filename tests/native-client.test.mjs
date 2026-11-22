@@ -1,5 +1,5 @@
 // Execute the actual NetworkKit adapter with a small fake kit; HAP build checks the SDK types.
-import { coreUrl, projectsUrl, composerUrl, r4Url, filesUrl, r5Url } from './load-core.mjs';
+import { coreUrl, projectsUrl, composerUrl, r4Url, filesUrl, r5Url, floatingStatusUrl, markdownUrl } from './load-core.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -9,6 +9,7 @@ const deveco = process.env.DEVECO_HOME || '/Applications/DevEco-Studio.app/Conte
 const ts = require(deveco + '/sdk/default/openharmony/ets/build-tools/ets-loader/node_modules/typescript');
 const original = await readFile(new URL('../entry/src/main/ets/services/T3Client.ets', import.meta.url), 'utf8');
 const wire = new URL('../entry/src/main/ets/protocol/Wire.ts', import.meta.url).href;
+const hosts = new URL('../entry/src/main/ets/protocol/Hosts.ts', import.meta.url).href;
 const cloud = 'data:text/javascript;base64,' + Buffer.from(ts.transpileModule(
   (await readFile(new URL('../entry/src/main/ets/protocol/Cloud.ts', import.meta.url), 'utf8'))
     .replace("import { url } from '@kit.ArkTS';",
@@ -17,9 +18,15 @@ const cloud = 'data:text/javascript;base64,' + Buffer.from(ts.transpileModule(
   { compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 } }
 ).outputText).toString('base64');
 const devicePreviewUrl = 'data:text/javascript;base64,' + Buffer.from(ts.transpileModule(await readFile(new URL('../entry/src/main/ets/protocol/DevicePreview.ts', import.meta.url),'utf8'), {compilerOptions:{module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64');
+const markdownMediaCacheUrl = 'data:text/javascript;base64,' + Buffer.from(ts.transpileModule(
+  (await readFile(new URL('../entry/src/main/ets/services/MarkdownMediaCache.ets', import.meta.url), 'utf8'))
+    .replace("'../protocol/Markdown'", JSON.stringify(markdownUrl)),
+  { compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 } }
+).outputText).toString('base64');
 let moduleId = 0;
 async function setup(options = {}) {
   const requests = [];
+  const socketConnects = [];
   const frames = [];
   let destroyed = 0;
   let socket;
@@ -30,6 +37,9 @@ async function setup(options = {}) {
       createHttp: () => ({
         request: async (url, args) => {
           requests.push({ url, args });
+          if (options.httpError && (!options.httpErrorPath || url.includes(options.httpErrorPath))) {
+            throw Object.assign(new Error('network error'), options.httpError);
+          }
           if (args.method === 'POST' && args.extraData === '') {
             throw Object.assign(new Error('Invalid extraData'), { code: 401 });
           }
@@ -71,18 +81,55 @@ async function setup(options = {}) {
         socket = {
           on: (type, callback) => listeners[type] = callback,
           close: async () => true,
-          connect: async (url) => {
+          connect: async (url, connectOptions) => {
+            socketConnects.push({ url, connectOptions });
             if (options.socketError) throw new Error('transport echoed ' + url);
+            if (!options.neverOpen) {
+              if (options.openDelayMs) setTimeout(() => listeners.open?.({ code: 0 }, {}), options.openDelayMs);
+              else queueMicrotask(() => listeners.open?.({ code: 0 }, {}));
+            }
             return true;
           },
+          emitOpen: (err = { code: 0 }) => listeners.open?.(err, {}),
+          emitError: (err = { code: 2300056 }) => listeners.error?.(err),
+          emitClose: (value = { code: 1006, reason: 'abnormal' }) => listeners.close?.({ code: 0 }, value),
           emit: (value) => listeners.message({ code: 0 }, JSON.stringify(value)),
           send: async (frame) => {
             const value = JSON.parse(frame);
             frames.push(value);
             options.onFrame?.(value);
             if (value._tag === 'Request') queueMicrotask(() => {
-              if (value.tag === 'orchestration.subscribeShell') {
-                socket.emit({ _tag: 'Chunk', requestId: value.id, values: [{ kind: 'snapshot', snapshot: { snapshotSequence: 9, projects: [], threads: [] } }] });
+              const configPayload = {
+                environment: { environmentId: options.mismatch ? 'other' : (options.environmentId ?? 'env'),
+                  capabilities: options.capabilities ?? {peerLinks:options.peerLinks===true},
+                  ...(options.platform ? {platform: options.platform} : {}) },
+                providers: options.providers ?? [],
+                ...(options.secretRequestReferences ? {secretRequestReferences:true} : {}),
+                settings: options.settings ?? {linkedEnvironmentsEnabled:options.peerLinks===true},
+                ...(options.newProjectsRoot ? {newProjectsRoot: options.newProjectsRoot} : {}),
+                ...(options.scratchWorkspaceRoot ? {scratchWorkspaceRoot: options.scratchWorkspaceRoot} : {})
+              };
+              if (value.tag === 'subscribeServerConfig') {
+                if (options.rejectSubscribeConfig) {
+                  socket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Failure', cause: { _tag: 'Fail', error: { message: 'unknown method' } } } });
+                } else {
+                  socket.emit({ _tag: 'Chunk', requestId: value.id, values: [{ version: 1, type: 'snapshot', config: configPayload }] });
+                }
+              } else if (value.tag === 'server.probe') {
+                if (options.dropProbe) return;
+                if (options.rejectProbeKnown) {
+                  socket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Failure', cause: { _tag: 'Fail', error: { message: 'unknown method' } } } });
+                } else {
+                  socket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Success', value: {} } });
+                }
+              } else if (value.tag === 'orchestration.subscribeShell') {
+                if (!options.delayShellSnapshot) {
+                  socket.emit({ _tag: 'Chunk', requestId: value.id, values: [{ kind: 'snapshot', snapshot: {
+                    snapshotSequence: 9,
+                    projects: options.shellProjects ?? [],
+                    threads: options.shellThreads ?? []
+                  } }] });
+                }
               } else if (value.tag === 'orchestration.subscribeThread') {
                 if (options.rejectThread) {
                   socket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Failure', cause: { _tag: 'Fail', error: { message: 'not found' } } } });
@@ -102,16 +149,7 @@ async function setup(options = {}) {
                 socket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Success', value: null } });
               } else {
                 if (options.dropMutation && value.tag !== 'server.getConfig') return;
-                const result = value.tag === 'assets.createUrl' ? {relativeUrl:'/api/assets/synthetic',expiresAt:Date.now()+60000} : value.tag === 'orchestration.launchThread' ? {threadId: options.launchIdentity ?? value.payload.threadId, projection:{},resumed:false} : value.tag === 'attachments.createUploadUrl' ? {attachmentId:'pending-test',relativeUrl:options.uploadPath ?? '/api/attachments/upload/signed.token',expiresAt:Date.now()+60000} : value.tag === 'server.getConfig' ? {
-                  environment: { environmentId: options.mismatch ? 'other' : (options.environmentId ?? 'env'),
-                    capabilities: options.capabilities ?? {peerLinks:options.peerLinks===true},
-                    ...(options.platform ? {platform: options.platform} : {}) },
-                  providers: options.providers ?? [],
-                  ...(options.secretRequestReferences ? {secretRequestReferences:true} : {}),
-                  settings: options.settings ?? {linkedEnvironmentsEnabled:options.peerLinks===true},
-                  ...(options.newProjectsRoot ? {newProjectsRoot: options.newProjectsRoot} : {}),
-                  ...(options.scratchWorkspaceRoot ? {scratchWorkspaceRoot: options.scratchWorkspaceRoot} : {})
-                } : value.tag === 'peerLinks.list' ? {links:[{environmentId:'peer',label:'Synthetic peer',status:'reachable',expiresAt:new Date(Date.now()+86400000).toISOString(),lastError:null}]} : { sequence: 11 };
+                const result = value.tag === 'assets.createUrl' ? {relativeUrl:'/api/assets/synthetic',expiresAt:Date.now()+120000,imageDimensions:{width:1260,height:2720}} : value.tag === 'orchestration.launchThread' ? {threadId: options.launchIdentity ?? value.payload.threadId, projection:{},resumed:false} : value.tag === 'attachments.createUploadUrl' ? {attachmentId:'pending-test',relativeUrl:options.uploadPath ?? '/api/attachments/upload/signed.token',expiresAt:Date.now()+60000} : value.tag === 'server.getConfig' ? configPayload : value.tag === 'peerLinks.list' ? {links:[{environmentId:'peer',label:'Synthetic peer',status:'reachable',expiresAt:new Date(Date.now()+86400000).toISOString(),lastError:null}]} : { sequence: 11 };
                 socket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Success', value: result } });
               }
             });
@@ -129,18 +167,22 @@ async function setup(options = {}) {
     .replace("import { BusinessError } from '@kit.BasicServicesKit';", '')
     .replace("'../protocol/DevicePreview'", JSON.stringify(devicePreviewUrl))
     .replace("'../protocol/Wire'", JSON.stringify(wire))
+    .replace("'../protocol/Hosts'", JSON.stringify(hosts))
     .replace("'../protocol/Core'", JSON.stringify(coreUrl))
     .replace("'../protocol/Cloud'", JSON.stringify(cloud))
     .replace("'../protocol/Projects'", JSON.stringify(projectsUrl))
     .replace("'../protocol/Composer'", JSON.stringify(composerUrl))
+    .replace("'../protocol/FloatingStatus'", JSON.stringify(floatingStatusUrl))
     .replace("'../protocol/Files'", JSON.stringify(filesUrl))
+    .replace("'../protocol/Markdown'", JSON.stringify(markdownUrl))
+    .replace("'./MarkdownMediaCache'", JSON.stringify(markdownMediaCacheUrl))
     .replace("'../protocol/R5'", JSON.stringify(r5Url));
   const sourceWithR4 = source.replace("'../protocol/R4'", JSON.stringify(r4Url));
   const compiled = ts.transpileModule(sourceWithR4, { compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 } }).outputText;
   const { T3Client } = await import('data:text/javascript;base64,' + Buffer.from(compiled + '\n// instance ' + ++moduleId).toString('base64'));
   const client = new T3Client();
   client.recoveryStore = options.recoveryStore;
-  return { client, requests, frames, destroyed: () => destroyed, socket: () => socket };
+  return { client, requests, socketConnects, frames, destroyed: () => destroyed, socket: () => socket };
 }
 
 test('re-pair replaces expired credentials only on success and never replays an unknown message',async()=>{
@@ -712,6 +754,49 @@ test('file download requests attachment media while preview and draft keep their
  }finally{s.client.disconnect()}
 });
 
+test('markdownMediaUrl resolves host absolute paths, relative paths and caches signed URLs per generation',async()=>{
+ const s=await setup();try{
+  await s.client.connect('https://test','synthetic');await s.client.watch('t');
+  const direct=await s.client.markdownMediaUrl('https://cdn.example/a.png','/repo');
+  assert.equal(direct.url,'https://cdn.example/a.png');
+  assert.equal(s.frames.filter(f=>f.tag==='assets.createUrl').length,0);
+
+  const abs=await s.client.markdownMediaUrl('/Users/zhangyc/.local/share/shot.jpeg','/repo');
+  assert.equal(abs.url,'https://test/api/assets/synthetic');
+  assert.equal(abs.width,1260);
+  assert.equal(abs.height,2720);
+  assert.deepEqual(s.frames.filter(f=>f.tag==='assets.createUrl').at(-1).payload.resource,{
+    _tag:'media-file',threadId:'t',path:'/Users/zhangyc/.local/share/shot.jpeg'
+  });
+
+  // Cached hit avoids duplicate RPC
+  const cached=await s.client.markdownMediaUrl('/Users/zhangyc/.local/share/shot.jpeg','/repo');
+  assert.equal(cached.url,abs.url);
+  assert.equal(s.frames.filter(f=>f.tag==='assets.createUrl').length,1);
+
+  // Explicit refresh re-mints URL
+  await s.client.markdownMediaUrl('/Users/zhangyc/.local/share/shot.jpeg','/repo',true);
+  assert.equal(s.frames.filter(f=>f.tag==='assets.createUrl').length,2);
+
+  // Relative workspace image uses hostOnly: true
+  await s.client.markdownMediaUrl('docs/assets/logo.png','/repo');
+  assert.deepEqual(s.frames.filter(f=>f.tag==='assets.createUrl').at(-1).payload.resource,{
+    _tag:'media-file',threadId:'t',path:'/repo/docs/assets/logo.png',hostOnly:true
+  });
+
+  // Draft scope falls back to draft-workspace-file
+  s.client.draftScope='draft:1';
+  await s.client.markdownMediaUrl('/Users/zhangyc/draft.png','/new');
+  assert.deepEqual(s.frames.filter(f=>f.tag==='assets.createUrl').at(-1).payload.resource,{
+    _tag:'draft-workspace-file',cwd:'/new',path:'/Users/zhangyc/draft.png'
+  });
+
+  for(const bad of ['javascript:alert(1)','../secret.png','~/a.png','file://other-host/share/a.png']){
+    await assert.rejects(s.client.markdownMediaUrl(bad,'/repo'));
+  }
+ }finally{s.client.disconnect()}
+});
+
 test('terminal metadata and read-only observe surface failures and cancel the originating connection',async()=>{
  const {client}=await setup();client.ready=true;client.canScope=s=>s==='terminal:operate'?false:true;
  const calls=[];const cancelled=[];let reject;let receive;
@@ -923,7 +1008,8 @@ test('bounded subscribeThread payload, disconnect-reconnect re-watch, transient 
   assert.deepEqual(subFrame.payload, {
    threadId: 'thread-bound',
    acceptBoundedSnapshot: true,
-   requestCompletionMarker: true
+   requestCompletionMarker: true,
+   acceptDedupedBodies: true
   });
 
   // Apply bounded snapshot history metadata and load older history without compactIds=1
@@ -975,5 +1061,336 @@ test('bounded subscribeThread payload, disconnect-reconnect re-watch, transient 
   assert.ok(transient.client.retryTimer !== undefined || transient.client.status.includes('重连'));
  } finally {
   transient.client.disconnect();
+ }
+});
+
+test('direct private and tailnet hosts bypass system proxy on HTTP and WebSocket while public hosts keep default proxy', async () => {
+ for (const [base, expectBypass] of [
+  ['http://192.168.2.97:3773', true],
+  ['https://box.ts.net', true],
+  ['https://example.com', false],
+ ]) {
+  const { client, requests, socketConnects } = await setup();
+  try {
+   await client.connect(base, 'synthetic');
+   assert.equal(client.ready, true);
+   assert.ok(requests.length >= 3);
+   for (const req of requests) {
+    assert.equal(req.args.usingProxy, expectBypass ? false : undefined, base + ' ' + req.url);
+   }
+   assert.equal(socketConnects.length, 1);
+   assert.deepEqual(socketConnects[0].connectOptions, expectBypass ? { proxy: 'no-proxy' } : undefined, base);
+  } finally {
+   client.disconnect();
+  }
+ }
+});
+
+test('HTTP network errors produce clear Chinese diagnostics, hide credentials, and remain recoverable', async () => {
+ const timeout = await setup({ httpError: { code: 2300028 } });
+ timeout.client.store = {
+  async load() { return { base: 'http://192.168.2.97:3773', environmentId: 'env', token: 'SYNTHETIC_TOKEN', expiresAt: Date.now() + 60000 }; },
+  async save() {},
+  async clear() {}
+ };
+ try {
+  await timeout.client.connect('http://192.168.2.97:3773', 'SECRET_PAIRING_CODE');
+  assert.equal(timeout.client.ready, false);
+  assert.match(timeout.client.status, /连接超时.*系统错误码 2300028/);
+  assert.equal(timeout.client.status.includes('SECRET_PAIRING_CODE'), false);
+  assert.ok(timeout.client.retryTimer !== undefined);
+ } finally {
+  timeout.client.disconnect();
+ }
+
+ const refused = await setup({ httpError: { code: 2300007 } });
+ try {
+  await refused.client.connect('http://192.168.2.97:3773', 'synthetic');
+  assert.match(refused.client.status, /无法连接服务器.*系统错误码 2300007/);
+ } finally {
+  refused.client.disconnect();
+ }
+
+ const tls = await setup({ httpError: { code: 2300060 } });
+ try {
+  await tls.client.connect('https://example.com', 'synthetic');
+  assert.match(tls.client.status, /TLS 证书校验失败.*系统错误码 2300060/);
+ } finally {
+  tls.client.disconnect();
+ }
+});
+
+test('connect uses subscribeServerConfig with workspaceSnapshotsOnDemand, applies live updates, and falls back to server.getConfig on legacy hosts', async () => {
+ const fast = await setup({ capabilities: { threadSettlement: true } });
+ try {
+  await fast.client.connect('https://test', 'synthetic');
+  const subFrame = fast.frames.find((f) => f.tag === 'subscribeServerConfig');
+  assert.ok(subFrame, 'must send subscribeServerConfig');
+  assert.deepEqual(subFrame.payload, { workspaceSnapshotsOnDemand: true, providerStatusDeltas: true });
+  assert.equal(fast.frames.some((f) => f.tag === 'server.getConfig'), false);
+  // Late settingsUpdated, providerStatusDeltas & snapshot updates apply live without reconnecting
+  fast.socket().emit({ _tag: 'Chunk', requestId: subFrame.id, values: [
+    { version: 1, type: 'settingsUpdated', payload: { settings: { addProjectBaseDirectory: '/late-dir', ghqCloneLayout: true } } }
+  ] });
+  assert.equal(fast.client.addProjectBaseDirectory, '/late-dir');
+  assert.equal(fast.client.ghqCloneLayout, true);
+ } finally {
+  fast.client.disconnect();
+ }
+
+ const deltaHost = await setup({
+  providers: [{
+   instanceId: 'codex',
+   enabled: true,
+   installed: true,
+   status: 'ready',
+   models: [{ slug: 'gpt-5', name: 'GPT-5' }],
+   slashCommands: [{ name: 'review' }],
+   skills: [{ name: 'refactor', enabled: true }]
+  }]
+ });
+ try {
+  await deltaHost.client.connect('https://test', 'synthetic');
+  const subFrame = deltaHost.frames.find((f) => f.tag === 'subscribeServerConfig');
+  deltaHost.socket().emit({ _tag: 'Chunk', requestId: subFrame.id, values: [
+   { version: 1, type: 'providerStatusDeltas', payload: { providers: [{ instanceId: 'codex', enabled: true, installed: true, status: 'busy' }] } }
+  ] });
+  assert.equal(deltaHost.client.models.length, 1);
+  assert.equal(deltaHost.client.models[0].model, 'gpt-5');
+  assert.deepEqual(deltaHost.client.providerCommands(), ['review']);
+  assert.deepEqual(deltaHost.client.providerSkills(), ['refactor']);
+ } finally {
+  deltaHost.client.disconnect();
+ }
+
+ const legacy = await setup({ rejectSubscribeConfig: true, capabilities: { threadSnooze: true } });
+ try {
+  await legacy.client.connect('https://test', 'synthetic');
+  assert.equal(legacy.client.ready, true);
+  assert.equal(legacy.frames.some((f) => f.tag === 'subscribeServerConfig'), true);
+  assert.equal(legacy.frames.some((f) => f.tag === 'server.getConfig'), true);
+  assert.equal(legacy.client.supports('threadSnooze'), true);
+ } finally {
+  legacy.client.disconnect();
+ }
+});
+
+test('reconnect skips redundant credential save, reuses prechecked descriptor, and preserves cached shell until forget', async () => {
+ let saveCalls = 0;
+ let stored;
+ const { client, requests } = await setup({
+  shellProjects: [{ id: 'p1', title: 'Alpha', workspaceRoot: '/alpha' }],
+  shellThreads: [{ id: 't1', title: 'First task', projectId: 'p1' }],
+  capabilities: { threadSettlement: true }
+ });
+ client.store = {
+  async load() { return stored ? structuredClone(stored) : undefined; },
+  async save(v) { saveCalls++; stored = structuredClone(v); },
+  async clear() { stored = undefined; }
+ };
+ try {
+  await client.connect('https://test', 'synthetic');
+  await new Promise(setImmediate);
+  assert.equal(saveCalls, 1);
+  assert.equal(client.shellSynced, true);
+  assert.equal(client.shell.threads.length, 1);
+  const exported = client.exportShellCache();
+  assert.ok(exported);
+  assert.equal(exported.threads[0].id, 't1');
+  assert.equal(exported.capabilities.threadSettlement, true);
+
+  // Transient disconnect preserves cached shell for UI while marking liveSynced false
+  client.disconnect('offline', false);
+  assert.equal(client.ready, false);
+  assert.equal(client.shellSynced, false);
+  assert.equal(client.hasShellData, true);
+  assert.equal(client.shell.threads.length, 1);
+
+  // Probe route + reuse prechecked descriptor skips duplicate /.well-known/t3/environment and skips redundant store.save
+  const probe = await client.probeRoute('https://test', 'env', 2500);
+  assert.equal(probe.ok, true);
+  const reqBefore = requests.length;
+  await client.connect('https://test', '', probe);
+  await new Promise(setImmediate);
+  assert.equal(client.ready, true);
+  assert.equal(saveCalls, 1, 'reconnect without new credential must not rewrite AssetStore');
+  const reconnectPaths = requests.slice(reqBefore).map((r) => new URL(r.url).pathname);
+  assert.equal(reconnectPaths.includes('/.well-known/t3/environment'), false, 'must reuse freshly probed descriptor');
+  assert.equal(reconnectPaths.includes('/api/auth/websocket-ticket/rpc'), true);
+
+  // Explicit forget clears shell cache in memory
+  await client.forget();
+  assert.equal(client.hasShellData, false);
+  assert.equal(client.shell.threads.length, 0);
+ } finally {
+  client.disconnect();
+ }
+});
+
+test('enterBackground keeps socket alive and foreground resume probes via server.probe before reconnecting', async () => {
+ // Case 1: Live socket answers server.probe -> zero reconnect!
+ const live = await setup();
+ try {
+  await live.client.connect('https://test', 'synthetic');
+  await new Promise(setImmediate);
+  const socketsBefore = live.socketConnects.length;
+  live.client.enterBackground();
+  assert.equal(live.client.ready, true, 'enterBackground must keep socket alive');
+  await live.client.resume(2000);
+  assert.equal(live.client.ready, true);
+  assert.equal(live.socketConnects.length, socketsBefore, 'healthy socket must not reconnect on foreground');
+  assert.equal(live.frames.some((f) => f.tag === 'server.probe'), true);
+ } finally {
+  live.client.disconnect();
+ }
+
+ // Case 2: Older host rejects server.probe with known RPC exit -> still proves socket is alive!
+ const knownReject = await setup({ rejectProbeKnown: true });
+ try {
+  await knownReject.client.connect('https://test', 'synthetic');
+  await new Promise(setImmediate);
+  const socketsBefore = knownReject.socketConnects.length;
+  knownReject.client.enterBackground();
+  await knownReject.client.resume(2000);
+  assert.equal(knownReject.client.ready, true);
+  assert.equal(knownReject.socketConnects.length, socketsBefore);
+ } finally {
+  knownReject.client.disconnect();
+ }
+
+ // Case 3: Silent dead socket fails probe -> transparently reconnects!
+ const dead = await setup({ dropProbe: true });
+ let savedToken = { base: 'https://test', environmentId: 'env', token: 'SYNTHETIC_TOKEN', expiresAt: Date.now() + 60000 };
+ dead.client.store = { async load() { return savedToken; }, async save(v) { savedToken = v; }, async clear() {} };
+ try {
+  await dead.client.connect('https://test', 'synthetic');
+  await new Promise(setImmediate);
+  const socketsBefore = dead.socketConnects.length;
+  dead.client.enterBackground();
+  await dead.client.resume(12000);
+  assert.equal(dead.client.ready, true);
+  assert.equal(dead.socketConnects.length, socketsBefore + 1, 'silent socket must reconnect after probe timeout');
+ } finally {
+  dead.client.disconnect();
+ }
+});
+
+test('connect waits for WebSocket open handshake, enables frameParts=1, and isolates stream failures without killing the socket', async () => {
+ // 1. Gated on socket open event
+ const gated = await setup({ neverOpen: true });
+ try {
+  const connecting = gated.client.connect('https://test', 'synthetic');
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  assert.equal(gated.socketConnects.length, 1);
+  assert.equal(new URL(gated.socketConnects[0].url).searchParams.get('frameParts'), '1');
+  assert.equal(gated.frames.length, 0, 'must not send RPC frames before socket open fires');
+  gated.socket().emitOpen({ code: 0 });
+  await connecting;
+  assert.equal(gated.client.ready, true);
+  assert.ok(gated.frames.some((f) => f.tag === 'subscribeServerConfig'));
+ } finally {
+  gated.client.disconnect();
+ }
+
+ // 2. Reconnect sends afterSequence for both shell and thread, and stream exits resubscribe locally without killing WS
+ const isolated = await setup({
+  shellProjects: [{ id: 'p1', title: 'Alpha', workspaceRoot: '/alpha' }],
+  shellThreads: [{ id: 't1', title: 'Task 1', projectId: 'p1' }]
+ });
+ let storedToken = { base: 'https://test', environmentId: 'env', token: 'SYNTHETIC_TOKEN', expiresAt: Date.now() + 60000 };
+ isolated.client.store = { async load() { return storedToken; }, async save(v) { storedToken = v; }, async clear() {} };
+ try {
+  await isolated.client.connect('https://test', 'synthetic');
+  await new Promise(setImmediate);
+  await isolated.client.watch('t1');
+  await new Promise(setImmediate);
+  assert.equal(isolated.client.shell.cursor, 9);
+  assert.equal(isolated.client.thread.cursor, 10);
+
+  // Transient disconnect -> reconnect sends afterSequence for shell (9) and thread (10)
+  isolated.client.disconnect('网络抖动', false, false);
+  await isolated.client.connect('https://test', '');
+  await new Promise(setImmediate);
+  const lastShellSub = isolated.frames.filter((f) => f.tag === 'orchestration.subscribeShell').at(-1);
+  assert.equal(lastShellSub.payload.requestCompletionMarker, true);
+  assert.equal(lastShellSub.payload.omitIdleSubagents, true);
+  assert.equal(lastShellSub.payload.afterSequence, 9);
+  const lastThreadSub = isolated.frames.filter((f) => f.tag === 'orchestration.subscribeThread').at(-1);
+  assert.equal(lastThreadSub.payload.afterSequence, 10);
+  assert.equal(lastThreadSub.payload.acceptDedupedBodies, true);
+
+  // Closing the shell stream or thread stream keeps the WebSocket alive and retries locally
+  const socketsBefore = isolated.socketConnects.length;
+  const shellSubCountBefore = isolated.frames.filter((f) => f.tag === 'orchestration.subscribeShell').length;
+  const threadSubCountBefore = isolated.frames.filter((f) => f.tag === 'orchestration.subscribeThread').length;
+  isolated.socket().emit({ _tag: 'Exit', requestId: lastShellSub.id, exit: { _tag: 'Success', value: null } });
+  isolated.socket().emit({ _tag: 'Exit', requestId: lastThreadSub.id, exit: { _tag: 'Success', value: null } });
+  assert.equal(isolated.client.ready, true, 'stream exit must not disconnect healthy WebSocket');
+  await new Promise((resolve) => setTimeout(resolve, 350));
+  assert.equal(isolated.socketConnects.length, socketsBefore, 'local stream resubscribe must reuse existing socket');
+  assert.ok(isolated.frames.filter((f) => f.tag === 'orchestration.subscribeShell').length > shellSubCountBefore);
+  assert.ok(isolated.frames.filter((f) => f.tag === 'orchestration.subscribeThread').length > threadSubCountBefore);
+ } finally {
+  isolated.client.disconnect();
+ }
+});
+
+test('inbound traffic proves socket alive during resume probe, offline pauses retries, and backoff escalates on rapid flap', async () => {
+ // 1. Live inbound frame during dropped server.probe resolves probe alive without reconnecting
+ const traffic = await setup({ dropProbe: true });
+ try {
+  await traffic.client.connect('https://test', 'synthetic');
+  await new Promise(setImmediate);
+  const socketsBefore = traffic.socketConnects.length;
+  traffic.client.enterBackground();
+  const resuming = traffic.client.resume(2000);
+  setTimeout(() => { traffic.socket().emit({ _tag: 'Pong' }); }, 30);
+  await resuming;
+  assert.equal(traffic.client.ready, true);
+  assert.equal(traffic.socketConnects.length, socketsBefore, 'incoming frame proves socket alive without reconnect');
+ } finally {
+  traffic.client.disconnect();
+ }
+
+ // 2. Offline pauses automatic retry and coming back online reconnects immediately
+ const net = await setup();
+ let saved = { base: 'https://test', environmentId: 'env', token: 'SYNTHETIC_TOKEN', expiresAt: Date.now() + 60000 };
+ net.client.store = { async load() { return saved; }, async save(v) { saved = v; }, async clear() {} };
+ try {
+  await net.client.connect('https://test', 'synthetic');
+  await new Promise(setImmediate);
+  net.client.handleNetworkStatus(true);
+  net.socket().emitClose({ code: 1006, reason: 'network down' });
+  assert.equal(net.client.ready, false);
+  assert.equal(net.client.networkOffline, true);
+  assert.equal(net.client.reconnectPending, false, 'offline client must pause retry loop');
+
+  net.client.handleNetworkStatus(false);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.equal(net.client.ready, true, 'coming back online must immediately reconnect');
+  assert.equal(net.client.networkOffline, false);
+ } finally {
+  net.client.disconnect();
+ }
+
+ // 3. Rapid flap (< 30s uptime) escalates retryDelay instead of resetting to 250ms forever
+ const flap = await setup();
+ flap.client.store = { async load() { return saved; }, async save(v) { saved = v; }, async clear() {} };
+ try {
+  await flap.client.connect('https://test', 'synthetic');
+  await new Promise(setImmediate);
+  // First drop from live session uses fast 250ms retry (jittered 125..250)
+  flap.client.disconnect('drop 1', true, false);
+  const firstDelay = flap.client.retryDelay;
+  assert.ok(firstDelay >= 100 && firstDelay <= 250, 'first live drop should use fast retry, got ' + firstDelay);
+  clearTimeout(flap.client.retryTimer); flap.client.retryTimer = 0;
+
+  // Immediate reconnect + drop within < 30s must escalate backoff rather than resetting
+  await flap.client.connect('https://test', '');
+  flap.client.disconnect('drop 2', true, false);
+  const secondDelay = flap.client.retryDelay;
+  assert.ok(secondDelay >= 500, 'rapid flap must escalate exponential backoff, got ' + secondDelay);
+ } finally {
+  flap.client.disconnect();
  }
 });

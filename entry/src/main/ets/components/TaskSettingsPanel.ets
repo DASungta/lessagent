@@ -14,7 +14,7 @@ import { record } from '../protocol/Wire';
 export struct TaskSettingsPanel {
   @Prop models: ModelChoice[] = [];
   @Prop config: Record<string, Object> = {};
-  @Prop settings: TaskSettings;
+  @Prop @Watch('syncSettings') settings: TaskSettings;
   @Prop busy: boolean = false;
   @Prop status: string = '';
   onSave: (value: TaskSettings) => void = () => {};
@@ -28,10 +28,15 @@ export struct TaskSettingsPanel {
   @State query: string = '';
   @State providerExpanded: boolean = false;
 
-  aboutToAppear(): void {
+  /** Synchronizes local picker state when the parent updates `settings`. */
+  private syncSettings(): void {
     this.selected = { instanceId: this.settings.modelSelection.instanceId, model: this.settings.modelSelection.model,
       options: (this.settings.modelSelection.options || []).slice() };
-    this.permission = this.settings.runtimeMode; this.interaction = this.settings.interactionMode;
+    this.permission = this.settings.runtimeMode;
+    this.interaction = this.settings.interactionMode;
+  }
+  aboutToAppear(): void {
+    this.syncSettings();
   }
   private controls(): ModelOptionControl[] { return optionControls(this.config, this.selected); }
   private modes(): string[] { return supportedModes(this.config, this.selected); }

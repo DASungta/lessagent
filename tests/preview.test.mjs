@@ -61,11 +61,14 @@ globalThis.__previewTest = {
  } }
 };
 const wireUrl = new URL('../entry/src/main/ets/protocol/Wire.ts', import.meta.url).href;
+const hostsUrl = new URL('../entry/src/main/ets/protocol/Hosts.ts', import.meta.url).href;
 const protocolUrl = new URL('../entry/src/main/ets/protocol/Preview.ts', import.meta.url).href;
 const source = (await readFile(new URL('../entry/src/main/ets/services/PreviewStream.ets',import.meta.url),'utf8'))
  .replace("import { webSocket } from '@kit.NetworkKit';",'const webSocket = globalThis.__previewTest.webSocket;')
  .replace("import { image } from '@kit.ImageKit';",'const image = globalThis.__previewTest.image;')
- .replace("'../protocol/Wire'",JSON.stringify(wireUrl)).replace("'../protocol/Preview'",JSON.stringify(protocolUrl));
+ .replace("'../protocol/Wire'",JSON.stringify(wireUrl))
+ .replace("'../protocol/Hosts'",JSON.stringify(hostsUrl))
+ .replace("'../protocol/Preview'",JSON.stringify(protocolUrl));
 const { PreviewStream } = await import(data(compile(source)));
 const tick = () => new Promise(resolve=>setImmediate(resolve));
 const jpeg = () => Uint8Array.from([255,216,255,217]).buffer;

@@ -3,22 +3,34 @@ import { ModelSelection, TaskSettings, launchTask, validateTaskSettings, queueCo
 import { BranchView, branches, branchListInput, ComposerContextRecord, ComposerDraft, contextPayload,
   DraftAttachment, DraftWorkspace, draftSettings, emptyWorkspace, forceStopCommand, forkThreadCommand,
   guestShare, GuestShareView, launchWorkspace, promoteCommand, refreshStatusInput, switchBranchInput,
-  SubagentView, subagents, backgroundTasks, BackgroundTaskView, tokenUsage, TokenUsage, attachmentLimitError,
+  SubagentView, subagents, BackgroundTaskView, tokenUsage, TokenUsage, attachmentLimitError,
   uploadAttachmentTarget, attachmentRecord, latestExecutedRun } from '../protocol/R4';
+import {
+  derivePendingBackgroundWork,
+  deriveThreadTurnSubagents,
+  PendingBackgroundTaskView,
+  PendingBackgroundWorkView,
+  presentPendingBackgroundWork,
+  ThreadTurnSubagentsView
+} from '../protocol/FloatingStatus';
 import { http, webSocket } from '@kit.NetworkKit';
 import { util } from '@kit.ArkTS';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { bootstrapForm, createThread, objects, record, RpcClient, RpcFailure, RpcSender, sendMessage,
   serverBase, socketUrl, text, ThreadState, validateDescriptor } from '../protocol/Wire';
+import { directHostKind, shouldBypassSystemProxy, urlHostname } from '../protocol/Hosts';
 
-import { ShellState, ModelChoice, models, SavedSession, SessionStorage, stopCommand, secretAnswer,
+import { CachedShellEntry, ShellState, ModelChoice, models, SavedSession, SessionStorage, stopCommand, secretAnswer,
   secretReferenceAnswer, dismissInputCommand, respondCommand, RecoveryState, RecoveryStorage,
   recoveryState, Attachment, PeerLinkView, peerAccessGranted, peerLinkViews,
   LinkAnswer, linkAnswerPayload, peerPairingScopes } from '../protocol/Core';
 import { contentMatches, ContentMatch, contentSearchInput, listEntriesInput, readFileInput,
   WorkspaceEntry, workspaceAssetResource, workspaceEntries, workspaceFile, WorkspaceFile } from '../protocol/Files';
-import { actionInput, applyVcsStatus, commentInput, emptyVcs, gitActionInput, listRefs,
-  pullInput, pullRequestActivity, PullRequestActivityView, pullRequestDetail, PullRequestDetailView,
+import { classifyMarkdownMediaSource, markdownMediaAssetResource, ResolvedMarkdownMedia,
+  safeAssetUrl } from '../protocol/Markdown';
+import { MarkdownMediaCache } from './MarkdownMediaCache';
+import { actionInput, applyVcsStatus, commentInput, emptyVcs, firstPullRequestCursor, gitActionInput, listRefs,
+  parsePullRequestCursors, pullInput, pullRequestActivity, PullRequestActivityView, pullRequestDetail, PullRequestDetailView,
   pullRequestChecks, PullRequestChecksView, pullRequestGuide, PullRequestGuideView,
   pullRequestListInput, pullRequestRef, pullRequestRows, PullRequestPage, PullRequestRow, refs, RefView,
   ReviewerSelection, LinkedPullRequestView, linkedPullRequests, linkedPullRequestCommand,
@@ -49,6 +61,36 @@ class HttpFailure extends Error {
   }
 }
 
+function withDirectProxyPolicy(target: string, options: http.HttpRequestOptions): http.HttpRequestOptions {
+  if (shouldBypassSystemProxy(target)) options.usingProxy = false;
+  return options;
+}
+
+function formatHttpNetworkError(path: string, base: string, code: number | undefined): string {
+  if (typeof code !== 'number') return 'HTTP ' + path + ' 失败，响应格式无效';
+  if (code === 2300028) {
+    return shouldBypassSystemProxy(base)
+      ? 'HTTP ' + path + ' 连接超时（系统错误码 2300028）：请确认手机与电脑在同一局域网或 VPN/Tailnet 路由可达，并检查防火墙与端口'
+      : 'HTTP ' + path + ' 连接超时（系统错误码 2300028）：请检查网络连接与服务端状态';
+  }
+  if (code === 2300007) {
+    return 'HTTP ' + path + ' 无法连接服务器（系统错误码 2300007）：请确认 T3 服务已运行且地址、端口与防火墙正确';
+  }
+  if (code === 2300006) {
+    return 'HTTP ' + path + ' 无法解析域名（系统错误码 2300006）：请检查地址拼写与网络连接';
+  }
+  if (code === 2300060) {
+    return 'HTTP ' + path + ' TLS 证书校验失败（系统错误码 2300060）：不接受不受信任或自签名证书';
+  }
+  if (code === 2300047) {
+    return 'HTTP ' + path + ' 失败，服务端重定向被拒绝（系统错误码 2300047）';
+  }
+  if (code === 2300052 || code === 2300055 || code === 2300056) {
+    return 'HTTP ' + path + ' 网络中断或服务端无响应（系统错误码 ' + code + '）';
+  }
+  return 'HTTP ' + path + ' 失败，系统错误码 ' + code;
+}
+
 interface PeerPairingPayload { label: string; scopes: string[]; }
 interface EmptyPayload { }
 interface NamePayload { name: string; }
@@ -57,6 +99,13 @@ interface SubscribeThreadPayload {
   threadId: string;
   acceptBoundedSnapshot: boolean;
   requestCompletionMarker: boolean;
+  acceptDedupedBodies: boolean;
+  afterSequence?: number;
+}
+interface SubscribeShellPayload {
+  requestCompletionMarker: boolean;
+  omitIdleSubagents: boolean;
+  afterSequence?: number;
 }
 interface PathPayload { partialPath: string; }
 interface RepositoryPayload { provider: string; repository: string; }
@@ -95,12 +144,47 @@ interface CommandOutputPayload { threadId: string; itemId: string; }
 interface AttachmentResource { _tag: string; attachmentId: string; fileName?: string; mimeType?: string; disposition?: string; }
 interface AssetUrlInput { resource: AttachmentResource; }
 
+interface ServerConfigSubscribePayload {
+  workspaceSnapshotsOnDemand: boolean;
+  providerStatusDeltas: boolean;
+}
+export interface RouteProbeResult {
+  ok: boolean;
+  base: string;
+  descriptor?: Record<string, Object>;
+  error?: string;
+  checkedAt: number;
+}
+const SHELL_CACHE_CAPABILITIES: string[] = [
+  'threadSettlement', 'threadSnooze', 'threadPinning', 'threadPinReorder',
+  'threadActiveReorder', 'threadAutoSettleOptOut', 'threadTitleRegeneration',
+  'threadProjectFromScratch', 'projectOrganization'
+];
+const PRECHECKED_DESCRIPTOR_TTL_MS = 5000;
+const NEARBY_DESCRIPTOR_TIMEOUT_MS = 3000;
+const SOCKET_OPEN_TIMEOUT_MS = 15000;
+const CONFIG_SYNC_TIMEOUT_MS = 45000;
+const STREAM_SUBSCRIBE_TIMEOUT_MS = 45000;
+const BACKOFF_RESET_AFTER_MS = 30000;
+const SESSION_LOSS_RETRY_DELAY_MS = 250;
+const LOCAL_PROBE_TIMEOUT_MS = 3000;
+const REMOTE_PROBE_TIMEOUT_MS = 15000;
+const LONG_BACKGROUND_PROBE_TIMEOUT_MS = 1500;
+const SILENT_SOCKET_HTTP_DELAY_MS = 500;
+const REMOTE_SILENT_SOCKET_AFTER_MS = 2500;
+const HEARTBEAT_INTERVAL_MS = 5000;
+const HEARTBEAT_TIMEOUT_MS = 15000;
+const HEARTBEAT_FREEZE_GAP_MS = 12000;
+const HEARTBEAT_RESUME_GRACE_MS = 5000;
+
 export interface CloudEndpoint { httpBaseUrl: string; wsBaseUrl: string; providerKind: string; }
 
 export interface CloudTransport {
   environmentId: string;
   label: string;
   endpoint(): Promise<CloudEndpoint>;
+  cachedEndpoint?(): Promise<CloudEndpoint | undefined>;
+  tokenExpiresAt?(): number;
   requestJson(path: string, method: http.RequestMethod, body?: string, json?: boolean,
     extraHeaders?: Record<string, string>): Promise<Object>;
   socketUrl(): Promise<string>;
@@ -110,12 +194,18 @@ export interface CloudTransport {
 
 export class T3Client {
   status: string = '未连接';
+  lastConnectionError: string = '';
+  networkOffline: boolean = false;
   expectedEnvironmentId: string = '';
   recoveryBase: string = '';
   reconnectSavedRoutes: (() => Promise<void>) | undefined = undefined;
   private connectionsPending: number = 0;
   get connectionPending(): boolean { return this.connectionsPending > 0; }
+  get reconnectPending(): boolean { return this.connectionsPending > 0 || this.retryTimer !== 0; }
+  get shellSynced(): boolean { return this.ready && this.shell.liveSynced; }
+  get hasShellData(): boolean { return this.shell.hasSnapshot; }
   get connectedBase(): string { return this.activeBase(); }
+  onShellUpdated: (() => void) | undefined = undefined;
   validateIdentity: (environmentId: string) => void = () => {};
   server: string = '';
   environmentLabel: string = '';
@@ -135,23 +225,35 @@ export class T3Client {
   directAddresses: string[] = [];
   ready: boolean = false;
   thread: ThreadState | undefined = undefined;
+  private preservedThread: ThreadState | undefined = undefined;
   onUpdate: () => void = () => {};
   private socket: webSocket.WebSocket | undefined = undefined;
   private rpc: RpcClient | undefined = undefined;
   private timer: number = 0;
   private lastInbound: number = 0;
+  private lastHeartbeatTick: number = 0;
+  private inboundFrames: number = 0;
+  private probeInboundNotify: (() => void) | undefined = undefined;
   private generation: number = 0;
+  private mediaCache: MarkdownMediaCache = new MarkdownMediaCache();
   private threadChunk: ((value: Object) => void) | undefined = undefined;
   private lastWatchedThreadId: string = '';
   private resumingWatchThreadId: string = '';
   get pendingWatchThreadId(): string { return this.thread?.threadId || this.resumingWatchThreadId; }
   private shellChunk: ((value: Object) => void) | undefined = undefined;
+  private configChunk: ((value: Object) => void) | undefined = undefined;
   private worktreeChunk: ((value: Object) => void) | undefined = undefined;
+  private shellRetryTimer: number = 0;
+  private shellRetryDelay: number = 250;
+  private threadRetryTimer: number = 0;
+  private threadRetryDelay: number = 250;
   worktreeSetup: Record<string, Object> | undefined = undefined;
   store: SessionStorage | undefined = undefined;
   shell: ShellState = new ShellState();
   models: ModelChoice[] = [];
   capabilities: Record<string, Object> = {};
+  private cachedCapabilities: Record<string, boolean> = {};
+  private lastShellEnvironmentId: string = '';
   config: Record<string, Object> = {};
   private launching: boolean = false;
   serverSettings: Record<string, Object> = {};
@@ -171,6 +273,10 @@ export class T3Client {
   get submitting(): boolean { return this.mutating || this.launching; }
   private reconciled: boolean = false;
   private resumeWanted: boolean = false;
+  private inBackground: boolean = false;
+  private probing: Promise<boolean> | undefined = undefined;
+  private connectedAt: number = 0;
+  private retryFailureCount: number = 0;
   private retryTimer: number = 0;
   private retryDelay: number = 1000;
   private notifyTimer: number = 0;
@@ -182,7 +288,40 @@ export class T3Client {
 
   generationValue(): number { return this.generation; }
   canScope(scope: string): boolean | undefined { return sessionAllows(this.sessionAccess, scope); }
-  supports(name: string): boolean { return capability({ capabilities: this.capabilities }, name); }
+  supports(name: string): boolean {
+    if (Object.keys(this.capabilities).length > 0) return capability({ capabilities: this.capabilities }, name);
+    return this.cachedCapabilities[name] === true;
+  }
+  hydrateShellCache(cached: CachedShellEntry): void {
+    if (this.ready || this.shell.liveSynced) return;
+    if (this.expectedEnvironmentId && cached.environmentId !== this.expectedEnvironmentId) return;
+    this.shell.hydrateCache(cached.projects, cached.threads);
+    this.lastShellEnvironmentId = cached.environmentId;
+    const caps: Record<string, boolean> = {};
+    for (const key of Object.keys(cached.capabilities)) {
+      if (cached.capabilities[key] === true) caps[key] = true;
+    }
+    this.cachedCapabilities = caps;
+    if (cached.scratchWorkspaceRoot && !this.scratchWorkspaceRoot) {
+      this.scratchWorkspaceRoot = cached.scratchWorkspaceRoot;
+    }
+  }
+  exportShellCache(): CachedShellEntry | undefined {
+    const environmentId = this.activeEnvironmentId();
+    if (!this.shell.liveSynced || !environmentId) return undefined;
+    const caps: Record<string, boolean> = {};
+    for (const key of SHELL_CACHE_CAPABILITIES) {
+      if (this.supports(key)) caps[key] = true;
+    }
+    return {
+      environmentId,
+      savedAt: Date.now(),
+      scratchWorkspaceRoot: this.scratchWorkspaceRoot,
+      capabilities: caps,
+      projects: this.shell.projects.slice(),
+      threads: this.shell.threads.slice()
+    };
+  }
   canCreateProject(): boolean {
     return this.ready && this.canScope('orchestration:operate') !== false;
   }
@@ -220,7 +359,7 @@ export class T3Client {
     const wrapped = (value: Object): void => {
       if (rpc === this.rpc && generation === this.generation) onItem(value);
     };
-    void rpc.request(method, payload, wrapped, 600000).then(() => {}).catch(() => {});
+    void rpc.request(method, payload, wrapped, 600000, false).then(() => {}).catch(() => {});
     return wrapped;
   }
   async previewStreamUrl(threadId: string, tabId: string): Promise<string> {
@@ -344,26 +483,236 @@ export class T3Client {
     return this.rpcRequest('orchestration.searchThreads', payload, 8000, false);
   }
 
+  private startHeartbeat(rpc: RpcClient, generation: number): void {
+    clearInterval(this.timer);
+    const now = Date.now();
+    this.lastInbound = now;
+    this.lastHeartbeatTick = now;
+    this.timer = setInterval(() => {
+      if (generation !== this.generation || this.rpc !== rpc) {
+        clearInterval(this.timer); this.timer = 0; return;
+      }
+      const tickNow = Date.now();
+      const tickGap = tickNow - this.lastHeartbeatTick;
+      this.lastHeartbeatTick = tickNow;
+      if (tickGap > HEARTBEAT_FREEZE_GAP_MS) {
+        // Timer was frozen by OS power/sleep policy; grant a short grace window and ping first.
+        const minInbound = tickNow - (HEARTBEAT_TIMEOUT_MS - HEARTBEAT_RESUME_GRACE_MS);
+        if (this.lastInbound < minInbound) this.lastInbound = minInbound;
+        rpc.ping();
+        return;
+      }
+      if (tickNow - this.lastInbound > HEARTBEAT_TIMEOUT_MS) rpc.fail('服务端响应超时；请重连并核对任务状态');
+      else rpc.ping();
+    }, HEARTBEAT_INTERVAL_MS);
+  }
+
+  private isFastRoute(): boolean {
+    if (this.cloud) return false;
+    const base = this.activeBase();
+    if (!base) return false;
+    const kind = directHostKind(urlHostname(base));
+    return kind === 'loopback' || kind === 'lan';
+  }
+
+  private isLoopbackTarget(): boolean {
+    if (this.cloud) return false;
+    const base = this.activeBase() || this.recoveryBase;
+    return !!base && directHostKind(urlHostname(base)) === 'loopback';
+  }
+
+  private probeTimeoutForRoute(backgroundDurationMs: number): number {
+    if (backgroundDurationMs >= 10000) return LONG_BACKGROUND_PROBE_TIMEOUT_MS;
+    if (this.isFastRoute()) return LOCAL_PROBE_TIMEOUT_MS;
+    return REMOTE_PROBE_TIMEOUT_MS;
+  }
+
+  private async probeLiveSocket(timeoutMs: number, fastFailOnHttp: boolean = false): Promise<boolean> {
+    if (!this.ready || !this.rpc) return false;
+    if (this.probing) return this.probing;
+    const rpc = this.rpc;
+    const generation = this.generation;
+    const framesBefore = this.inboundFrames;
+    const base = this.activeBase();
+    const envId = this.activeEnvironmentId();
+    const startedAt = Date.now();
+    let run: Promise<boolean> | undefined = undefined;
+    run = new Promise<boolean>((resolve) => {
+      let settled = false;
+      let httpDelayTimer = 0;
+      let silentTimer = 0;
+      const finish = (alive: boolean): void => {
+        if (settled) return;
+        settled = true;
+        if (httpDelayTimer) { clearTimeout(httpDelayTimer); httpDelayTimer = 0; }
+        if (silentTimer) { clearTimeout(silentTimer); silentTimer = 0; }
+        if (this.probeInboundNotify === onInbound) this.probeInboundNotify = undefined;
+        if (this.probing === run) this.probing = undefined;
+        resolve(alive);
+      };
+      const isCurrent = (): boolean => generation === this.generation && this.rpc === rpc && this.ready;
+      const onInbound = (): void => {
+        if (!isCurrent()) { finish(false); return; }
+        if (this.inboundFrames > framesBefore) finish(true);
+      };
+      this.probeInboundNotify = onInbound;
+
+      if (base && timeoutMs > SILENT_SOCKET_HTTP_DELAY_MS) {
+        httpDelayTimer = setTimeout(() => {
+          httpDelayTimer = 0;
+          if (settled || !isCurrent() || this.inboundFrames > framesBefore) return;
+          void this.probeRoute(base, envId, Math.min(2500, timeoutMs)).then((result: RouteProbeResult) => {
+            if (settled || !isCurrent()) return;
+            if (this.inboundFrames > framesBefore) { finish(true); return; }
+            if (!result.ok) return;
+            if (fastFailOnHttp) { finish(false); return; }
+            const remaining = REMOTE_SILENT_SOCKET_AFTER_MS - (Date.now() - startedAt);
+            if (remaining <= 0) { finish(false); return; }
+            silentTimer = setTimeout(() => {
+              silentTimer = 0;
+              if (settled) return;
+              finish(isCurrent() && this.inboundFrames > framesBefore);
+            }, remaining) as number;
+          }).catch(() => {});
+        }, SILENT_SOCKET_HTTP_DELAY_MS) as number;
+      }
+
+      const empty: EmptyPayload = {};
+      void rpc.request('server.probe', empty, undefined, timeoutMs, false).then(() => {
+        finish(isCurrent());
+      }).catch((error: Error) => {
+        // A known RPC exit (e.g. an older host without server.probe) still proves the socket is alive.
+        if (error instanceof RpcFailure && error.known && isCurrent()) {
+          finish(true);
+          return;
+        }
+        finish(isCurrent() && this.inboundFrames > framesBefore);
+      });
+    });
+    this.probing = run;
+    return run;
+  }
+
+  enterBackground(): void {
+    this.inBackground = true;
+    clearInterval(this.timer); this.timer = 0;
+    clearTimeout(this.retryTimer); this.retryTimer = 0;
+    clearTimeout(this.shellRetryTimer); this.shellRetryTimer = 0;
+    clearTimeout(this.threadRetryTimer); this.threadRetryTimer = 0;
+  }
+
   suspend(): void {
     const wanted = this.resumeWanted;
-    this.disconnect('后台已暂停连接，任务在服务端继续');
+    this.disconnect('后台已暂停连接，任务在服务端继续', false, false);
     this.resumeWanted = wanted;
   }
 
-  async resume(): Promise<void> {
-    if (!this.resumeWanted || this.ready) return;
+  handleNetworkStatus(offline: boolean): void {
+    const changed = this.networkOffline !== offline;
+    this.networkOffline = offline;
+    if (offline) {
+      if (!this.isLoopbackTarget()) {
+        clearTimeout(this.retryTimer); this.retryTimer = 0;
+      }
+      if (changed) this.onUpdate();
+      return;
+    }
+    this.retryFailureCount = 0;
+    if (this.inBackground) {
+      if (changed) this.onUpdate();
+      return;
+    }
+    if (this.ready && this.rpc) {
+      void this.handleNetworkPathChange().catch(() => {});
+      return;
+    }
+    if (this.resumeWanted && this.connectionsPending === 0) {
+      clearTimeout(this.retryTimer); this.retryTimer = 0;
+      void this.reconnectAttempt(0).catch(() => { this.status = '请解锁后安全重连'; this.onUpdate(); });
+      return;
+    }
+    if (changed) this.onUpdate();
+  }
+
+  async handleNetworkPathChange(): Promise<void> {
+    this.networkOffline = false;
+    this.retryFailureCount = 0;
+    if (this.inBackground || !this.resumeWanted) return;
+    if (this.ready && this.rpc) {
+      const alive = await this.probeLiveSocket(this.probeTimeoutForRoute(0), this.isFastRoute());
+      if (alive) {
+        if (!this.shell.liveSynced && !this.shellChunk) this.subscribeShell();
+        if (this.thread && !this.threadChunk && !this.mutating && !this.launching) {
+          void this.watch(this.thread.threadId).catch(() => {});
+        }
+        this.onUpdate();
+        return;
+      }
+      if (!this.resumeWanted || this.inBackground) return;
+    }
+    if (this.connectionsPending === 0) {
+      clearTimeout(this.retryTimer); this.retryTimer = 0;
+      await this.reconnectAttempt(0);
+    }
+  }
+
+  async resume(backgroundDurationMs: number = 0): Promise<void> {
+    this.inBackground = false;
+    this.retryFailureCount = 0;
+    this.retryDelay = 1000;
+    await this.reconnectAttempt(backgroundDurationMs);
+  }
+
+  private async reconnectAttempt(backgroundDurationMs: number = 0): Promise<void> {
+    clearTimeout(this.retryTimer); this.retryTimer = 0;
+    if (!this.resumeWanted) return;
+    if (this.networkOffline && !this.isLoopbackTarget()) {
+      this.onUpdate();
+      return;
+    }
+    if (this.ready && this.rpc) {
+      this.startHeartbeat(this.rpc, this.generation);
+      const probeTimeout = this.probeTimeoutForRoute(backgroundDurationMs);
+      const fastFailOnHttp = backgroundDurationMs >= 10000 || this.isFastRoute();
+      const alive = await this.probeLiveSocket(probeTimeout, fastFailOnHttp);
+      if (alive) {
+        if (!this.shell.liveSynced) this.subscribeShell();
+        if (this.thread && !this.threadChunk && !this.mutating && !this.launching) {
+          void this.watch(this.thread.threadId).catch(() => {});
+        }
+        this.onUpdate();
+        return;
+      }
+      if (!this.resumeWanted || this.inBackground) return;
+    } else if (this.connectionsPending > 0) {
+      if (backgroundDurationMs < 10000) return;
+      const wanted = this.resumeWanted;
+      this.disconnect('正在重新连接', false, false, true);
+      this.resumeWanted = wanted;
+    }
     if (this.reconnectSavedRoutes) { await this.reconnectSavedRoutes(); return; }
     const saved = this.store ? await this.store.load() : this.saved;
     if (saved && saved.expiresAt > Date.now()) await this.connect(saved.base);
   }
 
-  private retry(): void {
-    if (!this.resumeWanted || (!this.reconnectSavedRoutes && (!this.saved || this.saved.expiresAt <= Date.now()))) return;
+  private computeRetryDelay(fastDropRetry: boolean): number {
+    if (fastDropRetry) {
+      return Math.max(100, Math.round(SESSION_LOSS_RETRY_DELAY_MS * (0.5 + Math.random() * 0.5)));
+    }
+    const expStep = Math.max(0, this.retryFailureCount - 1);
+    const baseDelay = Math.min(1000 * Math.pow(2, Math.min(expStep, 5)), 30000);
+    return Math.max(250, Math.round(baseDelay * (0.5 + Math.random() * 0.5)));
+  }
+
+  private retry(delayMs: number): void {
+    if (this.inBackground || !this.resumeWanted ||
+      (!this.reconnectSavedRoutes && (!this.saved || this.saved.expiresAt <= Date.now()))) return;
+    if (this.networkOffline && !this.isLoopbackTarget()) return;
+    this.retryDelay = delayMs;
     this.retryTimer = setTimeout(() => {
       this.retryTimer = 0;
-      void this.resume().catch(() => { this.status = '请解锁后安全重连'; this.onUpdate(); });
-    }, this.retryDelay);
-    this.retryDelay = Math.min(this.retryDelay * 2, 30000);
+      void this.reconnectAttempt(0).catch(() => { this.status = '请解锁后安全重连'; this.onUpdate(); });
+    }, delayMs);
   }
 
   private async saveRecovery(): Promise<void> {
@@ -403,7 +752,7 @@ export class T3Client {
       }
       sent = true;
       if (rpc !== this.rpc) throw new Error('连接已变更，请同步原会话核对');
-      const response = await rpc.request(method, payload);
+      const response = await rpc.request(method, payload, undefined, 30000, false);
       if (rpc !== this.rpc) throw new Error('连接已变更，请核对原会话');
       if (method === 'orchestration.launchThread' && record(response).threadId !== this.recovery?.threadId) throw new Error('新任务响应身份不一致，请核对原会话');
       const pending = this.recovery;
@@ -461,10 +810,10 @@ export class T3Client {
       if (extraHeaders) {
         for (const key of Object.keys(extraHeaders)) headers[key] = extraHeaders[key];
       }
-      const options: http.HttpRequestOptions = {
-        method, header: headers, connectTimeout: 10000, readTimeout: timeoutMs,
+      const options: http.HttpRequestOptions = withDirectProxyPolicy(base, {
+        method, header: headers, connectTimeout: Math.min(timeoutMs, 10000), readTimeout: timeoutMs,
         usingCache: false, maxRedirects: 0, expectDataType: http.HttpDataType.STRING
-      };
+      });
       // NetworkKit rejects an explicitly empty POST extraData with parameter error 401.
       if (body) options.extraData = body;
       const response = await request.request(base + path, options);
@@ -473,8 +822,7 @@ export class T3Client {
     } catch (error) {
       if (error instanceof HttpFailure) throw error as Error;
       const code = (error as BusinessError).code;
-      const detail = typeof code === 'number' ? '，系统错误码 ' + code : '，响应格式无效';
-      throw new Error('HTTP ' + path + ' 失败' + detail);
+      throw new Error(formatHttpNetworkError(path, base, typeof code === 'number' ? code : undefined));
     } finally {
       request.destroy();
     }
@@ -498,7 +846,7 @@ export class T3Client {
     const generation = ++this.peerAccessGeneration;
     if (!this.activeEnvironmentId()) throw new Error('环境凭据未加载');
     this.peerAccessState = undefined;
-    const config = record(await rpc.request('server.getConfig', {}));
+    const config = record(await rpc.request('server.getConfig', {}, undefined, 15000, false));
     if (rpc !== this.rpc) throw new Error('连接已变更');
     if (generation !== this.peerAccessGeneration) throw new Error('权限查询已更新');
     const environmentId = this.activeEnvironmentId();
@@ -556,7 +904,7 @@ export class T3Client {
   async linkedEnvironments(): Promise<PeerLinkView[]> {
     const rpc = this.requireRpc();
     if (!this.canListPeerLinks()) throw new Error('无权查看已链接环境或环境未开启链接');
-    const value = await rpc.request('peerLinks.list', {});
+    const value = await rpc.request('peerLinks.list', {}, undefined, 15000, false);
     if (rpc !== this.rpc) throw new Error('连接已变更');
     return peerLinkViews(value);
   }
@@ -580,7 +928,7 @@ export class T3Client {
       onUpdate();
     };
     this.accessChunk = chunk;
-    void rpc.request('subscribeAuthAccess', {}, chunk).then(() => {
+    void rpc.request('subscribeAuthAccess', {}, chunk, 30000, false).then(() => {
       if (this.rpc === rpc && this.accessChunk === chunk) this.authAccessLoaded = false;
     }).catch(() => {
       if (this.rpc === rpc && this.accessChunk === chunk) {
@@ -634,10 +982,26 @@ export class T3Client {
     if (!this.expectedEnvironmentId || descriptor.environmentId !== this.expectedEnvironmentId) throw new Error('服务器身份不一致，未更新地址');
   }
 
-  async connect(address: string, credential: string = ''): Promise<void> {
+  async probeRoute(address: string, expectedEnvironmentId: string, timeoutMs: number = 2500): Promise<RouteProbeResult> {
+    let base = '';
+    try {
+      base = serverBase(address);
+      const descriptor = validateDescriptor(await this.httpJson(base, '/.well-known/t3/environment',
+        http.RequestMethod.GET, '', '', false, false, timeoutMs));
+      const environmentId = text(descriptor.environmentId);
+      if (expectedEnvironmentId && environmentId !== expectedEnvironmentId) {
+        return { ok: false, base, error: '服务器身份已变化，未发送配对凭据', checkedAt: Date.now() };
+      }
+      return { ok: true, base, descriptor, checkedAt: Date.now() };
+    } catch (error) {
+      return { ok: false, base, error: (error as Error).message || '探测连接路径失败', checkedAt: Date.now() };
+    }
+  }
+
+  async connect(address: string, credential: string = '', prechecked?: RouteProbeResult): Promise<void> {
     if (this.cloud) return this.connectCloud();
     if (this.mutating || this.launching) throw new Error('请求正在提交，请稍候再重连');
-    this.disconnect();
+    this.disconnect('正在鉴权', false, false, true);
     this.resumeWanted = true;
     const generation = this.generation;
     const base = serverBase(address);
@@ -646,7 +1010,20 @@ export class T3Client {
     this.onUpdate();
     this.connectionsPending++;
     try {
-      const descriptor = validateDescriptor(await this.httpJson(base, '/.well-known/t3/environment', http.RequestMethod.GET));
+      const canReusePrechecked = !credential.trim() && prechecked !== undefined && prechecked.ok &&
+        prechecked.base === base && prechecked.descriptor !== undefined &&
+        (Date.now() - prechecked.checkedAt) <= PRECHECKED_DESCRIPTOR_TTL_MS &&
+        (!this.expectedEnvironmentId || text(prechecked.descriptor.environmentId) === this.expectedEnvironmentId);
+      let descriptor: Record<string, Object>;
+      if (canReusePrechecked && prechecked?.descriptor) {
+        descriptor = prechecked.descriptor;
+      } else {
+        const hostKind = directHostKind(urlHostname(base));
+        const descriptorTimeout = !credential.trim() && (hostKind === 'loopback' || hostKind === 'lan')
+          ? NEARBY_DESCRIPTOR_TIMEOUT_MS : 10000;
+        descriptor = validateDescriptor(await this.httpJson(base, '/.well-known/t3/environment',
+          http.RequestMethod.GET, '', '', false, false, descriptorTimeout));
+      }
       if (generation !== this.generation) return;
       const environmentId = text(descriptor.environmentId);
       if (this.expectedEnvironmentId && environmentId !== this.expectedEnvironmentId) {
@@ -657,12 +1034,14 @@ export class T3Client {
       this.server = text(descriptor.label) + ' · ' + text(descriptor.serverVersion);
       let saved = this.store ? await this.store.load(base) : this.saved;
       if (generation !== this.generation) return;
+      let credentialsChanged = false;
       if (credential.trim()) {
         const auth = record(await this.httpJson(base, '/oauth/token', http.RequestMethod.POST, bootstrapForm(credential)));
         if (generation !== this.generation) return;
         if (auth.token_type !== 'Bearer') throw new Error('该服务要求 DPoP，当前仅支持直连 Bearer 鉴权');
         if (typeof auth.expires_in !== 'number' || auth.expires_in <= 0) throw new Error('无效凭据有效期');
         saved = { base, environmentId, token: text(auth.access_token), expiresAt: Date.now() + auth.expires_in * 1000 };
+        credentialsChanged = true;
       }
       if (!saved || saved.base !== base || saved.environmentId !== environmentId || saved.expiresAt <= Date.now()) {
         throw new Error('没有此服务器的有效会话，请输入新配对凭据');
@@ -678,7 +1057,7 @@ export class T3Client {
       }
       if (generation !== this.generation) return;
       await this.finishConnection(socketUrl(base, text(record(ticket).ticket)),
-        environmentId, base, saved, generation);
+        environmentId, base, saved, generation, credentialsChanged);
     } catch (error) {
       if (generation === this.generation) {
         const errMsg = (error as Error).message || '';
@@ -688,7 +1067,7 @@ export class T3Client {
           errMsg.includes('HTTP 401') || errMsg.includes('HTTP 403') ||
           errMsg.includes('HTTP 404') || errMsg.includes('无效');
         const canRecover = (!!this.saved || !!this.cloud || (!!this.reconnectSavedRoutes && !!this.store)) && !nonRecoverable;
-        this.disconnect(errMsg, canRecover);
+        this.disconnect(errMsg, canRecover, false);
       }
     } finally { this.connectionsPending--; }
   }
@@ -697,7 +1076,7 @@ export class T3Client {
     const transport = this.cloud;
     if (!transport) throw new Error('T3 Connect 传输未就绪');
     if (this.mutating || this.launching) throw new Error('请求正在提交，请稍候再重连');
-    this.disconnect();
+    this.disconnect('正在通过 T3 Connect 授权', false, false, true);
     this.resumeWanted = true;
     const generation = this.generation;
     this.server = '';
@@ -705,11 +1084,35 @@ export class T3Client {
     this.onUpdate();
     this.connectionsPending++;
     try {
-      const endpoint = await transport.endpoint();
-      if (generation !== this.generation) return;
-      const base = serverBase(endpoint.httpBaseUrl);
-      const descriptor = validateDescriptor(await this.httpJson(base, '/.well-known/t3/environment', http.RequestMethod.GET));
-      if (generation !== this.generation) return;
+      let base = '';
+      let descriptor: Record<string, Object> | undefined = undefined;
+      if (transport.cachedEndpoint) {
+        try {
+          const cached = await transport.cachedEndpoint();
+          if (generation !== this.generation) return;
+          if (cached) {
+            const candidateBase = serverBase(cached.httpBaseUrl);
+            const candidateDescriptor = validateDescriptor(await this.httpJson(candidateBase,
+              '/.well-known/t3/environment', http.RequestMethod.GET, '', '', false, false, 5000));
+            if (generation !== this.generation) return;
+            const candidateEnv = text(candidateDescriptor.environmentId);
+            if (candidateEnv === transport.environmentId &&
+              (!this.expectedEnvironmentId || candidateEnv === this.expectedEnvironmentId)) {
+              base = candidateBase;
+              descriptor = candidateDescriptor;
+            }
+          }
+        } catch (_) {
+          if (generation !== this.generation) return;
+        }
+      }
+      if (!descriptor) {
+        const endpoint = await transport.endpoint();
+        if (generation !== this.generation) return;
+        base = serverBase(endpoint.httpBaseUrl);
+        descriptor = validateDescriptor(await this.httpJson(base, '/.well-known/t3/environment', http.RequestMethod.GET));
+        if (generation !== this.generation) return;
+      }
       const environmentId = text(descriptor.environmentId);
       if (environmentId !== transport.environmentId ||
         (this.expectedEnvironmentId && environmentId !== this.expectedEnvironmentId)) {
@@ -722,52 +1125,265 @@ export class T3Client {
       this.onUpdate();
       const target = await transport.socketUrl();
       if (generation !== this.generation) return;
-      await this.finishConnection(target, environmentId, base, undefined, generation);
+      await this.finishConnection(target, environmentId, base, undefined, generation, false);
     } catch (error) {
-      if (generation === this.generation) this.disconnect((error as Error).message, true);
+      if (generation === this.generation) {
+        const errMsg = (error as Error).message || '';
+        const nonRecoverable = errMsg.includes('账号已切换') || errMsg.includes('身份不一致');
+        this.disconnect(errMsg, !nonRecoverable, false);
+      }
     } finally { this.connectionsPending--; }
   }
 
+  private mergeProviderDeltas(previous: Object | undefined, deltas: Object): Object[] {
+    const held: Map<string, Record<string, Object>> = new Map();
+    if (Array.isArray(previous)) {
+      for (const entry of previous as Object[]) {
+        if (entry !== null && typeof entry === 'object' && !Array.isArray(entry)) {
+          const row = entry as Record<string, Object>;
+          if (typeof row.instanceId === 'string') held.set(row.instanceId, row);
+        }
+      }
+    }
+    const mergedList: Object[] = [];
+    for (const raw of objects(deltas)) {
+      const delta = record(raw);
+      const instanceId = typeof delta.instanceId === 'string' ? delta.instanceId : '';
+      const base = instanceId ? held.get(instanceId) : undefined;
+      const merged: Record<string, Object> = {};
+      for (const key of Object.keys(delta)) merged[key] = delta[key];
+      if (merged.models === undefined && base?.models !== undefined) merged.models = base.models;
+      if (merged.slashCommands === undefined && base?.slashCommands !== undefined) merged.slashCommands = base.slashCommands;
+      if (merged.skills === undefined && base?.skills !== undefined) merged.skills = base.skills;
+      if (merged.models !== undefined) mergedList.push(merged);
+    }
+    return mergedList;
+  }
+
+  private applyConfigStreamEvent(value: Object, environmentId: string): Record<string, Object> | undefined {
+    const event = record(value);
+    const type = typeof event.type === 'string' ? event.type : '';
+    if (type === 'snapshot' && event.config !== undefined && event.config !== null) {
+      const cfg = record(event.config);
+      if (text(record(cfg.environment).environmentId) !== environmentId) {
+        throw new Error('服务器身份不一致，已中止连接');
+      }
+      return cfg;
+    }
+    if (type === 'settingsUpdated' && event.payload !== undefined && event.payload !== null) {
+      const payload = record(event.payload);
+      if (payload.settings !== undefined && payload.settings !== null && Object.keys(this.config).length > 0) {
+        const next: Record<string, Object> = {};
+        for (const key of Object.keys(this.config)) next[key] = this.config[key];
+        next.settings = payload.settings;
+        this.applyConfig(next);
+        this.notify();
+      }
+      return undefined;
+    }
+    if (type === 'providerStatuses' && event.payload !== undefined && event.payload !== null) {
+      const payload = record(event.payload);
+      if (payload.providers !== undefined && payload.providers !== null && Object.keys(this.config).length > 0) {
+        const next: Record<string, Object> = {};
+        for (const key of Object.keys(this.config)) next[key] = this.config[key];
+        next.providers = payload.providers;
+        this.applyConfig(next);
+        this.notify();
+      }
+      return undefined;
+    }
+    if (type === 'providerStatusDeltas' && event.payload !== undefined && event.payload !== null) {
+      const payload = record(event.payload);
+      if (payload.providers !== undefined && payload.providers !== null && Object.keys(this.config).length > 0) {
+        const next: Record<string, Object> = {};
+        for (const key of Object.keys(this.config)) next[key] = this.config[key];
+        next.providers = this.mergeProviderDeltas(this.config.providers, payload.providers);
+        this.applyConfig(next);
+        this.notify();
+      }
+      return undefined;
+    }
+    return undefined;
+  }
+
+  private async loadInitialConfig(rpc: RpcClient, generation: number,
+    environmentId: string): Promise<Record<string, Object>> {
+    const payload: ServerConfigSubscribePayload = {
+      workspaceSnapshotsOnDemand: true,
+      providerStatusDeltas: true
+    };
+    try {
+      return await new Promise<Record<string, Object>>((resolve, reject) => {
+        let settled = false;
+        const finish = (config: Record<string, Object>): void => {
+          if (settled) return;
+          settled = true;
+          resolve(config);
+        };
+        const fail = (error: Error): void => {
+          if (settled) return;
+          settled = true;
+          reject(error);
+        };
+        const chunk = (value: Object): void => {
+          if (rpc !== this.rpc || generation !== this.generation) {
+            fail(new Error('连接已变更'));
+            return;
+          }
+          try {
+            const snapshot = this.applyConfigStreamEvent(value, environmentId);
+            if (snapshot) {
+              if (!settled) {
+                finish(snapshot);
+              } else {
+                this.applyConfig(snapshot);
+                this.notify();
+              }
+            }
+          } catch (error) {
+            const err = error as Error;
+            const wasSettled = settled;
+            fail(err);
+            if (wasSettled && rpc === this.rpc && generation === this.generation &&
+              err.message.includes('服务器身份不一致')) {
+              this.disconnect(err.message, false, false);
+            }
+          }
+        };
+        this.configChunk = chunk;
+        void rpc.request('subscribeServerConfig', payload, chunk, CONFIG_SYNC_TIMEOUT_MS, false).then(() => {
+          if (this.configChunk === chunk) this.configChunk = undefined;
+          if (!settled) fail(new Error('FALLBACK_GET_CONFIG'));
+        }).catch((error: Error) => {
+          if (this.configChunk === chunk) this.configChunk = undefined;
+          if (!settled) fail(error);
+        });
+      });
+    } catch (error) {
+      if (rpc !== this.rpc || generation !== this.generation) throw error as Error;
+      const message = (error as Error).message || '';
+      if (message.includes('服务器身份不一致')) throw error as Error;
+      if (this.configChunk) {
+        rpc.cancelStream(this.configChunk);
+        this.configChunk = undefined;
+      }
+      const empty: EmptyPayload = {};
+      const config = record(await rpc.request('server.getConfig', empty, undefined, 30000, false));
+      if (text(record(config.environment).environmentId) !== environmentId) {
+        throw new Error('服务器身份不一致，已中止连接');
+      }
+      return config;
+    }
+  }
+
   private async finishConnection(target: string, environmentId: string, base: string,
-    saved: SavedSession | undefined, generation: number): Promise<void> {
+    saved: SavedSession | undefined, generation: number, credentialsChanged: boolean = false): Promise<void> {
     const socket = webSocket.createWebSocket();
     const rpc = new RpcClient(new NativeSender(socket));
     this.socket = socket;
     this.rpc = rpc;
     this.lastInbound = Date.now();
+    this.inboundFrames = 0;
     rpc.onFailure = (message: string) => {
       if (generation !== this.generation) return;
-      this.disconnect(message, true);
+      this.disconnect(message, true, false);
     };
-    socket.on('message', (error, data: string | ArrayBuffer) => {
+    let opened = false;
+    let openTimer = 0;
+    let resolveOpen: () => void = () => {};
+    let rejectOpen: (error: Error) => void = () => {};
+    const openPromise = new Promise<void>((resolve, reject) => {
+      resolveOpen = resolve;
+      rejectOpen = reject;
+    });
+    const clearOpenTimer = (): void => {
+      if (openTimer) { clearTimeout(openTimer); openTimer = 0; }
+    };
+    const settleOpen = (): void => {
+      if (opened) return;
+      opened = true;
+      clearOpenTimer();
+      resolveOpen();
+    };
+    const failOpen = (message: string): void => {
+      if (opened) return;
+      opened = true;
+      clearOpenTimer();
+      rejectOpen(new Error(message));
+    };
+    openTimer = setTimeout(() => {
+      openTimer = 0;
+      if (generation !== this.generation) { settleOpen(); return; }
+      failOpen('WebSocket 握手超时，请检查网络和服务器状态');
+    }, SOCKET_OPEN_TIMEOUT_MS) as number;
+
+    socket.on('open', (error: BusinessError) => {
+      if (generation !== this.generation) { settleOpen(); return; }
+      if (error && error.code !== 0) {
+        const msg = 'WebSocket 握手失败（错误码 ' + error.code + '），请检查网络和服务端版本';
+        failOpen(msg);
+        rpc.fail(msg);
+        return;
+      }
+      this.lastInbound = Date.now();
+      settleOpen();
+    });
+    socket.on('message', (error: BusinessError, data: string | ArrayBuffer) => {
       if (generation !== this.generation) return;
+      if (!opened) settleOpen();
       if ((error && error.code !== 0) || typeof data !== 'string') {
         rpc.fail('收到无效 WebSocket 消息');
         return;
       }
       this.lastInbound = Date.now();
+      this.inboundFrames++;
+      if (this.probeInboundNotify) this.probeInboundNotify();
       rpc.receive(data);
     });
-    socket.on('error', () => rpc.fail('WebSocket 连接失败或中断；提交中的请求结果未知，请重连并核对会话'));
-    socket.on('close', () => rpc.fail('连接已断开；提交中的任务结果未知，请重连并同步会话'));
+    socket.on('error', (error: BusinessError) => {
+      if (generation !== this.generation) { settleOpen(); return; }
+      const detail = error && typeof error.code === 'number' && error.code !== 0 ? '（错误码 ' + error.code + '）' : '';
+      const msg = 'WebSocket 连接失败或中断' + detail + '；提交中的请求结果未知，请重连并核对会话';
+      failOpen(msg);
+      rpc.fail(msg);
+    });
+    socket.on('close', (_error: BusinessError, value: webSocket.CloseResult) => {
+      if (generation !== this.generation) { settleOpen(); return; }
+      const code = value && typeof value.code === 'number' ? value.code : 0;
+      const detail = code > 0 && code !== 1000 ? '（状态码 ' + code + '）' : '';
+      const msg = '连接已断开' + detail + '；提交中的任务结果未知，请重连并同步会话';
+      failOpen(msg);
+      rpc.fail(msg);
+    });
     this.status = '正在连接与校验服务器';
     this.onUpdate();
     try {
-      if (!await socket.connect(target)) throw new Error('连接失败');
-    } catch (_) {
+      const connectOptions: webSocket.WebSocketRequestOptions | undefined =
+        shouldBypassSystemProxy(target) ? { proxy: 'no-proxy' } : undefined;
+      const started = connectOptions ? await socket.connect(target, connectOptions) : await socket.connect(target);
+      if (!started) throw new Error('连接失败');
+      await openPromise;
+    } catch (error) {
+      clearOpenTimer();
+      const message = (error as Error).message || '';
+      if (message.includes('WebSocket') || message.includes('连接已断开')) throw error as Error;
       throw new Error('WebSocket 连接失败，请检查网络和服务端版本');
+    } finally {
+      clearOpenTimer();
     }
     if (generation !== this.generation) return;
-    this.timer = setInterval(() => {
-      if (Date.now() - this.lastInbound > 15000) rpc.fail('服务端响应超时；请重连并核对任务状态');
-      else rpc.ping();
-    }, 5000);
-    const config = record(await rpc.request('server.getConfig', {}));
-    if (text(record(config.environment).environmentId) !== environmentId) throw new Error('服务器身份不一致，已中止连接');
+    if (!this.inBackground) this.startHeartbeat(rpc, generation);
+    const config = await this.loadInitialConfig(rpc, generation, environmentId);
     if (generation !== this.generation) return;
+    if (this.lastShellEnvironmentId && this.lastShellEnvironmentId !== environmentId) {
+      this.shell.clear();
+      this.preservedThread = undefined;
+    }
+    this.lastShellEnvironmentId = environmentId;
+    this.cachedCapabilities = {};
     this.applyConfig(config);
     if (saved) {
-      if (this.store) await this.store.save(saved);
+      if (this.store && credentialsChanged) await this.store.save(saved);
       if (generation !== this.generation) return;
       this.saved = saved;
     } else {
@@ -780,8 +1396,11 @@ export class T3Client {
     this.recovery = recovery ? recoveryState(recovery, this.recoveryBase || base, environmentId) : undefined;
     this.sessionAccess = undefined;
     this.ready = true;
+    this.connectedAt = Date.now();
+    this.lastConnectionError = '';
+    this.shellRetryDelay = 250;
+    this.threadRetryDelay = 250;
     this.subscribeShell();
-    this.retryDelay = 1000;
     this.status = '已连接';
     void this.refreshSessionAccess();
     const resumeThreadId = this.recovery?.threadId || (!this.draftScope ? this.lastWatchedThreadId : '');
@@ -838,15 +1457,40 @@ export class T3Client {
         this.cloudRenewal = setTimeout(renew, 30000);
       });
     };
-    this.cloudRenewal = setTimeout(renew, 30000);
+    const knownExpiresAt = transport.tokenExpiresAt ? transport.tokenExpiresAt() : 0;
+    const initialDelay = knownExpiresAt > 0 ? Math.max(5000, knownExpiresAt - Date.now() - 30000) : 30000;
+    this.cloudRenewal = setTimeout(renew, initialDelay);
   }
 
-  disconnect(message: string = '已断开；提交中的请求结果未知，请重连并同步会话', recover: boolean = false): void {
+  disconnect(message: string = '已断开；提交中的请求结果未知，请重连并同步会话', recover: boolean = false,
+    clearShell: boolean = false, keepBackoff: boolean = false): void {
+    const wasReady = this.ready;
+    const stayedStable = wasReady && this.connectedAt > 0 && (Date.now() - this.connectedAt) >= BACKOFF_RESET_AFTER_MS;
+    if (stayedStable) this.retryFailureCount = 0;
+    const useFastDropRetry = wasReady && this.retryFailureCount === 0;
+    if (recover) {
+      this.retryFailureCount++;
+      this.lastConnectionError = message;
+    } else if (!keepBackoff) {
+      this.retryFailureCount = 0;
+      this.lastConnectionError = '';
+    }
+    if (!clearShell && this.thread && this.thread.cursor >= 0) {
+      this.preservedThread = this.thread;
+    } else if (clearShell) {
+      this.preservedThread = undefined;
+    }
+    this.connectedAt = 0;
     this.resumeWanted = recover;
     clearTimeout(this.retryTimer); this.retryTimer = 0;
     clearTimeout(this.notifyTimer); this.notifyTimer = 0;
     clearTimeout(this.cloudRenewal); this.cloudRenewal = 0;
+    clearTimeout(this.shellRetryTimer); this.shellRetryTimer = 0;
+    clearTimeout(this.threadRetryTimer); this.threadRetryTimer = 0;
     this.generation++;
+    this.mediaCache.clear();
+    this.probing = undefined;
+    this.probeInboundNotify = undefined;
     this.ready = false; this.peerAccessState = undefined; this.offersPeerLinks = false;
     this.requireDeviceApproval = false;
     this.authAccessLoaded = false;
@@ -855,16 +1499,23 @@ export class T3Client {
     this.authAccess = { pairingLinks: [], devices: [] };
     this.threadChunk = undefined;
     this.shellChunk = undefined;
+    this.configChunk = undefined;
     this.worktreeChunk = undefined;
     this.worktreeSetup = undefined;
-    this.shell = new ShellState();
+    if (clearShell) {
+      this.shell.clear();
+      this.cachedCapabilities = {};
+      this.lastShellEnvironmentId = '';
+    } else {
+      this.shell.resetForReconnect();
+    }
     this.models = [];
     this.config = {};
     this.capabilities = {};
     this.serverSettings = {};
     this.platform = '';
     this.newProjectsRoot = '';
-    this.scratchWorkspaceRoot = '';
+    if (clearShell) this.scratchWorkspaceRoot = '';
     this.addProjectBaseDirectory = '';
     this.ghqCloneLayout = false;
     this.snoozePresets = snoozeSettingsFrom(undefined);
@@ -883,7 +1534,7 @@ export class T3Client {
     if (socket) void socket.close().catch(() => {});
     this.status = message;
     this.onUpdate();
-    if (recover) this.retry();
+    if (recover) this.retry(this.computeRetryDelay(useFastDropRetry));
   }
 
   async launch(projectId: string, prompt: string, settings: TaskSettings,
@@ -982,25 +1633,68 @@ export class T3Client {
     return threadId;
   }
 
+  private scheduleThreadResubscribe(threadId: string, generation: number): void {
+    if (this.inBackground || !this.ready || generation !== this.generation || this.lastWatchedThreadId !== threadId) return;
+    if (this.threadRetryTimer) return;
+    const delay = this.threadRetryDelay;
+    this.threadRetryDelay = Math.min(this.threadRetryDelay * 2, 30000);
+    this.threadRetryTimer = setTimeout(() => {
+      this.threadRetryTimer = 0;
+      if (this.inBackground || !this.ready || generation !== this.generation || this.lastWatchedThreadId !== threadId) return;
+      if (this.mutating || this.launching) return;
+      void this.watch(threadId).catch(() => {});
+    }, delay) as number;
+  }
+
   async watch(threadId: string): Promise<void> {
     if (!threadId.trim()) throw new Error('请输入会话 ID');
     const rpc = this.requireRpc();
     if (this.mutating || this.launching) throw new Error('请求正在提交，请稍候');
-    this.lastWatchedThreadId = threadId.trim();
+    const normalizedId = threadId.trim();
+    const generation = this.generation;
+    clearTimeout(this.threadRetryTimer); this.threadRetryTimer = 0;
+    this.lastWatchedThreadId = normalizedId;
     const previousChunk = this.threadChunk;
     this.threadChunk = undefined;
     if (previousChunk) rpc.cancelStream(previousChunk);
     this.recoveredMessageId = '';
-    await this.selectRecovery(threadId.trim());
-    if (rpc !== this.rpc) return;
-    const state = new ThreadState(threadId.trim());
+    await this.selectRecovery(normalizedId);
+    if (rpc !== this.rpc || generation !== this.generation) return;
+    const hasPendingRecovery = !!this.recovery?.pendingId && this.recovery.threadId === normalizedId;
+    const currentReusable = !hasPendingRecovery && this.thread && this.thread.threadId === normalizedId &&
+      (this.thread.cursor >= 0 || this.thread.resumeCursor >= 0) ? this.thread : undefined;
+    const preservedReusable = !hasPendingRecovery && this.preservedThread && this.preservedThread.threadId === normalizedId &&
+      (this.preservedThread.cursor >= 0 || this.preservedThread.resumeCursor >= 0) ? this.preservedThread : undefined;
+    const reusable = currentReusable || preservedReusable;
+    this.preservedThread = undefined;
+    let state: ThreadState;
+    let afterSequence: number | undefined = undefined;
+    if (reusable) {
+      state = reusable;
+      state.resetForReconnect();
+      if (state.resumeCursor >= 0) afterSequence = state.resumeCursor;
+    } else {
+      state = new ThreadState(normalizedId);
+    }
     this.thread = state;
     this.status = '正在同步会话';
     this.onUpdate();
     const chunk = (value: Object): void => {
-      state.apply(value);
+      if (rpc !== this.rpc || generation !== this.generation || this.threadChunk !== chunk) return;
+      try {
+        state.apply(value);
+      } catch (_) {
+        this.threadChunk = undefined;
+        rpc.cancelStream(chunk);
+        this.preservedThread = undefined;
+        if (this.thread === state) this.thread = new ThreadState(state.threadId);
+        this.scheduleThreadResubscribe(state.threadId, generation);
+        return;
+      }
+      const kind = typeof record(value).kind === 'string' ? text(record(value).kind) : '';
+      if (kind === 'snapshot' || kind === 'synchronized') this.threadRetryDelay = 250;
       this.status = state.notices || '会话已同步';
-      if (record(value).kind === 'snapshot' && this.recovery?.pendingId && !this.mutating &&
+      if (kind === 'snapshot' && this.recovery?.pendingId && !this.mutating &&
         this.recovery.threadId === state.threadId) {
         this.reconciled = true;
         const found = this.recovery.pendingKind === 'message' && state.messages.some((m) => m.id === this.recovery?.pendingId);
@@ -1014,15 +1708,23 @@ export class T3Client {
     const subscribePayload: SubscribeThreadPayload = {
       threadId: state.threadId,
       acceptBoundedSnapshot: true,
-      requestCompletionMarker: true
+      requestCompletionMarker: true,
+      acceptDedupedBodies: true
     };
-    void rpc.request('orchestration.subscribeThread', subscribePayload, chunk, 30000, true).then(() => {
-      if (this.threadChunk === chunk) this.disconnect('会话订阅已结束，请重新连接');
+    if (afterSequence !== undefined) subscribePayload.afterSequence = afterSequence;
+    void rpc.request('orchestration.subscribeThread', subscribePayload, chunk, STREAM_SUBSCRIBE_TIMEOUT_MS, false).then(() => {
+      if (this.rpc !== rpc || generation !== this.generation || this.threadChunk !== chunk) return;
+      this.threadChunk = undefined;
+      if (this.recovery?.pendingId && this.recovery.threadId === state.threadId) {
+        this.disconnect('会话订阅已结束，请重新连接', true, false);
+        return;
+      }
+      this.scheduleThreadResubscribe(state.threadId, generation);
     }).catch((error: Error) => {
-      if (this.rpc !== rpc || this.threadChunk !== chunk) return;
+      if (this.rpc !== rpc || generation !== this.generation || this.threadChunk !== chunk) return;
+      this.threadChunk = undefined;
       if (error instanceof RpcFailure && error.known && state.cursor < 0 &&
         (!this.recovery?.pendingId || this.recovery.threadId !== state.threadId)) {
-        this.threadChunk = undefined;
         if (this.thread === state) this.thread = undefined;
         if (this.recovery && !this.recovery.pendingId && this.recovery.threadId === state.threadId) {
           this.recovery = undefined;
@@ -1032,7 +1734,11 @@ export class T3Client {
         this.onUpdate();
         return;
       }
-      this.disconnect(error.message, true);
+      if (this.recovery?.pendingId && this.recovery.threadId === state.threadId) {
+        this.disconnect(error.message, true);
+        return;
+      }
+      this.scheduleThreadResubscribe(state.threadId, generation);
     });
   }
 
@@ -1119,12 +1825,62 @@ export class T3Client {
     if (typeof value.expiresAt !== 'number' || value.expiresAt <= Date.now()) throw new Error('文件链接已过期');
     return this.activeBase() + relative;
   }
+  async markdownMediaUrl(source: string, cwd: string = '', refresh: boolean = false): Promise<ResolvedMarkdownMedia> {
+    const effectiveCwd = cwd || this.threadCwd();
+    const classified = classifyMarkdownMediaSource(source, effectiveCwd);
+    if (classified.access === 'blocked') throw new Error('不支持此图片或媒体路径');
+    if (classified.access === 'direct') {
+      return {
+        url: classified.uri,
+        kind: classified.kind,
+        displayPath: classified.displayPath,
+        expiresAt: 0,
+        width: 0,
+        height: 0
+      };
+    }
+    const rpc = this.requireRpc();
+    const generation = this.generation;
+    const threadId = !this.draftScope && this.thread ? this.thread.threadId : '';
+    const resource = markdownMediaAssetResource(threadId, effectiveCwd, classified, false);
+    const cacheKey = this.mediaCache.key(generation, threadId, effectiveCwd, classified.path);
+    return this.mediaCache.resolve(generation, cacheKey, async (): Promise<ResolvedMarkdownMedia> => {
+      const payload: Record<string, Object> = {};
+      payload.resource = resource;
+      const value = record(await rpc.request('assets.createUrl', payload, undefined, 15000, false));
+      if (rpc !== this.rpc || generation !== this.generation) throw new Error('连接已变更');
+      const relative = text(value.relativeUrl);
+      const expiresAt = typeof value.expiresAt === 'number' ? value.expiresAt : 0;
+      if (expiresAt <= Date.now()) throw new Error('文件链接已过期');
+      const url = safeAssetUrl(this.activeBase(), relative);
+      let width = 0;
+      let height = 0;
+      if (value.imageDimensions && typeof value.imageDimensions === 'object') {
+        const dims = record(value.imageDimensions);
+        if (typeof dims.width === 'number' && dims.width > 0 && typeof dims.height === 'number' && dims.height > 0) {
+          width = dims.width;
+          height = dims.height;
+        }
+      }
+      return {
+        url,
+        kind: classified.kind,
+        displayPath: classified.displayPath,
+        expiresAt,
+        width,
+        height
+      };
+    }, refresh);
+  }
   async downloadWorkspaceFile(cwd: string, path: string): Promise<ArrayBuffer> {
     const url = await this.workspaceFileUrl(cwd, path, false);
     const request = http.createHttp();
     try {
-      const response = await request.request(url, { method: http.RequestMethod.GET, usingCache: false,
-        maxRedirects: 0, connectTimeout: 10000, readTimeout: 60000, expectDataType: http.HttpDataType.ARRAY_BUFFER });
+      const options: http.HttpRequestOptions = withDirectProxyPolicy(url, {
+        method: http.RequestMethod.GET, usingCache: false,
+        maxRedirects: 0, connectTimeout: 10000, readTimeout: 60000, expectDataType: http.HttpDataType.ARRAY_BUFFER
+      });
+      const response = await request.request(url, options);
       if (response.responseCode !== 200) throw new Error('文件下载失败（' + response.responseCode + '）');
       if (response.result instanceof ArrayBuffer) return response.result;
       throw new Error('文件响应不是二进制数据');
@@ -1190,15 +1946,15 @@ export class T3Client {
     await this.rpcRequest('vcs.switchRef', switchRefInput(cwd, refName), 60000, false);
   }
   async listPullRequests(state: string, query: string, cursor: string = '',
-    projectId: string = ''): Promise<PullRequestPage> {
+    projectId: string = '', cursors?: Record<string, string>): Promise<PullRequestPage> {
     const rpc = this.requireRpc();
     const value = record(await rpc.request('pullRequests.list',
-      pullRequestListInput(state, query, cursor, projectId), undefined, 30000, false));
+      pullRequestListInput(state, query, cursor, projectId, cursors), undefined, 30000, false));
     if (rpc !== this.rpc) throw new Error('连接已变更，请重新加载拉取请求');
     const parsed = pullRequestRows(value);
-    const next = value.nextCursors === undefined ? '' :
-      (typeof record(value.nextCursors).default === 'string' ? record(value.nextCursors).default as string : '');
-    return { rows: parsed.rows, errors: parsed.errors, truncated: parsed.truncated, nextCursor: next };
+    const nextCursors = parsePullRequestCursors(value.nextCursors);
+    const next = firstPullRequestCursor(nextCursors);
+    return { rows: parsed.rows, errors: parsed.errors, truncated: parsed.truncated, nextCursor: next, nextCursors };
   }
   async pullRequestDetail(ref: Object): Promise<PullRequestDetailView> {
     const rpc = this.requireRpc();
@@ -1409,8 +2165,31 @@ export class T3Client {
     }
     return rows;
   }
+  threadTurnSubagents(): ThreadTurnSubagentsView | undefined {
+    if (!this.thread) return undefined;
+    return deriveThreadTurnSubagents(this.thread.runs, this.thread.subagents, this.shell.threads);
+  }
+  threadPendingBackgroundTasks(): PendingBackgroundTaskView[] {
+    if (!this.thread) return [];
+    const shellThread = this.shell.threads.find((thread) => thread.id === this.thread?.threadId);
+    return derivePendingBackgroundWork(
+      this.thread.runs,
+      this.thread.providerThreads,
+      this.thread.items,
+      this.thread.details,
+      shellThread ? shellThread.pendingBackgroundTasks : []
+    );
+  }
+  threadPendingBackgroundWork(): PendingBackgroundWorkView | undefined {
+    return presentPendingBackgroundWork(this.threadPendingBackgroundTasks());
+  }
   threadBackgroundTasks(): BackgroundTaskView[] {
-    return this.thread ? backgroundTasks(this.thread.details) : [];
+    return this.threadPendingBackgroundTasks().map((task: PendingBackgroundTaskView): BackgroundTaskView => ({
+      id: task.taskId,
+      label: task.label,
+      kind: task.kind,
+      childThreadId: task.childThreadId
+    }));
   }
   threadGuestShare(): GuestShareView | undefined {
     return this.thread ? guestShare(this.thread.details.guestShare) : undefined;
@@ -1427,6 +2206,12 @@ export class T3Client {
     const subagent = this.thread.subagents.find((row: Record<string, Object>) => row.id === subagentId);
     if (!subagent || !this.threadSubagents().find((row: SubagentView) => row.id === subagentId)?.canStop) {
       throw new Error('子任务已结束或不可停止');
+    }
+    const childThreadId = typeof subagent.childThreadId === 'string' ? subagent.childThreadId : '';
+    if (subagent.origin === 'app_owned' && childThreadId) {
+      const id = util.generateRandomUUID();
+      await this.mutate('orchestration.dispatchCommand', stopCommand(id, childThreadId), id, 'response');
+      return;
     }
     const runId = typeof subagent.runId === 'string' ? subagent.runId : '';
     if (!runId) throw new Error('子任务缺少运行标识');
@@ -1456,7 +2241,7 @@ export class T3Client {
   async createGuestShare(): Promise<string> {
     if (!this.thread) throw new Error('请先选择会话');
     const rpc = this.requireRpc();
-    const result = record(await rpc.request('guestShare.create', { threadId: this.thread.threadId }));
+    const result = record(await rpc.request('guestShare.create', { threadId: this.thread.threadId }, undefined, 15000, false));
     if (rpc !== this.rpc) throw new Error('连接已变更');
     return text(result.url);
   }
@@ -1538,7 +2323,7 @@ export class T3Client {
     if (!this.thread) throw new Error('请先选择会话');
     if (!itemId || itemId.length > 256) throw new Error('会话条目标识无效');
     const payload: TurnItemPayload = { threadId: this.thread.threadId, itemId };
-    const value = record(await this.rpcRequest('orchestration.getTurnItem', payload));
+    const value = record(await this.rpcRequest('orchestration.getTurnItem', payload, 15000, false));
     return value.item === undefined || value.item === null ? undefined : record(value.item);
   }
   commandOutput(itemId: string, onFrame: (value: Object) => void): (value: Object) => void {
@@ -1586,8 +2371,11 @@ export class T3Client {
     const url = await this.attachmentUrl(id, name, mimeType, false);
     const request = http.createHttp();
     try {
-      const response = await request.request(url, { method: http.RequestMethod.GET, usingCache: false,
-        maxRedirects: 0, connectTimeout: 10000, readTimeout: 60000, expectDataType: http.HttpDataType.ARRAY_BUFFER });
+      const options: http.HttpRequestOptions = withDirectProxyPolicy(url, {
+        method: http.RequestMethod.GET, usingCache: false,
+        maxRedirects: 0, connectTimeout: 10000, readTimeout: 60000, expectDataType: http.HttpDataType.ARRAY_BUFFER
+      });
+      const response = await request.request(url, options);
       if (response.responseCode !== 200) throw new Error('附件下载失败（' + response.responseCode + '）');
       if (response.result instanceof ArrayBuffer) return response.result;
       throw new Error('附件响应不是二进制数据');
@@ -1615,23 +2403,63 @@ export class T3Client {
       this.onUpdate();
     };
     this.worktreeChunk = chunk;
-    void rpc.request('subscribeWorktreeSetup', { threadId }, chunk, 600000).catch(() => {
+    void rpc.request('subscribeWorktreeSetup', { threadId }, chunk, 600000, false).catch(() => {
       if (rpc === this.rpc && this.worktreeChunk === chunk) this.worktreeSetup = undefined;
     });
   }
 
+  private scheduleShellResubscribe(generation: number): void {
+    if (this.inBackground || !this.ready || generation !== this.generation) return;
+    if (this.shellRetryTimer) return;
+    const delay = this.shellRetryDelay;
+    this.shellRetryDelay = Math.min(this.shellRetryDelay * 2, 30000);
+    this.shellRetryTimer = setTimeout(() => {
+      this.shellRetryTimer = 0;
+      if (this.inBackground || !this.ready || generation !== this.generation) return;
+      this.subscribeShell();
+    }, delay) as number;
+  }
+
   private subscribeShell(): void {
     const rpc = this.requireRpc();
+    const generation = this.generation;
+    clearTimeout(this.shellRetryTimer); this.shellRetryTimer = 0;
     const previous = this.shellChunk;
     if (previous) rpc.cancelStream(previous);
     const chunk = (value: Object): void => {
-      if (rpc !== this.rpc) return;
-      this.shell.apply(value);
+      if (rpc !== this.rpc || generation !== this.generation || this.shellChunk !== chunk) return;
+      try {
+        this.shell.apply(value);
+      } catch (_) {
+        this.shellChunk = undefined;
+        rpc.cancelStream(chunk);
+        this.shell.resetForReconnect();
+        this.shell.resumeCursor = -1;
+        this.scheduleShellResubscribe(generation);
+        return;
+      }
+      if (this.shell.liveSynced) {
+        this.shellRetryDelay = 250;
+        if (this.onShellUpdated) this.onShellUpdated();
+      }
       this.onUpdate();
     };
     this.shellChunk = chunk;
-    void rpc.request('orchestration.subscribeShell', {}, chunk).catch(() => {
-      if (this.rpc === rpc) this.disconnect('项目列表同步失败，请重新连接');
+    const payload: SubscribeShellPayload = {
+      requestCompletionMarker: true,
+      omitIdleSubagents: true
+    };
+    if (this.shell.hasSnapshot && this.shell.resumeCursor >= 0) {
+      payload.afterSequence = this.shell.resumeCursor;
+    }
+    void rpc.request('orchestration.subscribeShell', payload, chunk, STREAM_SUBSCRIBE_TIMEOUT_MS, false).then(() => {
+      if (this.rpc !== rpc || generation !== this.generation || this.shellChunk !== chunk) return;
+      this.shellChunk = undefined;
+      this.scheduleShellResubscribe(generation);
+    }).catch(() => {
+      if (this.rpc !== rpc || generation !== this.generation || this.shellChunk !== chunk) return;
+      this.shellChunk = undefined;
+      this.scheduleShellResubscribe(generation);
     });
   }
   refreshShell(): void {
@@ -1639,9 +2467,12 @@ export class T3Client {
   }
 
   async forget(): Promise<void> {
-    this.disconnect();
+    this.disconnect('已断开；提交中的请求结果未知，请重连并同步会话', false, true);
     this.lastWatchedThreadId = '';
     this.resumingWatchThreadId = '';
+    this.preservedThread = undefined;
+    this.lastConnectionError = '';
+    this.retryFailureCount = 0;
     this.saved = undefined;
     this.recovery = undefined;
     this.attachment = undefined; this.attachments = []; this.attachmentThread = ''; this.draftScope = '';
@@ -1733,15 +2564,19 @@ export class T3Client {
     // Validate local metadata before requesting an upload capability.
     attachmentRecord({ type, id: 'validation', name, mimeType, sizeBytes: bytes.byteLength });
     const result = await rpc.request('attachments.createUploadUrl', { type, name,
-      mimeType, sizeBytes: bytes.byteLength });
+      mimeType, sizeBytes: bytes.byteLength }, undefined, 15000, false);
     const target = uploadAttachmentTarget(result, type, name, mimeType, bytes.byteLength);
     const request = http.createHttp();
     try {
       if (rpc !== this.rpc || !stillSelected()) throw new Error('附件目标已变化，请重新选择');
       this.uploadRequest = request;
-      const response = await request.request(base + target.path, { method: http.RequestMethod.POST,
+      const targetUrl = base + target.path;
+      const options: http.HttpRequestOptions = withDirectProxyPolicy(targetUrl, {
+        method: http.RequestMethod.POST,
         header: { 'Content-Type': 'application/octet-stream' }, extraData: bytes,
-        maxRedirects: 0, usingCache: false, connectTimeout: 10000, readTimeout: 60000 });
+        maxRedirects: 0, usingCache: false, connectTimeout: 10000, readTimeout: 60000
+      });
+      const response = await request.request(targetUrl, options);
       if (response.responseCode !== 204) throw new Error('upload rejected');
       if (rpc !== this.rpc || this.uploadRequest !== request || !stillSelected()) throw new Error('attachment target changed');
       return target.attachment;

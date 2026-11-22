@@ -89,7 +89,7 @@ test('environment binding scopes colliding thread drafts and clears displayed da
  const a={status:'A',thread:{threadId:'same'},shell:{projects:[],threads:[],archived:[]},supports:()=>false,scratchWorkspaceRoot:''},b={status:'B',thread:{threadId:'same'},shell:{projects:[],threads:[],archived:[]},supports:()=>false,scratchWorkspaceRoot:''};
  const registry={directory:{entries,selectedLocalId:'b'},clients:new Map([['a',a],['b',b]]),entryVisible:()=>true};
  let bound;
- class Picker {constructor(owner){this.owner=owner}belongsTo(owner){return this.owner===owner}}
+ class Picker {constructor(owner){this.owner=owner}belongsTo(owner){return this.owner===owner}canRetry(){return false}}
  const Page=new Function('bindClient','AttachmentPicker','client','buildProjectGroups','workspacePrefs','projectGroupRefs','emptyWorkMap',compiled)(v=>bound=v,Picker,b,()=>[],{projectGroupingMode:'repository'},projectGroupRefs,emptyWorkMap);
  const page=new Page();Object.assign(page,{registry:()=>registry,selectedLocalId:'a',prompt:'draft A',threadId:'same',draftMode:false,activeDraftId:'',
    textDrafts:new Map(),settingsDrafts:new Map(),contextDrafts:new Map(),draftRecords:[],draftContext:[{contextId:'ctx-a'}],attachments:[],drafts:new Map(),pickers:new Map(),messages:['private A'],source:{update:()=>{}},panel:'server'});
@@ -141,6 +141,34 @@ test('the add-environment form dispatches explicitly to either a new environment
   await page.connect();assert.equal(page.credential,'');assert.equal(page.panel,'server');
  }
  assert.deepEqual(calls,[['add','https://new','SYNTHETIC_CODE'],['route','saved','https://alt','SYNTHETIC_CODE']]);
+});
+
+test('connect preserves pairing credential on network timeout and clears it on identity mismatch or success',async()=>{
+ const method=source.slice(source.indexOf('  private async connect()'),source.indexOf('  private draftKey()'));
+ const compiled=ts.transpileModule('return class { '+method+' }',{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
+ let mode='timeout';
+ const registry={async add(){
+  if(mode==='timeout')throw Error('HTTP /.well-known/t3/environment 连接超时（系统错误码 2300028）：请确认手机与电脑在同一局域网或 VPN/Tailnet 路由可达，并检查防火墙与端口');
+  if(mode==='mismatch')throw Error('服务器身份已变化，未发送配对凭据');
+ },async addRoute(){}};
+ const Page=new Function('pairingTarget','PairingTarget',compiled)((base,code)=>({base,code}),{});
+ const page=new Page();
+ Object.assign(page,{loaded:true,busy:false,credential:'SYNTHETIC_CODE',address:'http://192.168.2.97:3773',routeFor:'',pairingError:false,
+  registry:()=>registry,incomingPairing:()=>{},loadLinkedEnvironments:()=>{},openPanel:panel=>page.panel=panel});
+ await page.connect();
+ assert.equal(page.credential,'SYNTHETIC_CODE');
+ assert.equal(page.pairingError,true);
+ assert.match(page.pairingStatus,/2300028/);
+ mode='mismatch';
+ await page.connect();
+ assert.equal(page.credential,'');
+ assert.equal(page.pairingError,true);
+ assert.match(page.pairingStatus,/服务器身份/);
+ mode='ok';page.credential='SYNTHETIC_CODE';
+ await page.connect();
+ assert.equal(page.credential,'');
+ assert.equal(page.pairingError,false);
+ assert.equal(page.panel,'server');
 });
 
 test('terminal cannot write after environment or thread changes',()=>{
@@ -311,4 +339,39 @@ test('launcher shortcuts wait for initialization and preserve drafts before one 
  await p.openShortcut();assert.equal(events.length,3);
  pending={id:2,action:'sessions'};p.page='files';await p.openShortcut();assert.equal(p.page,'files');assert.match(p.status,/返回会话/);
  pending={id:3,action:'sessions'};p.page='chat';await p.openShortcut();assert.equal(p.page,'sessions');
+});
+
+test('home connection states prevent empty-thread flash before first shell snapshot and show non-blocking reconnect header with cached threads',()=>{
+ const helpers = source.slice(source.indexOf('  private hasEnabledEnvironment()'), source.indexOf('  @Builder\n  iconButton('));
+ const compiled = ts.transpileModule('return class { ' + helpers + ' }', { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+ const Page = new Function(compiled)();
+ const page = Object.assign(new Page(), {
+  loaded: true, restoringEnvironments: false, anyEnvironmentReady: true, anyEnvironmentHasShell: false,
+  anyEnvironmentLiveSynced: false, reconnectingCount: 1, offlineCount: 0, status: '正在同步会话',
+  environmentEntries: [{ localId: 'a', enabled: true, deleting: false }], scopedThreads: []
+ });
+ // Connection is ready but subscribeShell snapshot has not arrived yet: must stay in loading state, never flash empty thread list!
+ assert.equal(page.homeWaitingForFirstSnapshot(), true);
+ assert.equal(page.homeAllOfflineWithoutCache(), false);
+ assert.equal(page.showHomeStatusBanner(), false);
+
+ // Cached threads present while reconnecting: show non-blocking top-left reconnect indicator and suppress raw status strip
+ page.scopedThreads = [{ id: 't1' }];
+ page.anyEnvironmentHasShell = true;
+ page.anyEnvironmentReady = false;
+ page.reconnectingCount = 2;
+ assert.equal(page.homeWaitingForFirstSnapshot(), false);
+ assert.equal(page.homeShowReconnectingHeader(), true);
+ assert.equal(page.homeConnectionLabel(), '正在重连 2 个环境');
+ assert.equal(page.showHomeStatusBanner(), false);
+
+ // Live sync completes with 0 threads: no longer waiting, safe to render empty ThreadList
+ page.scopedThreads = [];
+ page.anyEnvironmentReady = true;
+ page.anyEnvironmentHasShell = true;
+ page.anyEnvironmentLiveSynced = true;
+ page.reconnectingCount = 0;
+ assert.equal(page.homeWaitingForFirstSnapshot(), false);
+ assert.equal(page.homeAllOfflineWithoutCache(), false);
+ assert.equal(page.homeThreadListLoading(), false);
 });

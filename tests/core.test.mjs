@@ -57,6 +57,46 @@ test('input cards preserve custom option values, required flags and multiple sel
  const result=cards([{id:'r',status:'pending',responseCapability:{type:'not_resumable'}}],[{id:'i',requestId:'r',type:'user_input_request',questions:[q]}]);
  assert.equal(result[0].enabled,false);assert.equal(result[0].questions[0].multi,true);
  assert.deepEqual(result[0].questions[0].values,['a']);assert.equal(result[0].questions[0].custom,false);
+ assert.equal(result[0].questions[0].optionItems[0].label,'A');
+ assert.equal(result[0].questions[0].optionItems[0].description,'first');
+});
+
+test('questionDisplays normalizes recommended options, suppresses boilerplate and nests companion Other prompts',async()=>{
+ const { questionDisplays } = await import(coreUrl);
+ const [card]=cards([{id:'r',status:'pending',responseCapability:{type:'live'}}],[{
+  id:'i',requestId:'r',type:'user_input_request',questions:[
+   {id:'q1',header:'图库入口你想放在哪里？',question:'The agent has 2 questions.',allowCustomAnswer:false,required:true,
+    options:[
+     {label:'(Recommended) 输入框栏直接放一个图库图标，点一下直接选照片',description:'(Recommended) 输入框栏直接放一个图库图标，点一下直接选照片'},
+     {label:'只放在 + 菜单第一项',description:'保持输入框简洁',value:'plus_menu'}
+    ]},
+   {id:'q1_other',header:'Other',question:'Optional free-form answer to: 图库入口你想放在哪里？',allowCustomAnswer:true,required:false,options:[]},
+   {id:'q2',header:'Layout',question:'How should extra items behave?',allowCustomAnswer:true,required:true,
+    options:[{label:'Dynamic',description:'',preview:'preview text'}]}
+  ]
+ }]);
+ assert.equal(card.questions[0].optionItems[0].recommended,true);
+ assert.equal(card.questions[0].optionItems[0].label,'输入框栏直接放一个图库图标，点一下直接选照片');
+ assert.equal(card.questions[0].optionItems[0].description,'');
+ assert.equal(card.questions[0].optionItems[0].value,'(Recommended) 输入框栏直接放一个图库图标，点一下直接选照片');
+ assert.equal(card.questions[0].optionItems[1].recommended,false);
+ assert.equal(card.questions[0].optionItems[1].description,'保持输入框简洁');
+ assert.equal(card.questions[0].optionItems[1].value,'plus_menu');
+ assert.equal(card.questions[2].optionItems[0].preview,'preview text');
+
+ const displays=questionDisplays(card.questions);
+ assert.equal(displays.length,3);
+ assert.equal(displays[0].companion,false);
+ assert.equal(displays[0].ordinal,1);
+ assert.equal(displays[0].primaryTotal,2);
+ assert.equal(displays[0].eyebrow,'');
+ assert.equal(displays[0].title,'图库入口你想放在哪里？');
+ assert.equal(displays[1].companion,true);
+ assert.equal(displays[1].ordinal,0);
+ assert.equal(displays[2].companion,false);
+ assert.equal(displays[2].ordinal,2);
+ assert.equal(displays[2].eyebrow,'Layout');
+ assert.equal(displays[2].title,'How should extra items behave?');
 });
 test('repository identity enrichment snapshots cannot erase project or thread pickers',()=>{
  const s=new ShellState();
@@ -126,4 +166,103 @@ test('the captured real Replay link card is actionable only in its own thread',a
  const [card]=linkRequests([fixture.card],fixture.threadId);
  assert.equal(card.status,'pending');assert.equal(card.visibility,'local');assert.equal(card.access,'read-only');
  assert.equal(linkRequests([fixture.card],'another-thread')[0].visibility,'inherited');
+});
+
+test('ShellState tracks cached vs live snapshots, preserves rows across reconnect reset, and validates cachedShellEntry',async()=>{
+ const { ShellState, cachedShellEntry } = await import(coreUrl);
+ const s = new ShellState();
+ assert.equal(s.hasSnapshot, false);
+ assert.equal(s.liveSynced, false);
+ s.apply({ kind: 'snapshot', snapshot: { snapshotSequence: 8, projects: [{ id: 'p', title: 'Proj', workspaceRoot: '/w' }], threads: [{ id: 't', title: 'Task', projectId: 'p' }] } });
+ assert.equal(s.hasSnapshot, true);
+ assert.equal(s.liveSynced, true);
+
+ // Reconnect reset keeps rows visible while allowing lower snapshot sequence after server restart
+ s.resetForReconnect();
+ assert.equal(s.hasSnapshot, true);
+ assert.equal(s.liveSynced, false);
+ assert.equal(s.cursor, -1);
+ assert.equal(s.threads.length, 1);
+ s.apply({ kind: 'snapshot', snapshot: { snapshotSequence: 1, projects: [{ id: 'p', title: 'Proj2', workspaceRoot: '/w' }], threads: [{ id: 't2', title: 'Fresh', projectId: 'p' }] } });
+ assert.equal(s.liveSynced, true);
+ assert.equal(s.threads[0].id, 't2');
+
+ // Cache hydration validates fields, drops deleted threads, and never overwrites live state
+ const validated = cachedShellEntry({
+  environmentId: 'env-1',
+  savedAt: Date.now(),
+  scratchWorkspaceRoot: '/scratch',
+  capabilities: { threadSettlement: true, ignored: 'nope' },
+  projects: s.projects,
+  threads: [...s.threads, { id: 'del', label: 'Gone', projectId: 'p', deletedAt: '2026-01-01T00:00:00Z' }]
+ });
+ assert.equal(validated.threads.length, 1);
+ assert.deepEqual(validated.capabilities, { threadSettlement: true });
+ const fresh = new ShellState();
+ fresh.hydrateCache(validated.projects, validated.threads);
+ assert.equal(fresh.hasSnapshot, true);
+ assert.equal(fresh.liveSynced, false);
+ assert.equal(fresh.threads[0].id, 't2');
+ s.hydrateCache([], []);
+ assert.equal(s.threads[0].id, 't2', 'live state must not be overwritten by cache');
+ s.clear();
+ assert.equal(s.hasSnapshot, false);
+ assert.equal(s.threads.length, 0);
+});
+
+test('cachedShellEntry preserves project defaultModelSelection and options', async () => {
+  const { cachedShellEntry } = await import(coreUrl);
+  const entry = cachedShellEntry({
+    environmentId: 'env-1',
+    savedAt: Date.now(),
+    scratchWorkspaceRoot: '/scratch',
+    capabilities: {},
+    projects: [{
+      id: 'p1', label: 'Proj', workspaceRoot: '/w',
+      defaultModelSelection: { instanceId: 'codex', model: 'gpt-5', options: [{ id: 'reasoningEffort', value: 'max' }] }
+    }],
+    threads: []
+  });
+  assert.deepEqual(entry.projects[0].defaultModelSelection, {
+    instanceId: 'codex', model: 'gpt-5', options: [{ id: 'reasoningEffort', value: 'max' }]
+  });
+});
+
+test('ShellState supports afterSequence incremental resume, ignores unknown stream kinds, and tolerates long/multiline display fields', async () => {
+  const { ShellState } = await import(coreUrl);
+  const s = new ShellState();
+  const longTitle = 'Line 1\nLine 2\t' + 'a'.repeat(300);
+  const longPath = '/Users/work/' + 'sub/'.repeat(70) + 'repo';
+  s.apply({
+    kind: 'snapshot',
+    snapshot: {
+      snapshotSequence: 12,
+      projects: [{ id: 'p1', title: longTitle, workspaceRoot: longPath }],
+      threads: [{ id: 't1', title: 'Task\nwith newline', projectId: 'p1', providerInstanceId: null, branch: 'feat/' + 'x'.repeat(280) }]
+    }
+  });
+  assert.equal(s.cursor, 12);
+  assert.equal(s.resumeCursor, 12);
+  assert.equal(s.liveSynced, true);
+  assert.ok(s.projects[0].label.length > 256);
+  assert.equal(s.projects[0].label.includes('\n'), false);
+  assert.equal(s.threads[0].label, 'Task with newline');
+
+  // Unknown future kind does not throw
+  s.apply({ kind: 'snapshot-required' });
+  s.apply({ kind: 'future.shell.event', sequence: 13 });
+  assert.equal(s.cursor, 12);
+
+  // Reconnect reset keeps resumeCursor, replays missed delta + synchronized marker to restore liveSynced
+  s.resetForReconnect();
+  assert.equal(s.cursor, -1);
+  assert.equal(s.resumeCursor, 12);
+  assert.equal(s.liveSynced, false);
+  s.apply({ kind: 'thread.updated', sequence: 12, location: 'active', thread: { id: 't1', title: 'Duplicate', projectId: 'p1' } });
+  assert.equal(s.threads[0].label, 'Task with newline');
+  s.apply({ kind: 'thread.updated', sequence: 13, location: 'active', thread: { id: 't1', title: 'Updated via replay', projectId: 'p1' } });
+  s.apply({ kind: 'synchronized' });
+  assert.equal(s.liveSynced, true);
+  assert.equal(s.cursor, 13);
+  assert.equal(s.threads[0].label, 'Updated via replay');
 });

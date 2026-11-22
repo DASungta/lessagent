@@ -1,4 +1,5 @@
-import { objects, record, sequence, text } from './Wire';
+import { objects, parseModelSelection, record, sequence, text } from './Wire';
+import type { ModelSelection } from './Wire';
 
 // Upstream mobile project/* and home/* rules translated without depending on React or Effect.
 
@@ -10,13 +11,28 @@ export interface RepositoryIdentityView {
   rootPath: string;
 }
 
+export interface ProjectIconView {
+  kind: string;
+  name: string;
+  color: string;
+  emoji: string;
+  text: string;
+}
+
+export const PROJECT_ICON_COLORS: string[] = [
+  'gray', 'red', 'orange', 'amber', 'yellow', 'lime', 'green', 'emerald', 'teal',
+  'cyan', 'sky', 'blue', 'indigo', 'violet', 'purple', 'fuchsia', 'pink', 'rose'
+];
+
 export interface ProjectView {
   defaultThreadEnvMode?: string | null;
+  defaultModelSelection?: ModelSelection | null;
   id: string;
   label: string;
   projectId: string;
   workspaceRoot: string;
   repository: RepositoryIdentityView | undefined;
+  projectIcon?: ProjectIconView;
   pinnedAt: string;
   archivedAt: string;
   createdAt: string;
@@ -63,7 +79,12 @@ export interface ThreadView {
   titleRegenerationRequestId: string;
   titleRegenerationStartedAt: string;
   lineageRelationship: string;
+  lineageParentThreadId: string;
   lineageSideChat: boolean;
+  delegatedFromThreadId: string;
+  lastSnoozeWakeAt: string;
+  pendingBackgroundTasks: Record<string, Object>[];
+  goal: Record<string, Object> | undefined;
   deletedAt: string;
 }
 
@@ -79,6 +100,7 @@ export interface ScopedThread extends ThreadView {
   environmentId: string;
   environmentLabel: string;
   projectLabel: string;
+  projectIcon?: ProjectIconView;
 }
 
 export interface ProjectRef { localId: string; environmentId: string; projectId: string; }
@@ -222,13 +244,32 @@ function cleanId(value: Object, label: string): string {
   return result;
 }
 
+function cleanDisplayText(value: Object | undefined, label: string, fallback: string = ''): string {
+  if (value === undefined || value === null) {
+    if (fallback) return fallback;
+    throw new Error(label + '无效');
+  }
+  const result = text(value).replace(/[\u0000-\u001f\u007f]+/g, ' ').trim();
+  if (!result) {
+    if (fallback) return fallback;
+    throw new Error(label + '无效');
+  }
+  return result.length > 1024 ? result.slice(0, 1024) : result;
+}
+
+function optionalDisplayText(value: Object | undefined): string {
+  if (value === undefined || value === null || typeof value !== 'string') return '';
+  const result = value.replace(/[\u0000-\u001f\u007f]+/g, ' ').trim();
+  return result.length > 1024 ? result.slice(0, 1024) : result;
+}
+
 function optionalText(value: Object | undefined, label: string): string {
   if (value === undefined || value === null) return '';
   return cleanId(value, label);
 }
 
 function optionalIso(value: Object | undefined, label: string): string {
-  if (value === undefined || value === null) return '';
+  if (value === undefined || value === null || value === '') return '';
   const result = text(value);
   if (!result || !Number.isFinite(Date.parse(result))) throw new Error(label + '无效');
   return result;
@@ -244,28 +285,68 @@ function repositoryIdentity(value: Object | undefined): RepositoryIdentityView |
   const canonicalKey = cleanId(row.canonicalKey, '仓库身份');
   const origin = row.origin === undefined || row.origin === null ? undefined : record(row.origin);
   const originKey = origin === undefined ? '' : optionalText(origin.canonicalKey, '仓库来源身份');
-  const displayName = origin !== undefined ? optionalText(origin.displayName, '仓库来源名称') :
-    optionalText(row.displayName, '仓库名称');
+  const displayName = origin !== undefined ? optionalDisplayText(origin.displayName) :
+    optionalDisplayText(row.displayName);
   return {
     canonicalKey,
     groupingKey: originKey || canonicalKey,
     displayName,
-    name: optionalText(row.name, '仓库名'),
-    rootPath: optionalText(row.rootPath, '仓库根目录')
+    name: optionalDisplayText(row.name),
+    rootPath: optionalDisplayText(row.rootPath)
   };
+}
+
+export function parseProjectIcon(value: Object | undefined): ProjectIconView | undefined {
+  if (value === undefined || value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const row = value as Record<string, Object>;
+  const kind = typeof row.kind === 'string' ? row.kind.trim() : '';
+  const rawColor = typeof row.color === 'string' ? row.color.trim().toLowerCase() : '';
+  const validColor = PROJECT_ICON_COLORS.includes(rawColor) ? rawColor : '';
+  if (kind === 'lucide') {
+    const legacyMono = typeof row.monogramText === 'string' ? row.monogramText.trim() :
+      (typeof row.monogram === 'string' ? row.monogram.trim() : '');
+    if (legacyMono.length > 0 && legacyMono.length <= 32) {
+      return { kind: 'monogram', name: '', color: validColor || 'blue', emoji: '', text: legacyMono };
+    }
+    const name = typeof row.name === 'string' ? row.name.trim().toLowerCase() : '';
+    if (!name || name.length > 64 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name)) return undefined;
+    return { kind: 'lucide', name, color: validColor || 'gray', emoji: '', text: '' };
+  }
+  if (kind === 'emoji') {
+    const emoji = typeof row.emoji === 'string' ? row.emoji.trim() : '';
+    if (!emoji || emoji.length > 32) return undefined;
+    return { kind: 'emoji', name: '', color: '', emoji, text: '' };
+  }
+  if (kind === 'monogram') {
+    const mono = typeof row.text === 'string' ? row.text.trim() : '';
+    if (!mono || mono.length > 32) return undefined;
+    return { kind: 'monogram', name: '', color: validColor || 'blue', emoji: '', text: mono };
+  }
+  return undefined;
+}
+
+export function groupProjectIcon(group: ProjectGroup | undefined): ProjectIconView | undefined {
+  if (group === undefined) return undefined;
+  if (group.representative.projectIcon !== undefined) return group.representative.projectIcon;
+  return group.projects.find((project: ScopedProject) => project.projectIcon !== undefined)?.projectIcon;
 }
 
 export function projectView(value: Object): ProjectView {
   const row = record(value);
   if (row.defaultThreadEnvMode !== undefined && row.defaultThreadEnvMode !== null &&
     row.defaultThreadEnvMode !== 'local' && row.defaultThreadEnvMode !== 'worktree') throw new Error('项目默认工作区无效');
+  const defaultModelSelection = row.defaultModelSelection === undefined ? undefined :
+    row.defaultModelSelection === null ? null : parseModelSelection(row.defaultModelSelection);
+  const id = cleanId(row.id, '项目标识');
   return {
     defaultThreadEnvMode: row.defaultThreadEnvMode as string | null | undefined,
-    id: cleanId(row.id, '项目标识'),
-    label: cleanId(row.title, '项目名称'),
-    projectId: cleanId(row.id, '项目标识'),
-    workspaceRoot: optionalText(row.workspaceRoot, '项目目录'),
+    defaultModelSelection,
+    id,
+    label: cleanDisplayText(row.title, '项目名称', id),
+    projectId: id,
+    workspaceRoot: optionalDisplayText(row.workspaceRoot),
     repository: repositoryIdentity(row.repositoryIdentity),
+    projectIcon: parseProjectIcon(row.projectIcon),
     pinnedAt: optionalIso(row.pinnedAt, '项目固定时间'),
     archivedAt: optionalIso(row.archivedAt, '项目归档时间'),
     createdAt: optionalIso(row.createdAt, '项目创建时间'),
@@ -285,47 +366,55 @@ export function threadView(value: Object): ThreadView {
   const model = modelSelection(row.modelSelection);
   const pending = row.pendingRuntimeRequest === undefined || row.pendingRuntimeRequest === null ? undefined : record(row.pendingRuntimeRequest);
   const lineage = row.lineage === undefined || row.lineage === null ? undefined : record(row.lineage);
+  const delegatedFrom = row.delegatedFrom === undefined || row.delegatedFrom === null ? undefined : record(row.delegatedFrom);
   const titleRegeneration = row.titleRegeneration === undefined || row.titleRegeneration === null ? undefined : record(row.titleRegeneration);
   return {
     id: cleanId(row.id, '会话标识'),
-    label: cleanId(row.title, '会话名称'),
+    label: cleanDisplayText(row.title, '会话名称', '新会话'),
     projectId: cleanId(row.projectId, '会话项目'),
-    providerInstanceId: text(row.providerInstanceId === undefined ? '' : row.providerInstanceId) || model.instanceId,
+    providerInstanceId: (typeof row.providerInstanceId === 'string' ? row.providerInstanceId : '') || model.instanceId,
     model: model.model,
-    branch: optionalText(row.branch, '会话分支'),
-    worktreePath: optionalText(row.worktreePath, '会话工作区'),
-    status: row.status === undefined ? '' : text(row.status),
-    activityRunStatus: row.activityRunStatus === undefined || row.activityRunStatus === null ? '' : text(row.activityRunStatus),
+    branch: optionalDisplayText(row.branch),
+    worktreePath: optionalDisplayText(row.worktreePath),
+    status: typeof row.status === 'string' ? row.status : '',
+    activityRunStatus: typeof row.activityRunStatus === 'string' ? row.activityRunStatus : '',
     activeRunId: optionalText(row.activeRunId, '活动运行'),
     latestRunId: optionalText(row.latestRunId, '最近运行'),
     latestRunRequestedAt: optionalIso(row.latestRunRequestedAt, '运行请求时间'),
     latestRunStartedAt: optionalIso(row.latestRunStartedAt, '运行开始时间'),
     latestRunCompletedAt: optionalIso(row.latestRunCompletedAt, '运行完成时间'),
-    lastError: row.lastError === undefined || row.lastError === null ? '' : text(row.lastError),
-    lastErrorClass: row.lastErrorClass === undefined || row.lastErrorClass === null ? '' : text(row.lastErrorClass),
+    lastError: typeof row.lastError === 'string' ? row.lastError : '',
+    lastErrorClass: typeof row.lastErrorClass === 'string' ? row.lastErrorClass : '',
     createdAt: optionalIso(row.createdAt, '会话创建时间'),
     updatedAt: optionalIso(row.updatedAt, '会话更新时间'),
     archivedAt: optionalIso(row.archivedAt, '会话归档时间'),
-    settledOverride: row.settledOverride === undefined || row.settledOverride === null ? '' : text(row.settledOverride),
+    settledOverride: typeof row.settledOverride === 'string' ? row.settledOverride : '',
     settledAt: optionalIso(row.settledAt, '会话 settle 时间'),
     unsettledAt: optionalIso(row.unsettledAt, '会话 unsettle 时间'),
     snoozedUntil: optionalIso(row.snoozedUntil, '暂缓截止时间'),
     snoozedAt: optionalIso(row.snoozedAt, '暂缓时间'),
     pinnedAt: optionalIso(row.pinnedAt, '会话固定时间'),
-    pinOrderKey: optionalText(row.pinOrderKey, '固定顺序'),
-    activeOrderKey: optionalText(row.activeOrderKey, '活跃顺序'),
+    pinOrderKey: optionalDisplayText(row.pinOrderKey),
+    activeOrderKey: optionalDisplayText(row.activeOrderKey),
     autoSettleDisabledAt: optionalIso(row.autoSettleDisabledAt, '自动 settle 设置时间'),
     latestUserMessageAt: optionalIso(row.latestUserMessageAt, '最近用户消息时间'),
     latestUserAuthoredMessageAt: optionalIso(row.latestUserAuthoredMessageAt, '最近用户编写消息时间'),
     lastVisitedAt: optionalIso(row.lastVisitedAt, '最近访问时间'),
-    pendingKind: pending === undefined ? '' : text(pending.kind),
+    pendingKind: pending !== undefined && typeof pending.kind === 'string' ? pending.kind : '',
     pendingAt: pending === undefined ? '' : optionalIso(pending.createdAt, '请求时间'),
-    pendingGuestMessageCount: row.pendingGuestMessageCount === undefined ? 0 : row.pendingGuestMessageCount as number,
+    pendingGuestMessageCount: typeof row.pendingGuestMessageCount === 'number' && Number.isFinite(row.pendingGuestMessageCount) ?
+      row.pendingGuestMessageCount as number : 0,
     hasActionableProposedPlan: optionalBoolean(row.hasActionableProposedPlan),
     titleRegenerationRequestId: titleRegeneration === undefined ? '' : optionalText(titleRegeneration.requestId, '重生成请求'),
     titleRegenerationStartedAt: titleRegeneration === undefined ? '' : optionalIso(titleRegeneration.startedAt, '重生成时间'),
     lineageRelationship: lineage === undefined ? '' : optionalText(lineage.relationshipToParent, '会话关系'),
+    lineageParentThreadId: lineage === undefined ? '' : optionalText(lineage.parentThreadId, '父会话'),
     lineageSideChat: lineage !== undefined && optionalBoolean(lineage.sideChat),
+    delegatedFromThreadId: delegatedFrom === undefined ? '' : optionalText(delegatedFrom.threadId, '委派来源会话'),
+    lastSnoozeWakeAt: optionalIso(row.lastSnoozeWakeAt, '暂缓唤醒时间'),
+    pendingBackgroundTasks: row.pendingBackgroundTasks !== undefined && row.pendingBackgroundTasks !== null ?
+      objects(row.pendingBackgroundTasks).map(record) : [],
+    goal: row.goal !== undefined && row.goal !== null ? record(row.goal) : undefined,
     deletedAt: optionalIso(row.deletedAt, '会话删除时间')
   };
 }
@@ -743,8 +832,9 @@ export function buildArchiveGroups(input: {
     });
     const archived: ScopedThread[] = objects(snapshot.threads).map((value: Object) => {
       const thread = threadView(value);
+      const project = projects.find((candidate: ScopedProject) => candidate.id === thread.projectId);
       return scopedThreadView(thread, localId, entry.environmentId, entry.label,
-        projects.find((project: ScopedProject) => project.id === thread.projectId)?.label || '项目');
+        project?.label || '项目', project?.projectIcon);
     }).filter((thread: ScopedThread) => !!thread.archivedAt);
     const byProject = new Map<string, ScopedThread[]>();
     for (const thread of archived) {
@@ -777,7 +867,9 @@ export function scopedProjectView(project: ProjectView, localId: string, environ
   return {
     id: project.id, label: project.label, projectId: project.projectId,
     defaultThreadEnvMode: project.defaultThreadEnvMode,
+    defaultModelSelection: project.defaultModelSelection,
     workspaceRoot: project.workspaceRoot, repository: project.repository,
+    projectIcon: project.projectIcon,
     pinnedAt: project.pinnedAt, archivedAt: project.archivedAt,
     createdAt: project.createdAt, updatedAt: project.updatedAt, hasCustomTitle: project.hasCustomTitle,
     localId, environmentId, environmentLabel, isScratch
@@ -785,7 +877,7 @@ export function scopedProjectView(project: ProjectView, localId: string, environ
 }
 
 export function scopedThreadView(thread: ThreadView, localId: string, environmentId: string,
-  environmentLabel: string, projectLabel: string): ScopedThread {
+  environmentLabel: string, projectLabel: string, projectIcon?: ProjectIconView): ScopedThread {
   return {
     id: thread.id, label: thread.label, projectId: thread.projectId,
     providerInstanceId: thread.providerInstanceId, model: thread.model,
@@ -807,8 +899,14 @@ export function scopedThreadView(thread: ThreadView, localId: string, environmen
     hasActionableProposedPlan: thread.hasActionableProposedPlan,
     titleRegenerationRequestId: thread.titleRegenerationRequestId,
     titleRegenerationStartedAt: thread.titleRegenerationStartedAt,
-    lineageRelationship: thread.lineageRelationship, lineageSideChat: thread.lineageSideChat,
-    deletedAt: thread.deletedAt, localId, environmentId, environmentLabel, projectLabel
+    lineageRelationship: thread.lineageRelationship,
+    lineageParentThreadId: thread.lineageParentThreadId,
+    lineageSideChat: thread.lineageSideChat,
+    delegatedFromThreadId: thread.delegatedFromThreadId,
+    lastSnoozeWakeAt: thread.lastSnoozeWakeAt,
+    pendingBackgroundTasks: thread.pendingBackgroundTasks,
+    goal: thread.goal,
+    deletedAt: thread.deletedAt, localId, environmentId, environmentLabel, projectLabel, projectIcon
   };
 }
 

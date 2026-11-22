@@ -1,9 +1,10 @@
 import { T3Client } from '../services/T3Client';
 import {
   activityLines, ActivityLine, activitySummary, ActivitySummary, appendOutput,
-  ColoredDiffLine, MessageWorkMap, parseDiffPreviewLines, resolveExpandedActivityBody, TurnWorkGroup
+  ColoredDiffLine, isActivityInProgress, MessageWorkMap, parseDiffPreviewLines, resolveExpandedActivityBody, TurnWorkGroup
 } from '../protocol/ThreadItems';
 import { MarkdownView } from './MarkdownView';
+import { ResolvedMarkdownMedia } from '../protocol/Markdown';
 import { record, text } from '../protocol/Wire';
 import { FontSize, LineHeight, Radius, Space, Weight } from '../common/Theme';
 
@@ -280,7 +281,7 @@ export struct ThreadActivity {
           if (fetchedOutput) this.output = fetchedOutput;
         }
       }
-      if (line.kind === 'command_execution' && line.label.indexOf('inProgress') >= 0) {
+      if (line.kind === 'command_execution' && isActivityInProgress(line)) {
         this.stream = connection.commandOutput(line.itemId, (value: Object) => {
           const frame = record(value);
           this.output = appendOutput(this.output, text(frame.kind), text(frame.text), frame.truncated === true);
@@ -339,10 +340,14 @@ export struct ThreadActivity {
                 markdown: this.expandedBodyText(line),
                 selectable: true,
                 compact: true,
-                onCopy: this.onCopy
+                mediaScopeKey: this.groupId + ':' + (this.connection ? this.connection.generationValue() : 0),
+                mediaReady: !!this.connection && this.connection.ready,
+                onCopy: this.onCopy,
+                resolveMedia: this.connection ? (source: string, refresh: boolean): Promise<ResolvedMarkdownMedia> =>
+                  this.connection!.markdownMediaUrl(source, this.connection!.threadCwd(), refresh) : undefined
               })
             } else {
-              Text(line.label.indexOf('inProgress') >= 0 ? '正在思考…' : '（无思考内容）')
+              Text(isActivityInProgress(line) ? '正在思考…' : '（无思考内容）')
                 .fontSize(FontSize.callout)
                 .lineHeight(LineHeight.callout)
                 .fontColor($r('app.color.muted'))
@@ -532,7 +537,7 @@ export struct ThreadActivity {
       if (activityLines(this.items).length === 1) {
         this.stepRow(
           activityLines(this.items)[0],
-          this.isRunning && showActivityBadge(activitySummary(activityLines(this.items)[0]))
+          this.isRunning && isActivityInProgress(activityLines(this.items)[0])
         )
       } else if (activityLines(this.items).length >= 2) {
         Column({ space: 4 }) {
@@ -580,12 +585,13 @@ export struct ThreadActivity {
           if (this.isGroupOpen()) {
             Column() {
               Column({ space: 2 }) {
-                ForEach(activityLines(this.items), (line: ActivityLine, index: number) => {
+                ForEach(activityLines(this.items), (line: ActivityLine) => {
                   this.stepRow(
                     line,
-                    this.isRunning && index === activityLines(this.items).length - 1
+                    this.isRunning && isActivityInProgress(line)
                   )
-                }, (line: ActivityLine) => line.itemId + ':' + line.label + ':' + line.text.length)
+                }, (line: ActivityLine) => line.itemId + ':' + line.label + ':' + (line.status || '') + ':' +
+                  line.text.length + ':' + (this.isRunning && isActivityInProgress(line) ? '1' : '0'))
               }
               .width('100%')
               .padding({ left: 10, top: 2, bottom: 2 })

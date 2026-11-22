@@ -63,3 +63,52 @@ export function monogramTone(id: string | undefined | null, count: number = MONO
   const size = Math.max(1, Math.floor(count));
   return stableHash(id ?? '') % size;
 }
+
+export interface ProjectIconShape {
+  kind: string;
+  name: string;
+  color: string;
+  emoji: string;
+  text: string;
+}
+
+const VALID_PROJECT_ICON_COLORS: Set<string> = new Set([
+  'gray', 'red', 'orange', 'amber', 'yellow', 'lime', 'green', 'emerald', 'teal',
+  'cyan', 'sky', 'blue', 'indigo', 'violet', 'purple', 'fuchsia', 'pink', 'rose'
+]);
+
+const LUCIDE_ICON_SLUGS: Set<string> = new Set([
+  'folder-code', 'code-2', 'terminal', 'globe-2', 'server', 'database', 'bot',
+  'sparkles', 'smartphone', 'monitor', 'cloud-cog', 'package', 'book-open',
+  'flask-conical', 'shield-check', 'rocket', 'gamepad-2', 'music', 'image',
+  'shopping-bag', 'git-branch', 'workflow', 'wrench', 'layers-3', 'message-square-dashed'
+]);
+
+const LUCIDE_ICON_ALIASES: Record<string, string> = {
+  'code-xml': 'code-2',
+  'code': 'code-2',
+  'earth': 'globe-2',
+  'globe': 'globe-2',
+  'layers': 'layers-3',
+  'folder': 'folder-code'
+};
+
+/** 将服务端 Lucide 图标名归一为本地内置的图标 slug，不支持时返回空串以便回退首字母块。 */
+export function resolveLucideIconSlug(name: string | undefined | null): string {
+  const key = (name ?? '').trim().toLowerCase();
+  if (!key) return '';
+  if (LUCIDE_ICON_SLUGS.has(key)) return key;
+  return LUCIDE_ICON_ALIASES[key] ?? '';
+}
+
+/** 校验并归一项目图标色名（18 色 Tailwind 调色板），无效时返回空串。 */
+export function projectIconColorKey(color: string | undefined | null): string {
+  const key = (color ?? '').trim().toLowerCase();
+  return VALID_PROJECT_ICON_COLORS.has(key) ? key : '';
+}
+
+/** 生成用于列表 ForEach 键的图标签名，确保图标热更新时立即重绘。 */
+export function projectIconSignature(icon: ProjectIconShape | undefined | null): string {
+  if (!icon) return '';
+  return [icon.kind, icon.name, icon.color, icon.emoji, icon.text].join(':');
+}

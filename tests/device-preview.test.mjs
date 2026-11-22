@@ -54,12 +54,15 @@ globalThis.__devicePreviewTest={
  image:{createImageSource(){return{async getImageInfo(){return{size:{width:400,height:800}};},async createPixelMap(){return{async rotate(a){mocks.rotations.push(a);},async release(){mocks.framesReleased++;}};},async release(){mocks.sourcesReleased++;}};}}
 };
 const wireUrl=new URL('../entry/src/main/ets/protocol/Wire.ts',import.meta.url).href;
+const hostsUrl=new URL('../entry/src/main/ets/protocol/Hosts.ts',import.meta.url).href;
 const protocolUrl=new URL('../entry/src/main/ets/protocol/DevicePreview.ts',import.meta.url).href;
 const source=(await readFile(new URL('../entry/src/main/ets/services/DevicePreviewStream.ets',import.meta.url),'utf8'))
  .replace("import { http, webSocket } from '@kit.NetworkKit';",'const {http,webSocket}=globalThis.__devicePreviewTest;')
  .replace("import { image } from '@kit.ImageKit';",'const image=globalThis.__devicePreviewTest.image;')
  .replace("import { util } from '@kit.ArkTS';",'const util=globalThis.__devicePreviewTest.util;')
- .replace("'../protocol/Wire'",JSON.stringify(wireUrl)).replace("'../protocol/DevicePreview'",JSON.stringify(protocolUrl));
+ .replace("'../protocol/Wire'",JSON.stringify(wireUrl))
+ .replace("'../protocol/Hosts'",JSON.stringify(hostsUrl))
+ .replace("'../protocol/DevicePreview'",JSON.stringify(protocolUrl));
 const{DevicePreviewStream}=await import(data(compile(source)));
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 const access={mjpegUrl:'https://example.invalid/stream.mjpeg',inputUrl:'wss://example.invalid/input'};

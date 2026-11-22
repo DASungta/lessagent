@@ -6,12 +6,15 @@ const threadItems=await import(threadItemsUrl);
 
 test('drafts reload only with their environment and project scope',()=>{
  const draft=r4.composerDraft({version:1,draftId:'d1',localId:'a',environmentId:'env-a',projectId:'p1',text:'hello',
-  modelSelection:{instanceId:'grok',model:'grok-4.7'},runtimeMode:'approval-required',interactionMode:'default',
+  modelSelection:{instanceId:'grok',model:'grok-4.7',options:[{id:'reasoning_effort',value:'high'},{id:'fastMode',value:true}]},
+  modelCustomized:true,runtimeMode:'approval-required',interactionMode:'default',
   workspace:{mode:'worktree',branch:'main',worktreePath:'',startFromOrigin:true},
   attachments:[{type:'image',id:'img_1',name:'a.png',mimeType:'image/png',sizeBytes:12}],
   context:[{version:1,kind:'mention',contextId:'m1',label:'src/a.ts',path:'src/a.ts'}],updatedAt:1});
  assert.equal(draft.localId,'a');assert.equal(draft.workspace.mode,'worktree');assert.equal(draft.attachments[0].type,'image');
  assert.equal(draft.context[0].payload.path,'src/a.ts');
+ assert.deepEqual(draft.modelSelection.options,[{id:'reasoning_effort',value:'high'},{id:'fastMode',value:true}]);
+ assert.equal(draft.modelCustomized,true);
  assert.throws(()=>r4.composerDraft({...draft,workspace:{...draft.workspace,mode:'remote'}}));
 });
 

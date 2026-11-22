@@ -78,7 +78,7 @@ test('base and dark color tables match symmetrically and drop all removed legacy
   const dark = loadTokens(DARK_COLOR_PATH);
 
   assert.deepEqual([...light.keys()].sort(), [...dark.keys()].sort());
-  assert.equal(light.size, 75);
+  assert.equal(light.size, 111);
 
   const legacyTokens = ['canvas', 'surface', 'selected', 'composer', 'on_primary'];
   for (const name of legacyTokens) {

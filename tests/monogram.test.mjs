@@ -1,6 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { projectInitials, stableHash, monogramTone, MONOGRAM_TONE_COUNT } from '../entry/src/main/ets/protocol/Monogram.ts';
+import {
+  projectInitials,
+  stableHash,
+  monogramTone,
+  MONOGRAM_TONE_COUNT,
+  resolveLucideIconSlug,
+  projectIconColorKey,
+  projectIconSignature
+} from '../entry/src/main/ets/protocol/Monogram.ts';
 
 test('project initials take first letters of the first two words', () => {
   assert.equal(projectInitials('t3code-harmony'), 'TH');
@@ -59,4 +67,26 @@ test('monogram tone stays in range, is stable and spreads across tones', () => {
   assert.equal(monogramTone('abc', 1), 0);
   assert.equal(monogramTone('abc', 0), 0);
   assert.ok(monogramTone('abc', 3) < 3);
+});
+
+test('project icon helpers resolve bundled Lucide slugs, aliases, colors, and signatures', () => {
+  assert.equal(resolveLucideIconSlug('globe-2'), 'globe-2');
+  assert.equal(resolveLucideIconSlug('WRENCH'), 'wrench');
+  assert.equal(resolveLucideIconSlug('earth'), 'globe-2');
+  assert.equal(resolveLucideIconSlug('code-xml'), 'code-2');
+  assert.equal(resolveLucideIconSlug('layers'), 'layers-3');
+  assert.equal(resolveLucideIconSlug('message-square-dashed'), 'message-square-dashed');
+  assert.equal(resolveLucideIconSlug('unknown-future-icon'), '');
+  assert.equal(resolveLucideIconSlug(undefined), '');
+
+  assert.equal(projectIconColorKey('indigo'), 'indigo');
+  assert.equal(projectIconColorKey('Fuchsia'), 'fuchsia');
+  assert.equal(projectIconColorKey('not-a-color'), '');
+  assert.equal(projectIconColorKey(null), '');
+
+  assert.equal(projectIconSignature(undefined), '');
+  assert.equal(
+    projectIconSignature({ kind: 'lucide', name: 'globe-2', color: 'indigo', emoji: '', text: '' }),
+    'lucide:globe-2:indigo::'
+  );
 });

@@ -1,6 +1,7 @@
 import { webSocket } from '@kit.NetworkKit';
 import nativeVideo, { DecoderStats } from 'libt3device.so';
 import { record } from '../protocol/Wire';
+import { shouldBypassSystemProxy } from '../protocol/Hosts';
 import { androidVideoPacket, androidSpsSize, androidKeyframe, AndroidVideoSize, AndroidControlInput, AndroidControlPoint, androidTouch, androidControlJson } from '../protocol/AndroidVideo';
 
 interface AndroidQueuedInput {
@@ -97,7 +98,11 @@ export class AndroidDeviceStream {
     }, 250);
     try {
       this.onStatus('正在连接 Android 视频流…');
-      if (!await socket.connect(url)) throw new Error('connect');
+      const socketOptions: webSocket.WebSocketRequestOptions | undefined =
+        shouldBypassSystemProxy(url) ? { proxy: 'no-proxy' } : undefined;
+      if (!(socketOptions ? await socket.connect(url, socketOptions) : await socket.connect(url))) {
+        throw new Error('connect');
+      }
       if (this.current(generation)) { this.connected = true; this.refreshInputReady(); this.requestKeyframe(); }
     } catch (_) { if (generation === this.generation) this.fail('Android 视频连接失败'); }
   }

@@ -37,11 +37,14 @@ globalThis.__androidVideoTest={
   stop(epoch){mock.stops.push(epoch);},stats(){return{epoch:mock.epoch,ready:true,rendered:1,dropped:0,width:320,height:240,error:mock.error};}}
 };
 const wireUrl=new URL('../entry/src/main/ets/protocol/Wire.ts',import.meta.url).href;
+const hostsUrl=new URL('../entry/src/main/ets/protocol/Hosts.ts',import.meta.url).href;
 const protocolUrl=new URL('../entry/src/main/ets/protocol/AndroidVideo.ts',import.meta.url).href;
 const source=(await readFile(new URL('../entry/src/main/ets/services/AndroidDeviceStream.ets',import.meta.url),'utf8'))
  .replace("import { webSocket } from '@kit.NetworkKit';",'const webSocket=globalThis.__androidVideoTest.webSocket;')
  .replace("import nativeVideo, { DecoderStats } from 'libt3device.so';",'const nativeVideo=globalThis.__androidVideoTest.nativeVideo;')
- .replace("'../protocol/Wire'",JSON.stringify(wireUrl)).replace("'../protocol/AndroidVideo'",JSON.stringify(protocolUrl));
+ .replace("'../protocol/Wire'",JSON.stringify(wireUrl))
+ .replace("'../protocol/Hosts'",JSON.stringify(hostsUrl))
+ .replace("'../protocol/AndroidVideo'",JSON.stringify(protocolUrl));
 const {AndroidDeviceStream}=await import(data(compile(source)));
 const delta=raw([0,0,0,1,0x41,0xaa]);
 test('stream starts native decoder only after parameters and IDR, rebuilds on video-session',async()=>{

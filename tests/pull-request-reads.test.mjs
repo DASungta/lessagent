@@ -6,9 +6,17 @@ import { compile, data, r5Url } from './load-core.mjs';
 const source = await readFile(new URL('../entry/src/main/ets/components/PullRequestsPanel.ets', import.meta.url), 'utf8');
 const reads = source.slice(source.indexOf('  private alive:'), source.indexOf('  private async generateGuide()'));
 const { PanelHarness } = await import(data(compile(`
-  import { parseDiff, pullRequestPatch, pullRequestRef } from ${JSON.stringify(r5Url)};
+  import { firstPullRequestCursor, hasPullRequestCursors, mergePullRequestRows, normalizePullRequestCursors,
+    parseDiff, pullRequestPatch, pullRequestProjectChoices, pullRequestRef,
+    tagPullRequestRows } from ${JSON.stringify(r5Url)};
   export class PanelHarness {
     projectId = 'project';
+    activeLocalId = '';
+    environments = [];
+    projects = [];
+    connectionFor = () => undefined;
+    selectedEnvLocalId = '';
+    selectedProjectKey = '';
     busy = false; loading = false; rows = []; errors = [];
     filter = 'open'; query = ''; nextCursor = '';
     ${reads}
@@ -121,4 +129,80 @@ test('pagination never pairs an old cursor with newly typed PR search text', asy
   await panel.loadList();
   await panel.loadMore();
   assert.deepEqual(calls.slice(1), [['second', ''], ['second', 'page-for-second']]);
+});
+
+test('home pull requests aggregate environments, filter by projectId, forward full cursor maps, and route detail to row client', async () => {
+  const panel = new PanelHarness();
+  panel.alive = true;
+  panel.projectId = '';
+  panel.activeLocalId = 'mac';
+  const macCalls = [];
+  const ca02Calls = [];
+  const detailClients = [];
+  const makeClient = (name, calls, pages) => ({
+    ready: true,
+    generationValue: () => 1,
+    listPullRequests: async (filter, query, cursor, projectId, cursors) => {
+      calls.push({ filter, query, cursor, projectId, cursors });
+      return pages.shift() || { rows: [], errors: [], nextCursor: '', nextCursors: {} };
+    },
+    pullRequestDetail: async ref => {
+      detailClients.push([name, ref.projectId, ref.number]);
+      return { projectId: ref.projectId, repository: ref.repository, number: ref.number, title: 'T', body: '', activity: {} };
+    },
+    pullRequestActivity: async () => ({ comments: [], threads: [], commits: [] }),
+    pullRequestDiff: async () => diff('a.ts'),
+    pullRequestChecks: async () => undefined,
+    pullRequestReviewGuide: async () => undefined
+  });
+  const prRow = (projectId, repository, number, updatedAt) => ({
+    provider: 'gitlab', host: 'gitlab.example', projectId, projectTitle: 'yxbuddy',
+    repository, number, title: 'PR #' + number, url: 'u', author: 'dev', headBranch: 'h', baseBranch: 'main',
+    state: 'open', draft: false, additions: 1, deletions: 0, updatedAt, reviewDecision: '', checksState: '',
+    labels: [], stackPosition: 0, stackSize: 0
+  });
+  const macClient = makeClient('mac', macCalls, [
+    { rows: [prRow('p-yx-mac', 'base/yxbuddy', 39, '2026-11-22T02:00:00Z')], errors: [], nextCursor: 'cur-mac-1',
+      nextCursors: { 'gitlab.example:base/yxbuddy': 'cur-mac-1' } },
+    { rows: [prRow('p-yx-mac', 'base/yxbuddy', 38, '2026-11-21T02:00:00Z')], errors: [], nextCursor: '', nextCursors: {} },
+    { rows: [], errors: [], nextCursor: '', nextCursors: {} }
+  ]);
+  const ca02Client = makeClient('ca02', ca02Calls, [
+    { rows: [prRow('p-yx-ca02', 'base/yxbuddy', 39, '2026-11-22T02:00:00Z'), prRow('p-only-ca02', 'team/other', 7, '2026-11-22T04:00:00Z')],
+      errors: [], nextCursor: '', nextCursors: {} }
+  ]);
+  panel.connection = macClient;
+  panel.connectionFor = id => (id === 'mac' ? macClient : id === 'ca02' ? ca02Client : undefined);
+  panel.environments = [
+    { localId: 'mac', environmentId: 'env-mac', label: 'iMac', enabled: true },
+    { localId: 'ca02', environmentId: 'env-ca02', label: 'ca02', enabled: true }
+  ];
+  panel.projects = [
+    { localId: 'mac', environmentId: 'env-mac', environmentLabel: 'iMac', id: 'p-harm', label: 't3code-harmony',
+      workspaceRoot: '/harm', archivedAt: '', pinnedAt: '', isScratch: false,
+      repository: { canonicalKey: 'github.com/dasungta/t3code-harmony', displayName: 'DASungta/t3code-harmony' } },
+    { localId: 'ca02', environmentId: 'env-ca02', environmentLabel: 'ca02', id: 'p-only-ca02', label: 'other',
+      workspaceRoot: '/other', archivedAt: '', pinnedAt: '', isScratch: false,
+      repository: { canonicalKey: 'gitlab.example/team/other', displayName: 'team/other' } }
+  ];
+
+  await panel.loadList();
+  assert.deepEqual(panel.rows.map(r => [r.number, r.localId]), [[7, 'ca02'], [39, 'mac']]);
+  assert.equal(panel.nextCursor, 'cur-mac-1');
+
+  await panel.loadMore();
+  assert.deepEqual(macCalls[1].cursors, { 'gitlab.example:base/yxbuddy': 'cur-mac-1' });
+  assert.equal(ca02Calls.length, 1);
+  assert.deepEqual(panel.rows.map(r => r.number), [7, 39, 38]);
+
+  await panel.open(panel.rows[0]);
+  assert.deepEqual(detailClients, [['ca02', 'p-only-ca02', 7]]);
+  panel.selected = undefined;
+  panel.detailConnection = undefined;
+
+  panel.selectedProjectKey = 'mac:p-harm';
+  await panel.loadList();
+  assert.equal(macCalls[2].projectId, 'p-harm');
+  assert.equal(ca02Calls.length, 1);
+  assert.deepEqual(panel.rows, []);
 });

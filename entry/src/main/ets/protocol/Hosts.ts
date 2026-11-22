@@ -25,3 +25,13 @@ export function directHostKind(value: string): string {
   return privateIpv4 || privateIpv6 || host === '::' || host.endsWith('.localhost') || host.endsWith('.local') ||
     host === 'home.arpa' || host.endsWith('.home.arpa') || (!host.includes('.') && !host.includes(':')) ? 'lan' : 'public';
 }
+
+export function urlHostname(target: string): string {
+  const match = /^(?:https?|wss?):\/\/(?:[^/?#@]*@)?(\[[a-fA-F0-9:]+\]|[^/:?#@]+)/i.exec(target.trim());
+  return match ? match[1] : '';
+}
+
+export function shouldBypassSystemProxy(target: string): boolean {
+  const host = urlHostname(target);
+  return !!host && directHostKind(host) !== 'public';
+}

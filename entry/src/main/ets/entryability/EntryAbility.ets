@@ -9,6 +9,7 @@ import { cloud, prepareCloud } from '../services/CloudManager';
 import { UIAbility, Want } from '@kit.AbilityKit';
 import { client } from '../services/T3Client';
 import { environments, prepareEnvironments } from '../services/EnvironmentRegistry';
+import { startNetworkMonitor, stopNetworkMonitor } from '../services/NetworkMonitor';
 import { prepareWorkspacePreferences } from '../services/WorkspacePrefs';
 import { prepareDrafts } from '../storage/DraftStore';
 import { window, KeyboardAvoidMode } from '@kit.ArkUI';
@@ -33,6 +34,11 @@ export default class EntryAbility extends UIAbility {
   }
   onWindowStageCreate(stage: window.WindowStage): void {
     prepareEnvironments(this.context.filesDir);
+    startNetworkMonitor({
+      onOffline: () => { environments?.handleNetworkStatus(true); },
+      onOnline: () => { environments?.handleNetworkStatus(false); },
+      onPathChanged: () => { environments?.handleNetworkPathChange(); }
+    });
     void prepareLocalNotifications(this.context).catch(() => {
       AppStorage.setOrCreate('t3LocalNotificationError', '通知设置读取失败');
     });
@@ -67,5 +73,9 @@ export default class EntryAbility extends UIAbility {
   onBackground(): void {
     AppStorage.setOrCreate('t3Foreground', false); this.applyKeepAwake();
     environments?.suspend();
+  }
+  onDestroy(): void {
+    stopNetworkMonitor();
+    environments?.shutdown();
   }
 }

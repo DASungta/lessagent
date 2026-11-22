@@ -1,7 +1,7 @@
 import { record, text, objects } from './Wire';
+import type { ModelSelection, OptionSelection } from './Wire';
 
-export interface OptionSelection { id: string; value: string | boolean; }
-export interface ModelSelection { instanceId: string; model: string; options?: OptionSelection[]; }
+export type { OptionSelection, ModelSelection };
 export interface ModelOptionValue { id: string; label: string; }
 export interface ModelOptionControl { id: string; label: string; type: string; choices: ModelOptionValue[]; }
 export interface TaskSettings {
