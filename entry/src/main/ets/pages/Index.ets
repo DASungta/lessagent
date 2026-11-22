@@ -45,11 +45,12 @@ import {
   stepDelayedConnectionUi
 } from '../protocol/FloatingStatus';
 import { MessageFooter } from '../components/MessageFooter';
+import { CollapsibleUserMessageBody } from '../components/CollapsibleUserMessageBody';
 import { MessageWorkSlot, ThreadActivity, ThreadThinkingRow } from '../components/ThreadActivity';
 import {
   ActivityLine, buildMessageFooterMap, deriveLiveThinkingRow, emptyLiveThinkingRow, emptyWorkMap,
   formatMessageTimestamp, groupWorkByMessage, isPlainUserText, LiveThinkingRow,
-  MessageFooterMeta, MessageWorkMap, TurnWorkGroup, visibleWorkItems
+  MessageFooterMeta, MessageWorkMap, toggleExpandedUserMessage, TurnWorkGroup, visibleWorkItems
 } from '../protocol/ThreadItems';
 import { TaskSettingsPanel } from '../components/TaskSettingsPanel';
 import { QueuePanel } from '../components/QueuePanel';
@@ -251,6 +252,7 @@ struct Index {
   @Provide('t3CanOpenDiff') canOpenDiff: boolean = false;
   @Provide('t3WorkMap') workMap: MessageWorkMap = emptyWorkMap();
   @Provide('t3ExpandedWork') expandedWorkGroups: Record<string, boolean> = {};
+  @Provide('t3ExpandedUserMessages') expandedUserMessages: Record<string, boolean> = {};
   @Provide('t3MessageFooterMap') messageFooterMap: Record<string, MessageFooterMeta> = {};
   @Provide('t3ForkingMessageId') forkingMessageId: string = '';
   @Provide('t3CanOperateChat') canOperateChat: boolean = false;
@@ -444,6 +446,7 @@ struct Index {
       if (workKey !== this.lastWorkThreadKey) {
         this.lastWorkThreadKey = workKey;
         this.expandedWorkGroups = {};
+        this.expandedUserMessages = {};
       }
       if (!keepRenderedOnSync) {
         this.workMap = !this.draftMode && client.thread
@@ -792,6 +795,7 @@ struct Index {
       this.cachedChatTitle = '';
       this.cachedChatProject = '';
       this.expandedWorkGroups = {};
+      this.expandedUserMessages = {};
       this.canOpenDiff = false;
       this.projectId = ''; this.modelIndex = 0;
       if (!this.savingShare || this.page !== 'share') this.page = 'sessions';
@@ -1724,7 +1728,7 @@ struct Index {
     this.lastAutoWatchKey = '';
     this.cachedChatTitle = '';
     this.cachedChatProject = '';
-    this.expandedWorkGroups = {}; this.canOpenDiff = false;
+    this.expandedWorkGroups = {}; this.expandedUserMessages = {}; this.canOpenDiff = false;
     this.queued = []; this.extraPlans = []; this.extraSubagents = []; this.extraBackground = [];
     this.extraGuest = undefined; this.extraUsage = undefined;
     this.floatingCapsule = emptyFloatingCapsule();
@@ -2529,6 +2533,7 @@ struct Index {
       await client.watch(id);
       this.resolveActiveModel(client);
       this.expandedWorkGroups = {};
+      this.expandedUserMessages = {};
       this.lastWorkThreadKey = this.selectedLocalId + ':' + id;
       this.canOpenDiff = !this.draftMode && !!this.currentWorkspace();
       this.threadTerminalEnabled = this.ready && !this.draftMode && !!this.currentWorkspace() && client.canScope('terminal:read') !== false;
@@ -3766,6 +3771,10 @@ struct Index {
     }
   }
 
+  private toggleUserMessage(messageId: string): void {
+    this.expandedUserMessages = toggleExpandedUserMessage(this.expandedUserMessages, messageId);
+  }
+
   @Builder
   userBubble(message: ChatMessage) {
     Row() {
@@ -3779,10 +3788,16 @@ struct Index {
         })
         if (isPlainUserText(message.text)) {
           Column() {
-            Text(message.text)
-              .fontSize(FontSize.body).lineHeight(LineHeight.body)
-              .fontColor($r('app.color.bubble_ink'))
-              .copyOption(CopyOptions.InApp)
+            CollapsibleUserMessageBody({
+              messageKey: message.id,
+              collapsible: true,
+              onToggle: () => { this.toggleUserMessage(message.id); }
+            }) {
+              Text(message.text)
+                .fontSize(FontSize.body).lineHeight(LineHeight.body)
+                .fontColor($r('app.color.bubble_ink'))
+                .copyOption(CopyOptions.InApp)
+            }
           }.alignItems(HorizontalAlign.Start)
             .constraintSize({ maxWidth: '84%' })
             .padding({ left: 14, right: 14, top: 10, bottom: 10 })
@@ -3790,14 +3805,20 @@ struct Index {
             .borderRadius({ topLeft: Radius.bubble, topRight: Radius.bubble, bottomLeft: Radius.bubble, bottomRight: 6 })
         } else {
           Column({ space: Space.xs }) {
-            MarkdownView({ markdown: message.text, selectable: true,
-              mediaScopeKey: this.markdownMediaScopeKey(),
-              mediaReady: this.ready,
-              onCopy: (value: string) => { void this.copy(value); },
-              onOpenLink: (url: string) => { void this.openLink(url); },
-              onOpenImage: (url: string) => { void this.openMarkdownImage(url); },
-              resolveMedia: (source: string, refresh: boolean): Promise<ResolvedMarkdownMedia> =>
-                this.resolveMarkdownMedia(source, refresh) })
+            CollapsibleUserMessageBody({
+              messageKey: message.id,
+              collapsible: true,
+              onToggle: () => { this.toggleUserMessage(message.id); }
+            }) {
+              MarkdownView({ markdown: message.text, selectable: true,
+                mediaScopeKey: this.markdownMediaScopeKey(),
+                mediaReady: this.ready,
+                onCopy: (value: string) => { void this.copy(value); },
+                onOpenLink: (url: string) => { void this.openLink(url); },
+                onOpenImage: (url: string) => { void this.openMarkdownImage(url); },
+                resolveMedia: (source: string, refresh: boolean): Promise<ResolvedMarkdownMedia> =>
+                  this.resolveMarkdownMedia(source, refresh) })
+            }
           }.alignItems(HorizontalAlign.Start)
             .width('84%').clip(true)
             .padding({ left: 14, right: 14, top: 10, bottom: 10 })

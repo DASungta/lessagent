@@ -8,6 +8,7 @@ const source = (await readFile(new URL('../entry/src/main/ets/protocol/ThreadIte
   .replace("'./Wire'", JSON.stringify(wireUrl));
 const {
   activityLines, activitySummary, isPlainUserText,
+  USER_MESSAGE_FOLDED_HEIGHT, isTallEnoughToFold, toggleExpandedUserMessage,
   isHiddenWorkItem, isProminentWorkItem, summarizeWork,
   formatWorkDuration, deriveCheckpointBadges, groupWorkByMessage,
   parseDiffPreviewLines, resolveExpandedActivityBody, isActivityInProgress,
@@ -656,4 +657,33 @@ test('deriveLiveThinkingRow immediately surfaces starting and thinking states an
     const svg = await readFile(new URL(`../entry/src/main/resources/${theme}/media/ui_thinking.svg`, import.meta.url), 'utf8');
     assert.ok(svg.includes('<svg') && svg.includes('viewBox="0 0 24 24"'), `${theme}/ui_thinking.svg`);
   }
+});
+
+test('U2: long user messages fold only at >= 2x folded height, avoid clipped-height feedback loop, and track expansion by message id', async () => {
+  assert.equal(USER_MESSAGE_FOLDED_HEIGHT, 176);
+  assert.equal(isTallEnoughToFold(0), false);
+  assert.equal(isTallEnoughToFold(176), false);
+  assert.equal(isTallEnoughToFold(351.9), false);
+  assert.equal(isTallEnoughToFold(352), true);
+  assert.equal(isTallEnoughToFold(600), true);
+  assert.equal(isTallEnoughToFold(Number.NaN), false);
+
+  let expanded = {};
+  expanded = toggleExpandedUserMessage(expanded, 'u-1');
+  assert.equal(expanded['u-1'], true);
+  assert.equal(expanded['u-2'], undefined);
+  expanded = toggleExpandedUserMessage(expanded, 'u-2');
+  assert.deepEqual(expanded, { 'u-1': true, 'u-2': true });
+  expanded = toggleExpandedUserMessage(expanded, 'u-1');
+  assert.deepEqual(expanded, { 'u-1': false, 'u-2': true });
+
+  const component = await readFile(new URL('../entry/src/main/ets/components/CollapsibleUserMessageBody.ets', import.meta.url), 'utf8');
+  assert.match(component, /if \(!this\.isCollapsed\(\)\)/, 'must ignore clipped height while collapsed');
+  assert.match(component, /USER_MESSAGE_FOLDED_HEIGHT/);
+  assert.match(component, /linearGradient/);
+  assert.match(component, /展开全文/);
+  assert.match(component, /收起/);
+  const indexSource = await readFile(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url), 'utf8');
+  assert.match(indexSource, /CollapsibleUserMessageBody/);
+  assert.match(indexSource, /expandedUserMessages/);
 });

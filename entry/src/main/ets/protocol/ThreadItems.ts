@@ -4,6 +4,20 @@ export interface ActivityLine { label: string; text: string; kind: string; itemI
 
 function optional(value: Object | undefined): string { return typeof value === 'string' ? value : ''; }
 
+export const USER_MESSAGE_FOLDED_HEIGHT = 176;
+
+// Fold only when opening at least doubles what is on screen, matching upstream CollapsibleUserMessageBody.
+export function isTallEnoughToFold(height: number): boolean {
+  return Number.isFinite(height) && height >= USER_MESSAGE_FOLDED_HEIGHT * 2;
+}
+
+export function toggleExpandedUserMessage(current: Record<string, boolean>, messageId: string): Record<string, boolean> {
+  const next: Record<string, boolean> = {};
+  for (const key of Object.keys(current)) next[key] = current[key];
+  next[messageId] = next[messageId] !== true;
+  return next;
+}
+
 export function isActiveItemStatus(status: string): boolean {
   const normalized = status.trim().toLowerCase();
   return normalized === 'inprogress' || normalized === 'running' ||
