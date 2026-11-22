@@ -102,6 +102,8 @@ export function serverBase(input: string): string {
   return base;
 }
 
+export const DPOP_ACCESS_TOKEN_REFRESH_SKEW_MS = 60000;
+
 export function bootstrapForm(credential: string): string {
   if (credential.trim() === '') throw new Error('请输入配对凭据');
   return 'grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange' +
@@ -109,6 +111,15 @@ export function bootstrapForm(credential: string): string {
     '&subject_token_type=urn%3At3%3Aparams%3Aoauth%3Atoken-type%3Aenvironment-bootstrap' +
     '&requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token' +
     '&client_label=T3%20Harmony&client_device_type=mobile&client_os=HarmonyOS';
+}
+
+export function tokenRenewalForm(accessToken: string): string {
+  const token = accessToken.trim();
+  if (!token) throw new Error('缺少可续期的访问凭据');
+  return 'grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange' +
+    '&subject_token=' + encodeURIComponent(token) +
+    '&subject_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token' +
+    '&requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token';
 }
 
 export function validateDescriptor(value: Object): Record<string, Object> {
@@ -122,9 +133,11 @@ export function validateDescriptor(value: Object): Record<string, Object> {
   return descriptor;
 }
 
-export function socketUrl(base: string, ticket: string): string {
+export function socketUrl(base: string, ticket: string, dpopProof?: string): string {
+  const dpop = dpopProof ? '&dpop=' + encodeURIComponent(dpopProof) : '';
   return base.replace(/^http/, 'ws') + '/ws?orchestrationProtocol=2&wsTicket=' +
-    encodeURIComponent(ticket) + '&clientSurface=mobile&clientOs=HarmonyOS&connectionMethod=direct&frameParts=1';
+    encodeURIComponent(ticket) + dpop +
+    '&clientSurface=mobile&clientOs=HarmonyOS&connectionMethod=direct&frameParts=1';
 }
 
 export interface RpcSender {

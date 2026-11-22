@@ -104,3 +104,21 @@ test('deletion tombstone survives validation so interrupted cleanup can resume b
  assert.equal((await s.run()).entries[0].deleting,true);
  assert.throws(()=>environmentDirectory({...d,entries:[{...d.entries[0],deleting:'yes'}]}));
 });
+test('savedSession accepts direct DPoP sessions alongside legacy Bearer sessions without data loss',async()=>{
+ const legacy=savedSession(session);
+ assert.deepEqual(legacy,session);
+ assert.equal(Object.prototype.hasOwnProperty.call(legacy,'kind'),false);
+ const dpop=savedSession({...session,kind:'dpop'});
+ assert.deepEqual(dpop,{...session,kind:'dpop'});
+ const explicitBearer=savedSession({...session,kind:'bearer'});
+ assert.deepEqual(explicitBearer,{...session,kind:'bearer'});
+ for(const invalid of [{...session,kind:'cloud'},{...session,kind:''},{...session,kind:123},{...session,kind:null},{...session,kind:'dpop',extra:true}]){
+  assert.throws(()=>savedSession(invalid));
+ }
+ const s=setup();
+ const d=await s.run();
+ const ref=d.entries[0].credentialRef;
+ s.assets.session(ref).value={...session,kind:'dpop'};
+ assert.deepEqual(await s.run(),d);
+ assert.deepEqual(s.assets.session(ref).value,{...session,kind:'dpop'});
+});

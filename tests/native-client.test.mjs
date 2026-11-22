@@ -48,8 +48,18 @@ async function setup(options = {}) {
           if (url.includes('/api/attachments/upload/')) { if (options.waitUpload) await options.waitUpload(); return {responseCode:options.uploadStatus ?? 204,result:''}; }
           if (url.endsWith('/.well-known/t3/environment')) {
             if (options.waitMetadata) await options.waitMetadata;
-            value = { environmentId: options.environmentId ?? 'env', label: 'Test', serverVersion: 'test', orchestrationProtocolVersion: options.protocol ?? 2 };
+            value = {
+              environmentId: options.environmentId ?? 'env',
+              label: 'Test',
+              serverVersion: 'test',
+              orchestrationProtocolVersion: options.protocol ?? 2,
+              ...(options.descriptorCapabilities ? { capabilities: options.descriptorCapabilities } : {})
+            };
           } else if (url.endsWith('/api/auth/session')) {
+            if (options.onSessionRequest) {
+              const custom = await options.onSessionRequest(url, args);
+              if (custom) return { responseCode: custom.status ?? 200, result: JSON.stringify(custom.value ?? {}) };
+            }
             const state = options.sessionState ?? {authenticated:true,permissions:['access:read']};
             if (options.waitAccess) await (typeof options.waitAccess === 'function' ? options.waitAccess() : options.waitAccess);
             value = state;
@@ -61,11 +71,25 @@ async function setup(options = {}) {
             url.endsWith('/api/auth/connect-devices/revoke')) {
             value = { revoked: true };
           } else if (url.endsWith('/oauth/token')) {
+            if (options.onTokenRequest) {
+              const custom = await options.onTokenRequest(url, args);
+              if (custom) return { responseCode: custom.status ?? 200, result: JSON.stringify(custom.value ?? {}) };
+            }
             if (options.authError) status = 401;
             value = { access_token: 'SYNTHETIC_TOKEN', token_type: 'Bearer', expires_in: 3600 };
           } else if (url.includes('/api/orchestration/threads/') && url.includes('/history')) {
             value = options.historyResponse ?? { items: [], messages: [], hasMore: false, oldestCursor: null };
+          } else if (url.endsWith('/api/pull-requests/diff')) {
+            if (options.onDiffRequest) {
+              const custom = await options.onDiffRequest(url, args);
+              if (custom) return { responseCode: custom.status ?? 200, result: JSON.stringify(custom.value ?? {}) };
+            }
+            value = { diff: '' };
           } else {
+            if (options.onTicketRequest) {
+              const custom = await options.onTicketRequest(url, args);
+              if (custom) return { responseCode: custom.status ?? 200, result: JSON.stringify(custom.value ?? {}) };
+            }
             if (options.ticket404 && url.endsWith('/rpc')) status = 404;
             if (options.transientRpcStatus && url.endsWith('/rpc')) status = options.transientRpcStatus;
             value = { ticket: 'SYNTHETIC_TICKET' };
@@ -162,13 +186,15 @@ async function setup(options = {}) {
         };
         return socket;
       }
-    }
+    },
+    dpopSigner: options.dpopSigner
   };
   globalThis.__nativeKit = kit;
   const source = original
     .replace("import { http, webSocket } from '@kit.NetworkKit';", 'const { http, webSocket } = globalThis.__nativeKit;')
     .replace("import { util } from '@kit.ArkTS';", 'const { util } = globalThis.__nativeKit;')
     .replace("import { BusinessError } from '@kit.BasicServicesKit';", '')
+    .replace("import { dpopSigner } from './Dpop';", 'const { dpopSigner } = globalThis.__nativeKit;')
     .replace("'../protocol/DevicePreview'", JSON.stringify(devicePreviewUrl))
     .replace("'../protocol/Wire'", JSON.stringify(wire))
     .replace("'../protocol/Hosts'", JSON.stringify(hosts))
@@ -1434,4 +1460,298 @@ test('inbound traffic proves socket alive during resume probe, offline pauses re
  } finally {
   flap.client.disconnect();
  }
+});
+
+test('direct DPoP pairing uses device key when accessTokenRenewal is advertised and sends DPoP on HTTP and WS', async () => {
+  const proofCalls = [];
+  let stored;
+  const { client, requests, socketConnects } = await setup({
+    descriptorCapabilities: { accessTokenRenewal: true },
+    dpopSigner: {
+      async prove(method, target, accessToken) {
+        proofCalls.push({ method, target, accessToken });
+        return `proof:${method}:${target}:${accessToken ?? ''}`;
+      }
+    },
+    onTokenRequest: (_url, args) => {
+      assert.equal(args.header.DPoP, 'proof:POST:https://test/oauth/token:');
+      const params = new URLSearchParams(args.extraData);
+      assert.equal(params.get('subject_token'), 'one-time-code');
+      assert.equal(params.get('subject_token_type'), 'urn:t3:params:oauth:token-type:environment-bootstrap');
+      return { status: 200, value: { access_token: 'DPOP_TOK_1', token_type: 'DPoP', expires_in: 900 } };
+    },
+    onTicketRequest: (_url, args) => {
+      assert.equal(args.header.Authorization, 'DPoP DPOP_TOK_1');
+      assert.equal(args.header.DPoP, 'proof:POST:https://test/api/auth/websocket-ticket/rpc:DPOP_TOK_1');
+      return { status: 200, value: { ticket: 'DPOP_TICKET_1' } };
+    }
+  });
+  client.store = {
+    async load() { return stored ? structuredClone(stored) : undefined; },
+    async save(v) { stored = structuredClone(v); },
+    async clear() { stored = undefined; }
+  };
+  try {
+    await client.connect('https://test', 'one-time-code');
+    await new Promise(setImmediate);
+    assert.equal(client.ready, true);
+    assert.equal(stored.kind, 'dpop');
+    assert.equal(stored.token, 'DPOP_TOK_1');
+    const wsUrl = new URL(socketConnects[0].url);
+    assert.equal(wsUrl.searchParams.get('wsTicket'), 'DPOP_TICKET_1');
+    assert.equal(wsUrl.searchParams.get('dpop'), 'proof:GET:https://test/ws:DPOP_TICKET_1');
+    assert.equal(wsUrl.searchParams.get('connectionMethod'), 'direct');
+    const sessionReq = requests.find((r) => r.url.endsWith('/api/auth/session'));
+    assert.ok(sessionReq);
+    assert.equal(sessionReq.args.header.Authorization, 'DPoP DPOP_TOK_1');
+    assert.equal(sessionReq.args.header.DPoP, 'proof:GET:https://test/api/auth/session:DPOP_TOK_1');
+    await client.pullRequestDiff({ number: 1 });
+    const diffReq = requests.find((r) => r.url.endsWith('/api/pull-requests/diff'));
+    assert.equal(diffReq.args.header.Authorization, 'DPoP DPOP_TOK_1');
+    assert.equal(diffReq.args.header.DPoP, 'proof:POST:https://test/api/pull-requests/diff:DPOP_TOK_1');
+    assert.equal(proofCalls[0].target, 'https://test/oauth/token');
+    assert.equal(proofCalls[0].accessToken, undefined);
+  } finally {
+    client.disconnect();
+  }
+});
+
+test('direct pairing falls back to Bearer without wasting one-time code when capability absent or proof signing fails', async () => {
+  // 1. Server without accessTokenRenewal does not invoke signer
+  let signerCalls = 0;
+  const noCap = await setup({
+    descriptorCapabilities: {},
+    dpopSigner: {
+      async prove() { signerCalls++; return 'unused'; }
+    }
+  });
+  try {
+    await noCap.client.connect('https://test', 'code-no-cap');
+    assert.equal(noCap.client.ready, true);
+    assert.equal(signerCalls, 0);
+    const tokenReqs = noCap.requests.filter((r) => r.url.endsWith('/oauth/token'));
+    assert.equal(tokenReqs.length, 1);
+    assert.equal(tokenReqs[0].args.header.DPoP, undefined);
+  } finally {
+    noCap.client.disconnect();
+  }
+
+  // 2. Signer throws BEFORE /oauth/token -> falls back to Bearer and posts the one-time code only once
+  let stored;
+  const brokenSigner = await setup({
+    descriptorCapabilities: { accessTokenRenewal: true },
+    dpopSigner: {
+      async prove() { throw new Error('device key locked'); }
+    }
+  });
+  brokenSigner.client.store = {
+    async load() { return stored ? structuredClone(stored) : undefined; },
+    async save(v) { stored = structuredClone(v); },
+    async clear() { stored = undefined; }
+  };
+  try {
+    await brokenSigner.client.connect('https://test', 'single-use-code');
+    assert.equal(brokenSigner.client.ready, true);
+    const tokenReqs = brokenSigner.requests.filter((r) => r.url.endsWith('/oauth/token'));
+    assert.equal(tokenReqs.length, 1);
+    assert.equal(tokenReqs[0].args.header.DPoP, undefined);
+    assert.equal(new URLSearchParams(tokenReqs[0].args.extraData).get('subject_token'), 'single-use-code');
+    assert.equal(stored.kind, undefined);
+    assert.equal(new URL(brokenSigner.socketConnects[0].url).searchParams.get('dpop'), null);
+  } finally {
+    brokenSigner.client.disconnect();
+  }
+});
+
+test('direct DPoP renews expired or expiring tokens with per-connection lock deduplication', async () => {
+  let tokenCounter = 0;
+  let stored = {
+    base: 'https://test',
+    environmentId: 'env',
+    token: 'DPOP_EXPIRED_0',
+    expiresAt: Date.now() - 5000,
+    kind: 'dpop'
+  };
+  const { client, requests } = await setup({
+    descriptorCapabilities: { accessTokenRenewal: true },
+    dpopSigner: {
+      async prove(method, target, accessToken) {
+        return `proof:${method}:${target}:${accessToken ?? ''}`;
+      }
+    },
+    onTokenRequest: async (_url, args) => {
+      tokenCounter++;
+      const params = new URLSearchParams(args.extraData);
+      assert.equal(params.get('grant_type'), 'urn:ietf:params:oauth:grant-type:token-exchange');
+      assert.equal(params.get('subject_token_type'), 'urn:ietf:params:oauth:token-type:access_token');
+      assert.equal(params.get('requested_token_type'), 'urn:ietf:params:oauth:token-type:access_token');
+      assert.equal(params.get('scope'), null);
+      assert.equal(args.header.DPoP, 'proof:POST:https://test/oauth/token:');
+      if (tokenCounter === 1) {
+        assert.equal(params.get('subject_token'), 'DPOP_EXPIRED_0');
+        // Return a token already inside the 60s refresh skew (30s) so concurrent HTTP requests renew it once.
+        return { status: 200, value: { access_token: 'DPOP_SHORT_1', token_type: 'DPoP', expires_in: 30 } };
+      }
+      assert.equal(params.get('subject_token'), 'DPOP_SHORT_1');
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      return { status: 200, value: { access_token: 'DPOP_FRESH_2', token_type: 'DPoP', expires_in: 900 } };
+    }
+  });
+  client.store = {
+    async load() { return structuredClone(stored); },
+    async save(v) { stored = structuredClone(v); },
+    async clear() { stored = undefined; }
+  };
+  try {
+    // Reconnect with expired DPoP session succeeds via renewal without pairing code
+    await client.connect('https://test');
+    assert.equal(client.ready, true);
+    assert.equal(tokenCounter, 1);
+    assert.equal(stored.token, 'DPOP_SHORT_1');
+    assert.equal(stored.kind, 'dpop');
+
+    // Concurrent authenticated HTTP calls within 60s skew share ONE renewal lock
+    await Promise.all([
+      client.pullRequestDiff({ number: 1 }),
+      client.pullRequestDiff({ number: 2 })
+    ]);
+    assert.equal(tokenCounter, 2, 'concurrent renewals must deduplicate under per-connection lock');
+    assert.equal(stored.token, 'DPOP_FRESH_2');
+    const diffReqs = requests.filter((r) => r.url.endsWith('/api/pull-requests/diff'));
+    assert.equal(diffReqs.length, 2);
+    for (const req of diffReqs) {
+      assert.equal(req.args.header.Authorization, 'DPoP DPOP_FRESH_2');
+      assert.equal(req.args.header.DPoP, 'proof:POST:https://test/api/pull-requests/diff:DPOP_FRESH_2');
+    }
+  } finally {
+    client.disconnect();
+  }
+});
+
+test('direct DPoP retries once on 401 for websocket-ticket and HTTP requests, handles 404 ticket fallback, and avoids loops', async () => {
+  let tokenCounter = 0;
+  let ticketAttempts = 0;
+  let diffAttempts = 0;
+  let stored = {
+    base: 'https://test',
+    environmentId: 'env',
+    token: 'DPOP_STALE_CLOCK',
+    expiresAt: Date.now() + 3600000,
+    kind: 'dpop'
+  };
+  const { client, socketConnects } = await setup({
+    descriptorCapabilities: { accessTokenRenewal: true },
+    dpopSigner: {
+      async prove(method, target, accessToken) {
+        return `proof:${method}:${target}:${accessToken ?? ''}`;
+      }
+    },
+    onTokenRequest: (_url, args) => {
+      tokenCounter++;
+      const subject = new URLSearchParams(args.extraData).get('subject_token');
+      if (tokenCounter === 1) {
+        assert.equal(subject, 'DPOP_STALE_CLOCK');
+        return { status: 200, value: { access_token: 'DPOP_AFTER_WS_401', token_type: 'DPoP', expires_in: 3600 } };
+      }
+      if (tokenCounter === 2) {
+        assert.equal(subject, 'DPOP_AFTER_WS_401');
+        return { status: 200, value: { access_token: 'DPOP_AFTER_HTTP_401', token_type: 'DPoP', expires_in: 3600 } };
+      }
+      assert.equal(subject, 'DPOP_AFTER_HTTP_401');
+      return { status: 200, value: { access_token: 'DPOP_STILL_REJECTED', token_type: 'DPoP', expires_in: 3600 } };
+    },
+    onTicketRequest: (url, args) => {
+      ticketAttempts++;
+      if (ticketAttempts === 1) {
+        assert.equal(args.header.Authorization, 'DPoP DPOP_STALE_CLOCK');
+        return { status: 401, value: { error: 'invalid_credential' } };
+      }
+      if (ticketAttempts === 2) {
+        assert.equal(url, 'https://test/api/auth/websocket-ticket/rpc');
+        assert.equal(args.header.Authorization, 'DPoP DPOP_AFTER_WS_401');
+        return { status: 404, value: { error: 'not_found' } };
+      }
+      assert.equal(url, 'https://test/api/auth/websocket-ticket');
+      assert.equal(args.header.Authorization, 'DPoP DPOP_AFTER_WS_401');
+      assert.equal(args.header.DPoP, 'proof:POST:https://test/api/auth/websocket-ticket:DPOP_AFTER_WS_401');
+      return { status: 200, value: { ticket: 'FALLBACK_TICKET' } };
+    },
+    onDiffRequest: (_url, args) => {
+      diffAttempts++;
+      if (diffAttempts === 1) {
+        assert.equal(args.header.Authorization, 'DPoP DPOP_AFTER_WS_401');
+        return { status: 401, value: { error: 'invalid_credential' } };
+      }
+      if (diffAttempts === 2) {
+        assert.equal(args.header.Authorization, 'DPoP DPOP_AFTER_HTTP_401');
+        assert.equal(args.header.DPoP, 'proof:POST:https://test/api/pull-requests/diff:DPOP_AFTER_HTTP_401');
+        return { status: 200, value: { diff: 'ok-after-retry' } };
+      }
+      // Persistent 401 on subsequent call must fail after exactly one renewal + one retry
+      return { status: 401, value: { error: 'revoked' } };
+    }
+  });
+  client.store = {
+    async load() { return structuredClone(stored); },
+    async save(v) { stored = structuredClone(v); },
+    async clear() { stored = undefined; }
+  };
+  try {
+    await client.connect('https://test');
+    assert.equal(client.ready, true);
+    assert.equal(tokenCounter, 1);
+    assert.equal(ticketAttempts, 3);
+    assert.equal(stored.token, 'DPOP_AFTER_WS_401');
+    assert.equal(new URL(socketConnects[0].url).searchParams.get('dpop'), 'proof:GET:https://test/ws:FALLBACK_TICKET');
+
+    const res = await client.pullRequestDiff({ number: 7 });
+    assert.deepEqual(res, { diff: 'ok-after-retry' });
+    assert.equal(tokenCounter, 2);
+    assert.equal(stored.token, 'DPOP_AFTER_HTTP_401');
+
+    // Persistent 401: renews once (tokenCounter 2 -> 3), retries once (diffAttempts 2 -> 4), then throws
+    await assert.rejects(() => client.pullRequestDiff({ number: 8 }), /鉴权失败/);
+    assert.equal(tokenCounter, 3);
+    assert.equal(diffAttempts, 4);
+  } finally {
+    client.disconnect();
+  }
+});
+
+test('legacy Bearer saved sessions keep working without DPoP and reject expiry as before', async () => {
+  let signerUsed = 0;
+  let stored = {
+    base: 'https://test',
+    environmentId: 'env',
+    token: 'LEGACY_BEARER_TOK',
+    expiresAt: Date.now() + 3600000
+  };
+  const { client, requests, socketConnects } = await setup({
+    descriptorCapabilities: { accessTokenRenewal: true },
+    dpopSigner: {
+      async prove() { signerUsed++; return 'unused'; }
+    }
+  });
+  client.store = {
+    async load() { return structuredClone(stored); },
+    async save(v) { stored = structuredClone(v); },
+    async clear() { stored = undefined; }
+  };
+  try {
+    await client.connect('https://test');
+    assert.equal(client.ready, true);
+    assert.equal(signerUsed, 0);
+    const ticketReq = requests.find((r) => r.url.includes('/api/auth/websocket-ticket'));
+    assert.equal(ticketReq.args.header.Authorization, 'Bearer LEGACY_BEARER_TOK');
+    assert.equal(ticketReq.args.header.DPoP, undefined);
+    assert.equal(new URL(socketConnects[0].url).searchParams.get('dpop'), null);
+
+    client.disconnect();
+    stored.expiresAt = Date.now() - 1000;
+    await client.connect('https://test');
+    assert.equal(client.ready, false);
+    assert.match(client.status, /没有此服务器的有效会话/);
+  } finally {
+    client.disconnect();
+  }
 });

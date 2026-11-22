@@ -479,7 +479,7 @@ export function cards(requests: Record<string, Object>[], items: Record<string, 
   return result;
 }
 
-export interface SavedSession { base: string; environmentId: string; token: string; expiresAt: number; }
+export interface SavedSession { base: string; environmentId: string; token: string; expiresAt: number; kind?: string; }
 export interface SessionStorage {
   load(base?: string): Promise<SavedSession | undefined>;
   save(value: SavedSession): Promise<void>;

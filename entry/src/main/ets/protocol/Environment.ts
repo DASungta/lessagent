@@ -55,11 +55,24 @@ function identity(value: Object): string {
 }
 export function savedSession(value: Object): SavedSession {
   const row = record(value);
-  keys(row, ['base', 'environmentId', 'token', 'expiresAt']);
+  const expected = ['base', 'environmentId', 'token', 'expiresAt'].concat(
+    Object.keys(row).includes('kind') ? ['kind'] : []);
+  keys(row, expected);
   const base = text(row.base);
   if (serverBase(base) !== base || !text(row.token) || typeof row.expiresAt !== 'number' ||
     !Number.isFinite(row.expiresAt) || row.expiresAt <= 0) throw new Error('安全凭据记录无效');
-  return { base, environmentId: identity(row.environmentId), token: text(row.token), expiresAt: row.expiresAt as number };
+  const session: SavedSession = {
+    base,
+    environmentId: identity(row.environmentId),
+    token: text(row.token),
+    expiresAt: row.expiresAt as number
+  };
+  if (row.kind !== undefined) {
+    const kind = text(row.kind);
+    if (kind !== 'bearer' && kind !== 'dpop') throw new Error('安全凭据类型无效');
+    session.kind = kind;
+  }
+  return session;
 }
 function checkedRecovery(value: Object, base: string, environmentId: string): RecoveryState {
   const row = record(value);

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { bootstrapForm, createThread, RpcClient, sendMessage, serverBase,
-  socketUrl, ThreadState, validateDescriptor } from '../entry/src/main/ets/protocol/Wire.ts';
+import { bootstrapForm, createThread, DPOP_ACCESS_TOKEN_REFRESH_SKEW_MS, RpcClient, sendMessage,
+  serverBase, socketUrl, ThreadState, tokenRenewalForm, validateDescriptor } from '../entry/src/main/ets/protocol/Wire.ts';
 
 function setup() {
   const sent = [];
@@ -23,6 +23,19 @@ test('HTTP direct URLs validated; credentials encoded as OAuth form data', () =>
   assert.equal(params.get('subject_token'), 'test +&中文');
   assert.equal(params.get('grant_type'), 'urn:ietf:params:oauth:grant-type:token-exchange');
   assert.equal(new URL(socketUrl('https://test', 'test+/=')).searchParams.get('wsTicket'), 'test+/=');
+  assert.equal(new URL(socketUrl('https://test', 'test+/=')).searchParams.get('dpop'), null);
+  const dpopWs = new URL(socketUrl('https://test', 'ticket-1', 'proof.jwt+/='));
+  assert.equal(dpopWs.searchParams.get('wsTicket'), 'ticket-1');
+  assert.equal(dpopWs.searchParams.get('dpop'), 'proof.jwt+/=');
+  assert.equal(dpopWs.searchParams.get('connectionMethod'), 'direct');
+  const renew = new URLSearchParams(tokenRenewalForm(' access-token+1 '));
+  assert.equal(renew.get('grant_type'), 'urn:ietf:params:oauth:grant-type:token-exchange');
+  assert.equal(renew.get('subject_token'), 'access-token+1');
+  assert.equal(renew.get('subject_token_type'), 'urn:ietf:params:oauth:token-type:access_token');
+  assert.equal(renew.get('requested_token_type'), 'urn:ietf:params:oauth:token-type:access_token');
+  assert.equal(renew.get('scope'), null);
+  assert.equal(DPOP_ACCESS_TOKEN_REFRESH_SKEW_MS, 60000);
+  assert.throws(() => tokenRenewalForm('   '));
   assert.throws(() => bootstrapForm(' '));
 });
 

@@ -16,8 +16,10 @@ import {
 import { http, webSocket } from '@kit.NetworkKit';
 import { util } from '@kit.ArkTS';
 import { BusinessError } from '@kit.BasicServicesKit';
-import { bootstrapForm, createThread, objects, record, RpcClient, RpcFailure, RpcSender, sendMessage,
-  serverBase, socketUrl, text, ThreadState, validateDescriptor } from '../protocol/Wire';
+import { bootstrapForm, createThread, DPOP_ACCESS_TOKEN_REFRESH_SKEW_MS, objects, record, RpcClient,
+  RpcFailure, RpcSender, sendMessage, serverBase, socketUrl, text, ThreadState, tokenRenewalForm,
+  validateDescriptor } from '../protocol/Wire';
+import { dpopSigner } from './Dpop';
 import { directHostKind, shouldBypassSystemProxy, urlHostname } from '../protocol/Hosts';
 
 import { CachedShellEntry, ShellState, ModelChoice, models, SavedSession, SessionStorage, stopCommand, secretAnswer,
@@ -178,6 +180,21 @@ const HEARTBEAT_TIMEOUT_MS = 15000;
 const HEARTBEAT_FREEZE_GAP_MS = 12000;
 const HEARTBEAT_RESUME_GRACE_MS = 5000;
 
+export interface DirectDpopSigner {
+  prove(method: string, target: string, accessToken?: string): Promise<string>;
+}
+
+interface DirectDpopSocketResult {
+  url: string;
+  session: SavedSession;
+}
+
+function supportsDirectDpopRenewal(descriptor: Record<string, Object>): boolean {
+  const caps = descriptor.capabilities;
+  return caps !== undefined && caps !== null && typeof caps === 'object' && !Array.isArray(caps) &&
+    (caps as Record<string, Object>).accessTokenRenewal === true;
+}
+
 export interface CloudEndpoint { httpBaseUrl: string; wsBaseUrl: string; providerKind: string; }
 
 export interface CloudTransport {
@@ -200,6 +217,7 @@ export class T3Client {
   expectedEnvironmentId: string = '';
   recoveryBase: string = '';
   reconnectSavedRoutes: (() => Promise<void>) | undefined = undefined;
+  dpop: DirectDpopSigner | undefined = dpopSigner;
   private connectionsPending: number = 0;
   get connectionPending(): boolean { return this.connectionsPending > 0; }
   get reconnectPending(): boolean { return this.connectionsPending > 0 || this.retryTimer !== 0; }
@@ -218,6 +236,8 @@ export class T3Client {
   private cloudBase: string = '';
   private cloudEnvironmentId: string = '';
   private cloudRenewal: number = 0;
+  private directDpopRenewal: number = 0;
+  private directDpopLocks: Map<string, Promise<void>> = new Map();
   requireDeviceApproval: boolean = false;
   authAccess: AuthAccess = { pairingLinks: [], devices: [] };
   authAccessLoaded: boolean = false;
@@ -598,6 +618,7 @@ export class T3Client {
     this.inBackground = true;
     clearInterval(this.timer); this.timer = 0;
     clearTimeout(this.retryTimer); this.retryTimer = 0;
+    clearTimeout(this.directDpopRenewal); this.directDpopRenewal = 0;
     clearTimeout(this.shellRetryTimer); this.shellRetryTimer = 0;
     clearTimeout(this.threadRetryTimer); this.threadRetryTimer = 0;
   }
@@ -681,6 +702,7 @@ export class T3Client {
         if (this.thread && !this.threadChunk && !this.mutating && !this.launching) {
           void this.watch(this.thread.threadId).catch(() => {});
         }
+        if (!this.cloud && this.saved?.kind === 'dpop') this.scheduleDirectDpopRenewal(this.generation);
         this.onUpdate();
         return;
       }
@@ -693,7 +715,7 @@ export class T3Client {
     }
     if (this.reconnectSavedRoutes) { await this.reconnectSavedRoutes(); return; }
     const saved = this.store ? await this.store.load() : this.saved;
-    if (saved && saved.expiresAt > Date.now()) await this.connect(saved.base);
+    if (saved && (saved.kind === 'dpop' || saved.expiresAt > Date.now())) await this.connect(saved.base);
   }
 
   private computeRetryDelay(fastDropRetry: boolean): number {
@@ -707,7 +729,7 @@ export class T3Client {
 
   private retry(delayMs: number): void {
     if (this.inBackground || !this.resumeWanted ||
-      (!this.reconnectSavedRoutes && (!this.saved || this.saved.expiresAt <= Date.now()))) return;
+      (!this.reconnectSavedRoutes && (!this.saved || (this.saved.kind !== 'dpop' && this.saved.expiresAt <= Date.now())))) return;
     if (this.networkOffline && !this.isLoopbackTarget()) return;
     this.retryDelay = delayMs;
     this.retryTimer = setTimeout(() => {
@@ -798,15 +820,104 @@ export class T3Client {
   private attachmentThread: string = '';
   recoveredMessageId: string = '';
 
-  private async httpJson(base: string, path: string, method: http.RequestMethod,
-    body: string = '', token: string = '', json: boolean = false,
-    cloudAuth: boolean = false, timeoutMs: number = 10000,
-    extraHeaders?: Record<string, string>): Promise<Object> {
-    if (cloudAuth && this.cloud) return this.cloud.requestJson(path, method, body, json, extraHeaders);
+  private async withDirectDpopLock<T>(key: string, action: () => Promise<T>): Promise<T> {
+    const previous = this.directDpopLocks.get(key) || Promise.resolve();
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const tail = previous.then(() => gate);
+    this.directDpopLocks.set(key, tail);
+    await previous;
+    try {
+      return await action();
+    } finally {
+      release();
+      if (this.directDpopLocks.get(key) === tail) this.directDpopLocks.delete(key);
+    }
+  }
+
+  private async signDirectDpopProof(method: string, target: string, accessToken?: string): Promise<string> {
+    if (!this.dpop) throw new Error('设备 DPoP 密钥不可用，无法完成鉴权');
+    try {
+      return await this.dpop.prove(method, target, accessToken);
+    } catch (_) {
+      throw new Error('无法生成设备 DPoP 鉴权证明');
+    }
+  }
+
+  private isBlockedDirectDpopError(error: Error): boolean {
+    if (error instanceof HttpFailure) {
+      return error.status === 400 || error.status === 401 || error.status === 403 || error.status === 404;
+    }
+    const msg = error.message || '';
+    return msg.includes('无效') || msg.includes('不可用') || msg.includes('无法生成设备 DPoP') ||
+      msg.includes('没有此服务器的有效会话');
+  }
+
+  private async ensureDirectDpopToken(seed: SavedSession, rejectedToken?: string,
+    persist: boolean = true): Promise<SavedSession> {
+    const key = seed.base + '\n' + seed.environmentId;
+    return this.withDirectDpopLock(key, async (): Promise<SavedSession> => {
+      let current: SavedSession = seed;
+      if (persist && this.saved && this.saved.kind === 'dpop' &&
+        this.saved.base === seed.base && this.saved.environmentId === seed.environmentId &&
+        (current.token === rejectedToken || this.saved.expiresAt >= current.expiresAt)) {
+        current = this.saved;
+      }
+      if (current.token !== rejectedToken &&
+        current.expiresAt - DPOP_ACCESS_TOKEN_REFRESH_SKEW_MS > Date.now()) {
+        return current;
+      }
+      if (persist && this.store) {
+        try {
+          const stored = await this.store.load(seed.base);
+          if (stored && stored.kind === 'dpop' &&
+            stored.base === seed.base && stored.environmentId === seed.environmentId) {
+            if (stored.token !== rejectedToken &&
+              stored.expiresAt - DPOP_ACCESS_TOKEN_REFRESH_SKEW_MS > Date.now()) {
+              if (this.saved && this.saved.base === stored.base &&
+                this.saved.environmentId === stored.environmentId) {
+                this.saved = stored;
+              }
+              return stored;
+            }
+            if (current.token === rejectedToken || stored.expiresAt > current.expiresAt) current = stored;
+          }
+        } catch (_) {}
+      }
+      const proof = await this.signDirectDpopProof('POST', current.base + '/oauth/token');
+      const headers: Record<string, string> = { 'DPoP': proof };
+      const auth = record(await this.rawHttpJson(current.base, '/oauth/token',
+        http.RequestMethod.POST, tokenRenewalForm(current.token), '', false, 10000, headers));
+      const accessToken = text(auth.access_token);
+      if (auth.token_type !== 'DPoP' || !accessToken) {
+        throw new Error('环境返回了无效的 DPoP 续期令牌');
+      }
+      if (typeof auth.expires_in !== 'number' || !Number.isFinite(auth.expires_in) || auth.expires_in <= 0) {
+        throw new Error('无效凭据有效期');
+      }
+      const renewed: SavedSession = {
+        base: current.base,
+        environmentId: current.environmentId,
+        token: accessToken,
+        expiresAt: Date.now() + auth.expires_in * 1000,
+        kind: 'dpop'
+      };
+      if (persist && this.store) await this.store.save(renewed);
+      if (persist && this.saved && this.saved.base === renewed.base &&
+        this.saved.environmentId === renewed.environmentId) {
+        this.saved = renewed;
+      }
+      return renewed;
+    });
+  }
+
+  private async rawHttpJson(base: string, path: string, method: http.RequestMethod,
+    body: string = '', authorization: string = '', json: boolean = false,
+    timeoutMs: number = 10000, extraHeaders?: Record<string, string>): Promise<Object> {
     const request = http.createHttp();
     try {
       const headers: Record<string, string> = { 'Accept': 'application/json' };
-      if (token) headers['Authorization'] = 'Bearer ' + token;
+      if (authorization) headers['Authorization'] = authorization;
       if (body) headers['Content-Type'] = json ? 'application/json' : 'application/x-www-form-urlencoded';
       if (extraHeaders) {
         for (const key of Object.keys(extraHeaders)) headers[key] = extraHeaders[key];
@@ -827,6 +938,82 @@ export class T3Client {
     } finally {
       request.destroy();
     }
+  }
+
+  private async directDpopHttpJson(base: string, path: string, method: http.RequestMethod,
+    body: string = '', json: boolean = false, timeoutMs: number = 10000,
+    extraHeaders?: Record<string, string>): Promise<Object> {
+    const initial = this.saved;
+    if (!initial || initial.kind !== 'dpop' || initial.base !== base) {
+      throw new Error('没有此服务器的有效会话，请输入新配对凭据');
+    }
+    let session = await this.ensureDirectDpopToken(initial, undefined, true);
+    const send = async (current: SavedSession): Promise<Object> => {
+      const proof = await this.signDirectDpopProof(method as string, base + path, current.token);
+      const headers: Record<string, string> = {};
+      if (extraHeaders) {
+        for (const key of Object.keys(extraHeaders)) headers[key] = extraHeaders[key];
+      }
+      headers['DPoP'] = proof;
+      return this.rawHttpJson(base, path, method, body, 'DPoP ' + current.token, json, timeoutMs, headers);
+    };
+    try {
+      return await send(session);
+    } catch (error) {
+      if (!(error instanceof HttpFailure) || error.status !== 401) throw error as Error;
+      session = await this.ensureDirectDpopToken(session, session.token, true);
+      return send(session);
+    }
+  }
+
+  private async issueDirectDpopRpcTicket(base: string, token: string): Promise<string> {
+    const rpcPath = '/api/auth/websocket-ticket/rpc';
+    const rpcProof = await this.signDirectDpopProof('POST', base + rpcPath, token);
+    const rpcHeaders: Record<string, string> = { 'DPoP': rpcProof };
+    try {
+      const result = await this.rawHttpJson(base, rpcPath, http.RequestMethod.POST, '', 'DPoP ' + token,
+        false, 10000, rpcHeaders);
+      return text(record(result).ticket);
+    } catch (error) {
+      if (!(error instanceof HttpFailure) || error.status !== 404) throw error as Error;
+      const barePath = '/api/auth/websocket-ticket';
+      const bareProof = await this.signDirectDpopProof('POST', base + barePath, token);
+      const bareHeaders: Record<string, string> = { 'DPoP': bareProof };
+      const result = await this.rawHttpJson(base, barePath, http.RequestMethod.POST, '', 'DPoP ' + token,
+        false, 10000, bareHeaders);
+      return text(record(result).ticket);
+    }
+  }
+
+  private async resolveDirectDpopSocketUrl(seed: SavedSession, persistRenewal: boolean,
+    generation: number): Promise<DirectDpopSocketResult> {
+    let active = await this.ensureDirectDpopToken(seed, undefined, persistRenewal);
+    if (generation !== this.generation) return { url: '', session: active };
+    let ticket = '';
+    try {
+      ticket = await this.issueDirectDpopRpcTicket(active.base, active.token);
+    } catch (error) {
+      if (generation !== this.generation) return { url: '', session: active };
+      if (!(error instanceof HttpFailure) || error.status !== 401) throw error as Error;
+      // A token the host refuses before its expiry (e.g. clock jump) renews once.
+      active = await this.ensureDirectDpopToken(active, active.token, persistRenewal);
+      if (generation !== this.generation) return { url: '', session: active };
+      ticket = await this.issueDirectDpopRpcTicket(active.base, active.token);
+    }
+    if (!ticket || ticket.length > 8192) throw new Error('WebSocket 票据无效');
+    const upgradeProof = await this.signDirectDpopProof('GET', active.base + '/ws', ticket);
+    return { url: socketUrl(active.base, ticket, upgradeProof), session: active };
+  }
+
+  private async httpJson(base: string, path: string, method: http.RequestMethod,
+    body: string = '', token: string = '', json: boolean = false,
+    cloudAuth: boolean = false, timeoutMs: number = 10000,
+    extraHeaders?: Record<string, string>): Promise<Object> {
+    if (cloudAuth && this.cloud) return this.cloud.requestJson(path, method, body, json, extraHeaders);
+    if (token && this.saved && this.saved.kind === 'dpop' && this.saved.base === base) {
+      return this.directDpopHttpJson(base, path, method, body, json, timeoutMs, extraHeaders);
+    }
+    return this.rawHttpJson(base, path, method, body, token ? 'Bearer ' + token : '', json, timeoutMs, extraHeaders);
   }
 
   private captureDirectAddresses(config: Record<string, Object>): void {
@@ -1037,28 +1224,58 @@ export class T3Client {
       if (generation !== this.generation) return;
       let credentialsChanged = false;
       if (credential.trim()) {
-        const auth = record(await this.httpJson(base, '/oauth/token', http.RequestMethod.POST, bootstrapForm(credential)));
+        let pairingProof: string | undefined = undefined;
+        if (supportsDirectDpopRenewal(descriptor) && this.dpop) {
+          try {
+            // Create the proof before sending the one-time code so signing failure keeps the code for Bearer.
+            pairingProof = await this.dpop.prove('POST', base + '/oauth/token');
+          } catch (_) {
+            pairingProof = undefined;
+          }
+        }
         if (generation !== this.generation) return;
-        if (auth.token_type !== 'Bearer') throw new Error('该服务要求 DPoP，当前仅支持直连 Bearer 鉴权');
-        if (typeof auth.expires_in !== 'number' || auth.expires_in <= 0) throw new Error('无效凭据有效期');
-        saved = { base, environmentId, token: text(auth.access_token), expiresAt: Date.now() + auth.expires_in * 1000 };
+        const authHeaders: Record<string, string> | undefined = pairingProof ? { 'DPoP': pairingProof } : undefined;
+        const auth = record(await this.rawHttpJson(base, '/oauth/token',
+          http.RequestMethod.POST, bootstrapForm(credential), '', false, 10000, authHeaders));
+        if (generation !== this.generation) return;
+        const expectedType = pairingProof ? 'DPoP' : 'Bearer';
+        if (auth.token_type !== expectedType) {
+          throw new Error(pairingProof ? '服务端未返回预期的 DPoP 令牌' : '该服务要求 DPoP，当前环境不支持或未启用设备密钥');
+        }
+        const accessToken = text(auth.access_token);
+        if (!accessToken) throw new Error('无效访问凭据');
+        if (typeof auth.expires_in !== 'number' || !Number.isFinite(auth.expires_in) || auth.expires_in <= 0) {
+          throw new Error('无效凭据有效期');
+        }
+        saved = pairingProof
+          ? { base, environmentId, token: accessToken, expiresAt: Date.now() + auth.expires_in * 1000, kind: 'dpop' }
+          : { base, environmentId, token: accessToken, expiresAt: Date.now() + auth.expires_in * 1000 };
         credentialsChanged = true;
       }
-      if (!saved || saved.base !== base || saved.environmentId !== environmentId || saved.expiresAt <= Date.now()) {
+      if (!saved || saved.base !== base || saved.environmentId !== environmentId ||
+        (saved.kind !== 'dpop' && saved.expiresAt <= Date.now())) {
         throw new Error('没有此服务器的有效会话，请输入新配对凭据');
       }
-      const token = saved.token;
-      let ticket: Object;
-      try {
-        ticket = await this.httpJson(base, '/api/auth/websocket-ticket/rpc', http.RequestMethod.POST, '', token);
-      } catch (error) {
+      let targetUrl = '';
+      if (saved.kind === 'dpop') {
+        const resolved = await this.resolveDirectDpopSocketUrl(saved, !credentialsChanged, generation);
         if (generation !== this.generation) return;
-        if (!(error instanceof HttpFailure) || error.status !== 404) throw error as Error;
-        ticket = await this.httpJson(base, '/api/auth/websocket-ticket', http.RequestMethod.POST, '', token);
+        targetUrl = resolved.url;
+        saved = resolved.session;
+      } else {
+        const token = saved.token;
+        let ticket: Object;
+        try {
+          ticket = await this.rawHttpJson(base, '/api/auth/websocket-ticket/rpc', http.RequestMethod.POST, '', 'Bearer ' + token);
+        } catch (error) {
+          if (generation !== this.generation) return;
+          if (!(error instanceof HttpFailure) || error.status !== 404) throw error as Error;
+          ticket = await this.rawHttpJson(base, '/api/auth/websocket-ticket', http.RequestMethod.POST, '', 'Bearer ' + token);
+        }
+        if (generation !== this.generation) return;
+        targetUrl = socketUrl(base, text(record(ticket).ticket));
       }
-      if (generation !== this.generation) return;
-      await this.finishConnection(socketUrl(base, text(record(ticket).ticket)),
-        environmentId, base, saved, generation, credentialsChanged);
+      await this.finishConnection(targetUrl, environmentId, base, saved, generation, credentialsChanged);
     } catch (error) {
       if (generation === this.generation) {
         const errMsg = (error as Error).message || '';
@@ -1408,6 +1625,7 @@ export class T3Client {
     this.resumingWatchThreadId = resumeThreadId;
     this.onUpdate();
     if (this.cloud) this.scheduleCloudRenewal(generation);
+    else if (saved?.kind === 'dpop') this.scheduleDirectDpopRenewal(generation);
     if (resumeThreadId) {
       try { await this.watch(resumeThreadId); }
       finally { if (this.resumingWatchThreadId === resumeThreadId) this.resumingWatchThreadId = ''; }
@@ -1440,6 +1658,33 @@ export class T3Client {
     this.offeredSourceControlProviders = offeredProvidersFrom(this.serverSettings.offeredSourceControlProviders);
     this.captureDirectAddresses(config);
     this.requireDeviceApproval = !!config.settings && record(config.settings).requireConnectDeviceApproval === true;
+  }
+
+  private scheduleDirectDpopRenewal(generation: number): void {
+    clearTimeout(this.directDpopRenewal); this.directDpopRenewal = 0;
+    if (this.cloud || !this.ready || !this.saved || this.saved.kind !== 'dpop') return;
+    const scheduleNext = (expiresAt: number): void => {
+      if (generation !== this.generation || !this.ready || this.cloud ||
+        !this.saved || this.saved.kind !== 'dpop') return;
+      const now = Date.now();
+      const floor = now < expiresAt ? 5000 : DPOP_ACCESS_TOKEN_REFRESH_SKEW_MS;
+      const delay = Math.max(floor, expiresAt - DPOP_ACCESS_TOKEN_REFRESH_SKEW_MS - now);
+      this.directDpopRenewal = setTimeout(() => {
+        this.directDpopRenewal = 0;
+        if (generation !== this.generation || !this.ready || this.cloud ||
+          !this.saved || this.saved.kind !== 'dpop') return;
+        const current = this.saved;
+        void this.ensureDirectDpopToken(current, undefined, true).then((renewed: SavedSession) => {
+          if (generation !== this.generation || !this.ready || this.cloud) return;
+          scheduleNext(Math.max(expiresAt, renewed.expiresAt));
+        }).catch((error: Error) => {
+          if (generation !== this.generation || !this.ready || this.cloud) return;
+          if (this.isBlockedDirectDpopError(error)) return;
+          scheduleNext(expiresAt);
+        });
+      }, delay) as number;
+    };
+    scheduleNext(this.saved.expiresAt);
   }
 
   private scheduleCloudRenewal(generation: number): void {
@@ -1486,6 +1731,7 @@ export class T3Client {
     clearTimeout(this.retryTimer); this.retryTimer = 0;
     clearTimeout(this.notifyTimer); this.notifyTimer = 0;
     clearTimeout(this.cloudRenewal); this.cloudRenewal = 0;
+    clearTimeout(this.directDpopRenewal); this.directDpopRenewal = 0;
     clearTimeout(this.shellRetryTimer); this.shellRetryTimer = 0;
     clearTimeout(this.threadRetryTimer); this.threadRetryTimer = 0;
     this.generation++;
