@@ -1,4 +1,4 @@
-import { record, text, objects } from './Wire';
+import { compactArray, compactObjects, record, text, objects } from './Wire';
 import type { ModelSelection, OptionSelection } from './Wire';
 
 export type { OptionSelection, ModelSelection };
@@ -65,8 +65,7 @@ function resolveDescriptorOptionValue(row: Record<string, Object>, selection: Mo
   }
   if (typeof row.currentValue === 'string' && row.currentValue) return row.currentValue;
   if (Array.isArray(row.options)) {
-    for (const item of objects(row.options as Object)) {
-      const choice = record(item);
+    for (const choice of compactObjects(row.options as Object)) {
       if (choice.isDefault === true && typeof choice.id === 'string') return choice.id;
     }
   }
@@ -78,17 +77,10 @@ export function modelOptionsSummary(config: Object, selection: ModelSelection,
   reportedSelection?: ModelSelection): string {
   if (!selection.instanceId && !selection.model) return '';
   const root = optionalRecord(config);
-  const rawProviders = root.providers;
-  const provider = Array.isArray(rawProviders)
-    ? objects(rawProviders as Object).map(record).find((p: Record<string, Object>) => p.instanceId === selection.instanceId)
-    : undefined;
-  const rawModels = provider ? provider.models : undefined;
-  const model = Array.isArray(rawModels)
-    ? objects(rawModels as Object).map(record).find((m: Record<string, Object>) => m.slug === selection.model)
-    : undefined;
+  const provider = compactObjects(root.providers).find((p: Record<string, Object>) => p.instanceId === selection.instanceId);
+  const model = provider ? compactObjects(provider.models).find((m: Record<string, Object>) => m.slug === selection.model) : undefined;
   const caps = model ? optionalRecord(model.capabilities) : {};
-  const rawDescriptors = caps.optionDescriptors;
-  const descriptors = Array.isArray(rawDescriptors) ? objects(rawDescriptors as Object).map(record) : [];
+  const descriptors = compactObjects(caps.optionDescriptors);
 
   if (descriptors.length > 0) {
     let fastModeFallbackLabel = '';
@@ -112,7 +104,7 @@ export function modelOptionsSummary(config: Object, selection: ModelSelection,
         continue;
       }
       if (id === 'serviceTier' && type === 'select' && Array.isArray(row.options)) {
-        const choices = objects(row.options as Object).map(record);
+        const choices = compactObjects(row.options as Object);
         const fastTier = choices.find((c: Record<string, Object>) => c.label === 'Fast');
         const ultrafastTier = choices.find((c: Record<string, Object>) => c.label === 'Ultrafast');
         if (((fastTier || ultrafastTier) && currentValue === 'default') ||
@@ -132,7 +124,7 @@ export function modelOptionsSummary(config: Object, selection: ModelSelection,
           label = rowLabel + ' ' + (currentValue ? 'On' : 'Off');
         }
       } else if (type === 'select' && typeof currentValue === 'string' && Array.isArray(row.options)) {
-        const choices = objects(row.options as Object).map(record);
+        const choices = compactObjects(row.options as Object);
         const matched = choices.find((c: Record<string, Object>) => c.id === currentValue);
         if (matched) {
           label = typeof matched.label === 'string' && matched.label.trim()
@@ -179,40 +171,40 @@ export function modelOptionsSummary(config: Object, selection: ModelSelection,
 }
 
 export function optionControls(config: Object, selection: ModelSelection): ModelOptionControl[] {
-  const provider = objects(record(config).providers || []).map(record).find((p) => p.instanceId === selection.instanceId);
-  const model = provider ? objects(provider.models || []).map(record).find((m) => m.slug === selection.model) : undefined;
+  const provider = compactObjects(record(config).providers).find((p: Record<string, Object>) => p.instanceId === selection.instanceId);
+  const model = provider ? compactObjects(provider.models).find((m: Record<string, Object>) => m.slug === selection.model) : undefined;
   const caps = model ? optionalRecord(model.capabilities) : {};
-  return objects(caps.optionDescriptors || []).map((value: Object): ModelOptionControl => {
+  return compactArray(caps.optionDescriptors, (value: Object): ModelOptionControl => {
     const row = record(value);
     if (row.type !== 'select' && row.type !== 'boolean') throw new Error('未知模型选项类型');
     return { id: text(row.id), label: text(row.label), type: text(row.type), choices:
-      row.type === 'boolean' ? [] : objects(row.options).map((item: Object): ModelOptionValue => {
+      row.type === 'boolean' ? [] : compactArray(objects(row.options), (item: Object): ModelOptionValue => {
         const choice = record(item); return { id: text(choice.id), label: text(choice.label) };
       }) };
   });
 }
 export function supportedModes(config: Object, selection: ModelSelection): string[] {
   const row = record(config);
-  const provider = objects(row.providers || []).map(record).find((p) => p.instanceId === selection.instanceId);
+  const provider = compactObjects(row.providers).find((p: Record<string, Object>) => p.instanceId === selection.instanceId);
   const policy = optionalRecord(optionalRecord(row.managedPolicy).limits);
   const ceiling = policy.maxRuntimeMode === undefined ? runtimeModes.length - 1 : runtimeModes.indexOf(text(policy.maxRuntimeMode));
   return runtimeModes.filter((mode: string, index: number) => index <= ceiling &&
-    (!provider?.supportedRuntimeModes || (provider.supportedRuntimeModes as string[]).includes(mode)));
+    (!Array.isArray(provider?.supportedRuntimeModes) || (provider.supportedRuntimeModes as Object[]).includes(mode)));
 }
 export function interactionModes(config: Object, selection: ModelSelection): string[] {
-  const provider = objects(record(config).providers || []).map(record).find((p) => p.instanceId === selection.instanceId);
+  const provider = compactObjects(record(config).providers).find((p: Record<string, Object>) => p.instanceId === selection.instanceId);
   return provider?.showInteractionModeToggle === false ? ['default'] : ['default', 'plan'];
 }
 export function validateTaskSettings(config: Object, projectId: string, settings: TaskSettings): TaskSettings {
   const row = record(config);
   const selection = settings.modelSelection;
-  const provider = objects(row.providers || []).map(record).find((p) => p.instanceId === selection.instanceId);
+  const provider = compactObjects(row.providers).find((p: Record<string, Object>) => p.instanceId === selection.instanceId);
   const overrides = optionalRecord(optionalRecord(optionalRecord(row.settings).projectSettingsOverrides)[projectId]);
   const projectProvider = optionalRecord(optionalRecord(overrides.providerInstances)[selection.instanceId]);
   const allowed = optionalRecord(optionalRecord(optionalRecord(row.managedPolicy).limits).providers).allowedDrivers;
   if (!provider || provider.installed === false || (projectProvider.enabled === undefined ? provider.enabled === false : projectProvider.enabled === false) ||
     (Array.isArray(allowed) && !allowed.includes(provider.driver)) ||
-    !objects(provider.models || []).some((value: Object) => record(value).slug === selection.model)) {
+    !compactObjects(provider.models).some((value: Record<string, Object>) => value.slug === selection.model)) {
     throw new Error('模型在当前项目不可用，请重新选择');
   }
   if (!supportedModes(config, selection).includes(settings.runtimeMode)) throw new Error('当前 Provider 或组织策略不允许此权限模式');
@@ -240,15 +232,19 @@ export function launchTask(commandId: string, threadId: string, messageId: strin
       ...(context === undefined ? {} : { context }) } };
 }
 export function queuedRuns(runs: Record<string, Object>[], messages: Record<string, Object>[]): QueuedRun[] {
-  return runs.filter((run: Record<string, Object>) => run.status === 'queued').map((run: Record<string, Object>): QueuedRun => {
-    const messageId = text(run.userMessageId);
-    const message = messages.find((row: Record<string, Object>) => row.id === messageId);
-    const attachments = message && message.attachments !== undefined ? objects(message.attachments).map((value: Object) =>
-      text(record(value).name)) : [];
-    return { id: text(run.id), messageId, text: message ? text(message.text) : '',
-      position: typeof run.queuePosition === 'number' ? run.queuePosition : Number.MAX_SAFE_INTEGER,
-      held: run.queueHeld === true, attachmentNames: attachments };
-  }).sort((a: QueuedRun, b: QueuedRun) => a.position - b.position);
+  return compactArray(
+    runs.filter((run: Record<string, Object>) => run.status === 'queued'),
+    (entry: Object): QueuedRun => {
+      const run = record(entry);
+      const messageId = text(run.userMessageId);
+      const message = messages.find((row: Record<string, Object>) => row.id === messageId);
+      const attachments = message && message.attachments !== undefined ? compactArray(message.attachments, (value: Object) =>
+        text(record(value).name)) : [];
+      return { id: text(run.id), messageId, text: message && typeof message.text === 'string' ? message.text : '',
+        position: typeof run.queuePosition === 'number' ? run.queuePosition : Number.MAX_SAFE_INTEGER,
+        held: run.queueHeld === true, attachmentNames: attachments };
+    }
+  ).sort((a: QueuedRun, b: QueuedRun) => a.position - b.position);
 }
 export function queueCommand(commandId: string, threadId: string, action: string, runId: string,
   beforeRunId: string | null = null, prompt: string = ''): Object {

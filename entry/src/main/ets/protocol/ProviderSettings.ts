@@ -1,4 +1,4 @@
-import { record, objects } from './Wire';
+import { compactArray, record, objects } from './Wire';
 
 export interface ProviderModelView { id: string; name: string; }
 export interface ProviderView {
@@ -35,8 +35,11 @@ export function providerCatalog(config: Object, expectedEnvironment: string): Pr
       status: safeText(row.status, 'unknown'), authStatus: safeText(auth.status, 'unknown'),
       enabled: row.enabled === true, installed: row.installed === true,
       allowed: !Array.isArray(allowed) || allowed.includes(row.driver), canAuthenticate: setup.canAuthenticate === true,
-      models: objects(row.models || []).map((value: Object): ProviderModelView => {
-        const model = record(value); return { id: safeText(model.slug), name: safeText(model.name, safeText(model.slug)) };
+      models: compactArray(row.models, (value: Object): ProviderModelView => {
+        const model = record(value);
+        const slug = safeText(model.slug);
+        if (!slug) throw new Error('模型标识无效');
+        return { id: slug, name: safeText(model.name, slug) };
       }) };
   });
 }

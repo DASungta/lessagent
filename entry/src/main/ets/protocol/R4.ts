@@ -1,4 +1,4 @@
-import { parseOptionSelections, record, text, objects } from './Wire';
+import { compactArray, parseOptionSelections, record, text, objects } from './Wire';
 import { ModelSelection, TaskSettings } from './Composer';
 
 export const R4_MAX_INPUT_CHARS = 120000;
@@ -236,7 +236,7 @@ export function draftWorkspaceForBranch(workspace: DraftWorkspace, ref: BranchVi
 
 export function branches(value: Object): BranchView[] {
   const row = record(value);
-  return objects(row.refs).map((item: Object): BranchView => {
+  return compactArray(objects(row.refs), (item: Object): BranchView => {
     const ref = record(item);
     return { name: text(ref.name), isRemote: ref.isRemote === true,
       remoteName: typeof ref.remoteName === 'string' ? ref.remoteName : '',
@@ -259,10 +259,14 @@ export function requireCurrentBranch(refs: BranchView[]): string {
 
 export interface PlanView { id: string; markdown: string; streaming: boolean; status: string; }
 export function proposedPlans(items: Record<string, Object>[]): PlanView[] {
-  return items.filter((item: Record<string, Object>) => item.type === 'proposed_plan').map((item: Record<string, Object>): PlanView => {
-    return { id: text(item.id), markdown: text(item.markdown), streaming: item.streaming === true,
-      status: text(item.status) };
-  });
+  return compactArray(
+    items.filter((item: Record<string, Object>) => item.type === 'proposed_plan'),
+    (entry: Object): PlanView => {
+      const item = record(entry);
+      return { id: text(item.id), markdown: text(item.markdown), streaming: item.streaming === true,
+        status: text(item.status) };
+    }
+  );
 }
 
 export interface TokenUsage { usedTokens: number; maxTokens: number; inputTokens: number; outputTokens: number;
@@ -295,18 +299,21 @@ export interface SubagentView {
   isWorkflow: boolean;
 }
 export function subagents(rows: Record<string, Object>[]): SubagentView[] {
-  return rows.map((row: Record<string, Object>): SubagentView => {
-    const remote = row.remoteChild !== undefined && row.remoteChild !== null ? record(row.remoteChild) : undefined;
+  return compactArray(rows, (entry: Object): SubagentView => {
+    const row = record(entry);
+    const remote = row.remoteChild !== undefined && row.remoteChild !== null && typeof row.remoteChild === 'object' && !Array.isArray(row.remoteChild)
+      ? row.remoteChild as Record<string, Object> : undefined;
+    const status = text(row.status);
     return {
       id: text(row.id),
       title: typeof row.title === 'string' && row.title.trim() ? row.title :
         (typeof row.prompt === 'string' ? row.prompt.slice(0, 80) : 'Subagent'),
-      status: text(row.status),
+      status,
       childThreadId: typeof row.childThreadId === 'string' ? row.childThreadId : '',
       remoteThreadId: remote && typeof remote.threadId === 'string' ? remote.threadId : '',
       remoteEnvironmentId: remote && typeof remote.environmentId === 'string' ? remote.environmentId : '',
       detail: typeof row.progress === 'string' ? row.progress : typeof row.result === 'string' ? row.result : '',
-      canStop: ['pending', 'running', 'waiting', 'idle'].includes(text(row.status)),
+      canStop: ['pending', 'running', 'waiting', 'idle'].includes(status),
       pendingKind: '',
       runId: typeof row.runId === 'string' ? row.runId : '',
       startedAt: typeof row.startedAt === 'string' ? row.startedAt : '',
@@ -320,7 +327,7 @@ export function subagents(rows: Record<string, Object>[]): SubagentView[] {
 export interface BackgroundTaskView { id: string; label: string; kind: string; childThreadId: string; }
 export function backgroundTasks(details: Record<string, Object>): BackgroundTaskView[] {
   if (details.pendingBackgroundTasks === undefined || details.pendingBackgroundTasks === null) return [];
-  return objects(details.pendingBackgroundTasks).map((value: Object): BackgroundTaskView => {
+  return compactArray(objects(details.pendingBackgroundTasks), (value: Object): BackgroundTaskView => {
     const row = record(value);
     return { id: text(row.taskId), label: typeof row.description === 'string' && row.description.trim() ?
       row.description : text(row.kind),
@@ -336,10 +343,10 @@ export function guestShare(value: Object | undefined): GuestShareView | undefine
   const row = record(value);
   return { id: text(row.id), host: text(row.host), createdAt: text(row.createdAt),
     expiresAt: text(row.expiresAt), guestName: typeof row.guestName === 'string' ? row.guestName : '',
-    messages: objects(row.messages).map((item: Object): GuestMessageView => {
+    messages: compactArray(objects(row.messages), (item: Object): GuestMessageView => {
       const message = record(item);
       return { id: text(message.id), text: text(message.text), status: text(message.status),
-        attachments: message.attachments === undefined ? [] : objects(message.attachments).map(attachmentRecord) };
+        attachments: message.attachments === undefined ? [] : compactArray(message.attachments, attachmentRecord) };
     }) };
 }
 
@@ -384,8 +391,8 @@ export function latestExecutedRun(runs: Record<string, Object>[]): Record<string
   const end = (run: Record<string, Object>): number => typeof run.completedAt === 'string' ?
     Date.parse(run.completedAt) : Number.POSITIVE_INFINITY;
   for (const run of runs) {
-    const status = text(run.status);
-    if (status === 'queued' || (status === 'cancelled' && run.startedAt === null)) continue;
+    const status = typeof run.status === 'string' ? run.status : '';
+    if (!status || status === 'queued' || (status === 'cancelled' && run.startedAt === null)) continue;
     if (!latest) { latest = run; continue; }
     const left = end(run); const right = end(latest);
     const ordinal = typeof run.ordinal === 'number' ? run.ordinal : 0;

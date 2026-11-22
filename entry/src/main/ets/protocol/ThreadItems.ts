@@ -1,4 +1,4 @@
-import { ChatMessage, record, text, objects } from './Wire';
+import { ChatMessage, compactArray, compactObjects, record, text } from './Wire';
 
 export interface ActivityLine { label: string; text: string; kind: string; itemId: string; status?: string; }
 
@@ -30,78 +30,102 @@ export function isActivityInProgress(line: ActivityLine): boolean {
 }
 
 export function activityLines(items: Record<string, Object>[]): ActivityLine[] {
-  return items.filter((item: Record<string, Object>) =>
-    !['assistant_message', 'user_message', 'link_request', 'secret_request',
-      'user_input_request', 'approval_request'].includes(text(item.type))).map((item: Record<string, Object>): ActivityLine => {
-    const type = text(item.type);
-    const id = text(item.id);
+  const result: ActivityLine[] = [];
+  for (const item of items) {
+    const type = optional(item.type);
+    const id = optional(item.id);
+    if (!type || !id) continue;
+    if (['assistant_message', 'user_message', 'link_request', 'secret_request',
+      'user_input_request', 'approval_request'].includes(type)) continue;
     const status = optional(item.status);
     if (type === 'command_execution') {
       const exit = typeof item.exitCode === 'number' ? ' · exit ' + item.exitCode : '';
-      return { itemId: id, kind: type, status, label: '命令 · ' + status + exit,
+      result.push({ itemId: id, kind: type, status, label: '命令 · ' + status + exit,
         text: optional(item.input) + (optional(item.output) ? '\n' + optional(item.output) :
-          item.outputOmitted === true ? '\n输出未随快照提供，展开后读取完整输出' : '') };
+          item.outputOmitted === true ? '\n输出未随快照提供，展开后读取完整输出' : '') });
+      continue;
     }
     if (type === 'file_change') {
-      return { itemId: id, kind: type, status, label: optional(item.fileName) + ' · +' +
+      result.push({ itemId: id, kind: type, status, label: optional(item.fileName) + ' · +' +
         String(typeof item.additions === 'number' ? item.additions : 0) + ' −' +
         String(typeof item.deletions === 'number' ? item.deletions : 0),
-        text: optional(item.diffStr) || (optional(item.oldStr) + '\n→\n' + optional(item.newStr)) };
+        text: optional(item.diffStr) || (optional(item.oldStr) + '\n→\n' + optional(item.newStr)) });
+      continue;
     }
     if (type === 'file_search') {
-      return { itemId: id, kind: type, status, label: '文件搜索 · ' + status,
-        text: optional(item.pattern) + '\n' + objects(item.results || []).map((value: Object) =>
-          text(record(value).fileName)).join('\n') };
+      const fileNames = compactObjects(item.results).map((row: Record<string, Object>) => optional(row.fileName))
+        .filter((name: string) => name.length > 0);
+      result.push({ itemId: id, kind: type, status, label: '文件搜索 · ' + status,
+        text: optional(item.pattern) + '\n' + fileNames.join('\n') });
+      continue;
     }
     if (type === 'web_search') {
-      return { itemId: id, kind: type, status, label: '网络搜索 · ' + status,
-        text: objects(item.patterns || []).map((value: Object) => text(value)).join(', ') + '\n' +
-          objects(item.results || []).map((value: Object) => {
-            const row = record(value);
-            return (optional(row.title) || optional(row.url)) + '\n' + optional(row.url) + '\n' + optional(row.snippet);
-          }).join('\n') };
+      const patterns = compactArray(item.patterns, (value: Object) => text(value));
+      const results = compactObjects(item.results).map((row: Record<string, Object>) =>
+        (optional(row.title) || optional(row.url)) + '\n' + optional(row.url) + '\n' + optional(row.snippet));
+      result.push({ itemId: id, kind: type, status, label: '网络搜索 · ' + status,
+        text: patterns.join(', ') + '\n' + results.join('\n') });
+      continue;
     }
     if (type === 'todo_list') {
-      return { itemId: id, kind: type, status, label: '计划步骤 · ' + status,
-        text: objects(item.steps || []).map((value: Object) => {
-          const step = record(value);
-          return '[' + optional(step.status) + '] ' + optional(step.text);
-        }).join('\n') };
+      const steps = compactObjects(item.steps).map((step: Record<string, Object>) =>
+        '[' + optional(step.status) + '] ' + optional(step.text));
+      result.push({ itemId: id, kind: type, status, label: '计划步骤 · ' + status,
+        text: steps.join('\n') });
+      continue;
     }
-    if (type === 'system_notice') return { itemId: id, kind: type, status, label: '系统提示', text: optional(item.message) };
+    if (type === 'system_notice') {
+      result.push({ itemId: id, kind: type, status, label: '系统提示', text: optional(item.message) });
+      continue;
+    }
     if (type === 'error') {
-      const failure = item.failure !== undefined ? record(item.failure) : {};
-      return { itemId: id, kind: type, status, label: '错误 · ' + optional(failure.class),
-        text: optional(failure.message) + (typeof failure.code === 'string' ? '\n' + failure.code : '') };
+      const failure: Record<string, Object> =
+        item.failure !== undefined && item.failure !== null && typeof item.failure === 'object' && !Array.isArray(item.failure)
+          ? item.failure as Record<string, Object> : {};
+      result.push({ itemId: id, kind: type, status, label: '错误 · ' + optional(failure.class),
+        text: optional(failure.message) + (typeof failure.code === 'string' ? '\n' + failure.code : '') });
+      continue;
     }
     if (type === 'run_interrupt_request' || type === 'run_interrupt_result') {
-      return { itemId: id, kind: type, status, label: '停止运行', text: optional(item.message) };
+      result.push({ itemId: id, kind: type, status, label: '停止运行', text: optional(item.message) });
+      continue;
     }
     if (type === 'reasoning') {
-      return { itemId: id, kind: type, status, label: '思考过程' + (status ? ' · ' + status : ''),
+      result.push({ itemId: id, kind: type, status, label: '思考过程' + (status ? ' · ' + status : ''),
         text: typeof item.text === 'string' ? item.text :
-          typeof item.summary === 'string' ? item.summary : '' };
+          typeof item.summary === 'string' ? item.summary : '' });
+      continue;
     }
     if (type === 'compaction') {
-      return { itemId: id, kind: type, status, label: '压缩上下文',
-        text: optional(item.summary) + (typeof item.afterTokenCount === 'number' ? '\n' + String(item.afterTokenCount) + ' tokens' : '') };
+      result.push({ itemId: id, kind: type, status, label: '压缩上下文',
+        text: optional(item.summary) + (typeof item.afterTokenCount === 'number' ? '\n' + String(item.afterTokenCount) + ' tokens' : '') });
+      continue;
     }
-    if (type === 'handoff') return { itemId: id, kind: type, status, label: '上下文交接', text: optional(item.summary) };
+    if (type === 'handoff') {
+      result.push({ itemId: id, kind: type, status, label: '上下文交接', text: optional(item.summary) });
+      continue;
+    }
     if (type === 'checkpoint') {
-      return { itemId: id, kind: type, status, label: '检查点',
-        text: objects(item.files || []).map((value: Object) => optional(record(value).path)).join('\n') };
+      const paths = compactObjects(item.files).map((row: Record<string, Object>) => optional(row.path));
+      result.push({ itemId: id, kind: type, status, label: '检查点', text: paths.join('\n') });
+      continue;
     }
-    if (type === 'notification') return { itemId: id, kind: type, status, label: '通知', text: optional(item.summary) || optional(item.text) };
+    if (type === 'notification') {
+      result.push({ itemId: id, kind: type, status, label: '通知', text: optional(item.summary) || optional(item.text) });
+      continue;
+    }
     if (type === 'dynamic_tool') {
       const toolTitle = optional(item.title).trim() || optional(item.toolName).trim();
-      return { itemId: id, kind: type, status,
+      result.push({ itemId: id, kind: type, status,
         label: type + (toolTitle ? ' · ' + toolTitle : '') + (status ? ' · ' + status : ''),
-        text: optional(item.input) + (optional(item.output) ? '\n' + optional(item.output) : '') };
+        text: optional(item.input) + (optional(item.output) ? '\n' + optional(item.output) : '') });
+      continue;
     }
     const title = optional(item.title);
-    return { itemId: id, kind: type, status, label: type + (title ? ' · ' + title : '') + (status ? ' · ' + status : ''),
-      text: optional(item.input) + (optional(item.output) ? '\n' + optional(item.output) : '') };
-  });
+    result.push({ itemId: id, kind: type, status, label: type + (title ? ' · ' + title : '') + (status ? ' · ' + status : ''),
+      text: optional(item.input) + (optional(item.output) ? '\n' + optional(item.output) : '') });
+  }
+  return result;
 }
 
 export function appendOutput(previous: string, kind: string, textValue: string, truncated: boolean): string {
@@ -301,8 +325,8 @@ function failureCode(item: Record<string, Object>): string {
 }
 
 export function isHiddenWorkItem(item: Record<string, Object>): boolean {
-  const type = text(item.type);
-  if ([
+  const type = optional(item.type);
+  if (!type || [
     'assistant_message', 'user_message', 'link_request', 'secret_request',
     'user_input_request', 'approval_request', 'todo_list', 'run_interrupt_request', 'checkpoint'
   ].includes(type)) {
@@ -323,7 +347,7 @@ export function isHiddenWorkItem(item: Record<string, Object>): boolean {
 
 export function isProminentWorkItem(item: Record<string, Object>): boolean {
   if (isHiddenWorkItem(item)) return false;
-  const type = text(item.type);
+  const type = optional(item.type);
   return type === 'error' || type === 'run_interrupt_result';
 }
 
@@ -373,9 +397,9 @@ export function deriveCheckpointBadges(checkpoints: Record<string, Object>[],
   const byItemId: Record<string, CheckpointBadge> = {};
 
   for (const cp of checkpoints) {
-    if (text(cp.status) !== 'ready') continue;
+    if (optional(cp.status) !== 'ready') continue;
     const runId = optional(cp.runId);
-    const fileRows = cp.files !== undefined ? objects(cp.files).map(record) : [];
+    const fileRows = compactObjects(cp.files);
     let count = fileRows.length;
     let additions = 0;
     let deletions = 0;
@@ -395,7 +419,7 @@ export function deriveCheckpointBadges(checkpoints: Record<string, Object>[],
       } catch (_) {}
     }
     if (count <= 0) continue;
-    const cpId = text(cp.id) || ('cp:' + runId + ':' + count);
+    const cpId = optional(cp.id) || ('cp:' + runId + ':' + count);
     const badge = makeCheckpointBadge(cpId, runId, count, additions, deletions, filePaths);
     if (runId) {
       byRun[runId] = badge;
@@ -405,10 +429,10 @@ export function deriveCheckpointBadges(checkpoints: Record<string, Object>[],
   }
 
   for (const item of items) {
-    if (text(item.type) !== 'checkpoint') continue;
+    if (optional(item.type) !== 'checkpoint') continue;
     const runId = optional(item.runId);
     if (runId && byRun[runId]) continue;
-    const fileRows = item.files !== undefined ? objects(item.files).map(record) : [];
+    const fileRows = compactObjects(item.files);
     const filePaths: string[] = [];
     let additions = 0;
     let deletions = 0;
@@ -419,7 +443,7 @@ export function deriveCheckpointBadges(checkpoints: Record<string, Object>[],
       if (typeof file.deletions === 'number') deletions += Number(file.deletions);
     }
     if (filePaths.length === 0) continue;
-    const itemId = text(item.id) || ('cp-item:' + runId + ':' + filePaths.length);
+    const itemId = optional(item.id) || ('cp-item:' + runId + ':' + filePaths.length);
     const badge = makeCheckpointBadge(itemId, runId, filePaths.length, additions, deletions, filePaths);
     if (runId) {
       byRun[runId] = badge;
@@ -460,7 +484,7 @@ export function buildRunMeta(
   options?: RunMetaOptions
 ): RunMeta | undefined {
   if (!run) return undefined;
-  const runId = text(run.id);
+  const runId = optional(run.id);
   const status = optional(run.status);
   const startIso = optional(run.startedAt) || optional(run.requestedAt);
   const endIso = optional(run.completedAt);
@@ -565,7 +589,7 @@ function normalizeGroupWorkItems(
   return workItems.map((item: Record<string, Object>, index: number): Record<string, Object> => {
     const status = optional(item.status);
     if (!isActiveItemStatus(status)) return item;
-    const type = text(item.type);
+    const type = optional(item.type);
     if (type === 'reasoning') {
       const isTrailingActiveReasoning = isTail && !runSettled &&
         index === workItems.length - 1 && prominentItems.length === 0;
@@ -596,7 +620,7 @@ function buildWorkGroup(
   const runActivelyWorking = runRecord !== undefined && !runEnded &&
     (runStatus === 'preparing' || runStatus === 'starting' || runStatus === 'running');
   const runInterrupted = runRecord !== undefined && (runStatus === 'interrupted' || runStatus === 'cancelled');
-  const hasInterruptItem = prominentItems.some((item: Record<string, Object>) => text(item.type) === 'run_interrupt_result') ||
+  const hasInterruptItem = prominentItems.some((item: Record<string, Object>) => optional(item.type) === 'run_interrupt_result') ||
     normalizedWork.some((item: Record<string, Object>) => {
       const st = optional(item.status);
       return st === 'interrupted' || st === 'cancelled';
@@ -615,10 +639,10 @@ function buildWorkGroup(
   const defaultExpanded = groupRunning || groupInterrupted || (isTail && runActivelyWorking);
   const revParts: string[] = [];
   for (const item of normalizedWork) {
-    revParts.push(text(item.id) + ':' + optional(item.status) + ':' + String(item.exitCode ?? ''));
+    revParts.push(optional(item.id) + ':' + optional(item.status) + ':' + String(item.exitCode ?? ''));
   }
   for (const item of prominentItems) {
-    revParts.push(text(item.id) + ':' + optional(item.status));
+    revParts.push(optional(item.id) + ':' + optional(item.status));
   }
   if (checkpoint) revParts.push('cp:' + checkpoint.checkpointId + ':' + checkpoint.fileCount + ':' + checkpoint.diffLabel);
   if (runMeta) revParts.push('run:' + runMeta.status + ':' + (runMeta.running ? '1' : '0') + ':' + runMeta.headerLabel);
@@ -654,7 +678,7 @@ export function groupWorkByMessage(items: Record<string, Object>[],
   messages: ChatMessage[]): MessageWorkMap {
   const runById: Record<string, Record<string, Object>> = {};
   for (const run of runs) {
-    const id = text(run.id);
+    const id = optional(run.id);
     if (id) runById[id] = run;
   }
 
@@ -679,8 +703,8 @@ export function groupWorkByMessage(items: Record<string, Object>[],
 
   const flushPending = (target: 'afterUser' | 'afterAssistant' | 'tail'): void => {
     const runRecord = pendingRunId ? runById[pendingRunId] : undefined;
-    const firstItemId = pendingWork.length ? text(pendingWork[0].id) :
-      pendingProminent.length ? text(pendingProminent[0].id) : '';
+    const firstItemId = pendingWork.length ? optional(pendingWork[0].id) :
+      pendingProminent.length ? optional(pendingProminent[0].id) : '';
     let gId = '';
     let slot: 'afterUser' | 'afterAssistant' | 'tail' = 'tail';
     let slotKey = '';
@@ -722,7 +746,8 @@ export function groupWorkByMessage(items: Record<string, Object>[],
   };
 
   for (const item of items) {
-    const type = text(item.type);
+    const type = optional(item.type);
+    if (!type) continue;
     const itemRunId = optional(item.runId);
     if (type === 'user_message') {
       if (pendingWork.length > 0 || pendingProminent.length > 0 || pendingCheckpoint !== undefined) {
@@ -739,13 +764,13 @@ export function groupWorkByMessage(items: Record<string, Object>[],
       } else {
         pendingRunId = '';
       }
-      lastUserMessageId = optional(item.messageId) || text(item.id);
+      lastUserMessageId = optional(item.messageId) || optional(item.id);
       lastAssistantMessageId = '';
       seenAssistantSinceLastUser = false;
       continue;
     }
     if (type === 'assistant_message') {
-      const msgId = optional(item.messageId) || text(item.id);
+      const msgId = optional(item.messageId) || optional(item.id);
       const effectiveRunId = itemRunId || pendingRunId;
       const runRecord = effectiveRunId ? runById[effectiveRunId] : undefined;
       let cp: CheckpointBadge | undefined = msgId ? derived.byAssistantMessage[msgId] : undefined;
@@ -785,7 +810,7 @@ export function groupWorkByMessage(items: Record<string, Object>[],
     }
     if (type === 'checkpoint') {
       if (!itemRunId) {
-        const cpFromItem = derived.byItemId[text(item.id)];
+        const cpFromItem = derived.byItemId[optional(item.id)];
         if (cpFromItem) pendingCheckpoint = cpFromItem;
       }
       continue;

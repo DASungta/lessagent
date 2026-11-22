@@ -1,8 +1,8 @@
-import { objects, record, text } from './Wire';
+import { compactArray, compactObjects, objects, record, text } from './Wire';
 
 function textList(value: Object | undefined): string[] {
   if (value === undefined || !Array.isArray(value)) return [];
-  return (value as Object[]).map((item: Object) => typeof item === 'string' ? item : '');
+  return (value as Object[]).filter((item: Object) => typeof item === 'string') as string[];
 }
 
 export interface DiffRow {
@@ -149,7 +149,7 @@ export function reviewPreviewInput(cwd: string, baseRef: string = '', sourceKind
 function reviewFileStat(value: Object): ReviewFileStat {
   const row = record(value);
   return {
-    path: text(row.path), previousPath: row.previousPath === null ? '' : text(row.previousPath),
+    path: text(row.path), previousPath: row.previousPath === null || row.previousPath === undefined ? '' : text(row.previousPath),
     changeType: typeof row.changeType === 'string' ? row.changeType : 'change',
     additions: Number(row.additions), deletions: Number(row.deletions)
   };
@@ -157,15 +157,15 @@ function reviewFileStat(value: Object): ReviewFileStat {
 
 export function reviewPreview(value: Object): ReviewPreview {
   const row = record(value);
-  const sources = objects(row.sources).map((source: Object): ReviewSource => {
+  const sources = compactArray(objects(row.sources), (source: Object): ReviewSource => {
     const item = record(source);
     return {
       id: text(item.id), kind: text(item.kind), title: text(item.title),
       commitSubject: typeof item.commitSubject === 'string' ? item.commitSubject : '',
-      baseRef: item.baseRef === null ? '' : text(item.baseRef),
-      headRef: item.headRef === null ? '' : text(item.headRef),
+      baseRef: item.baseRef === null || item.baseRef === undefined ? '' : text(item.baseRef),
+      headRef: item.headRef === null || item.headRef === undefined ? '' : text(item.headRef),
       diff: text(item.diff), diffHash: text(item.diffHash), truncated: item.truncated === true,
-      files: item.files === undefined ? [] : objects(item.files).map(reviewFileStat)
+      files: item.files === undefined ? [] : compactArray(item.files, reviewFileStat)
     };
   });
   return { sources, incomplete: row.incomplete === true };
@@ -284,7 +284,7 @@ function mergeVcs(current: VcsView, value: Record<string, Object>): VcsView {
     isDefaultRef: value.isDefaultRef === undefined ? current.isDefaultRef : value.isDefaultRef === true,
     hasWorkingTreeChanges: value.hasWorkingTreeChanges === undefined ? current.hasWorkingTreeChanges :
       value.hasWorkingTreeChanges === true,
-    files: workingTree === undefined ? current.files : objects(workingTree.files).map((file: Object): VcsChange => {
+    files: workingTree === undefined ? current.files : compactArray(workingTree.files, (file: Object): VcsChange => {
       const row = record(file);
       return { path: text(row.path), insertions: Number(row.insertions) || 0, deletions: Number(row.deletions) || 0 };
     }),
@@ -294,7 +294,7 @@ function mergeVcs(current: VcsView, value: Record<string, Object>): VcsView {
     ahead: typeof value.aheadCount === 'number' ? value.aheadCount : current.ahead,
     behind: typeof value.behindCount === 'number' ? value.behindCount : current.behind,
     rootPath: workingTree !== undefined && typeof workingTree.rootPath === 'string' ? workingTree.rootPath : current.rootPath,
-    providerKind: provider === undefined ? current.providerKind : text(provider.kind),
+    providerKind: provider === undefined ? current.providerKind : (typeof provider.kind === 'string' ? provider.kind : current.providerKind),
     prNumber: pr === undefined ? current.prNumber : (typeof pr.number === 'number' ? pr.number : 0),
     prState: pr === undefined ? current.prState : (typeof pr.state === 'string' ? pr.state : ''),
     prTitle: pr === undefined ? current.prTitle : (typeof pr.title === 'string' ? pr.title : ''),
@@ -383,10 +383,10 @@ export function vcsWatchInput(cwd: string): Object {
 }
 
 export function refs(value: Object): RefView[] {
-  return objects(record(value).refs).map((ref: Object): RefView => {
+  return compactArray(objects(record(value).refs), (ref: Object): RefView => {
     const row = record(ref);
     return { name: text(row.name), isRemote: row.isRemote === true, current: row.current === true,
-      isDefault: row.isDefault === true, worktreePath: row.worktreePath === null ? '' : text(row.worktreePath) };
+      isDefault: row.isDefault === true, worktreePath: row.worktreePath === null || row.worktreePath === undefined ? '' : text(row.worktreePath) };
   });
 }
 
@@ -672,7 +672,7 @@ function stringOr(value: Object | undefined | null, fallback: string = ''): stri
 export function pullRequestRows(value: Object): { rows: PullRequestRow[]; errors: string[]; truncated: boolean;
   providers: Array<{ kind: string; host: string; configured: boolean; configuredDetail: string }> } {
   const result = record(value);
-  const rows = objects(result.entries).map((entry: Object): PullRequestRow => {
+  const rows = compactArray(objects(result.entries), (entry: Object): PullRequestRow => {
     const row = record(entry);
     const stack = row.stack === undefined || row.stack === null ? undefined : record(row.stack);
     return {
@@ -687,16 +687,16 @@ export function pullRequestRows(value: Object): { rows: PullRequestRow[]; errors
       updatedAt: typeof row.updatedAt === 'string' ? row.updatedAt : '',
       reviewDecision: typeof row.reviewDecision === 'string' ? row.reviewDecision : '',
       checksState: typeof row.checksState === 'string' ? row.checksState : '',
-      labels: objects(row.labels).map((label: Object) => text(record(label).name)),
+      labels: compactArray(row.labels, (label: Object) => text(record(label).name)),
       stackPosition: stack === undefined ? 0 : Number(stack.position),
       stackSize: stack === undefined ? 0 : Number(stack.size)
     };
   });
-  const errors = objects(result.errors).map((error: Object) => text(record(error).message));
-  const providers = objects(result.providers).map((provider: Object) => {
+  const errors = compactArray(result.errors, (error: Object) => text(record(error).message));
+  const providers = compactArray(result.providers, (provider: Object) => {
     const row = record(provider);
     return { kind: text(row.kind), host: text(row.host), configured: row.configured === true,
-      configuredDetail: row.detail === null ? '' : text(row.detail) };
+      configuredDetail: row.detail === null || row.detail === undefined ? '' : text(row.detail) };
   });
   return { rows, errors, truncated: result.truncated === true, providers };
 }
@@ -768,7 +768,7 @@ export function pullRequestChecks(value: Object | null | undefined): PullRequest
   const row = record(value);
   return {
     state: typeof row.state === 'string' ? row.state : '',
-    checks: (row.checks === undefined ? [] : objects(row.checks)).map((check: Object): PullRequestCheckView => {
+    checks: compactArray(row.checks, (check: Object): PullRequestCheckView => {
       const item = record(check);
       return {
         name: typeof item.name === 'string' ? item.name : 'Check',
@@ -825,23 +825,23 @@ export function pullRequestGuide(value: Object): PullRequestGuideView {
   const row = record(value);
   const guide = row.guide === undefined || row.guide === null ? undefined : record(row.guide);
   const run = row.run === undefined || row.run === null ? undefined : record(row.run);
-  const stops = guide === undefined ? [] : objects(guide.stops).map((entry: Object): ReviewGuideStop => {
+  const stops = guide === undefined ? [] : compactArray(guide.stops, (entry: Object): ReviewGuideStop => {
     const stop = record(entry);
     const attention = stop.attention === undefined || stop.attention === null ? undefined : record(stop.attention);
     return {
       title: text(stop.title), summary: typeof stop.summary === 'string' ? stop.summary : '',
       attentionKind: attention === undefined ? '' : text(attention.kind),
       attentionNote: attention === undefined ? '' : text(attention.note),
-      files: objects(stop.files).map((file: Object) => {
+      files: compactArray(stop.files, (file: Object) => {
         const item = record(file);
         return { path: text(item.path), note: typeof item.note === 'string' ? item.note : '' };
       }),
-      excerpts: objects(stop.excerpts).map((excerpt: Object) => {
+      excerpts: compactArray(stop.excerpts, (excerpt: Object) => {
         const item = record(excerpt);
         return { path: text(item.path), side: text(item.side), start: Number(item.start),
           end: Number(item.end), caption: typeof item.caption === 'string' ? item.caption : '' };
       }),
-      notes: objects(stop.notes).map((note: Object) => {
+      notes: compactArray(stop.notes, (note: Object) => {
         const item = record(note);
         return { path: text(item.path), line: Number(item.line), title: text(item.title),
           body: typeof item.body === 'string' ? item.body : '' };
@@ -865,7 +865,7 @@ export function pullRequestDetail(value: Object): PullRequestDetailView {
   const caps = row.capabilities === undefined ? {} : record(row.capabilities);
   const permissions = row.viewerPermissions === undefined ? {} : record(row.viewerPermissions);
   const review = caps.review === undefined || caps.review === null ? {} : record(caps.review);
-  const checks = row.checks === undefined ? [] : objects(row.checks).map((check: Object) => {
+  const checks = compactArray(row.checks, (check: Object) => {
     const item = record(check);
     return { name: typeof item.name === 'string' ? item.name : (typeof item.title === 'string' ? item.title : 'Check'),
       state: typeof item.state === 'string' ? item.state :
@@ -879,15 +879,15 @@ export function pullRequestDetail(value: Object): PullRequestDetailView {
     headBranch: text(row.headBranch), baseBranch: text(row.baseBranch),
     additions: Number(row.additions), deletions: Number(row.deletions), changedFiles: Number(row.changedFiles),
     mergeable: typeof row.mergeability === 'string' ? row.mergeability : String(row.mergeability || 'unknown'),
-    mergeMethods: caps.mergeMethods === undefined ? [] : objects(caps.mergeMethods).map((method: Object) => text(method)),
-    actions: permissions.actions === undefined ? [] : objects(permissions.actions).map((action: Object) => text(action)),
+    mergeMethods: compactArray(caps.mergeMethods, (method: Object) => text(method)),
+    actions: compactArray(permissions.actions, (action: Object) => text(action)),
     comment: permissions.comment === true,
-    reviewVerdicts: review.verdicts === undefined ? [] : objects(review.verdicts).map((verdict: Object) => text(verdict)),
+    reviewVerdicts: compactArray(review.verdicts, (verdict: Object) => text(verdict)),
     inlineComment: review.inlineComment === true,
     checksState: typeof row.checksState === 'string' ? row.checksState : '',
     checks,
-    reviewers: row.reviewers === undefined ? [] : objects(row.reviewers).map((reviewer: Object) => actor(reviewer)),
-    labels: row.labels === undefined ? [] : objects(row.labels).map((label: Object) => text(record(label).name)),
+    reviewers: compactArray(row.reviewers, (reviewer: Object) => actor(reviewer)),
+    labels: compactArray(row.labels, (label: Object) => text(record(label).name)),
     viewer: typeof row.viewer === 'string' ? row.viewer : '',
     activity: pullRequestActivity(row)
   };
@@ -927,21 +927,21 @@ export interface PullRequestActivityView {
 export function pullRequestActivity(value: Object): PullRequestActivityView {
   const row = record(value);
   return {
-    comments: (row.comments === undefined ? [] : objects(row.comments)).map((comment: Object) => {
+    comments: compactArray(row.comments, (comment: Object): PullRequestCommentView => {
       const item = record(comment);
       return { id: stringOr(item.id), author: actor(item.author), body: stringOr(item.body),
         createdAt: typeof item.createdAt === 'string' ? item.createdAt : '' };
     }),
-    threads: (row.reviewThreads === undefined ? [] : objects(row.reviewThreads)).map((thread: Object) => {
+    threads: compactArray(row.reviewThreads, (thread: Object): PullRequestThreadView => {
       const item = record(thread);
       return { id: stringOr(item.id), path: typeof item.path === 'string' ? item.path : '',
         resolved: item.resolved === true,
-        comments: (item.comments === undefined ? [] : objects(item.comments)).map((comment: Object) => {
+        comments: compactArray(item.comments, (comment: Object): PullRequestThreadCommentView => {
           const entry = record(comment);
           return { id: stringOr(entry.id), author: actor(entry.author), body: stringOr(entry.body) };
         }) };
     }),
-    commits: (row.commits === undefined ? [] : objects(row.commits)).map((commit: Object) => {
+    commits: compactArray(row.commits, (commit: Object): PullRequestCommitView => {
       const item = record(commit);
       return { sha: stringOr(item.sha), subject: typeof item.subject === 'string' ? item.subject : stringOr(item.message) };
     })
@@ -1016,12 +1016,12 @@ export interface LinkedPullRequestView {
 export function linkedPullRequests(value: Object): LinkedPullRequestView[] {
   const details = record(value);
   if (details.pullRequests === undefined) return [];
-  return objects(details.pullRequests).map((entry: Object): LinkedPullRequestView => {
+  return compactArray(objects(details.pullRequests), (entry: Object): LinkedPullRequestView => {
     const row = record(entry);
     const snapshot = row.snapshot === undefined || row.snapshot === null ? undefined : record(row.snapshot);
     const watch = row.watch === undefined || row.watch === null ? undefined : record(row.watch);
     const stack = row.stack === undefined || row.stack === null ? undefined : record(row.stack);
-    const layers = stack === undefined ? [] : objects(stack.layers).map(record);
+    const layers = stack === undefined ? [] : compactObjects(stack.layers);
     const layer = layers.find((item: Record<string, Object>) => item.number === row.number);
     return {
       host: text(row.host), repository: text(row.repository), number: Number(row.number),

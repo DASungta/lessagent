@@ -1,4 +1,4 @@
-import { objects, record, text } from './Wire';
+import { compactArray, objects, record, text } from './Wire';
 
 export interface WorkspaceEntry {
   path: string;
@@ -39,7 +39,7 @@ export function matchesContentSearchLine(line: string, excerpt: string, query: s
 const MAX_DISPLAY_LINE = 4000;
 
 export function workspaceEntries(value: Object): WorkspaceEntry[] {
-  return objects(record(value).entries).map((entry: Object): WorkspaceEntry => {
+  return compactArray(objects(record(value).entries), (entry: Object): WorkspaceEntry => {
     const row = record(entry);
     const path = text(row.path).replace(/\\/g, '/').replace(/^\.\//, '');
     const kind = text(row.kind);
@@ -78,11 +78,11 @@ export function workspaceFile(value: Object): WorkspaceFile {
 }
 
 export function contentMatches(value: Object): ContentMatch[] {
-  return objects(record(value).matches).map((match: Object): ContentMatch => {
+  return compactArray(objects(record(value).matches), (match: Object): ContentMatch => {
     const row = record(match);
     return {
       path: text(row.path), lineNumber: Number(row.lineNumber), lineContent: text(row.lineContent),
-      ranges: objects(row.matchRanges).map((range: Object) => {
+      ranges: compactArray(row.matchRanges, (range: Object) => {
         const item = record(range);
         return { start: Number(item.start), end: Number(item.end) };
       })

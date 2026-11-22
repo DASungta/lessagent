@@ -1,17 +1,18 @@
-import { parseModelSelection, record, RpcFailure, text, objects, sequence, serverBase } from './Wire';
+import { compactArray, compactObjects, parseModelSelection, record, RpcFailure, text, objects, sequence, serverBase } from './Wire';
 import { ProjectView, ThreadView, RepositoryIdentityView, projectView, threadView, parseProjectIcon, samePath } from './Projects';
 
 export interface Choice { id: string; label: string; projectId: string; }
 export interface ModelChoice { instanceId: string; model: string; label: string; }
 export function models(config: Object): ModelChoice[] {
   const result: ModelChoice[] = [];
-  for (const value of objects(record(config).providers)) {
-    const provider = record(value);
+  for (const provider of compactObjects(record(config).providers)) {
     if (provider.enabled === false || provider.installed === false) continue;
-    for (const item of objects(provider.models)) {
-      const model = record(item);
-      result.push({ instanceId: text(provider.instanceId), model: text(model.slug),
-        label: text(provider.instanceId) + ' / ' + text(model.name) });
+    if (typeof provider.instanceId !== 'string' || !provider.instanceId) continue;
+    for (const model of compactObjects(provider.models)) {
+      if (typeof model.slug !== 'string' || !model.slug) continue;
+      const name = typeof model.name === 'string' && model.name ? model.name : model.slug;
+      result.push({ instanceId: provider.instanceId, model: model.slug,
+        label: provider.instanceId + ' / ' + name });
     }
   }
   return result;
@@ -159,8 +160,8 @@ export function cachedShellEntry(value: Object): CachedShellEntry {
       if (rawCaps[key] === true) capabilities[key] = true;
     }
   }
-  const projects = objects(row.projects).map((item: Object) => cachedProjectView(item));
-  const threads = objects(row.threads).map((item: Object) => cachedThreadView(item))
+  const projects = compactArray(objects(row.projects), (item: Object) => cachedProjectView(item));
+  const threads = compactArray(objects(row.threads), (item: Object) => cachedThreadView(item))
     .filter((item: ThreadView) => !item.deletedAt);
   return {
     environmentId,
@@ -215,8 +216,7 @@ export class ShellState {
       if (item.resolvedRepositoryIdentityRoots !== undefined) {
         const snapshot = record(item.snapshot);
         if (snapshot.projects === undefined) return;
-        for (const project of objects(snapshot.projects)) {
-          const next = projectView(project);
+        for (const next of compactArray(objects(snapshot.projects), (p: Object) => projectView(p))) {
           const current = this.projects.find((row: ProjectView) => row.id === next.id && samePath(row.workspaceRoot, next.workspaceRoot));
           if (current !== undefined && next.repository !== undefined) current.repository = next.repository;
         }
@@ -225,9 +225,10 @@ export class ShellState {
       const snapshot = record(item.snapshot);
       const cursor = sequence(snapshot.snapshotSequence);
       if (cursor < this.cursor) return;
-      this.projects = objects(snapshot.projects).map((p: Object) => projectView(p));
-      this.threads = objects(snapshot.threads).map((t: Object) => threadView(t));
-      this.archived = snapshot.archivedThreads === undefined ? [] : objects(snapshot.archivedThreads).map((t: Object) => threadView(t));
+      this.projects = compactArray(objects(snapshot.projects), (p: Object) => projectView(p));
+      this.threads = compactArray(objects(snapshot.threads), (t: Object) => threadView(t));
+      this.archived = snapshot.archivedThreads === undefined ? [] :
+        compactArray(objects(snapshot.archivedThreads), (t: Object) => threadView(t));
       this.cursor = cursor;
       this.resumeCursor = cursor;
       this.hasSnapshot = true;
@@ -317,9 +318,9 @@ const COMPANION_OTHER_PROMPT_RE = /^optional free-form answer to:/i;
 
 function parseQuestionOption(o: Record<string, Object>): QuestionOption {
   const rawLabel = text(o.label).trim();
-  const rawDescription = text(o.description).trim();
+  const rawDescription = typeof o.description === 'string' ? o.description.trim() : '';
   const preview = typeof o.preview === 'string' ? o.preview.trim() : '';
-  const value = o.value === undefined ? text(o.label) : text(o.value);
+  const value = typeof o.value === 'string' ? o.value : text(o.label);
   const hasRecommended = RECOMMENDED_OPTION_PREFIX.test(rawLabel);
   const stripped = hasRecommended ? rawLabel.replace(RECOMMENDED_OPTION_PREFIX, '').trim() : rawLabel;
   const label = stripped.length > 0 ? stripped : rawLabel;
@@ -417,62 +418,63 @@ function safeSecretUrl(value: Object): string {
 export function cards(requests: Record<string, Object>[], items: Record<string, Object>[]): ActionCard[] {
   const result: ActionCard[] = [];
   for (const item of items) {
-    if (item.type === 'secret_request' && item.secretStatus === 'pending') {
-      const local = (item.visibility === undefined || item.visibility === 'local');
-      const secretFields = parseSecretFields(item.fields);
-      result.push({ id: text(item.id), requestId: '', kind: 'secret',
-        label: text(item.label) + '\n' + text(item.reason) + (local ? '' : '\n等待在原会话中回答'),
-        questions: [], enabled: local, responseType: local ? 'secret' : 'inherited', canDismiss: false,
-        approvalOptions: [], requestKind: 'secret',
-        detail: text(item.reason), reason: safeSecretUrl(item.url),
-        fullAccessOverride: '', secretUrl: safeSecretUrl(item.url),
-        secretPlaceholder: typeof item.placeholder === 'string' ? item.placeholder : '',
-        secretDelivery: typeof item.delivery === 'string' ? item.delivery : '',
-        secretReference: item.fields === undefined,
-        secretFields });
-    } else if (item.type === 'approval_request' || item.type === 'user_input_request') {
-      const request = requests.find((row: Record<string, Object>) => row.id === item.requestId);
-      if (!request || request.status !== 'pending') continue;
-      const questions: Question[] = item.type === 'user_input_request' ? objects(item.questions).map((value: Object) => {
-        const q = record(value);
-        const rawOptions = objects(q.options).map(record);
-        const optionItems = rawOptions.map(parseQuestionOption);
-        const header = text(q.header).trim();
-        const body = text(q.question).trim();
-        const combinedLabel = header && body && header !== body ? header + ': ' + body : (body || header);
-        return {
-          id: text(q.id),
-          header,
-          text: body,
-          label: combinedLabel,
-          options: optionItems.map((o: QuestionOption) => o.description ? o.label + ' — ' + o.description : o.label),
-          optionItems,
-          descriptions: optionItems.map((o: QuestionOption) => o.description),
-          values: optionItems.map((o: QuestionOption) => o.value),
-          multi: q.multiSelect === true,
-          required: q.required !== false,
-          custom: q.allowCustomAnswer !== false,
-          initial: typeof q.initialAnswer === 'string' ? q.initialAnswer : ''
-        };
-      }) : [];
-      const approvalOptions: ApprovalChoice[] = item.type === 'approval_request' && item.options !== undefined ?
-        objects(item.options).map((value: Object): ApprovalChoice => {
-          const option = record(value);
-          return { decision: text(option.decision), label: text(option.label),
-            warning: typeof option.warning === 'string' ? option.warning : '' };
+    try {
+      if (item.type === 'secret_request' && item.secretStatus === 'pending') {
+        const local = (item.visibility === undefined || item.visibility === 'local');
+        const secretFields = parseSecretFields(item.fields);
+        result.push({ id: text(item.id), requestId: '', kind: 'secret',
+          label: text(item.label) + '\n' + text(item.reason) + (local ? '' : '\n等待在原会话中回答'),
+          questions: [], enabled: local, responseType: local ? 'secret' : 'inherited', canDismiss: false,
+          approvalOptions: [], requestKind: 'secret',
+          detail: text(item.reason), reason: safeSecretUrl(item.url),
+          fullAccessOverride: '', secretUrl: safeSecretUrl(item.url),
+          secretPlaceholder: typeof item.placeholder === 'string' ? item.placeholder : '',
+          secretDelivery: typeof item.delivery === 'string' ? item.delivery : '',
+          secretReference: item.fields === undefined,
+          secretFields });
+      } else if (item.type === 'approval_request' || item.type === 'user_input_request') {
+        const request = requests.find((row: Record<string, Object>) => row.id === item.requestId);
+        if (!request || request.status !== 'pending') continue;
+        const questions: Question[] = item.type === 'user_input_request' ? compactArray(item.questions, (value: Object): Question => {
+          const q = record(value);
+          const optionItems = compactArray(q.options, (opt: Object): QuestionOption => parseQuestionOption(record(opt)));
+          const header = text(q.header).trim();
+          const body = text(q.question).trim();
+          const combinedLabel = header && body && header !== body ? header + ': ' + body : (body || header);
+          return {
+            id: text(q.id),
+            header,
+            text: body,
+            label: combinedLabel,
+            options: optionItems.map((o: QuestionOption) => o.description ? o.label + ' — ' + o.description : o.label),
+            optionItems,
+            descriptions: optionItems.map((o: QuestionOption) => o.description),
+            values: optionItems.map((o: QuestionOption) => o.value),
+            multi: q.multiSelect === true,
+            required: q.required !== false,
+            custom: q.allowCustomAnswer !== false,
+            initial: typeof q.initialAnswer === 'string' ? q.initialAnswer : ''
+          };
         }) : [];
-      result.push({ id: text(item.id), requestId: text(request.id), kind: item.type === 'user_input_request' ? 'input' : 'approval',
-        label: item.type === 'approval_request' ? text(item.requestKind) + '\n' + (typeof item.prompt === 'string' ? item.prompt : '') + '\n' + (typeof item.reason === 'string' ? item.reason : '') : '需要你的回答',
-        questions, enabled: record(request.responseCapability).type !== 'not_resumable',
-        responseType: text(record(request.responseCapability).type),
-        canDismiss: item.type === 'user_input_request' &&
-          (item.responseMode === 'message' || record(request.responseCapability).type === 'message'),
-        approvalOptions, requestKind: item.type === 'approval_request' ? text(item.requestKind) : '',
-        detail: item.type === 'approval_request' && typeof item.prompt === 'string' ? item.prompt : '',
-        reason: typeof item.reason === 'string' ? item.reason : '',
-        fullAccessOverride: typeof item.fullAccessOverride === 'string' ? item.fullAccessOverride : '',
-        secretUrl: '', secretPlaceholder: '', secretDelivery: '', secretReference: true, secretFields: [] });
-    }
+        const approvalOptions: ApprovalChoice[] = item.type === 'approval_request' && item.options !== undefined ?
+          compactArray(item.options, (value: Object): ApprovalChoice => {
+            const option = record(value);
+            return { decision: text(option.decision), label: text(option.label),
+              warning: typeof option.warning === 'string' ? option.warning : '' };
+          }) : [];
+        result.push({ id: text(item.id), requestId: text(request.id), kind: item.type === 'user_input_request' ? 'input' : 'approval',
+          label: item.type === 'approval_request' ? text(item.requestKind) + '\n' + (typeof item.prompt === 'string' ? item.prompt : '') + '\n' + (typeof item.reason === 'string' ? item.reason : '') : '需要你的回答',
+          questions, enabled: record(request.responseCapability).type !== 'not_resumable',
+          responseType: text(record(request.responseCapability).type),
+          canDismiss: item.type === 'user_input_request' &&
+            (item.responseMode === 'message' || record(request.responseCapability).type === 'message'),
+          approvalOptions, requestKind: item.type === 'approval_request' ? text(item.requestKind) : '',
+          detail: item.type === 'approval_request' && typeof item.prompt === 'string' ? item.prompt : '',
+          reason: typeof item.reason === 'string' ? item.reason : '',
+          fullAccessOverride: typeof item.fullAccessOverride === 'string' ? item.fullAccessOverride : '',
+          secretUrl: '', secretPlaceholder: '', secretDelivery: '', secretReference: true, secretFields: [] });
+      }
+    } catch (_) {}
   }
   return result;
 }

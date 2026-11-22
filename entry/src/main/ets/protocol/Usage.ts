@@ -1,4 +1,4 @@
-import { record, objects, text, sequence } from './Wire';
+import { compactArray, compactObjects, record, objects, text, sequence } from './Wire';
 
 export const USAGE_CONTRACT_VERSION: number = 6;
 export const USAGE_MERGE_COMPATIBLE_SINCE: number = 4;
@@ -526,28 +526,31 @@ export function parseUsageSummary(value: Object): UsageSummaryView {
   const notices: string[] = [];
   const sources: UsageSourceView[] = [];
   for (const raw of objects(root.sources)) {
-    const source = record(raw);
-    const status = text(source.status);
-    const fp =
-      source.fingerprint !== undefined && source.fingerprint !== null ? record(source.fingerprint) : undefined;
-    sources.push({
-      hostId: fp ? optionalText(fp.hostId) : '',
-      provider: fp ? optionalText(fp.provider) : '',
-      resolvedHomePath: fp ? optionalText(fp.resolvedHomePath) : '',
-      volumeId: fp ? optionalText(fp.volumeId) : '',
-      physicalSourceId: fp ? optionalText(fp.physicalSourceId) : '',
-      status,
-      scannedFiles: optionalNonNegativeInt(source.scannedFiles),
-      skippedFiles: optionalNonNegativeInt(source.skippedFiles),
-      malformedRecords: optionalNonNegativeInt(source.malformedRecords),
-      distinctSessions: optionalNonNegativeInt(source.distinctSessions),
-      message: optionalText(source.message),
-      refreshing: source.refreshing === true,
-    });
-    const notice = usageSourceNotice(status);
-    if (notice && !notices.includes(notice)) notices.push(notice);
-    const refreshing = '正在更新用量，当前显示上次读取的记录';
-    if (source.refreshing === true && !notices.includes(refreshing)) notices.push(refreshing);
+    try {
+      const source = record(raw);
+      const status = text(source.status);
+      const fp =
+        source.fingerprint !== undefined && source.fingerprint !== null && typeof source.fingerprint === 'object' && !Array.isArray(source.fingerprint)
+          ? source.fingerprint as Record<string, Object> : undefined;
+      sources.push({
+        hostId: fp ? optionalText(fp.hostId) : '',
+        provider: fp ? optionalText(fp.provider) : '',
+        resolvedHomePath: fp ? optionalText(fp.resolvedHomePath) : '',
+        volumeId: fp ? optionalText(fp.volumeId) : '',
+        physicalSourceId: fp ? optionalText(fp.physicalSourceId) : '',
+        status,
+        scannedFiles: optionalNonNegativeInt(source.scannedFiles),
+        skippedFiles: optionalNonNegativeInt(source.skippedFiles),
+        malformedRecords: optionalNonNegativeInt(source.malformedRecords),
+        distinctSessions: optionalNonNegativeInt(source.distinctSessions),
+        message: optionalText(source.message),
+        refreshing: source.refreshing === true,
+      });
+      const notice = usageSourceNotice(status);
+      if (notice && !notices.includes(notice)) notices.push(notice);
+      const refreshing = '正在更新用量，当前显示上次读取的记录';
+      if (source.refreshing === true && !notices.includes(refreshing)) notices.push(refreshing);
+    } catch (_) {}
   }
 
   return {
@@ -609,13 +612,15 @@ function account(id: string, label: string, driver: string, value: Object): Usag
   const limits = record(value);
   let notice = '';
   let unsupported = false;
-  if (limits.unavailable !== undefined) {
-    const unavailable = record(limits.unavailable);
-    unsupported = unavailable.reason === 'unsupported';
-    notice = unsupported ? '此账号未提供限额' : '查询失败；以下为上次已知限额';
+  if (limits.unavailable !== undefined && limits.unavailable !== null) {
+    try {
+      const unavailable = record(limits.unavailable);
+      unsupported = unavailable.reason === 'unsupported';
+      notice = unsupported ? '此账号未提供限额' : '查询失败；以下为上次已知限额';
+    } catch (_) {}
   }
   if (limits.zeroSpendCap === true) notice += ' 月度支出上限为 $0';
-  const windows: UsageWindow[] = objects(limits.windows).map((raw: Object): UsageWindow => {
+  const windows: UsageWindow[] = compactArray(limits.windows, (raw: Object): UsageWindow => {
     const window = record(raw);
     const used = finite(window.usedPercent);
     if (used < 0 || used > 100) notice += ' 服务端比例超出契约范围，按边界显示';
@@ -632,32 +637,41 @@ function account(id: string, label: string, driver: string, value: Object): Usag
 export function usageAccounts(value: Object): UsageAccount[] {
   const config = record(value);
   const accounts: UsageAccount[] = [];
-  for (const raw of objects(config.providers)) {
-    const provider = record(raw);
-    if (provider.usageLimits !== undefined) {
-      accounts.push(
-        account(
-          'provider:' + text(provider.instanceId),
-          optionalText(provider.displayName) || text(provider.driver),
-          text(provider.driver),
-          provider.usageLimits,
-        ),
-      );
-    }
+  for (const raw of compactObjects(config.providers)) {
+    try {
+      if (raw.usageLimits !== undefined && raw.usageLimits !== null) {
+        accounts.push(
+          account(
+            'provider:' + text(raw.instanceId),
+            optionalText(raw.displayName) || text(raw.driver),
+            text(raw.driver),
+            raw.usageLimits,
+          ),
+        );
+      }
+    } catch (_) {}
   }
   if (config.usageLimitSources !== undefined) {
-    for (const rawSource of objects(config.usageLimitSources)) {
-      const source = record(rawSource);
-      for (const rawAccount of objects(source.accounts)) {
-        const row = record(rawAccount);
-        const item = account(
-          text(source.id) + ':' + text(row.id),
-          text(source.label) + ' · ' + (optionalText(row.email) || text(row.id)),
-          text(row.driver),
-          row.usageLimits,
-        );
-        if (source.error !== undefined) item.notice = '来源查询失败，显示上次快照。 ' + item.notice;
-        accounts.push(item);
+    for (const source of compactObjects(config.usageLimitSources)) {
+      let sourceId = '';
+      let sourceLabel = '';
+      try {
+        sourceId = text(source.id);
+        sourceLabel = text(source.label);
+      } catch (_) {
+        continue;
+      }
+      for (const row of compactObjects(source.accounts)) {
+        try {
+          const item = account(
+            sourceId + ':' + text(row.id),
+            sourceLabel + ' · ' + (optionalText(row.email) || text(row.id)),
+            text(row.driver),
+            row.usageLimits,
+          );
+          if (source.error !== undefined) item.notice = '来源查询失败，显示上次快照。 ' + item.notice;
+          accounts.push(item);
+        } catch (_) {}
       }
     }
   }
@@ -1382,32 +1396,33 @@ function parseLimitNotice(limits: Record<string, Object>): string {
 }
 
 function parseResetCredits(raw: Object | undefined): UsageResetCredits | undefined {
-  if (raw === undefined || raw === null) return undefined;
-  const obj = record(raw);
-  const options: UsageResetCreditOption[] =
-    obj.options !== undefined && obj.options !== null
-      ? objects(obj.options).map((item: Object): UsageResetCreditOption => {
-          const opt = record(item);
-          return {
-            creditId: text(opt.creditId),
-            label: text(opt.label),
-            description: text(opt.description),
-            availableCount: optionalNonNegativeInt(opt.availableCount),
-            expiresAt: optionalText(opt.expiresAt),
-          };
-        })
-      : [];
-  return {
-    availableCount: optionalNonNegativeInt(obj.availableCount),
-    nextExpiresAt: optionalText(obj.nextExpiresAt),
-    nextCreditId: optionalText(obj.nextCreditId),
-    options,
-  };
+  if (raw === undefined || raw === null || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
+  try {
+    const obj = record(raw);
+    const options: UsageResetCreditOption[] = compactArray(obj.options, (item: Object): UsageResetCreditOption => {
+      const opt = record(item);
+      return {
+        creditId: text(opt.creditId),
+        label: text(opt.label),
+        description: text(opt.description),
+        availableCount: optionalNonNegativeInt(opt.availableCount),
+        expiresAt: optionalText(opt.expiresAt),
+      };
+    });
+    return {
+      availableCount: optionalNonNegativeInt(obj.availableCount),
+      nextExpiresAt: optionalText(obj.nextExpiresAt),
+      nextCreditId: optionalText(obj.nextCreditId),
+      options,
+    };
+  } catch (_) {
+    return undefined;
+  }
 }
 
 function parseLimitWindows(limits: Record<string, Object>): PooledLimitWindowEntry[] {
   if (limits.windows === undefined || limits.windows === null) return [];
-  return objects(limits.windows).map((item: Object): PooledLimitWindowEntry => {
+  return compactArray(limits.windows, (item: Object): PooledLimitWindowEntry => {
     const w = record(item);
     const used = finite(w.usedPercent);
     const clamped = Math.max(0, Math.min(100, used));
@@ -1477,35 +1492,33 @@ function createAccountKeyResolver(reports: AccountIdentityReport[]): (report: Ac
 export function collectPooledLimitAccounts(snapshots: LimitEnvironmentSnapshot[]): PooledLimitAccount[] {
   const reports: AccountIdentityReport[] = [];
   for (const snap of snapshots) {
-    const providers = snap.config.providers !== undefined && snap.config.providers !== null ? objects(snap.config.providers) : [];
-    for (const raw of providers) {
-      const p = record(raw);
-      if (p.enabled === false) continue;
-      const auth = p.auth !== undefined && p.auth !== null ? record(p.auth) : {};
-      const limits = p.usageLimits !== undefined && p.usageLimits !== null ? record(p.usageLimits) : {};
-      reports.push({
-        driver: text(p.driver),
-        email: optionalText(auth.email),
-        workspaceId: optionalText(auth.workspaceId),
-        credentialFingerprint: optionalText(limits.credentialFingerprint),
-      });
-    }
-    const sources =
-      snap.config.usageLimitSources !== undefined && snap.config.usageLimitSources !== null
-        ? objects(snap.config.usageLimitSources)
-        : [];
-    for (const rawSource of sources) {
-      const source = record(rawSource);
-      const accts = source.accounts !== undefined && source.accounts !== null ? objects(source.accounts) : [];
-      for (const rawAcct of accts) {
-        const a = record(rawAcct);
-        const limits = a.usageLimits !== undefined && a.usageLimits !== null ? record(a.usageLimits) : {};
+    for (const p of compactObjects(snap.config.providers)) {
+      try {
+        if (p.enabled === false) continue;
+        const auth = p.auth !== undefined && p.auth !== null && typeof p.auth === 'object' && !Array.isArray(p.auth)
+          ? p.auth as Record<string, Object> : {};
+        const limits = p.usageLimits !== undefined && p.usageLimits !== null && typeof p.usageLimits === 'object' && !Array.isArray(p.usageLimits)
+          ? p.usageLimits as Record<string, Object> : {};
         reports.push({
-          driver: text(a.driver),
-          email: optionalText(a.email),
-          workspaceId: optionalText(a.workspaceId),
+          driver: text(p.driver),
+          email: optionalText(auth.email),
+          workspaceId: optionalText(auth.workspaceId),
           credentialFingerprint: optionalText(limits.credentialFingerprint),
         });
+      } catch (_) {}
+    }
+    for (const source of compactObjects(snap.config.usageLimitSources)) {
+      for (const a of compactObjects(source.accounts)) {
+        try {
+          const limits = a.usageLimits !== undefined && a.usageLimits !== null && typeof a.usageLimits === 'object' && !Array.isArray(a.usageLimits)
+            ? a.usageLimits as Record<string, Object> : {};
+          reports.push({
+            driver: text(a.driver),
+            email: optionalText(a.email),
+            workspaceId: optionalText(a.workspaceId),
+            credentialFingerprint: optionalText(limits.credentialFingerprint),
+          });
+        } catch (_) {}
       }
     }
   }
@@ -1583,91 +1596,93 @@ export function collectPooledLimitAccounts(snapshots: LimitEnvironmentSnapshot[]
   };
 
   for (const snap of snapshots) {
-    const providers = snap.config.providers !== undefined && snap.config.providers !== null ? objects(snap.config.providers) : [];
-    for (const raw of providers) {
-      const p = record(raw);
-      if (!isProviderEntryWithLimits(p)) continue;
-      const limits = record(p.usageLimits);
-      if (parseLimitNotice(limits)) continue;
-      const driver = text(p.driver);
-      const instanceId = text(p.instanceId);
-      const auth = p.auth !== undefined && p.auth !== null ? record(p.auth) : {};
-      const email = optionalText(auth.email);
-      const workspaceId = optionalText(auth.workspaceId);
-      const resolved = resolveKey({
-        driver,
-        email,
-        workspaceId,
-        credentialFingerprint: optionalText(limits.credentialFingerprint),
-      });
-      const fallbackKey = snap.environmentId + ':' + instanceId;
-      mergeAccount(resolved || fallbackKey, {
-        key: fallbackKey,
-        driver,
-        displayName: optionalText(p.displayName).trim(),
-        email,
-        plan: optionalText(auth.label),
-        accentColor: normalizeHexAccentColor(optionalText(p.accentColor)),
-        environments: [{ environmentId: snap.environmentId, label: snap.label }],
-        sourceLabel: '',
-        checkedAt: optionalText(limits.checkedAt),
-        zeroSpendCap: limits.zeroSpendCap === true,
-        windows: parseLimitWindows(limits),
-        resetCredits: parseResetCredits(limits.resetCredits),
-        redeemEnvironmentId: snap.environmentId,
-        redeemPayload: { instanceId },
-      });
-    }
-  }
-
-  const labelEnvironment = snapshots.length > 1;
-  for (const snap of snapshots) {
-    const sources =
-      snap.config.usageLimitSources !== undefined && snap.config.usageLimitSources !== null
-        ? objects(snap.config.usageLimitSources)
-        : [];
-    for (const rawSource of sources) {
-      const source = record(rawSource);
-      const sourceId = text(source.id);
-      const sourceTitle = text(source.label);
-      const sourceLabel = labelEnvironment ? snap.label + ' · ' + sourceTitle : sourceTitle;
-      const accts = source.accounts !== undefined && source.accounts !== null ? objects(source.accounts) : [];
-      for (const rawAcct of accts) {
-        const a = record(rawAcct);
-        const limits = record(a.usageLimits);
+    for (const p of compactObjects(snap.config.providers)) {
+      try {
+        if (!isProviderEntryWithLimits(p)) continue;
+        const limits = record(p.usageLimits);
         if (parseLimitNotice(limits)) continue;
-        const driver = text(a.driver);
-        const accountId = text(a.id);
-        const email = optionalText(a.email);
-        const workspaceId = optionalText(a.workspaceId);
+        const driver = text(p.driver);
+        const instanceId = text(p.instanceId);
+        const auth = p.auth !== undefined && p.auth !== null && typeof p.auth === 'object' && !Array.isArray(p.auth)
+          ? p.auth as Record<string, Object> : {};
+        const email = optionalText(auth.email);
+        const workspaceId = optionalText(auth.workspaceId);
         const resolved = resolveKey({
           driver,
           email,
           workspaceId,
           credentialFingerprint: optionalText(limits.credentialFingerprint),
         });
-        const hub = resolved ? snap.environmentId + ':' + sourceId : hubIdentity(snap.environmentId, source);
-        const key = hub + ':' + accountId + (workspaceId ? ':' + workspaceId : '');
-        const resetCredits = parseResetCredits(limits.resetCredits);
-        mergeAccount(resolved || key, {
-          key,
+        const fallbackKey = snap.environmentId + ':' + instanceId;
+        mergeAccount(resolved || fallbackKey, {
+          key: fallbackKey,
           driver,
-          displayName: email ? '' : hubAccountName(accountId),
+          displayName: optionalText(p.displayName).trim(),
           email,
-          plan: optionalText(a.plan),
-          accentColor: '',
-          environments: [],
-          sourceLabel,
+          plan: optionalText(auth.label),
+          accentColor: normalizeHexAccentColor(optionalText(p.accentColor)),
+          environments: [{ environmentId: snap.environmentId, label: snap.label }],
+          sourceLabel: '',
           checkedAt: optionalText(limits.checkedAt),
           zeroSpendCap: limits.zeroSpendCap === true,
           windows: parseLimitWindows(limits),
-          resetCredits,
-          redeemEnvironmentId: resetCredits && resetCredits.nextCreditId ? snap.environmentId : '',
-          redeemPayload:
-            resetCredits && resetCredits.nextCreditId
-              ? { sourceId, accountId, creditId: resetCredits.nextCreditId }
-              : undefined,
+          resetCredits: parseResetCredits(limits.resetCredits),
+          redeemEnvironmentId: snap.environmentId,
+          redeemPayload: { instanceId },
         });
+      } catch (_) {}
+    }
+  }
+
+  const labelEnvironment = snapshots.length > 1;
+  for (const snap of snapshots) {
+    for (const source of compactObjects(snap.config.usageLimitSources)) {
+      let sourceId = '';
+      let sourceTitle = '';
+      try {
+        sourceId = text(source.id);
+        sourceTitle = text(source.label);
+      } catch (_) {
+        continue;
+      }
+      const sourceLabel = labelEnvironment ? snap.label + ' · ' + sourceTitle : sourceTitle;
+      for (const a of compactObjects(source.accounts)) {
+        try {
+          const limits = record(a.usageLimits);
+          if (parseLimitNotice(limits)) continue;
+          const driver = text(a.driver);
+          const accountId = text(a.id);
+          const email = optionalText(a.email);
+          const workspaceId = optionalText(a.workspaceId);
+          const resolved = resolveKey({
+            driver,
+            email,
+            workspaceId,
+            credentialFingerprint: optionalText(limits.credentialFingerprint),
+          });
+          const hub = resolved ? snap.environmentId + ':' + sourceId : hubIdentity(snap.environmentId, source);
+          const key = hub + ':' + accountId + (workspaceId ? ':' + workspaceId : '');
+          const resetCredits = parseResetCredits(limits.resetCredits);
+          mergeAccount(resolved || key, {
+            key,
+            driver,
+            displayName: email ? '' : hubAccountName(accountId),
+            email,
+            plan: optionalText(a.plan),
+            accentColor: '',
+            environments: [],
+            sourceLabel,
+            checkedAt: optionalText(limits.checkedAt),
+            zeroSpendCap: limits.zeroSpendCap === true,
+            windows: parseLimitWindows(limits),
+            resetCredits,
+            redeemEnvironmentId: resetCredits && resetCredits.nextCreditId ? snap.environmentId : '',
+            redeemPayload:
+              resetCredits && resetCredits.nextCreditId
+                ? { sourceId, accountId, creditId: resetCredits.nextCreditId }
+                : undefined,
+          });
+        } catch (_) {}
       }
     }
   }

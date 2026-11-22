@@ -1,4 +1,4 @@
-import { ChatMessage, objects, record, text } from './Wire';
+import { ChatMessage, compactObjects, record } from './Wire';
 import { effectiveSnoozed, snoozeWakeLabel, ThreadView } from './Projects';
 import { SubagentView, subagents as parseSubagents } from './R4';
 
@@ -269,13 +269,13 @@ function pullRequestWatchTasks(details: Record<string, Object>): PendingBackgrou
     return [];
   }
   const tasks: PendingBackgroundTaskView[] = [];
-  for (const rawLink of objects(details.pullRequests)) {
-    const link = record(rawLink);
-    if (link.watch === undefined || link.watch === null) continue;
+  for (const link of compactObjects(details.pullRequests)) {
+    if (link.watch === undefined || link.watch === null || typeof link.watch !== 'object' || Array.isArray(link.watch)) continue;
     if (str(link.source) === 'stack-dismissed') continue;
-    const snapshot = link.snapshot !== undefined && link.snapshot !== null ? record(link.snapshot) : undefined;
+    const snapshot = link.snapshot !== undefined && link.snapshot !== null && typeof link.snapshot === 'object' && !Array.isArray(link.snapshot)
+      ? link.snapshot as Record<string, Object> : undefined;
     if (snapshot && str(snapshot.state) === 'merged') continue;
-    const watch = record(link.watch);
+    const watch = link.watch as Record<string, Object>;
     const host = str(link.host).toLowerCase();
     const repo = str(link.repository).toLowerCase();
     const numberVal = num(link.number);
@@ -402,18 +402,15 @@ export function derivePendingBackgroundWork(
     : providerThreads;
 
   for (const pt of matchingProviderThreads) {
-    if (pt.pendingBackgroundTasks === undefined || pt.pendingBackgroundTasks === null) continue;
-    for (const rawTask of objects(pt.pendingBackgroundTasks)) {
-      const task = normalizeBackgroundTask(record(rawTask));
+    for (const rawTask of compactObjects(pt.pendingBackgroundTasks)) {
+      const task = normalizeBackgroundTask(rawTask);
       if (task && !byTaskId.has(task.taskId)) byTaskId.set(task.taskId, task);
     }
   }
 
-  if (details.pendingBackgroundTasks !== undefined && details.pendingBackgroundTasks !== null) {
-    for (const rawTask of objects(details.pendingBackgroundTasks)) {
-      const task = normalizeBackgroundTask(record(rawTask));
-      if (task && !byTaskId.has(task.taskId)) byTaskId.set(task.taskId, task);
-    }
+  for (const rawTask of compactObjects(details.pendingBackgroundTasks)) {
+    const task = normalizeBackgroundTask(rawTask);
+    if (task && !byTaskId.has(task.taskId)) byTaskId.set(task.taskId, task);
   }
 
   for (const rawTask of shellPendingTasks) {

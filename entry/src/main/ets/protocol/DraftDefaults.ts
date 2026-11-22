@@ -1,4 +1,4 @@
-import { objects, parseModelSelection, record } from './Wire';
+import { compactObjects, parseModelSelection, record } from './Wire';
 import type { ModelSelection, OptionSelection } from './Wire';
 
 export interface DraftDefaultsConnection {
@@ -78,8 +78,7 @@ function normalizeModelOptions(modelRow: Record<string, Object>, options: Option
   if (!options || options.length === 0) return undefined;
   if (modelRow.capabilities === undefined || modelRow.capabilities === null) return options.slice();
   const caps = optionalObj(modelRow.capabilities);
-  const rawDescriptors = caps.optionDescriptors;
-  const descriptors = Array.isArray(rawDescriptors) ? objects(rawDescriptors as Object).map(record) : [];
+  const descriptors = compactObjects(caps.optionDescriptors);
   if (descriptors.length === 0) return undefined;
   const valid: OptionSelection[] = [];
   for (const option of options) {
@@ -88,7 +87,7 @@ function normalizeModelOptions(modelRow: Record<string, Object>, options: Option
     if (descriptor.type === 'boolean') {
       if (typeof option.value === 'boolean') valid.push({ id: option.id, value: option.value });
     } else if (descriptor.type === 'select' && typeof option.value === 'string') {
-      const choices = Array.isArray(descriptor.options) ? objects(descriptor.options as Object).map(record) : [];
+      const choices = compactObjects(descriptor.options);
       if (choices.some((choice: Record<string, Object>) => choice.id === option.value)) {
         valid.push({ id: option.id, value: option.value });
       }
@@ -98,9 +97,8 @@ function normalizeModelOptions(modelRow: Record<string, Object>, options: Option
 }
 
 function isUsageWindowExhausted(providerRow: Record<string, Object>, modelSlug: string, nowMs: number): boolean {
-  const rawWindows = optionalObj(providerRow.usageLimits).windows;
-  if (!Array.isArray(rawWindows) || (rawWindows as Object[]).length === 0) return false;
-  const windows = objects(rawWindows as Object).map(record);
+  const windows = compactObjects(optionalObj(providerRow.usageLimits).windows);
+  if (windows.length === 0) return false;
   const prefix = modelSlug.split('/')[0] || '';
   const exhausted = windows.filter((window: Record<string, Object>) => {
     if (typeof window.usedPercent !== 'number' || (window.usedPercent as number) < 100) return false;
@@ -158,8 +156,7 @@ function usableModelSelection(root: Record<string, Object>, settings: Record<str
   const providerRow = findProvider(providers, candidate.instanceId);
   if (!providerRow || !providerSelectable(root, settings, projectId, providerRow)) return undefined;
   const driver = providerDriver(providerRow, settings, candidate.instanceId);
-  const rawModels = providerRow.models;
-  const modelList = Array.isArray(rawModels) ? objects(rawModels as Object).map(record) : [];
+  const modelList = compactObjects(providerRow.models);
   const modelRow = modelList.find((item: Record<string, Object>) => item.slug === candidate.model);
   if (!modelRow) return undefined;
   if (!allowLegacy && driver !== 'antigravity' && modelRow.isLegacy === true) return undefined;
@@ -177,8 +174,7 @@ function catalogFallbackModelSelection(root: Record<string, Object>, settings: R
   for (const providerRow of providers) {
     if (!providerSelectable(root, settings, projectId, providerRow)) continue;
     const instanceId = providerRow.instanceId as string;
-    const rawModels = providerRow.models;
-    const rawList = Array.isArray(rawModels) ? objects(rawModels as Object).map(record) : [];
+    const rawList = compactObjects(providerRow.models);
     const visible = rawList.filter((item: Record<string, Object>) =>
       typeof item.slug === 'string' && item.slug && !isModelHidden(settings, instanceId, item.slug as string, item));
     const orderRaw = optionalObj(optionalObj(settings.providerModelPreferences)[instanceId]).modelOrder;
@@ -208,7 +204,7 @@ function catalogFallbackModelSelection(root: Record<string, Object>, settings: R
 
 function resolveDefaultModelSelection(root: Record<string, Object>, originalSettings: Record<string, Object>,
   project: DraftDefaultsProject, nowMs: number): ModelSelection | undefined {
-  const providers = Array.isArray(root.providers) ? objects(root.providers as Object).map(record) : [];
+  const providers = compactObjects(root.providers);
   if (providers.length === 0) return undefined;
   const overrides = optionalObj(originalSettings.projectSettingsOverrides);
   const override = optionalObj(overrides[project.id]);
@@ -329,7 +325,7 @@ export function resolveDraftDefaults(config: Object, expectedEnvironment: string
   }
   const modelSelection = resolveDefaultModelSelection(root, original, project, Date.now());
   if (modelSelection && Array.isArray(root.providers)) {
-    const providerRow = findProvider(objects(root.providers as Object).map(record), modelSelection.instanceId);
+    const providerRow = findProvider(compactObjects(root.providers), modelSelection.instanceId);
     if (providerRow && Array.isArray(providerRow.supportedRuntimeModes) &&
       (providerRow.supportedRuntimeModes as Object[]).length > 0) {
       const ceiling = maximum === undefined ? modes.length - 1 : modes.indexOf(maximum as string);

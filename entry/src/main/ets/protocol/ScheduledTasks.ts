@@ -1,4 +1,4 @@
-import { record, objects, text } from './Wire';
+import { compactObjects, record, objects, text } from './Wire';
 import { TaskSettings, validateTaskSettings } from './Composer';
 import { BranchView, branches } from './R4';
 import { samePath } from './Projects';
@@ -61,18 +61,22 @@ export function scheduleFromFields(type: string, time: string, days: string, min
 }
 export function scheduleSnapshot(value: Object): ScheduledTaskSnapshot {
   const root = record(value); const seen: string[] = [];
-  const tasks = objects(root.tasks).map((item: Object): ScheduledTaskView => {
-    const row = record(item); const id = required(row.id);
-    if (seen.includes(id) || typeof row.enabled !== 'boolean') throw new Error('任务响应无效');
-    seen.push(id);
-    return { id, title: required(row.title), prompt: required(row.prompt), enabled: row.enabled,
-      schedule: record(row.schedule), projectId: required(row.projectId), threadId: row.threadId === null ? null : required(row.threadId),
-      threadMode: row.threadMode === undefined ? undefined : text(row.threadMode), workspaceStrategy: record(row.workspaceStrategy),
-      modelSelection: record(row.modelSelection), runtimeMode: required(row.runtimeMode), interactionMode: required(row.interactionMode),
-      updatedAt: required(row.updatedAt), nextRunAt: typeof row.nextRunAt === 'string' ? row.nextRunAt : '',
-      lastRunStatus: required(row.lastRunStatus), blocked: typeof row.blockedByPolicy === 'string',
-      creationSource: typeof row.creationSource === 'string' ? row.creationSource : undefined };
-  });
+  const tasks: ScheduledTaskView[] = [];
+  for (const item of objects(root.tasks)) {
+    try {
+      const row = record(item); const id = required(row.id);
+      if (seen.includes(id) || typeof row.enabled !== 'boolean') continue;
+      const view: ScheduledTaskView = { id, title: required(row.title), prompt: required(row.prompt), enabled: row.enabled,
+        schedule: record(row.schedule), projectId: required(row.projectId), threadId: row.threadId === null ? null : required(row.threadId),
+        threadMode: row.threadMode === undefined ? undefined : text(row.threadMode), workspaceStrategy: record(row.workspaceStrategy),
+        modelSelection: record(row.modelSelection), runtimeMode: required(row.runtimeMode), interactionMode: required(row.interactionMode),
+        updatedAt: required(row.updatedAt), nextRunAt: typeof row.nextRunAt === 'string' ? row.nextRunAt : '',
+        lastRunStatus: required(row.lastRunStatus), blocked: typeof row.blockedByPolicy === 'string',
+        creationSource: typeof row.creationSource === 'string' ? row.creationSource : undefined };
+      seen.push(id);
+      tasks.push(view);
+    } catch (_) {}
+  }
   return { tasks, timeZone: typeof root.timeZone === 'string' ? root.timeZone : '' };
 }
 function checkConnection(connection: ScheduleConnection, environmentId: string, generation: number | undefined): void {
@@ -126,13 +130,13 @@ async function verifyScheduleDestination(connection: ScheduleConnection, environ
     const event = record(value);
     if (event.kind !== 'snapshot' || event.resolvedRepositoryIdentityRoots !== undefined) return undefined;
     const snapshot = record(event.snapshot);
-    const project = objects(snapshot.projects).map(record).find(item => item.id === projectId);
+    const project = compactObjects(snapshot.projects).find(item => item.id === projectId);
     if (!project || (project.archivedAt !== undefined && project.archivedAt !== null && project.archivedAt !== '')) {
       throw new Error('目标项目不存在或已归档');
     }
     const workspaceRoot = typeof project.workspaceRoot === 'string' ? project.workspaceRoot : '';
     if (threadId === null) return workspaceRoot;
-    const thread = objects(snapshot.threads).map(record).find(item => item.id === threadId);
+    const thread = compactObjects(snapshot.threads).find(item => item.id === threadId);
     if (!thread || thread.projectId !== projectId ||
       (thread.archivedAt !== undefined && thread.archivedAt !== null && thread.archivedAt !== '') ||
       (thread.deletedAt !== undefined && thread.deletedAt !== null && thread.deletedAt !== '')) {

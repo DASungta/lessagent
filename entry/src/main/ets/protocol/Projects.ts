@@ -1,4 +1,4 @@
-import { objects, parseModelSelection, record, sequence, text } from './Wire';
+import { compactArray, compactObjects, objects, parseModelSelection, record, sequence, text } from './Wire';
 import type { ModelSelection } from './Wire';
 
 // Upstream mobile project/* and home/* rules translated without depending on React or Effect.
@@ -208,26 +208,28 @@ export const DEFAULT_SNOOZE_PRESETS: SnoozePresetSetting[] = [
 ];
 
 export function snoozeSettingsFrom(value: Object | undefined): SnoozePresetSetting[] {
-  if (value === undefined || value === null) return DEFAULT_SNOOZE_PRESETS.slice();
-  const rows = objects(value);
+  if (value === undefined || value === null || !Array.isArray(value)) return DEFAULT_SNOOZE_PRESETS.slice();
+  const rows = value as Object[];
   if (!rows.length || rows.length > 8) return DEFAULT_SNOOZE_PRESETS.slice();
   const result: SnoozePresetSetting[] = [];
   for (const item of rows) {
-    const row = record(item);
-    const kind = text(row.kind);
-    if (kind === 'after') {
-      const minutes = row.minutes as number;
-      if (!Number.isSafeInteger(minutes) || minutes < 1 || minutes > 43200) return DEFAULT_SNOOZE_PRESETS.slice();
-      result.push({ kind, minutes, day: '', time: '' });
-    } else if (kind === 'at') {
-      const day = text(row.day);
-      const time = text(row.time);
-      if (!WEEKDAYS.includes(day) && day !== 'today' && day !== 'tomorrow') return DEFAULT_SNOOZE_PRESETS.slice();
-      if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return DEFAULT_SNOOZE_PRESETS.slice();
-      result.push({ kind, minutes: 0, day, time });
-    } else return DEFAULT_SNOOZE_PRESETS.slice();
+    try {
+      const row = record(item);
+      const kind = text(row.kind);
+      if (kind === 'after') {
+        const minutes = row.minutes as number;
+        if (!Number.isSafeInteger(minutes) || minutes < 1 || minutes > 43200) continue;
+        result.push({ kind, minutes, day: '', time: '' });
+      } else if (kind === 'at') {
+        const day = text(row.day);
+        const time = text(row.time);
+        if (!WEEKDAYS.includes(day) && day !== 'today' && day !== 'tomorrow') continue;
+        if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) continue;
+        result.push({ kind, minutes: 0, day, time });
+      }
+    } catch (_) {}
   }
-  return result;
+  return result.length > 0 ? result : DEFAULT_SNOOZE_PRESETS.slice();
 }
 
 export function offeredProvidersFrom(value: Object | undefined): Record<string, boolean> {
@@ -280,20 +282,24 @@ function optionalBoolean(value: Object | undefined): boolean {
 }
 
 function repositoryIdentity(value: Object | undefined): RepositoryIdentityView | undefined {
-  if (value === undefined || value === null) return undefined;
-  const row = record(value);
-  const canonicalKey = cleanId(row.canonicalKey, '仓库身份');
-  const origin = row.origin === undefined || row.origin === null ? undefined : record(row.origin);
-  const originKey = origin === undefined ? '' : optionalText(origin.canonicalKey, '仓库来源身份');
-  const displayName = origin !== undefined ? optionalDisplayText(origin.displayName) :
-    optionalDisplayText(row.displayName);
-  return {
-    canonicalKey,
-    groupingKey: originKey || canonicalKey,
-    displayName,
-    name: optionalDisplayText(row.name),
-    rootPath: optionalDisplayText(row.rootPath)
-  };
+  if (value === undefined || value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  try {
+    const row = record(value);
+    const canonicalKey = cleanId(row.canonicalKey, '仓库身份');
+    const origin = row.origin === undefined || row.origin === null ? undefined : record(row.origin);
+    const originKey = origin === undefined ? '' : optionalText(origin.canonicalKey, '仓库来源身份');
+    const displayName = origin !== undefined ? optionalDisplayText(origin.displayName) :
+      optionalDisplayText(row.displayName);
+    return {
+      canonicalKey,
+      groupingKey: originKey || canonicalKey,
+      displayName,
+      name: optionalDisplayText(row.name),
+      rootPath: optionalDisplayText(row.rootPath)
+    };
+  } catch (_) {
+    return undefined;
+  }
 }
 
 export function parseProjectIcon(value: Object | undefined): ProjectIconView | undefined {
@@ -333,13 +339,14 @@ export function groupProjectIcon(group: ProjectGroup | undefined): ProjectIconVi
 
 export function projectView(value: Object): ProjectView {
   const row = record(value);
-  if (row.defaultThreadEnvMode !== undefined && row.defaultThreadEnvMode !== null &&
-    row.defaultThreadEnvMode !== 'local' && row.defaultThreadEnvMode !== 'worktree') throw new Error('项目默认工作区无效');
+  const rawMode = row.defaultThreadEnvMode;
+  const defaultThreadEnvMode: string | null | undefined =
+    rawMode === 'local' ? 'local' : (rawMode === 'worktree' ? 'worktree' : (rawMode === null ? null : undefined));
   const defaultModelSelection = row.defaultModelSelection === undefined ? undefined :
     row.defaultModelSelection === null ? null : parseModelSelection(row.defaultModelSelection);
   const id = cleanId(row.id, '项目标识');
   return {
-    defaultThreadEnvMode: row.defaultThreadEnvMode as string | null | undefined,
+    defaultThreadEnvMode,
     defaultModelSelection,
     id,
     label: cleanDisplayText(row.title, '项目名称', id),
@@ -412,9 +419,9 @@ export function threadView(value: Object): ThreadView {
     lineageSideChat: lineage !== undefined && optionalBoolean(lineage.sideChat),
     delegatedFromThreadId: delegatedFrom === undefined ? '' : optionalText(delegatedFrom.threadId, '委派来源会话'),
     lastSnoozeWakeAt: optionalIso(row.lastSnoozeWakeAt, '暂缓唤醒时间'),
-    pendingBackgroundTasks: row.pendingBackgroundTasks !== undefined && row.pendingBackgroundTasks !== null ?
-      objects(row.pendingBackgroundTasks).map(record) : [],
-    goal: row.goal !== undefined && row.goal !== null ? record(row.goal) : undefined,
+    pendingBackgroundTasks: compactObjects(row.pendingBackgroundTasks),
+    goal: row.goal !== undefined && row.goal !== null && typeof row.goal === 'object' && !Array.isArray(row.goal)
+      ? row.goal as Record<string, Object> : undefined,
     deletedAt: optionalIso(row.deletedAt, '会话删除时间')
   };
 }
@@ -825,12 +832,12 @@ export function buildArchiveGroups(input: {
     const entry = input.entries.find((candidate) => candidate.localId === localId);
     if (entry === undefined || (input.environmentId && input.environmentId !== entry.environmentId)) continue;
     const snapshot = record(input.snapshots[localId]);
-    const projects: ScopedProject[] = objects(snapshot.projects).map((value: Object) => {
+    const projects: ScopedProject[] = compactArray(snapshot.projects, (value: Object): ScopedProject => {
       const project = projectView(value);
       return scopedProjectView(project, localId, entry.environmentId, entry.label,
         !!input.scratchRoots[localId] && samePath(project.workspaceRoot, input.scratchRoots[localId]));
     });
-    const archived: ScopedThread[] = objects(snapshot.threads).map((value: Object) => {
+    const archived: ScopedThread[] = compactArray(snapshot.threads, (value: Object): ScopedThread => {
       const thread = threadView(value);
       const project = projects.find((candidate: ScopedProject) => candidate.id === thread.projectId);
       return scopedThreadView(thread, localId, entry.environmentId, entry.label,

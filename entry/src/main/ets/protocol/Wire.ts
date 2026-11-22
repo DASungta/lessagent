@@ -23,6 +23,28 @@ export function objects(value: Object): Object[] {
   return value as Object[];
 }
 
+export function compactObjects(value: Object | undefined): Record<string, Object>[] {
+  if (!Array.isArray(value)) return [];
+  const result: Record<string, Object>[] = [];
+  for (const item of value as Object[]) {
+    if (item !== null && typeof item === 'object' && !Array.isArray(item)) {
+      result.push(item as Record<string, Object>);
+    }
+  }
+  return result;
+}
+
+export function compactArray<T>(value: Object | undefined, parse: (item: Object) => T): T[] {
+  if (!Array.isArray(value)) return [];
+  const result: T[] = [];
+  for (const item of value as Object[]) {
+    try {
+      result.push(parse(item));
+    } catch (_) {}
+  }
+  return result;
+}
+
 export interface OptionSelection { id: string; value: string | boolean; }
 export interface ModelSelection { instanceId: string; model: string; options?: OptionSelection[]; }
 
@@ -337,25 +359,25 @@ export class ThreadState {
       const projection = record(item.projection);
       if (text(record(projection.thread).id) !== this.threadId) throw new Error('会话身份不一致');
       this.details = record(projection.thread);
-      this.runs = projection.runs ? objects(projection.runs).map(record) : [];
-      this.messageRecords = objects(projection.messages).map(record);
-      this.plans = projection.plans ? objects(projection.plans).map(record) : [];
-      this.subagents = projection.subagents ? objects(projection.subagents).map(record) : [];
-      this.providerTurns = projection.providerTurns ? objects(projection.providerTurns).map(record) : [];
-      this.providerThreads = projection.providerThreads ? objects(projection.providerThreads).map(record) : [];
-      this.providerSessions = projection.providerSessions ? objects(projection.providerSessions).map(record) : [];
-      this.nodes = projection.nodes ? objects(projection.nodes).map(record) : [];
+      this.runs = projection.runs ? compactObjects(projection.runs) : [];
+      this.messageRecords = compactObjects(projection.messages);
+      this.plans = projection.plans ? compactObjects(projection.plans) : [];
+      this.subagents = projection.subagents ? compactObjects(projection.subagents) : [];
+      this.providerTurns = projection.providerTurns ? compactObjects(projection.providerTurns) : [];
+      this.providerThreads = projection.providerThreads ? compactObjects(projection.providerThreads) : [];
+      this.providerSessions = projection.providerSessions ? compactObjects(projection.providerSessions) : [];
+      this.nodes = projection.nodes ? compactObjects(projection.nodes) : [];
       const visible = projection.visibleTurnItems === undefined ? [] :
-        objects(projection.visibleTurnItems).map((value: Object) => {
+        compactArray(projection.visibleTurnItems, (value: Object): Record<string, Object> => {
           const row = record(value);
           const item = row.item === undefined ? row : record(row.item);
           if (row.visibility !== undefined) item.visibility = row.visibility;
           if (row.sourceThreadId !== undefined) item.sourceThreadId = row.sourceThreadId;
           return item;
         });
-      this.requests = projection.runtimeRequests ? objects(projection.runtimeRequests).map(record) : [];
-      this.checkpoints = projection.checkpoints ? objects(projection.checkpoints).map(record) : [];
-      const rawItems = visible.length ? visible : (projection.turnItems ? objects(projection.turnItems).map(record) : []);
+      this.requests = projection.runtimeRequests ? compactObjects(projection.runtimeRequests) : [];
+      this.checkpoints = projection.checkpoints ? compactObjects(projection.checkpoints) : [];
+      const rawItems = visible.length ? visible : (projection.turnItems ? compactObjects(projection.turnItems) : []);
       this.items = rawItems.map((entry: Record<string, Object>) => this.restoreDedupedTurnItem(entry));
       this.messages = [];
       const hasItemMessages = this.items.some((entry: Record<string, Object>) =>
@@ -363,9 +385,7 @@ export class ThreadState {
       if (hasItemMessages) {
         for (const item of this.items) this.upsertItemMessage(item);
       } else {
-        const messages = objects(projection.messages);
-        for (const raw of messages) {
-          const msg = record(raw);
+        for (const msg of this.messageRecords) {
           if (!this.isHiddenContinuationMessage(msg)) this.upsert(msg);
         }
       }
@@ -394,8 +414,10 @@ export class ThreadState {
     }
     else if (type === 'turn-item.updated') {
       const payload = this.restoreDedupedTurnItem(record(event.payload));
-      this.mergeItemByOrdinal(payload);
-      this.upsertItemMessage(payload);
+      if (typeof payload.id === 'string' && payload.id) {
+        this.mergeItemByOrdinal(payload);
+        this.upsertItemMessage(payload);
+      }
     }
     else if (type === 'runtime-request.updated') this.merge(this.requests, record(event.payload));
     else if (type === 'checkpoint.captured' || type === 'checkpoint.updated') this.merge(this.checkpoints, record(event.payload));
@@ -450,7 +472,7 @@ export class ThreadState {
       if (Array.isArray(payload.pullRequests)) {
         this.details = Object.assign({}, this.details, { pullRequests: payload.pullRequests });
       } else if (typeof payload.host === 'string' && typeof payload.repository === 'string' && typeof payload.number === 'number') {
-        const current = Array.isArray(this.details.pullRequests) ? objects(this.details.pullRequests).map(record) : [];
+        const current = Array.isArray(this.details.pullRequests) ? compactObjects(this.details.pullRequests) : [];
         const host = String(payload.host).toLowerCase();
         const repo = String(payload.repository).toLowerCase();
         const num = payload.number as number;
@@ -620,7 +642,7 @@ export class ThreadState {
       if (item.type === 'user_message' && typeof item.messageId === 'string' && typeof item.text === 'string') {
         const isQueued = item.inputIntent === 'queued_turn' && item.status === 'pending';
         if (!isQueued && !this.isHiddenContinuationMessage(item)) {
-          const names = item.attachments ? objects(item.attachments).map((a: Object) => text(record(a).name)) : [];
+          const names = this.extractAttachmentNames(item.attachments);
           if (item.text.trim() || names.length) {
             const matched = this.findMessageRecord(item.messageId);
             const ts = (matched && typeof matched.createdAt === 'string' ? matched.createdAt : undefined) ||
@@ -641,11 +663,12 @@ export class ThreadState {
           (typeof item.completedAt === 'string' ? item.completedAt : undefined);
         const entry: ChatMessage = { id: item.messageId, role: 'assistant', text: item.text, streaming: item.streaming === true,
           timestamp: ts,
-          attachmentNames: item.attachments ? objects(item.attachments).map((a: Object) => text(record(a).name)) : [] };
+          attachmentNames: this.extractAttachmentNames(item.attachments) };
         if (typeof item.runId === 'string' && item.runId) entry.runId = item.runId;
         older.push(entry);
       }
-      const itemId = text(item.id);
+      if (typeof item.id !== 'string' || !item.id) continue;
+      const itemId = item.id;
       const existingItemIndex = this.items.findIndex((row: Record<string, Object>) => row.id === itemId);
       if (existingItemIndex >= 0) {
         const previous = this.items[existingItemIndex];
