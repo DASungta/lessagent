@@ -2229,13 +2229,13 @@ export class T3Client {
     await this.mutate('orchestration.dispatchCommand',
       promoteCommand(id, this.thread.threadId, runId, text(target.id)), id, 'response');
   }
-  async forkThread(runId: string, sideChat: boolean = false): Promise<string> {
+  async forkThread(runId: string, sideChat: boolean = false, sourceThreadIdOverride: string = '', title: string = ''): Promise<string> {
     if (!this.thread) throw new Error('请先选择会话');
     const targetThreadId = util.generateRandomUUID();
-    const sourceThreadId = this.thread.threadId;
+    const sourceThreadId = sourceThreadIdOverride.trim() || this.thread.threadId;
     const id = util.generateRandomUUID();
     await this.mutate('orchestration.dispatchCommand',
-      forkThreadCommand(id, sourceThreadId, targetThreadId, runId, '', sideChat), id, 'response');
+      forkThreadCommand(id, sourceThreadId, targetThreadId, runId, title, sideChat), id, 'response');
     return targetThreadId;
   }
   async createGuestShare(): Promise<string> {

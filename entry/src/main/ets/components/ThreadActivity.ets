@@ -671,3 +671,60 @@ export struct MessageWorkSlot {
     }.width('100%')
   }
 }
+
+@Component
+export struct ThreadThinkingRow {
+  @Prop label: string = '正在思考…';
+  @Prop @Watch('syncPulse') active: boolean = true;
+  @State private pulseOpacity: number = 1;
+
+  private syncPulse(): void {
+    if (this.active) {
+      try {
+        this.getUIContext().animateTo({
+          duration: 850,
+          curve: Curve.EaseInOut,
+          iterations: -1,
+          playMode: PlayMode.Alternate
+        }, () => {
+          this.pulseOpacity = 0.45;
+        });
+      } catch (_) {}
+    } else {
+      try {
+        this.getUIContext().animateTo({ duration: 150 }, () => {
+          this.pulseOpacity = 1;
+        });
+      } catch (_) {
+        this.pulseOpacity = 1;
+      }
+    }
+  }
+
+  build() {
+    Row({ space: 6 }) {
+      Image($r('app.media.ui_thinking'))
+        .width(15)
+        .height(15)
+        .objectFit(ImageFit.Contain)
+        .opacity(0.85)
+        .accessibilityLevel('no')
+      Text(this.label || '正在思考…')
+        .fontSize(FontSize.callout)
+        .lineHeight(LineHeight.callout)
+        .fontWeight(Weight.medium)
+        .fontColor($r('app.color.ink'))
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .layoutWeight(1)
+    }
+    .width('100%')
+    .constraintSize({ minHeight: 28 })
+    .padding({ left: 2, right: 2, top: 3, bottom: 3 })
+    .opacity(this.pulseOpacity)
+    .alignItems(VerticalAlign.Center)
+    .accessibilityGroup(true)
+    .accessibilityText(this.label || '正在思考…')
+    .onAppear(() => { this.syncPulse(); })
+  }
+}

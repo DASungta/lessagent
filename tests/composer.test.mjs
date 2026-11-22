@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {composerUrl} from './load-core.mjs';
 import {ThreadState} from '../entry/src/main/ets/protocol/Wire.ts';
-const {launchTask,validateTaskSettings,optionControls,supportedModes,queuedRuns,queueCommand}=await import(composerUrl);
+const {launchTask,validateTaskSettings,optionControls,supportedModes,queuedRuns,queueCommand,modelOptionsSummary}=await import(composerUrl);
 const config={providers:[{instanceId:'codex',driver:'codex',installed:true,enabled:true,models:[{slug:'m',capabilities:{optionDescriptors:[{id:'reasoningEffort',label:'Reasoning',type:'select',options:[{id:'high',label:'High'}]},{id:'fast',label:'Fast',type:'boolean'}]}}],supportedRuntimeModes:['approval-required','full-access']}],settings:{}};
 const settings={modelSelection:{instanceId:'codex',model:'m',options:[{id:'reasoningEffort',value:'high'},{id:'fast',value:false}]},runtimeMode:'approval-required',interactionMode:'default'};
 test('first send builds one launch with initial message and no client thread.create',()=>{
@@ -45,4 +45,30 @@ test('queued edits preserve existing attachments and precise order/resume semant
  assert.equal(queueCommand('c','t','resume','').type,'queue.resume');
  assert.throws(()=>queueCommand('c','t','reorder','r','r'));
  assert.throws(()=>queueCommand('c','t','edit','r',null,' '));
+});
+
+test('modelOptionsSummary formats reasoning effort, defaults, speed traits, and fallbacks cleanly',()=>{
+ const cfg={providers:[
+  {instanceId:'antigravity',driver:'antigravity',models:[
+   {slug:'gemini-4-neon',capabilities:{optionDescriptors:[
+    {id:'thought_level',label:'Reasoning',type:'select',role:'reasoning',options:[
+     {id:'high',label:'High',isDefault:true},{id:'xhigh',label:'Extra'}
+    ]}
+   ]}}
+  ]},
+  {instanceId:'codex',driver:'codex',models:[
+   {slug:'gpt-6',capabilities:{optionDescriptors:[
+    {id:'reasoningEffort',label:'Reasoning',type:'select',role:'reasoning',options:[
+     {id:'medium',label:'Medium',isDefault:true},{id:'high',label:'High'}
+    ]},
+    {id:'fastMode',label:'Fast',type:'boolean'}
+   ]}}
+  ]}
+ ]};
+ assert.equal(modelOptionsSummary(cfg,{instanceId:'antigravity',model:'gemini-4-neon',options:[{id:'thought_level',value:'xhigh'}]}),'Extra');
+ assert.equal(modelOptionsSummary(cfg,{instanceId:'antigravity',model:'gemini-4-neon'}),'High');
+ assert.equal(modelOptionsSummary(cfg,{instanceId:'antigravity',model:'gemini-4-neon'},{instanceId:'antigravity',model:'gemini-4-neon',options:[{id:'thought_level',value:'xhigh'}]}),'Extra');
+ assert.equal(modelOptionsSummary(cfg,{instanceId:'codex',model:'gpt-6',options:[{id:'reasoningEffort',value:'high'},{id:'fastMode',value:true}]}),'High Fast');
+ assert.equal(modelOptionsSummary({},{instanceId:'antigravity',model:'gemini-4-neon',options:[{id:'thought_level',value:'xhigh'}]}),'Extra');
+ assert.equal(modelOptionsSummary(cfg,{instanceId:'',model:''}),'');
 });

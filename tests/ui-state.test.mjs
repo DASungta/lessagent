@@ -375,3 +375,62 @@ test('home connection states prevent empty-thread flash before first shell snaps
  assert.equal(page.homeAllOfflineWithoutCache(), false);
  assert.equal(page.homeThreadListLoading(), false);
 });
+
+test('forkFromMessage forwards sourceThreadId and title, prevents duplicate forks, and ignores stale navigation', async () => {
+ const methods = source.slice(source.indexOf('  private currentChatTitle()'), source.indexOf('  private refreshExtras()'));
+ const compiled = ts.transpileModule('return class { ' + methods + ' }', { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+ const calls = [];
+ const watched = [];
+ let resolveFork;
+ const mockClient = {
+  thread: { threadId: 'child-t', details: { title: 'Fallback Title' } },
+  canScope: () => true,
+  forkThread: (runId, sideChat, sourceThreadId, title) => {
+   calls.push({ runId, sideChat, sourceThreadId, title });
+   return new Promise((r) => { resolveFork = r; });
+  }
+ };
+ const Page = new Function('client', compiled)(mockClient);
+ const page = Object.assign(new Page(), {
+  alive: true, ready: true, busy: false, unknown: false, forkingMessageId: '',
+  selectedLocalId: 'env-1', threadId: 'child-t', cachedChatTitle: 'Session Title',
+  threads: [{ id: 'child-t', label: 'Session Title' }], panelOpen: true, status: '',
+  async watch(id) { watched.push(id); }
+ });
+
+ const pending = page.forkFromMessage('msg-1', 'run-9', 'parent-t');
+ assert.equal(page.busy, true);
+ assert.equal(page.forkingMessageId, 'msg-1');
+ // Concurrent second fork click while first is in-flight is ignored
+ await page.forkFromMessage('msg-2', 'run-10', 'child-t');
+ assert.equal(calls.length, 1);
+ assert.deepEqual(calls[0], { runId: 'run-9', sideChat: false, sourceThreadId: 'parent-t', title: 'Session Title fork' });
+ resolveFork('forked-thread-id');
+ await pending;
+ assert.deepEqual(watched, ['forked-thread-id']);
+ assert.equal(page.busy, false);
+ assert.equal(page.forkingMessageId, '');
+ assert.equal(page.panelOpen, false);
+
+ // If thread changed while fork was in-flight, do not hijack navigation
+ const pendingStale = page.forkFromMessage('msg-3', 'run-11', 'child-t');
+ page.threadId = 'other-thread';
+ resolveFork('forked-stale-id');
+ await pendingStale;
+ assert.deepEqual(watched, ['forked-thread-id']);
+ assert.equal(page.forkingMessageId, '');
+
+ // Offline or missing scope blocks fork
+ page.threadId = 'child-t';
+ page.ready = false;
+ await page.forkFromMessage('msg-4', 'run-12', 'child-t');
+ assert.equal(calls.length, 2);
+
+ // Light & dark SVG icons for copy/check/fork exist
+ for (const theme of ['base', 'dark']) {
+  for (const name of ['ui_copy.svg', 'ui_check.svg', 'ui_fork.svg']) {
+   const svg = await readFile(new URL(`../entry/src/main/resources/${theme}/media/${name}`, import.meta.url), 'utf8');
+   assert.ok(svg.includes('<svg') && svg.includes('viewBox="0 0 24 24"'), `${theme}/${name}`);
+  }
+ }
+});

@@ -20,7 +20,7 @@ import { loadStagedShareThumbnail, peekIncomingShare, removeIncomingShare, remov
 import { IncomingShareAttachment, MAX_SHARED_TEXT_CHARS, SharePart, shareDraftText } from '../protocol/IncomingShare';
 import { TerminalPanel } from '../components/TerminalPanel';
 import { TerminalSize, terminalInput, terminalAccess } from '../protocol/Terminal';
-import { TaskSettings, ModelSelection, OptionSelection, QueuedRun, queuedRuns, validateTaskSettings } from '../protocol/Composer';
+import { TaskSettings, ModelSelection, OptionSelection, QueuedRun, queuedRuns, validateTaskSettings, modelOptionsSummary } from '../protocol/Composer';
 import { BranchView, branches, ComposerContextRecord, ComposerDraft, composerDraftLabel, composerDraft, contextRecord,
   draftSettings, emptyWorkspace, DraftWorkspace, switchDraftWorkspaceMode, draftWorkspaceForBranch, mentionContext, skillContext, attachmentLimitError,
   terminalContext,
@@ -44,10 +44,12 @@ import {
   PendingBackgroundTaskView,
   stepDelayedConnectionUi
 } from '../protocol/FloatingStatus';
-import { MessageWorkSlot, ThreadActivity } from '../components/ThreadActivity';
+import { MessageFooter } from '../components/MessageFooter';
+import { MessageWorkSlot, ThreadActivity, ThreadThinkingRow } from '../components/ThreadActivity';
 import {
-  ActivityLine, emptyWorkMap, groupWorkByMessage, isPlainUserText,
-  MessageWorkMap, TurnWorkGroup, visibleWorkItems
+  ActivityLine, buildMessageFooterMap, deriveLiveThinkingRow, emptyLiveThinkingRow, emptyWorkMap,
+  formatMessageTimestamp, groupWorkByMessage, isPlainUserText, LiveThinkingRow,
+  MessageFooterMeta, MessageWorkMap, TurnWorkGroup, visibleWorkItems
 } from '../protocol/ThreadItems';
 import { TaskSettingsPanel } from '../components/TaskSettingsPanel';
 import { QueuePanel } from '../components/QueuePanel';
@@ -63,7 +65,7 @@ import { EnvironmentEntry, environmentRoutes, DirectRoute } from '../protocol/En
 import { ConnectionsPanel } from '../components/ConnectionsPanel';
 import { PairingScanCard } from '../components/PairingScanCard';
 import { PairingTarget } from '../protocol/Pairing';
-import { ChatMessage, objects, record, text } from '../protocol/Wire';
+import { ChatMessage, objects, parseModelSelection, record, text } from '../protocol/Wire';
 import { MarkdownView } from '../components/MarkdownView';
 import { classifyMarkdownMediaSource, ResolvedMarkdownMedia } from '../protocol/Markdown';
 import { FilesPanel } from '../components/FilesPanel';
@@ -104,7 +106,7 @@ import { TopBar } from '../components/ui/TopBar';
 import { GroupCard } from '../components/ui/GroupCard';
 import { FormRow } from '../components/ui/FormRow';
 import { IconButton } from '../components/ui/IconButton';
-import { providerLogoKind, shortModelDisplayName } from '../protocol/ThreadRow';
+import { composerModelShortName, providerLogoKind } from '../protocol/ThreadRow';
 import { AppButton } from '../components/ui/AppButton';
 import { ProjectMonogram } from '../components/ui/ProjectMonogram';
 import { ProviderLogo } from '../components/ui/ProviderLogo';
@@ -248,11 +250,14 @@ struct Index {
   @Provide('t3CanOpenDiff') canOpenDiff: boolean = false;
   @Provide('t3WorkMap') workMap: MessageWorkMap = emptyWorkMap();
   @Provide('t3ExpandedWork') expandedWorkGroups: Record<string, boolean> = {};
+  @Provide('t3MessageFooterMap') messageFooterMap: Record<string, MessageFooterMeta> = {};
+  @Provide('t3ForkingMessageId') forkingMessageId: string = '';
+  @Provide('t3CanOperateChat') canOperateChat: boolean = false;
   private lastWorkThreadKey: string = '';
   private renderedThreadKey: string = '';
   @State hasMoreHistory: boolean = false;
   @State chatAwayFromBottom: boolean = false;
-  @State composerToolsOpen: boolean = false;
+  @State threadRunning: boolean = false;
   private pendingScrollBottomKey: string = '';
   private lastAutoWatchKey: string = '';
   @State cachedChatTitle: string = '';
@@ -272,6 +277,7 @@ struct Index {
   @State activeModelDriver: string = '';
   @State activeModelSlug: string = '';
   @State activeModelLabel: string = '';
+  @State activeModelSummary: string = '';
   @State activeDraftId: string = '';
   private draftModelCustomized: boolean = false;
   @State draftRecords: ComposerDraft[] = [];
@@ -290,6 +296,7 @@ struct Index {
   @State extraGuest: GuestShareView | undefined = undefined;
   @State extraUsage: TokenUsage | undefined = undefined;
   @State floatingCapsule: FloatingCapsuleModel = emptyFloatingCapsule();
+  @State liveThinking: LiveThinkingRow = emptyLiveThinkingRow();
   @State turnSubagents: SubagentView[] = [];
   @State pendingBackgroundItems: PendingBackgroundTaskView[] = [];
   @State forceStoppingKey: string = '';
@@ -405,6 +412,8 @@ struct Index {
         this.hasMoreHistory = false;
       }
       this.queued = !this.draftMode && client.thread ? queuedRuns(client.thread.runs, client.thread.messageRecords) : [];
+      this.threadRunning = !this.draftMode && !!client.thread?.runs.some((run: Record<string, Object>) =>
+        ['preparing', 'starting', 'running', 'waiting'].includes(String(run.status)));
       if (client.recoveredMessageId && this.messages.some((m: ChatMessage) =>
         m.id === client.recoveredMessageId && m.text === this.prompt)) {
         this.prompt = '';
@@ -413,6 +422,7 @@ struct Index {
       this.source.update(this.messages);
       this.attachmentName = client.attachment?.name || '';
       this.unknown = !!client.recovery?.pendingId;
+      this.canOperateChat = !this.draftMode && client.ready && !this.unknown && client.canScope('orchestration:operate') !== false;
       this.projects = client.shell.projects.slice();
       this.threads = client.shell.threads.slice();
       this.models = client.models.slice();
@@ -437,6 +447,16 @@ struct Index {
         this.workMap = !this.draftMode && client.thread
           ? groupWorkByMessage(client.thread.items, client.thread.runs, client.thread.checkpoints, this.messages)
           : emptyWorkMap();
+        this.messageFooterMap = !this.draftMode && client.thread
+          ? buildMessageFooterMap(
+              client.thread.threadId,
+              this.messages,
+              client.thread.items,
+              client.thread.runs,
+              client.thread.providerThreads,
+              client.thread.providerSessions
+            )
+          : {};
       }
       this.tools = !this.draftMode && client.thread && this.workMap.hasVisible
         ? visibleWorkItems(client.thread.items).map((row: Record<string, Object>) => String(row.type) + ' · ' + String(row.status))
@@ -752,14 +772,19 @@ struct Index {
       if (next) next.draftScope = '';
       this.messages = []; this.source.update([]); this.actions = []; this.tools = [];
       this.workMap = emptyWorkMap();
+      this.liveThinking = { visible: false, kind: 'thinking', label: '', runId: '' };
+      this.messageFooterMap = {};
+      this.forkingMessageId = '';
+      this.canOperateChat = false;
       this.renderedThreadKey = '';
       this.hasMoreHistory = false;
       this.chatAwayFromBottom = false;
-      this.composerToolsOpen = false;
+      this.threadRunning = false;
       this.activeModelInstanceId = '';
       this.activeModelDriver = '';
       this.activeModelSlug = '';
       this.activeModelLabel = '';
+      this.activeModelSummary = '';
       this.pendingScrollBottomKey = '';
       this.lastAutoWatchKey = '';
       this.cachedChatTitle = '';
@@ -1686,10 +1711,13 @@ struct Index {
     this.branches = []; this.branchesLoading = false; this.commandPanel = '';
     this.messages = []; this.source.update([]); this.actions = []; this.tools = []; this.linkItems = [];
     this.workMap = emptyWorkMap();
+    this.messageFooterMap = {};
+    this.forkingMessageId = '';
+    this.canOperateChat = false;
     this.renderedThreadKey = '';
     this.hasMoreHistory = false;
     this.chatAwayFromBottom = false;
-    this.composerToolsOpen = false;
+    this.threadRunning = false;
     this.pendingScrollBottomKey = '';
     this.lastAutoWatchKey = '';
     this.cachedChatTitle = '';
@@ -1698,6 +1726,7 @@ struct Index {
     this.queued = []; this.extraPlans = []; this.extraSubagents = []; this.extraBackground = [];
     this.extraGuest = undefined; this.extraUsage = undefined;
     this.floatingCapsule = emptyFloatingCapsule();
+    this.liveThinking = emptyLiveThinkingRow();
     this.turnSubagents = [];
     this.pendingBackgroundItems = [];
     this.page = 'chat'; this.panelOpen = false; this.sendMode = 'auto';
@@ -1705,6 +1734,7 @@ struct Index {
     this.activeModelDriver = '';
     this.activeModelSlug = this.taskSettings.modelSelection.model;
     this.activeModelLabel = '';
+    this.activeModelSummary = '';
     this.rememberProject(projectId);
     this.status = existing ? '已恢复本地草稿' : '新任务草稿已保存';
     if (!existing) { this.draftRecords = [this.draftRecord()!].concat(this.draftRecords); void this.persistDraft().catch(() => {}); }
@@ -1973,6 +2003,43 @@ struct Index {
     finally { this.busy = false; }
   }
 
+  private currentChatTitle(): string {
+    const matched = this.threads.find((t: ThreadView) => t.id === this.threadId);
+    if (matched?.label) return matched.label.trim();
+    if (this.cachedChatTitle) return this.cachedChatTitle.trim();
+    if (client.thread && typeof client.thread.details.title === 'string') {
+      return client.thread.details.title.trim();
+    }
+    return '';
+  }
+
+  private async forkFromMessage(messageId: string, runId: string, sourceThreadId: string): Promise<void> {
+    if (!client.thread || this.busy || this.unknown || this.forkingMessageId !== '' || !runId) return;
+    if (!this.ready || client.canScope('orchestration:operate') === false) return;
+    const owner = client;
+    const localId = this.selectedLocalId;
+    const originThreadId = this.threadId;
+    const sourceTitle = this.currentChatTitle();
+    const forkTitle = sourceTitle ? sourceTitle + ' fork' : '';
+    this.busy = true;
+    this.forkingMessageId = messageId;
+    try {
+      const id = await owner.forkThread(runId, false, sourceThreadId, forkTitle);
+      if (!this.alive || client !== owner || this.selectedLocalId !== localId || this.threadId !== originThreadId) {
+        return;
+      }
+      this.panelOpen = false;
+      await this.watch(id);
+    } catch (error) {
+      if (this.alive && client === owner && this.selectedLocalId === localId) {
+        this.status = (error as Error).message;
+      }
+    } finally {
+      if (this.forkingMessageId === messageId) this.forkingMessageId = '';
+      this.busy = false;
+    }
+  }
+
   private refreshExtras(): void {
     if (!client.thread) { this.extraPlans = []; this.extraSubagents = []; this.extraBackground = [];
       this.extraGuest = undefined; this.extraUsage = undefined; return; }
@@ -2018,6 +2085,7 @@ struct Index {
       this.turnSubagents = [];
       this.pendingBackgroundItems = [];
       this.floatingCapsule = emptyFloatingCapsule();
+      this.liveThinking = emptyLiveThinkingRow();
       return;
     }
     const thread = client.thread && client.thread.threadId === this.threadId ? client.thread : undefined;
@@ -2068,6 +2136,29 @@ struct Index {
       hasWorktreeSetupCard: this.worktreeSetup !== undefined,
       supportsSnooze: caps === undefined || caps.snooze,
       supportsSettlement: caps === undefined || caps.settlement
+    });
+    const pendingLocalLinks = this.linkItems.filter((item: LinkRequestView) =>
+      item.status === 'pending' && item.visibility === 'local').length;
+    const rawConfigProviders = client.config ? client.config.providers : undefined;
+    const configProviders = Array.isArray(rawConfigProviders) ? rawConfigProviders as Object[] : undefined;
+    this.liveThinking = deriveLiveThinkingRow({
+      draftMode: false,
+      threadSynced: synced,
+      runs: thread ? thread.runs : [],
+      items: thread ? thread.items : [],
+      messages: this.messages,
+      providerTurns: thread ? thread.providerTurns : [],
+      providerSessions: thread ? thread.providerSessions : [],
+      nodes: thread ? thread.nodes : [],
+      details: thread ? thread.details : {},
+      tailGroup: this.workMap.tail,
+      pendingActionCount: this.actions.length + pendingLocalLinks,
+      hasPendingBackgroundWork: bgTasks.length > 0,
+      hasWorktreeSetupCard: this.worktreeSetup !== undefined,
+      isCompacting: this.floatingCapsule.status?.kind === 'compacting',
+      isStopping: this.floatingCapsule.status?.kind === 'stop',
+      fallbackProviderDriver: this.activeModelDriver,
+      configProviders
     });
   }
 
@@ -2339,6 +2430,7 @@ struct Index {
       this.activeModelDriver = '';
       this.activeModelSlug = applied.modelSelection.model;
       this.activeModelLabel = '';
+      this.activeModelSummary = '';
       if (this.draftMode) this.scheduleDraftSave();
       if (failure) this.status = (partial ? '部分设置已生效：' : '设置保存失败：') + failure;
       else { this.status = '设置已保存'; this.panelOpen = false; }
@@ -2404,6 +2496,8 @@ struct Index {
       this.messages = [];
       this.source.update([]);
       this.workMap = emptyWorkMap();
+      this.messageFooterMap = {};
+      this.forkingMessageId = '';
       this.renderedThreadKey = '';
       this.hasMoreHistory = false;
       this.cachedChatTitle = '';
@@ -2413,12 +2507,14 @@ struct Index {
       this.activeModelDriver = '';
       this.activeModelSlug = matched?.model || '';
       this.activeModelLabel = '';
+      this.activeModelSummary = '';
       this.turnSubagents = [];
       this.pendingBackgroundItems = [];
       this.floatingCapsule = emptyFloatingCapsule();
+      this.liveThinking = emptyLiveThinkingRow();
     }
     this.chatAwayFromBottom = false;
-    this.composerToolsOpen = false;
+    this.threadRunning = false;
     this.pendingScrollBottomKey = targetKey;
     this.lastAutoWatchKey = this.selectedLocalId + ':' + client.generationValue() + ':' + id;
     this.threadId = id;
@@ -2461,6 +2557,7 @@ struct Index {
         const id = await owner.launch(this.projectId, submitted, this.taskSettings, this.draftWorkspace, submittedContext);
         if (owner !== client || localId !== this.selectedLocalId) return;
         this.draftMode = false; this.threadId = id; this.activeDraftId = '';
+        this.pendingScrollBottomKey = localId + ':' + id;
         if (this.prompt === submitted) this.prompt = '';
         else this.textDrafts.set(this.draftKey(), this.prompt);
         this.draftContext = []; this.attachments = [];
@@ -2471,9 +2568,12 @@ struct Index {
       } else {
         const running = !!owner.thread?.runs.some((run: Record<string, Object>) => ['preparing', 'starting', 'running', 'waiting'].includes(String(run.status)));
         await owner.send(submitted, followUpDelivery(this.sendMode || 'auto', running, workspacePrefs.followUpBehavior), submittedContext);
-        if (owner === client && this.prompt === submitted) {
-          this.prompt = ''; this.textDrafts.delete(key); this.draftContext = [];
-          this.contextDrafts.delete(key);
+        if (owner === client) {
+          this.pendingScrollBottomKey = localId + ':' + this.threadId;
+          if (this.prompt === submitted) {
+            this.prompt = ''; this.textDrafts.delete(key); this.draftContext = [];
+            this.contextDrafts.delete(key);
+          }
         }
       }
     } catch (error) {
@@ -2552,7 +2652,17 @@ struct Index {
     this.scheduleDraftSave();
   }
 
-  private composerAttachmentMenu(uploading: boolean, canRetry: boolean, hasAttachments: boolean): MenuElement[] {
+  private composerSendModeMenu(): MenuElement[] {
+    return [
+      { value: this.sendMode === 'auto' ? '✓ 自动发送' : '自动发送', action: () => { this.sendMode = 'auto'; } },
+      { value: this.sendMode === 'queue' ? '✓ 排队发送' : '排队发送', action: () => { this.sendMode = 'queue'; } },
+      { value: this.sendMode === 'steer' ? '✓ 引导运行' : '引导运行', action: () => { this.sendMode = 'steer'; } }
+    ];
+  }
+
+  private composerAttachmentMenu(uploading: boolean, canRetry: boolean, hasAttachments: boolean,
+    draftMode: boolean = false, sendMode: string = 'auto', queuedCount: number = 0,
+    threadRunning: boolean = false): MenuElement[] {
     if (uploading) {
       return [
         { value: '取消上传', action: () => { this.cancelAttachmentUpload(); } },
@@ -2566,7 +2676,20 @@ struct Index {
     if (canRetry) {
       items.push({ value: '重试上传', action: () => { void this.attach('retry'); } });
     }
+    items.push({ value: '引用文件 @', action: () => { this.openComposerCommand('mention'); } });
+    items.push({ value: '命令 /', action: () => { this.openComposerCommand('commands'); } });
+    items.push({ value: '技能', action: () => { this.openComposerCommand('skill'); } });
+    items.push({ value: '语音输入', action: () => { this.voiceTarget = this.draftKey(); this.page = 'voice'; } });
     items.push({ value: '粘贴结构化上下文', action: () => { this.openPanel('paste-context'); } });
+    if (!draftMode) {
+      items.push({ value: queuedCount > 0 ? '队列 (' + queuedCount + ')' : '队列', action: () => { this.openPanel('queue'); } });
+      if (sendMode !== 'auto') {
+        items.push({ value: '恢复自动发送', action: () => { this.sendMode = 'auto'; } });
+      } else if (threadRunning) {
+        items.push({ value: '排队发送', action: () => { this.sendMode = 'queue'; } });
+        items.push({ value: '引导运行', action: () => { this.sendMode = 'steer'; } });
+      }
+    }
     if (hasAttachments) {
       items.push({ value: '清空附件', action: () => { this.clearAttachments(); } });
     }
@@ -2578,9 +2701,14 @@ struct Index {
     catch (error) { this.status = (error as Error).message; }
   }
 
-  private async copy(value: string): Promise<void> {
-    try { await pasteboard.getSystemPasteboard().setData(pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, value)); }
-    catch (_) { this.status = '复制失败'; }
+  private async copy(value: string): Promise<boolean> {
+    try {
+      await pasteboard.getSystemPasteboard().setData(pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, value));
+      return true;
+    } catch (_) {
+      this.status = '复制失败';
+      return false;
+    }
   }
   private async openLink(url: string): Promise<void> {
     if (!/^(https?:\/\/|mailto:)/i.test(url)) { this.status = '已阻止非 HTTP(S)/mailto 链接'; return; }
@@ -2735,9 +2863,7 @@ struct Index {
     this.panelOpen = false; this.page = 'pull-requests';
   }
   private messageTime(value: string | undefined): string {
-    if (!value) return '';
-    const time = Date.parse(value);
-    return Number.isFinite(time) ? new Date(time).toLocaleTimeString() : '';
+    return formatMessageTimestamp(value);
   }
 
   onBackPress(): boolean {
@@ -2967,7 +3093,9 @@ struct Index {
     if (this.status === '正在鉴权' || this.status === '正在连接与校验服务器' ||
       this.status === '正在通过 T3 Connect 授权' || this.status === '正在连接中继环境' ||
       this.status === '正在同步会话' || this.status === '正在重新连接' ||
-      this.status === '后台已暂停连接，任务在服务端继续') {
+      this.status === '后台已暂停连接，任务在服务端继续' || this.status.startsWith('任务状态') ||
+      this.status === '正在提交' || this.status === '指令已确认，请等待回复' ||
+      this.status === '附件已上传，发送指令时附带') {
       return false;
     }
     return true;
@@ -3613,7 +3741,24 @@ struct Index {
   messageMenu(message: ChatMessage) {
     Menu() {
       MenuItem({ content: '复制消息' }).onClick(() => { void this.copy(message.text); })
+      if (this.messageFooterMap[message.id]?.canFork && this.canOperateChat) {
+        MenuItem({ content: '从此处分叉会话' }).onClick(() => {
+          const meta = this.messageFooterMap[message.id];
+          if (meta && meta.canFork) {
+            void this.forkFromMessage(message.id, meta.forkRunId, meta.forkSourceThreadId);
+          }
+        })
+      }
       MenuItem({ content: '分享消息' }).onClick(() => { void this.shareMessage(message.text); })
+    }
+  }
+
+  @Builder
+  sendModeContextMenu() {
+    Menu() {
+      MenuItem({ content: this.sendMode === 'auto' ? '✓ 自动发送' : '自动发送' }).onClick(() => { this.sendMode = 'auto'; })
+      MenuItem({ content: this.sendMode === 'queue' ? '✓ 排队发送' : '排队发送' }).onClick(() => { this.sendMode = 'queue'; })
+      MenuItem({ content: this.sendMode === 'steer' ? '✓ 引导运行' : '引导运行' }).onClick(() => { this.sendMode = 'steer'; })
     }
   }
 
@@ -3772,7 +3917,7 @@ struct Index {
         }.width('100%').constraintSize({ minHeight: 36 }).padding({ left: Space.sm, right: Space.xs })
           .backgroundColor($r('app.color.group')).borderRadius(Radius.button).enabled(!this.busy)
           .accessibilityDescription('选择分支与工作区').onClick(() => this.openComposerCommand('branch'))
-      }.width('100%').padding({ left: Space.md, right: Space.md, top: Space.xxs, bottom: Space.xs })
+      }.width('100%').padding({ left: Space.md, right: Space.md, top: Space.sm, bottom: Space.xs })
     }
     Stack({ alignContent: Alignment.Bottom }) {
       List({ space: 14, scroller: this.scroller }) {
@@ -3816,10 +3961,16 @@ struct Index {
               } else {
                 this.assistantBlock(message)
               }
-              if (this.messageTime(message.timestamp)) {
-                Text(this.messageTime(message.timestamp)).fontSize(FontSize.badge).fontColor($r('app.color.muted'))
-                  .width('100%').textAlign(message.role === 'user' ? TextAlign.End : TextAlign.Start)
-              }
+              MessageFooter({
+                messageId: message.id,
+                role: message.role,
+                text: message.text,
+                timestampLabel: this.messageTime(message.timestamp),
+                onCopy: (value: string): Promise<boolean> => this.copy(value),
+                onFork: (msgId: string, runId: string, sourceThreadId: string) => {
+                  void this.forkFromMessage(msgId, runId, sourceThreadId);
+                }
+              })
             }.width('100%')
               .bindContextMenu(this.messageMenu(message), ResponseType.LongPress)
             if (message.role === 'user' && !this.draftMode) {
@@ -3851,6 +4002,14 @@ struct Index {
       if (!this.draftMode && this.workMap.tail) {
         ListItem() {
           this.turnWorkView(this.workMap.tail)
+        }
+      }
+      if (!this.draftMode && this.liveThinking.visible) {
+        ListItem() {
+          ThreadThinkingRow({
+            label: this.liveThinking.label,
+            active: true
+          })
         }
       }
       ForEach(this.actions, (card: ActionCard) => { ListItem() { RequestCard({ card, connection: client }) } }, (card: ActionCard) => this.selectedLocalId + ':' + card.id)
@@ -4042,164 +4201,167 @@ struct Index {
         .hitTestBehavior(HitTestMode.Transparent)
     }.width('100%').layoutWeight(1)
     Column({ space: 0 }) {
-      if (this.draftContext.length) {
+      if (this.draftContext.length || this.attachments.length) {
         Scroll() {
           Row({ space: 6 }) {
             ForEach(this.draftContext, (item: ComposerContextRecord) => {
-              Button((item.kind + ': ' + item.label) + ' ×', { type: ButtonType.Normal })
-                .constraintSize({ minHeight: 30 }).padding({ left: 10, right: 10 }).borderRadius(Radius.tool)
-                .fontSize(FontSize.caption).backgroundColor($r('app.color.card')).fontColor($r('app.color.ink'))
-                .border({ width: 0.5, color: $r('app.color.border') })
-                .accessibilityDescription('移除引用')
-                .onClick(() => this.removeContext(item.contextId))
+              Row({ space: 4 }) {
+                Text(item.kind + ': ' + item.label)
+                  .fontSize(FontSize.caption).lineHeight(LineHeight.caption)
+                  .fontColor($r('app.color.ink'))
+                  .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .constraintSize({ maxWidth: 168 })
+                Text('×')
+                  .fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+              }
+              .height(30).padding({ left: 10, right: 8 })
+              .backgroundColor($r('app.color.card')).borderRadius(Radius.tool)
+              .border({ width: 0.5, color: $r('app.color.border') })
+              .alignItems(VerticalAlign.Center)
+              .accessibilityDescription('移除引用 ' + item.label)
+              .onClick(() => this.removeContext(item.contextId))
             }, (item: ComposerContextRecord) => item.contextId)
-          }.padding({ left: 2, right: 2, bottom: 6 })
-        }.scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).align(Alignment.Start).width('100%')
-      }
-      if (this.attachments.length) {
-        Scroll() {
-          Row({ space: 6 }) {
             ForEach(this.attachments, (item: DraftAttachment) => {
-              Row({ space: 2 }) {
-                Button((item.type === 'image' ? '图 · ' : '文件 · ') + item.name, { type: ButtonType.Normal })
-                  .constraintSize({ minHeight: 30 }).padding({ left: 10, right: 8 }).borderRadius(Radius.tool)
-                  .fontSize(FontSize.caption).backgroundColor($r('app.color.card')).fontColor($r('app.color.ink'))
-                  .border({ width: 0.5, color: $r('app.color.border') })
-                  .onClick(() => { void this.openAttachment(item.name); })
-                Button('×', { type: ButtonType.Normal }).width(30).constraintSize({ minHeight: 30 }).borderRadius(Radius.tool)
-                  .fontSize(FontSize.callout).backgroundColor($r('app.color.card')).fontColor($r('app.color.muted'))
-                  .border({ width: 0.5, color: $r('app.color.border') })
-                  .accessibilityText('移除附件 ' + item.name)
-                  .onClick(() => { client.removeAttachment(item.id); this.refreshAttachments(); this.scheduleDraftSave(); })
+              Row({ space: 0 }) {
+                Button({ type: ButtonType.Normal, stateEffect: true }) {
+                  Text((item.type === 'image' ? '图 · ' : '文件 · ') + item.name)
+                    .fontSize(FontSize.caption).lineHeight(LineHeight.caption)
+                    .fontColor($r('app.color.ink'))
+                    .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+                    .constraintSize({ maxWidth: 176 })
+                }
+                .height(30).padding({ left: 10, right: 6 })
+                .backgroundColor(Color.Transparent)
+                .onClick(() => { void this.openAttachment(item.name); })
+                Button({ type: ButtonType.Normal, stateEffect: true }) {
+                  Text('×').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+                }
+                .width(26).height(30).padding(0)
+                .backgroundColor(Color.Transparent)
+                .accessibilityText('移除附件 ' + item.name)
+                .onClick(() => { client.removeAttachment(item.id); this.refreshAttachments(); this.scheduleDraftSave(); })
               }
+              .backgroundColor($r('app.color.card')).borderRadius(Radius.tool)
+              .border({ width: 0.5, color: $r('app.color.border') })
+              .alignItems(VerticalAlign.Center)
             }, (item: DraftAttachment) => item.id)
-          }.padding({ left: 2, right: 2, bottom: 6 })
+          }.padding({ left: 12, right: 12, top: 10, bottom: 2 })
         }.scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).align(Alignment.Start).width('100%')
       }
-      Row({ space: 6 }) {
+      TextArea({ placeholder: this.draftMode ? '描述要完成的任务…' : '继续追问…', text: this.prompt })
+        .width('100%')
+        .fontSize(FontSize.body).lineHeight(LineHeight.body)
+        .fontColor($r('app.color.ink')).placeholderColor($r('app.color.placeholder'))
+        .onChange((value: string, preview: PreviewText) => { this.composingText = !!preview?.value; this.prompt = value; this.scheduleDraftSave(); })
+        .onFocus(() => { this.composerFocused = true; this.keyboard.reset(); })
+        .onBlur(() => { this.composerFocused = false; this.composingText = false; this.keyboard.reset(); })
+        .onKeyPreIme((event: KeyEvent): boolean => this.keyboardEvent(event, true))
+        .constraintSize({ minHeight: 42 }).maxLines(5, { overflowMode: MaxLinesMode.SCROLL })
+        .padding({ left: 14, right: 14, top: (this.draftContext.length || this.attachments.length) ? 6 : 12, bottom: 4 })
+        .backgroundColor(Color.Transparent).accessibilityText('消息输入框')
+      Row({ space: 4 }) {
         Button({ type: ButtonType.Circle, stateEffect: true }) {
-          Image($r('app.media.ui_plus')).width(15).height(15).accessibilityLevel('no')
-        }.width(32).height(32)
-          .backgroundColor($r('app.color.card')).border({ width: 0.5, color: $r('app.color.border') })
-          .accessibilityText('添加附件')
-          .bindMenu(this.composerAttachmentMenu(this.uploadingAttachment, this.canRetryAttachment, this.attachments.length > 0))
-        Button({ type: ButtonType.Circle, stateEffect: true }) {
-          Image($r('app.media.ui_image')).width(15).height(15).accessibilityLevel('no')
-        }.width(32).height(32)
-          .backgroundColor($r('app.color.card')).border({ width: 0.5, color: $r('app.color.border') })
-          .opacity(this.ready && !this.busy && !this.unknown ? 1 : Opacity.disabled)
-          .enabled(this.ready && !this.busy && !this.unknown)
-          .accessibilityText('从图库选择图片')
-          .onClick(() => { void this.attach('photo'); })
-        TextArea({ placeholder: this.draftMode ? '描述要完成的任务…' : '继续追问…', text: this.prompt })
-          .fontSize(FontSize.body).lineHeight(LineHeight.body)
-          .fontColor($r('app.color.ink')).placeholderColor($r('app.color.placeholder'))
-          .onChange((value: string, preview: PreviewText) => { this.composingText = !!preview?.value; this.prompt = value; this.scheduleDraftSave(); })
-          .onFocus(() => { this.composerFocused = true; this.keyboard.reset(); })
-          .onBlur(() => { this.composerFocused = false; this.composingText = false; this.keyboard.reset(); })
-          .onKeyPreIme((event: KeyEvent): boolean => this.keyboardEvent(event, true))
-          .constraintSize({ minHeight: 32 }).maxLines(4, { overflowMode: MaxLinesMode.SCROLL })
-          .layoutWeight(1).padding({ left: 4, right: 4, top: 5, bottom: 5 })
-          .backgroundColor(Color.Transparent).accessibilityText('消息输入框')
-        if (!this.composerToolsOpen) {
+          Image($r('app.media.ui_plus'))
+            .width(20).height(20)
+            .opacity(this.busy || this.unknown ? Opacity.disabled : 0.9)
+            .accessibilityLevel('no')
+        }.width(38).height(38)
+          .backgroundColor(Color.Transparent)
+          .accessibilityText('添加附件与工具')
+          .bindMenu(this.composerAttachmentMenu(
+            this.uploadingAttachment,
+            this.canRetryAttachment,
+            this.attachments.length > 0,
+            this.draftMode,
+            this.sendMode,
+            this.queued.length,
+            this.threadRunning
+          ))
+        if (!this.draftMode && this.sendMode !== 'auto') {
           Button({ type: ButtonType.Capsule, stateEffect: true }) {
-            Stack({ alignContent: Alignment.TopEnd }) {
-              Row({ space: 3 }) {
-                if (this.hasCurrentModelLogo()) {
-                  ProviderLogo({ driver: this.currentModelDriver(), model: this.currentModelSlug(), logoSize: 16 })
-                } else {
-                  Image($r('app.media.ui_settings')).width(15).height(15).opacity(0.78).accessibilityLevel('no')
-                }
-                Image($r('app.media.ui_chevron_down')).width(10).height(10).opacity(0.65).accessibilityLevel('no')
-              }.alignItems(VerticalAlign.Center)
-              if (this.sendMode !== 'auto' || this.queued.length > 0) {
-                Circle().width(6).height(6).fill($r('app.color.primary')).offset({ x: 3, y: -3 }).accessibilityLevel('no')
+            Text(this.sendMode === 'queue' ? '排队' : '引导')
+              .fontSize(FontSize.caption).lineHeight(LineHeight.caption)
+              .fontWeight(Weight.medium)
+              .fontColor($r('app.color.primary_text'))
+          }.height(28).padding({ left: 10, right: 10 })
+            .backgroundColor($r('app.color.info_bg'))
+            .accessibilityText('消息发送方式，' + (this.sendMode === 'queue' ? '排队' : '引导'))
+            .bindMenu(this.composerSendModeMenu())
+        }
+        Row() {
+          Button({ type: ButtonType.Normal, stateEffect: true }) {
+            Row({ space: 5 }) {
+              if (this.hasCurrentModelLogo()) {
+                ProviderLogo({ driver: this.currentModelDriver(), model: this.currentModelSlug(), logoSize: 17 })
+              } else {
+                Image($r('app.media.ui_settings')).width(16).height(16).opacity(0.75).flexShrink(0).accessibilityLevel('no')
               }
+              Text(this.currentModelDisplayLabel() || '模型')
+                .fontSize(FontSize.body).lineHeight(LineHeight.body)
+                .fontWeight(Weight.medium)
+                .fontColor($r('app.color.ink'))
+                .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+                .wordBreak(WordBreak.BREAK_ALL)
+                .constraintSize({ minWidth: 0 })
+                .flexShrink(1)
+              if (this.currentModelSummary()) {
+                Text(this.currentModelSummary())
+                  .fontSize(FontSize.callout).lineHeight(LineHeight.callout)
+                  .fontColor($r('app.color.muted'))
+                  .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .flexShrink(0)
+              }
+              Image($r('app.media.ui_chevron_down')).width(12).height(12).opacity(0.7).flexShrink(0).accessibilityLevel('no')
+            }.alignItems(VerticalAlign.Center)
+          }.height(36).padding({ left: 8, right: 6 })
+            .backgroundColor(Color.Transparent)
+            .borderRadius(Radius.button)
+            .constraintSize({ minWidth: 0 })
+            .enabled(!this.busy && !this.unknown)
+            .opacity(!this.busy && !this.unknown ? 1 : Opacity.disabled)
+            .accessibilityText('模型与选项，' + (this.currentModelDisplayLabel() || '模型') +
+              (this.currentModelSummary() ? ' ' + this.currentModelSummary() : ''))
+            .onClick(() => this.openTaskSettings())
+        }.layoutWeight(1).constraintSize({ minWidth: 0 }).justifyContent(FlexAlign.End).alignItems(VerticalAlign.Center)
+        if (!this.draftMode && this.threadRunning && !this.busy && !this.unknown &&
+          this.prompt.trim().length === 0 && this.attachments.length === 0) {
+          Button({ type: ButtonType.Circle, stateEffect: true }) {
+            Rect().width(11).height(11).radius(2.5).fill($r('app.color.danger'))
+          }.width(36).height(36)
+            .backgroundColor($r('app.color.danger_bg'))
+            .border({ width: 1, color: $r('app.color.danger_border') })
+            .enabled(this.ready)
+            .opacity(this.ready ? 1 : Opacity.disabled)
+            .accessibilityText('停止任务')
+            .onClick(() => this.stop())
+        } else if (this.draftMode) {
+          Button({ type: ButtonType.Circle, stateEffect: true }) {
+            if (this.busy) {
+              LoadingProgress().width(16).height(16).color($r('app.color.on_prominent')).accessibilityLevel('no')
+            } else {
+              Image($r('app.media.ui_send')).width(17).height(17).accessibilityLevel('no')
             }
-          }.height(32).padding({ left: 8, right: 6 })
-            .backgroundColor($r('app.color.card')).border({ width: 0.5, color: $r('app.color.border') })
-            .accessibilityText('当前模型 ' + (this.currentModelDisplayLabel() || '模型') + '，展开选项')
-            .onClick(() => { this.composerToolsOpen = true; })
+          }.width(36).height(36).backgroundColor($r('app.color.prominent'))
+            .opacity(this.busy || (this.ready && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0)) ? 1 : 0.28)
+            .accessibilityText(this.busy ? '正在提交' : '发送消息')
+            .enabled(this.ready && !this.busy && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0))
+            .onClick(() => this.send())
         } else {
           Button({ type: ButtonType.Circle, stateEffect: true }) {
-            Image($r('app.media.ui_chevron_down')).width(13).height(13).opacity(0.8).rotate({ angle: 180 }).accessibilityLevel('no')
-          }.width(32).height(32)
-            .backgroundColor($r('app.color.card'))
-            .border({ width: 1, color: $r('app.color.primary') })
-            .accessibilityText('收起模型与工具栏')
-            .onClick(() => { this.composerToolsOpen = false; })
-        }
-        Button({ type: ButtonType.Circle, stateEffect: true }) {
-          if (this.busy) {
-            LoadingProgress().width(16).height(16).color($r('app.color.on_prominent')).accessibilityLevel('no')
-          } else {
-            Image($r('app.media.ui_send')).width(16).height(16).accessibilityLevel('no')
-          }
-        }.width(32).height(32).backgroundColor($r('app.color.prominent'))
-          .opacity(this.busy || (this.ready && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0)) ? 1 : 0.3)
-          .accessibilityText(this.busy ? '正在提交' : '发送消息')
-          .enabled(this.ready && !this.busy && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0))
-          .onClick(() => this.send())
-      }.width('100%').alignItems(VerticalAlign.Bottom)
-      if (this.composerToolsOpen) {
-        Scroll() {
-          Row({ space: 6 }) {
-            Button({ type: ButtonType.Capsule, stateEffect: true }) {
-              Row({ space: 5 }) {
-                if (this.hasCurrentModelLogo()) {
-                  ProviderLogo({ driver: this.currentModelDriver(), model: this.currentModelSlug(), logoSize: 14 })
-                }
-                Text(this.currentModelDisplayLabel() || '模型')
-                  .fontSize(FontSize.callout).fontColor($r('app.color.ink'))
-                  .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).constraintSize({ maxWidth: 150 })
-                Image($r('app.media.ui_chevron_down')).width(11).height(11).opacity(0.65).accessibilityLevel('no')
-              }.alignItems(VerticalAlign.Center)
-            }.constraintSize({ minHeight: 30 }).padding({ left: 10, right: 8, top: 4, bottom: 4 })
-              .backgroundColor($r('app.color.card')).border({ width: 0.5, color: $r('app.color.border') })
-              .enabled(!this.busy && !this.unknown)
-              .accessibilityText('模型与选项').onClick(() => this.openTaskSettings())
-            Button({ type: ButtonType.Capsule, stateEffect: true }) {
-              Text('工具').fontSize(FontSize.callout).fontColor($r('app.color.ink'))
-            }.constraintSize({ minHeight: 30 }).padding({ left: 10, right: 10, top: 4, bottom: 4 })
-              .backgroundColor($r('app.color.card')).border({ width: 0.5, color: $r('app.color.border') })
-              .enabled(!this.busy)
-              .accessibilityText('工具')
-              .bindMenu([
-                { value: '语音输入', action: () => { this.voiceTarget = this.draftKey(); this.page = 'voice'; } },
-                { value: '命令 /', action: () => this.openComposerCommand('commands') },
-                { value: '技能', action: () => this.openComposerCommand('skill') },
-                { value: '引用文件 @', action: () => this.openComposerCommand('mention') }
-              ])
-            if (!this.draftMode) {
-              Button({ type: ButtonType.Capsule, stateEffect: true }) {
-                Text(this.sendMode === 'queue' ? '排队' : this.sendMode === 'steer' ? '引导' : '自动')
-                  .fontSize(FontSize.callout)
-                  .fontColor(this.sendMode !== 'auto' ? $r('app.color.primary_text') : $r('app.color.ink'))
-              }.constraintSize({ minHeight: 30 }).padding({ left: 10, right: 10, top: 4, bottom: 4 })
-                .backgroundColor($r('app.color.card'))
-                .border({ width: 0.5, color: this.sendMode !== 'auto' ? $r('app.color.primary') : $r('app.color.border') })
-                .accessibilityText('消息发送方式，' + (this.sendMode === 'queue' ? '排队' : this.sendMode === 'steer' ? '引导' : '自动'))
-                .bindMenu([
-                  { value: '自动发送', action: () => { this.sendMode = 'auto'; } },
-                  { value: '排队发送', action: () => { this.sendMode = 'queue'; } },
-                  { value: '引导运行', action: () => { this.sendMode = 'steer'; } }
-                ])
-              Button({ type: ButtonType.Capsule, stateEffect: true }) {
-                Text('队列' + (this.queued.length ? ' ' + this.queued.length : ''))
-                  .fontSize(FontSize.callout)
-                  .fontColor(this.queued.length ? $r('app.color.primary_text') : $r('app.color.ink'))
-              }.constraintSize({ minHeight: 30 }).padding({ left: 10, right: 10, top: 4, bottom: 4 })
-                .backgroundColor($r('app.color.card'))
-                .border({ width: 0.5, color: this.queued.length ? $r('app.color.primary') : $r('app.color.border') })
-                .accessibilityText('队列' + (this.queued.length ? '，' + this.queued.length + ' 条' : ''))
-                .onClick(() => this.openPanel('queue'))
+            if (this.busy) {
+              LoadingProgress().width(16).height(16).color($r('app.color.on_prominent')).accessibilityLevel('no')
+            } else {
+              Image($r('app.media.ui_send')).width(17).height(17).accessibilityLevel('no')
             }
-          }
-        }.scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).align(Alignment.Start)
-          .width('100%').margin({ top: 6 })
-      }
+          }.width(36).height(36).backgroundColor($r('app.color.prominent'))
+            .opacity(this.busy || (this.ready && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0)) ? 1 : 0.28)
+            .accessibilityText(this.busy ? '正在提交' : '发送消息')
+            .enabled(this.ready && !this.busy && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0))
+            .bindContextMenu(this.sendModeContextMenu(), ResponseType.LongPress)
+            .onClick(() => this.send())
+        }
+      }.width('100%').padding({ left: 6, right: 8, top: 2, bottom: 6 }).alignItems(VerticalAlign.Center)
     }.margin({ left: Space.sm, right: Space.sm, top: Space.xxs, bottom: this.composerFocused ? Space.xs : Space.sm })
-      .padding({ left: 6, right: 6, top: 6, bottom: 6 })
       .backgroundColor($r('app.color.group')).borderRadius(Radius.composer)
       .border({ width: 1, color: $r('app.color.border') })
   }
@@ -4207,16 +4369,29 @@ struct Index {
   private resolveActiveModel(owner: T3Client): void {
     let instanceId = '';
     let slug = '';
+    let selection: ModelSelection | undefined = undefined;
+    let reportedSelection: ModelSelection | undefined = undefined;
     if (this.draftMode) {
-      instanceId = this.taskSettings.modelSelection.instanceId || '';
-      slug = this.taskSettings.modelSelection.model || '';
+      selection = this.taskSettings.modelSelection;
+      instanceId = selection.instanceId || '';
+      slug = selection.model || '';
     } else if (this.threadId) {
       if (owner.thread && owner.thread.threadId === this.threadId) {
         const details = owner.thread.details;
-        if (details.modelSelection !== undefined && details.modelSelection !== null) {
-          const sel = record(details.modelSelection);
-          if (typeof sel.instanceId === 'string') instanceId = sel.instanceId;
-          if (typeof sel.model === 'string') slug = sel.model;
+        selection = parseModelSelection(details.modelSelection);
+        reportedSelection = parseModelSelection(details.reportedModelSelection);
+        if (selection) {
+          instanceId = selection.instanceId;
+          slug = selection.model;
+        }
+        if (!reportedSelection && typeof details.activeProviderThreadId === 'string' && details.activeProviderThreadId) {
+          const activeProviderThreadId = details.activeProviderThreadId;
+          const providerThread = owner.thread.providerThreads.find((candidate: Record<string, Object>) =>
+            candidate.id === activeProviderThreadId &&
+            (!instanceId || candidate.providerInstanceId === instanceId));
+          if (providerThread && providerThread.nativeMetadata !== undefined && providerThread.nativeMetadata !== null) {
+            reportedSelection = parseModelSelection(record(providerThread.nativeMetadata).modelSelection);
+          }
         }
         if (!instanceId && typeof details.providerInstanceId === 'string') {
           instanceId = details.providerInstanceId;
@@ -4233,6 +4408,9 @@ struct Index {
         instanceId = this.activeModelInstanceId;
         slug = this.activeModelSlug;
       }
+    }
+    if (!selection && instanceId && slug) {
+      selection = { instanceId, model: slug };
     }
     let driver = instanceId;
     let rawName = slug;
@@ -4257,7 +4435,8 @@ struct Index {
     this.activeModelInstanceId = instanceId;
     this.activeModelDriver = driver;
     this.activeModelSlug = slug;
-    this.activeModelLabel = shortModelDisplayName(rawName, slug);
+    this.activeModelLabel = composerModelShortName(rawName, slug, driver);
+    this.activeModelSummary = selection ? modelOptionsSummary(owner.config, selection, reportedSelection) : '';
   }
 
   private currentModelSlug(): string {
@@ -4288,7 +4467,17 @@ struct Index {
     const instanceId = this.activeModelInstanceId || (this.draftMode ? this.taskSettings.modelSelection.instanceId : '');
     const slug = this.currentModelSlug();
     const hit = this.models.find((item: ModelChoice) => item.instanceId === instanceId && item.model === slug);
-    return shortModelDisplayName(hit?.label || slug, slug);
+    return composerModelShortName(hit?.label || slug, slug, this.currentModelDriver());
+  }
+
+  private currentModelSummary(): string {
+    if (this.activeModelSummary) return this.activeModelSummary;
+    if (this.draftMode) return modelOptionsSummary(client.config, this.taskSettings.modelSelection);
+    if (this.taskSettings.modelSelection.instanceId === this.activeModelInstanceId &&
+      this.taskSettings.modelSelection.model === this.activeModelSlug) {
+      return modelOptionsSummary(client.config, this.taskSettings.modelSelection);
+    }
+    return '';
   }
 
   private isRootTab(): boolean {
@@ -4630,13 +4819,16 @@ struct Index {
             IconButton({ icon: $r('app.media.ui_more'), label: '会话操作', onTap: () => this.openPanel('thread') })
           }.width('100%').constraintSize({ minHeight: Sizes.topBar }).padding({ left: Space.xs, right: Space.xs })
             .alignItems(VerticalAlign.Center)
-          if (this.showChatStatusBanner()) {
-            Text(this.status).fontSize(FontSize.caption).lineHeight(LineHeight.caption)
-              .fontColor($r('app.color.muted')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
-              .width('100%').padding({ left: Space.md, right: Space.md, bottom: Space.xxs })
-              .accessibilityText('状态：' + this.status).onClick(() => this.openPanel('thread'))
-          }
-          this.chatPage()
+          Column() {
+            if (this.showChatStatusBanner()) {
+              Text(this.status).fontSize(FontSize.caption).lineHeight(LineHeight.caption)
+                .fontColor($r('app.color.muted')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
+                .width('100%').padding({ left: Space.md, right: Space.md, top: Space.xs, bottom: Space.xxs })
+                .accessibilityText('状态：' + this.status).onClick(() => this.openPanel('thread'))
+            }
+            this.chatPage()
+          }.width('100%').layoutWeight(1).backgroundColor($r('app.color.screen'))
+            .borderRadius({ topLeft: 26, topRight: 26 }).clip(true)
         } else {
           Row({ space: 4 }) {
             Button({ type: ButtonType.Normal }) {
@@ -4713,7 +4905,7 @@ struct Index {
       }
     }.width('100%').height('100%')
       .focusable(true).onKeyEvent((event: KeyEvent) => { this.keyboardEvent(event, false); })
-      .backgroundColor(this.page === 'chat' ? $r('app.color.screen') : $r('app.color.group'))
+      .backgroundColor($r('app.color.group'))
       .foregroundColor($r('app.color.ink'))
       .bindSheet($$this.panelOpen, this.panelContent(), { height: this.panel === 'thread' ? '66%' :
         this.panel === 'attachment' ? '80%' :

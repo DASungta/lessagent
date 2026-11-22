@@ -90,6 +90,53 @@ export function shortModelDisplayName(name: string, slug: string = ''): string {
   return raw || slug.trim() || name.trim();
 }
 
+const COMPOSER_FAMILY_PREFIXES: string[] = ['Claude ', 'GPT-', 'GPT ', 'Gemini ', 'Muse ', 'Grok '];
+const COMPOSER_VARIANT_WORDS: string[] = [
+  'pro', 'flash', 'mini', 'max', 'lite', 'nano', 'ultra', 'plus', 'fast', 'turbo',
+  'preview', 'latest', 'thinking', 'reasoning', 'build', 'code', 'image', 'vision',
+  'audio', 'live', 'custom', 'tools', 'exp', 'experimental', 'chat', 'tts', 'stt',
+  'non', 'transcribe'
+];
+const COMPOSER_VERSION_WORD = /^v?\d+(?:\.\d+)*[a-z]?$/i;
+
+function composerNativeFamilies(driver: string): string[] {
+  const kind = providerLogoKind(driver);
+  if (kind === 'claude') return ['Claude '];
+  if (kind === 'openai') return ['GPT-', 'GPT '];
+  if (kind === 'gemini' || kind === 'antigravity') return ['Gemini '];
+  if (kind === 'grok') return ['Grok '];
+  if (kind === 'muse') return ['Muse '];
+  return [];
+}
+
+function composerNonVersionWords(value: string): string[] {
+  return value
+    .replace(/\(.*?\)/g, ' ')
+    .split(/[\s-]+/)
+    .filter((word: string) => word.length > 0 && !COMPOSER_VERSION_WORD.test(word));
+}
+
+function composerNamesModel(value: string): boolean {
+  return composerNonVersionWords(value).some((word: string) =>
+    !COMPOSER_VARIANT_WORDS.includes(word.toLowerCase()));
+}
+
+/** 对齐原版 modelShortName：在已展示 Provider 徽标的输入栏中进一步精简家族前缀（如 Gemini 4 Neon → 4 Neon）。 */
+export function composerModelShortName(name: string, slug: string = '', driver: string = ''): string {
+  const base = shortModelDisplayName(name, slug);
+  if (!base) return '';
+  const prefix = COMPOSER_FAMILY_PREFIXES.find((candidate: string) => base.startsWith(candidate));
+  if (!prefix) return base;
+  const rest = base.slice(prefix.length).trim();
+  if (!rest) return base;
+  const nativeFamilies = composerNativeFamilies(driver);
+  const keep = nativeFamilies.includes(prefix)
+    ? composerNonVersionWords(rest).length > 0
+    : composerNamesModel(rest);
+  if (!keep) return base;
+  return /\s/.test(rest) ? rest : rest.replace(/-/g, ' ');
+}
+
 /** 第二行左侧：失败时显示错误摘要（单行），否则显示环境名。 */
 export function threadSubline(status: string, lastError: string, environmentLabel: string): { text: string; error: boolean } {
   const error = lastError.replace(/\s+/g, ' ').trim();

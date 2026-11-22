@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {compile, threadItemsUrl, floatingStatusUrl} from './load-core.mjs';
-const { emptyWorkMap } = await import(threadItemsUrl);
+const { emptyWorkMap, emptyLiveThinkingRow } = await import(threadItemsUrl);
 const { emptyFloatingCapsule } = await import(floatingStatusUrl);
 const source=await readFile(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),'utf8');
 const methods=source.slice(source.indexOf('  private draftKey()'),source.indexOf('  private openTaskSettings()'));
@@ -12,7 +12,7 @@ let counter=0;
 const util={generateRandomUUID:()=>`draft-${++counter}`};
 const draftStore={async save(){}};
 const client={bindDraftAttachments(){}};
-const Page=new Function('client','util','emptyWorkspace','draftSettings','draftStore','emptyWorkMap','emptyFloatingCapsule',compile('return class { '+methods+' }'))(client,util,emptyWorkspace,draftSettings,draftStore,emptyWorkMap,emptyFloatingCapsule);
+const Page=new Function('client','util','emptyWorkspace','draftSettings','draftStore','emptyWorkMap','emptyFloatingCapsule','emptyLiveThinkingRow',compile('return class { '+methods+' }'))(client,util,emptyWorkspace,draftSettings,draftStore,emptyWorkMap,emptyFloatingCapsule,emptyLiveThinkingRow);
 function page(localId='a') {
   return Object.assign(new Page(),{selectedLocalId:localId,threadId:'old',draftMode:false,projectId:'old-project',prompt:'old text',
     remembered:[],rememberProject:function(id){this.remembered.push(id)},activeDraftId:'',draftRecords:[],textDrafts:new Map(),settingsDrafts:new Map(),contextDrafts:new Map(),models:[{instanceId:'codex',model:'m'}],
@@ -154,9 +154,11 @@ test('draft mode exposes project switching and retargets active drafts across pr
  assert.match(p.status, /附件未带入/);
 });
 
-test('composer exposes direct gallery button and dynamically adjusts attachment menu items by state', () => {
- assert.match(source, /Image\(\$r\('app\.media\.ui_image'\)\)[\s\S]*?accessibilityText\('从图库选择图片'\)[\s\S]*?this\.attach\('photo'\)/);
- assert.match(source, /\.bindMenu\(this\.composerAttachmentMenu\(this\.uploadingAttachment, this\.canRetryAttachment, this\.attachments\.length > 0\)\)/);
+test('composer uses stacked layout without external gallery button and consolidates actions inside plus menu', () => {
+ assert.doesNotMatch(source, /app\.media\.ui_image/);
+ assert.doesNotMatch(source, /composerToolsOpen/);
+ assert.match(source, /TextArea\(\{[\s\S]*?\.width\('100%'\)[\s\S]*?Image\(\$r\('app\.media\.ui_plus'\)\)[\s\S]*?this\.currentModelSummary\(\)[\s\S]*?this\.openTaskSettings\(\)/);
+ assert.match(source, /\.bindMenu\(this\.composerAttachmentMenu\(\s*this\.uploadingAttachment,\s*this\.canRetryAttachment,\s*this\.attachments\.length > 0,\s*this\.draftMode,\s*this\.sendMode,\s*this\.queued\.length,\s*this\.threadRunning\s*\)\)/);
 
  const menuMethod = source.slice(
   source.indexOf('  private composerAttachmentMenu('),
@@ -166,24 +168,24 @@ test('composer exposes direct gallery button and dynamically adjusts attachment 
  const page = new MenuPage();
 
  assert.deepEqual(
-  page.composerAttachmentMenu(false, false, false).map((item) => item.value),
-  ['从图库选择', '选择文件', '粘贴结构化上下文']
+  page.composerAttachmentMenu(false, false, false, false, 'auto', 0, false).map((item) => item.value),
+  ['从图库选择', '选择文件', '引用文件 @', '命令 /', '技能', '语音输入', '粘贴结构化上下文', '队列']
  );
  assert.deepEqual(
-  page.composerAttachmentMenu(true, false, false).map((item) => item.value),
+  page.composerAttachmentMenu(false, false, false, true, 'auto', 0, false).map((item) => item.value),
+  ['从图库选择', '选择文件', '引用文件 @', '命令 /', '技能', '语音输入', '粘贴结构化上下文']
+ );
+ assert.deepEqual(
+  page.composerAttachmentMenu(true, false, false, false, 'auto', 0, false).map((item) => item.value),
   ['取消上传', '粘贴结构化上下文']
  );
  assert.deepEqual(
-  page.composerAttachmentMenu(false, true, false).map((item) => item.value),
-  ['从图库选择', '选择文件', '重试上传', '粘贴结构化上下文']
+  page.composerAttachmentMenu(false, true, false, false, 'auto', 2, true).map((item) => item.value),
+  ['从图库选择', '选择文件', '重试上传', '引用文件 @', '命令 /', '技能', '语音输入', '粘贴结构化上下文', '队列 (2)', '排队发送', '引导运行']
  );
  assert.deepEqual(
-  page.composerAttachmentMenu(false, false, true).map((item) => item.value),
-  ['从图库选择', '选择文件', '粘贴结构化上下文', '清空附件']
- );
- assert.deepEqual(
-  page.composerAttachmentMenu(false, true, true).map((item) => item.value),
-  ['从图库选择', '选择文件', '重试上传', '粘贴结构化上下文', '清空附件']
+  page.composerAttachmentMenu(false, false, true, false, 'queue', 1, true).map((item) => item.value),
+  ['从图库选择', '选择文件', '引用文件 @', '命令 /', '技能', '语音输入', '粘贴结构化上下文', '队列 (1)', '恢复自动发送', '清空附件']
  );
 });
 
@@ -202,8 +204,8 @@ test('new drafts adopt resolved defaultModelSelection with options and retarget 
       }
     }
   };
-  const ConfiguredPage = new Function('client', 'util', 'emptyWorkspace', 'draftSettings', 'draftStore', 'emptyWorkMap', 'emptyFloatingCapsule',
-    compile('return class { ' + methods + ' }'))(clientWithConfig, util, emptyWorkspace, draftSettings, draftStore, emptyWorkMap, emptyFloatingCapsule);
+  const ConfiguredPage = new Function('client', 'util', 'emptyWorkspace', 'draftSettings', 'draftStore', 'emptyWorkMap', 'emptyFloatingCapsule', 'emptyLiveThinkingRow',
+    compile('return class { ' + methods + ' }'))(clientWithConfig, util, emptyWorkspace, draftSettings, draftStore, emptyWorkMap, emptyFloatingCapsule, emptyLiveThinkingRow);
   const p = Object.assign(new ConfiguredPage(), {
     selectedLocalId: 'env-a', threadId: '', draftMode: false, projectId: '', prompt: '',
     remembered: [], rememberProject() {}, activeDraftId: '', draftRecords: [],

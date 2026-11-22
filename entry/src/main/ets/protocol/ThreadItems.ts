@@ -908,3 +908,415 @@ export function resolveExpandedActivityBody(line: ActivityLine, fetchedOutput: s
   return fetchedOutput || line.text || '';
 }
 
+export interface MessageFooterMeta {
+  showFooter: boolean;
+  canCopy: boolean;
+  canFork: boolean;
+  forkRunId: string;
+  forkSourceThreadId: string;
+}
+
+export function canForkAssistantItem(
+  item: Record<string, Object>,
+  capabilities: Record<string, Object> | undefined
+): boolean {
+  if (optional(item.type) !== 'assistant_message') return false;
+  if (!optional(item.runId)) return false;
+  if (optional(item.status) !== 'completed') return false;
+  if (capabilities === undefined) {
+    // Historical and inherited items may outlive their provider-session record;
+    // keep the server-side fork fallback available unless capabilities explicitly disallow it.
+    return true;
+  }
+  const threads = capabilities.threads !== undefined && capabilities.threads !== null
+    ? record(capabilities.threads) : {};
+  const identity = capabilities.identity !== undefined && capabilities.identity !== null
+    ? record(capabilities.identity) : {};
+  const context = capabilities.context !== undefined && capabilities.context !== null
+    ? record(capabilities.context) : {};
+  const canForkNatively =
+    threads.canForkThread === true &&
+    threads.canForkFromTurn === true &&
+    identity.nativeThreadIds === 'strong';
+  return canForkNatively || context.supportsFullThreadHandoff === true;
+}
+
+export function buildMessageFooterMap(
+  threadId: string,
+  messages: ChatMessage[],
+  items: Record<string, Object>[],
+  runs: Record<string, Object>[],
+  providerThreads: Record<string, Object>[],
+  providerSessions: Record<string, Object>[]
+): Record<string, MessageFooterMeta> {
+  const runById: Record<string, Record<string, Object>> = {};
+  for (const run of runs) {
+    const id = optional(run.id);
+    if (id) runById[id] = run;
+  }
+  const terminalAssistantByRun: Record<string, string> = {};
+  for (const message of messages) {
+    if (message.role === 'assistant' && message.runId) {
+      terminalAssistantByRun[message.runId] = message.id;
+    }
+  }
+  const assistantItemByMessageId: Record<string, Record<string, Object>> = {};
+  for (const item of items) {
+    if (optional(item.type) === 'assistant_message') {
+      const msgId = optional(item.messageId);
+      if (msgId) assistantItemByMessageId[msgId] = item;
+    }
+  }
+  const providerThreadById: Record<string, Record<string, Object>> = {};
+  for (const pt of providerThreads) {
+    const id = optional(pt.id);
+    if (id) providerThreadById[id] = pt;
+  }
+  const providerSessionById: Record<string, Record<string, Object>> = {};
+  for (const ps of providerSessions) {
+    const id = optional(ps.id);
+    if (id) providerSessionById[id] = ps;
+  }
+
+  const result: Record<string, MessageFooterMeta> = {};
+  for (const message of messages) {
+    const hasText = message.text.trim().length > 0;
+    if (message.role === 'user') {
+      result[message.id] = {
+        showFooter: hasText || Boolean(message.timestamp),
+        canCopy: hasText,
+        canFork: false,
+        forkRunId: '',
+        forkSourceThreadId: ''
+      };
+      continue;
+    }
+    if (message.role !== 'assistant') {
+      result[message.id] = {
+        showFooter: hasText || Boolean(message.timestamp),
+        canCopy: hasText,
+        canFork: false,
+        forkRunId: '',
+        forkSourceThreadId: ''
+      };
+      continue;
+    }
+    const runId = message.runId || '';
+    const run = runId ? runById[runId] : undefined;
+    const turnInProgress = run !== undefined && isActiveRunStatus(optional(run.status));
+    const isTerminal = !runId || terminalAssistantByRun[runId] === message.id;
+    const showFooter = isTerminal && !turnInProgress && !message.streaming;
+    if (!showFooter) {
+      result[message.id] = {
+        showFooter: false,
+        canCopy: false,
+        canFork: false,
+        forkRunId: '',
+        forkSourceThreadId: ''
+      };
+      continue;
+    }
+    const item = assistantItemByMessageId[message.id];
+    let canFork = false;
+    let forkRunId = '';
+    let forkSourceThreadId = '';
+    if (item !== undefined) {
+      const ptId = optional(item.providerThreadId);
+      const pt = ptId ? providerThreadById[ptId] : undefined;
+      const psId = pt ? optional(pt.providerSessionId) : '';
+      const ps = psId ? providerSessionById[psId] : undefined;
+      const capabilities = ps !== undefined && ps.capabilities !== undefined && ps.capabilities !== null
+        ? record(ps.capabilities) : undefined;
+      const itemRunId = optional(item.runId) || runId;
+      const sourceThreadId = optional(item.sourceThreadId) || threadId;
+      if (itemRunId && sourceThreadId && canForkAssistantItem(item, capabilities)) {
+        canFork = true;
+        forkRunId = itemRunId;
+        forkSourceThreadId = sourceThreadId;
+      }
+    }
+    result[message.id] = {
+      showFooter: true,
+      canCopy: hasText,
+      canFork,
+      forkRunId,
+      forkSourceThreadId
+    };
+  }
+  return result;
+}
+
+let cachedMsgTimeFormatter: Intl.DateTimeFormat | undefined = undefined;
+let cachedMsgDateFormatter: Intl.DateTimeFormat | undefined = undefined;
+let cachedMsgDateWithYearFormatter: Intl.DateTimeFormat | undefined = undefined;
+
+export function formatMessageTimestamp(value: string | undefined, nowMs: number = Date.now()): string {
+  if (!value) return '';
+  const time = Date.parse(value);
+  if (!Number.isFinite(time)) return '';
+  const date = new Date(time);
+  const now = new Date(nowMs);
+  const sameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+  try {
+    if (!cachedMsgTimeFormatter) {
+      cachedMsgTimeFormatter = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
+    }
+    const formattedTime = cachedMsgTimeFormatter.format(date);
+    if (sameDay) return formattedTime;
+    const sameYear = date.getFullYear() === now.getFullYear();
+    if (sameYear) {
+      if (!cachedMsgDateFormatter) {
+        cachedMsgDateFormatter = new Intl.DateTimeFormat(undefined, { month: 'numeric', day: 'numeric' });
+      }
+      return cachedMsgDateFormatter.format(date) + ' ' + formattedTime;
+    }
+    if (!cachedMsgDateWithYearFormatter) {
+      cachedMsgDateWithYearFormatter = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'numeric', day: 'numeric' });
+    }
+    return cachedMsgDateWithYearFormatter.format(date) + ' ' + formattedTime;
+  } catch (_) {
+    const hh = String(date.getHours()).padStart(2, '0');
+    const mm = String(date.getMinutes()).padStart(2, '0');
+    if (sameDay) return hh + ':' + mm;
+    return (date.getMonth() + 1) + '/' + date.getDate() + ' ' + hh + ':' + mm;
+  }
+}
+
+export type LiveThinkingKind = 'starting' | 'preparing' | 'thinking' | 'waiting-subagents';
+
+export interface LiveThinkingRow {
+  visible: boolean;
+  kind: LiveThinkingKind;
+  label: string;
+  runId: string;
+}
+
+export interface LiveThinkingInput {
+  draftMode: boolean;
+  threadSynced: boolean;
+  runs: Record<string, Object>[];
+  items: Record<string, Object>[];
+  messages: ChatMessage[];
+  providerTurns: Record<string, Object>[];
+  providerSessions: Record<string, Object>[];
+  nodes: Record<string, Object>[];
+  details: Record<string, Object>;
+  tailGroup: TurnWorkGroup | undefined;
+  pendingActionCount: number;
+  hasPendingBackgroundWork: boolean;
+  hasWorktreeSetupCard: boolean;
+  isCompacting: boolean;
+  isStopping: boolean;
+  fallbackProviderDriver?: string;
+  configProviders?: Object[];
+}
+
+export function emptyLiveThinkingRow(): LiveThinkingRow {
+  return { visible: false, kind: 'thinking', label: '', runId: '' };
+}
+
+function numericField(value: Object | undefined): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value as number : 0;
+}
+
+export function providerDisplayName(driver: string): string {
+  const normalized = driver.trim().toLowerCase();
+  if (!normalized) return '';
+  if (normalized === 'claude' || normalized === 'claudeagent' || normalized === 'claude_agent' || normalized === 'claude-code') {
+    return 'Claude Code';
+  }
+  if (normalized === 'codex') return 'Codex';
+  if (normalized === 'antigravity') return 'Antigravity';
+  if (normalized === 'cursor') return 'Cursor';
+  if (normalized === 'gemini') return 'Gemini';
+  if (normalized === 'grok') return 'Grok';
+  if (normalized === 'opencode' || normalized === 'opencode2') return 'OpenCode';
+  if (normalized === 'pi') return 'Pi';
+  if (normalized === 'muse') return 'Muse';
+  if (normalized === 'kiro') return 'Kiro';
+  if (normalized === 'fx') return 'Fx';
+  if (normalized === 'acp') return 'ACP';
+  return '';
+}
+
+function resolveRunProviderName(
+  providerInstanceId: string,
+  providerSessions: Record<string, Object>[],
+  configProviders: Object[] | undefined,
+  fallbackDriver: string | undefined
+): string {
+  if (providerInstanceId) {
+    for (let i = providerSessions.length - 1; i >= 0; i -= 1) {
+      const session = providerSessions[i];
+      if (optional(session.providerInstanceId) !== providerInstanceId) continue;
+      const mapped = providerDisplayName(optional(session.driver));
+      if (mapped) return mapped;
+    }
+    if (Array.isArray(configProviders)) {
+      for (const raw of configProviders) {
+        if (raw === null || raw === undefined || typeof raw !== 'object' || Array.isArray(raw)) continue;
+        const row = raw as Record<string, Object>;
+        if (optional(row.instanceId) !== providerInstanceId) continue;
+        const mapped = providerDisplayName(optional(row.driver));
+        if (mapped) return mapped;
+        const displayName = optional(row.displayName).trim();
+        if (displayName) return displayName;
+      }
+    }
+  }
+  if (fallbackDriver) {
+    const mapped = providerDisplayName(fallbackDriver);
+    if (mapped) return mapped;
+  }
+  if (providerInstanceId) {
+    const mapped = providerDisplayName(providerInstanceId);
+    if (mapped) return mapped;
+  }
+  return '';
+}
+
+function latestProviderTurnForAttempt(
+  providerTurns: Record<string, Object>[],
+  attemptId: string
+): Record<string, Object> | undefined {
+  if (!attemptId) return undefined;
+  let latest: Record<string, Object> | undefined = undefined;
+  for (const turn of providerTurns) {
+    if (optional(turn.runAttemptId) !== attemptId) continue;
+    if (!latest || numericField(turn.ordinal) > numericField(latest.ordinal)) {
+      latest = turn;
+    }
+  }
+  return latest;
+}
+
+function isProviderNativeSubagent(details: Record<string, Object>): boolean {
+  if (optional(details.creationSource) !== 'provider') return false;
+  if (details.lineage === undefined || details.lineage === null) return false;
+  try {
+    return optional(record(details.lineage).relationshipToParent) === 'subagent';
+  } catch (_) {
+    return false;
+  }
+}
+
+function countTrailingActiveSubagents(items: Record<string, Object>[], runId: string): number {
+  if (!runId) return 0;
+  let count = 0;
+  for (let i = items.length - 1; i >= 0; i -= 1) {
+    const item = items[i];
+    if (optional(item.runId) !== runId) break;
+    const type = optional(item.type);
+    if (type === 'subagent') {
+      if (isActiveItemStatus(optional(item.status))) count += 1;
+      continue;
+    }
+    if (type === 'user_message' || type === 'assistant_message') break;
+    if (!isHiddenWorkItem(item)) break;
+  }
+  return count;
+}
+
+function runHasObservedProviderWork(items: Record<string, Object>[], runId: string): boolean {
+  if (!runId) return false;
+  for (let i = items.length - 1; i >= 0; i -= 1) {
+    const item = items[i];
+    if (optional(item.runId) !== runId) continue;
+    const type = optional(item.type);
+    if (type === 'user_message' || type === 'checkpoint' || type === 'run_interrupt_request') continue;
+    if (type === 'command_execution' && optional(item.input).trim() === 'Preparing workspace') continue;
+    if (type === 'assistant_message' || !isHiddenWorkItem(item)) return true;
+  }
+  return false;
+}
+
+/**
+ * 推导消息流尾部的实时占位思考行（对齐上游 ThreadThinkingRow）：
+ * - 在 run 已创建、但尚未产生任何进行中的 turn_item 或流式 assistant_message 时立即提示；
+ * - Provider 尚未开启 turn 时显示「正在启动 <Provider>…」，turn 开启后显示「正在思考…」。
+ */
+export function deriveLiveThinkingRow(input: LiveThinkingInput): LiveThinkingRow {
+  if (input.draftMode || !input.threadSynced) return emptyLiveThinkingRow();
+  if (input.isStopping || input.isCompacting) return emptyLiveThinkingRow();
+  if (input.pendingActionCount > 0) return emptyLiveThinkingRow();
+  if (input.messages.some((msg: ChatMessage) => msg.role === 'assistant' && msg.streaming)) {
+    return emptyLiveThinkingRow();
+  }
+  if (input.tailGroup !== undefined && input.tailGroup.summary.running) {
+    return emptyLiveThinkingRow();
+  }
+
+  let activeRun: Record<string, Object> | undefined = undefined;
+  for (const run of input.runs) {
+    const status = optional(run.status);
+    const isInterruptible = status === 'preparing' || status === 'starting' || status === 'running';
+    const isWaitingActive = status === 'waiting' && !input.hasPendingBackgroundWork;
+    if (!isInterruptible && !isWaitingActive) continue;
+    if (!activeRun || numericField(run.ordinal) > numericField(activeRun.ordinal)) {
+      activeRun = run;
+    }
+  }
+
+  if (!activeRun) {
+    if (isProviderNativeSubagent(input.details)) {
+      for (let i = input.nodes.length - 1; i >= 0; i -= 1) {
+        const node = input.nodes[i];
+        if (optional(node.kind) === 'root_turn' && optional(node.runId) === '') {
+          if (isActiveItemStatus(optional(node.status))) {
+            return { visible: true, kind: 'thinking', label: '正在思考…', runId: '' };
+          }
+          break;
+        }
+      }
+    }
+    return emptyLiveThinkingRow();
+  }
+
+  const runId = optional(activeRun.id);
+  const runStatus = optional(activeRun.status);
+
+  if (runStatus === 'preparing') {
+    if (input.hasWorktreeSetupCard) return emptyLiveThinkingRow();
+    return { visible: true, kind: 'preparing', label: '正在准备工作区…', runId };
+  }
+
+  const attemptId = optional(activeRun.activeAttemptId);
+  const latestTurn = latestProviderTurnForAttempt(input.providerTurns, attemptId);
+  const turnStatus = latestTurn ? optional(latestTurn.status) : '';
+  if (turnStatus !== '' && turnStatus !== 'pending' && turnStatus !== 'running') {
+    return emptyLiveThinkingRow();
+  }
+
+  const waitingSubagents = countTrailingActiveSubagents(input.items, runId);
+  if (waitingSubagents > 0) {
+    return {
+      visible: true,
+      kind: 'waiting-subagents',
+      label: '等待 ' + waitingSubagents + ' 个子 Agent…',
+      runId
+    };
+  }
+
+  const providerStarting = turnStatus === '' &&
+    (runStatus === 'starting' || (runStatus === 'running' && !runHasObservedProviderWork(input.items, runId)));
+  if (providerStarting) {
+    const providerName = resolveRunProviderName(
+      optional(activeRun.providerInstanceId),
+      input.providerSessions,
+      input.configProviders,
+      input.fallbackProviderDriver
+    );
+    return {
+      visible: true,
+      kind: 'starting',
+      label: providerName ? '正在启动 ' + providerName + '…' : '正在启动…',
+      runId
+    };
+  }
+
+  return { visible: true, kind: 'thinking', label: '正在思考…', runId };
+}
+

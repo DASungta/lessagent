@@ -63,7 +63,7 @@ export class Radius {
   /** 消息气泡 */
   static readonly bubble: number = 18;
   /** 输入区 */
-  static readonly composer: number = 22;
+  static readonly composer: number = 24;
   /** 全圆：图标按钮、胶囊。ArkUI 圆角超过半高时按半高绘制。 */
   static readonly full: number = 999;
 }

@@ -64,7 +64,7 @@ test('branch, plan, subagent and guest parsing keeps typed identities',()=>{
 });
 
 test('fork and queue commands use the server execution ids',()=>{
- assert.deepEqual(r4.forkThreadCommand('c','source','target','run','Side',true),{type:'thread.fork',commandId:'c',
+ assert.deepEqual(r4.forkThreadCommand('c','source','target','run','  Side  ',true),{type:'thread.fork',commandId:'c',
   createdBy:'user',creationSource:'mobile',sourceThreadId:'source',targetThreadId:'target',
   sourcePoint:{type:'run',runId:'run'},title:'Side',sideChat:true});
  assert.equal(r4.forkThreadCommand('c','s','t','','',false).sourcePoint.type,'latest_stable');

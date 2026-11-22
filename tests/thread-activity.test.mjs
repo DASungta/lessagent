@@ -10,7 +10,9 @@ const {
   activityLines, activitySummary, isPlainUserText,
   isHiddenWorkItem, isProminentWorkItem, summarizeWork,
   formatWorkDuration, deriveCheckpointBadges, groupWorkByMessage,
-  parseDiffPreviewLines, resolveExpandedActivityBody, isActivityInProgress
+  parseDiffPreviewLines, resolveExpandedActivityBody, isActivityInProgress,
+  canForkAssistantItem, buildMessageFooterMap, formatMessageTimestamp,
+  deriveLiveThinkingRow, emptyLiveThinkingRow, providerDisplayName
 } = await import(data(compile(source)));
 
 test('command_execution summarizes first command line and exit tone', () => {
@@ -434,4 +436,224 @@ test('wire v2 statuses (running/pending/waiting) and untitled dynamic_tool summa
   assert.equal(summaries[5].badge, '进行中');
 
   assert.equal(isHiddenWorkItem({ id: 'prep-run', type: 'command_execution', status: 'running', input: 'Preparing workspace' }), false);
+});
+
+test('canForkAssistantItem mirrors upstream native fork, full handoff, and historical fallback rules', () => {
+  const completed = { id: 'it-1', type: 'assistant_message', messageId: 'a1', runId: 'r1', status: 'completed' };
+  assert.equal(canForkAssistantItem(completed, undefined), true);
+  assert.equal(canForkAssistantItem({ ...completed, status: 'streaming' }, undefined), false);
+  assert.equal(canForkAssistantItem({ ...completed, runId: '' }, undefined), false);
+  assert.equal(canForkAssistantItem({ ...completed, type: 'user_message' }, undefined), false);
+
+  assert.equal(canForkAssistantItem(completed, {
+    threads: { canForkThread: true, canForkFromTurn: true },
+    identity: { nativeThreadIds: 'strong' },
+    context: { supportsFullThreadHandoff: false }
+  }), true);
+  assert.equal(canForkAssistantItem(completed, {
+    threads: { canForkThread: false, canForkFromTurn: false },
+    identity: { nativeThreadIds: 'weak' },
+    context: { supportsFullThreadHandoff: true }
+  }), true);
+  assert.equal(canForkAssistantItem(completed, {
+    threads: { canForkThread: true, canForkFromTurn: false },
+    identity: { nativeThreadIds: 'strong' },
+    context: { supportsFullThreadHandoff: false }
+  }), false);
+});
+
+test('buildMessageFooterMap enables copy and fork on terminal completed assistant turns and respects inherited sourceThreadId and capabilities', () => {
+  const messages = [
+    { id: 'u1', role: 'user', text: 'hello', streaming: false, runId: 'r1', timestamp: '2026-11-22T05:50:00Z' },
+    { id: 'a1-mid', role: 'assistant', text: 'checking...', streaming: false, runId: 'r1', timestamp: '2026-11-22T05:51:00Z' },
+    { id: 'a1-end', role: 'assistant', text: 'inherited answer', streaming: false, runId: 'r1', timestamp: '2026-11-22T05:52:00Z' },
+    { id: 'u2', role: 'user', text: '   ', streaming: false, runId: 'r2', timestamp: '2026-11-22T05:53:00Z', attachmentNames: ['pic.png'] },
+    { id: 'a2', role: 'assistant', text: 'incapable answer', streaming: false, runId: 'r2', timestamp: '2026-11-22T05:54:00Z' },
+    { id: 'a3', role: 'assistant', text: 'still running', streaming: false, runId: 'r3', timestamp: '2026-11-22T05:55:00Z' },
+    { id: 'a4', role: 'assistant', text: 'streaming...', streaming: true, runId: 'r4', timestamp: '2026-11-22T05:56:00Z' }
+  ];
+  const items = [
+    { id: 'i1', type: 'assistant_message', messageId: 'a1-mid', runId: 'r1', status: 'completed', sourceThreadId: 'parent-thread' },
+    { id: 'i2', type: 'assistant_message', messageId: 'a1-end', runId: 'r1', status: 'completed', sourceThreadId: 'parent-thread' },
+    { id: 'i3', type: 'assistant_message', messageId: 'a2', runId: 'r2', status: 'completed', providerThreadId: 'pt-incapable' },
+    { id: 'i4', type: 'assistant_message', messageId: 'a3', runId: 'r3', status: 'completed' },
+    { id: 'i5', type: 'assistant_message', messageId: 'a4', runId: 'r4', status: 'streaming' }
+  ];
+  const runs = [
+    { id: 'r1', status: 'completed' },
+    { id: 'r2', status: 'completed' },
+    { id: 'r3', status: 'waiting' },
+    { id: 'r4', status: 'running' }
+  ];
+  const providerThreads = [{ id: 'pt-incapable', providerSessionId: 'ps-incapable' }];
+  const providerSessions = [{
+    id: 'ps-incapable',
+    capabilities: {
+      threads: { canForkThread: false, canForkFromTurn: false },
+      identity: { nativeThreadIds: 'none' },
+      context: { supportsFullThreadHandoff: false }
+    }
+  }];
+
+  const map = buildMessageFooterMap('child-thread', messages, items, runs, providerThreads, providerSessions);
+  assert.deepEqual(map['u1'], { showFooter: true, canCopy: true, canFork: false, forkRunId: '', forkSourceThreadId: '' });
+  assert.deepEqual(map['a1-mid'], { showFooter: false, canCopy: false, canFork: false, forkRunId: '', forkSourceThreadId: '' });
+  assert.deepEqual(map['a1-end'], { showFooter: true, canCopy: true, canFork: true, forkRunId: 'r1', forkSourceThreadId: 'parent-thread' });
+  assert.deepEqual(map['u2'], { showFooter: true, canCopy: false, canFork: false, forkRunId: '', forkSourceThreadId: '' });
+  assert.deepEqual(map['a2'], { showFooter: true, canCopy: true, canFork: false, forkRunId: '', forkSourceThreadId: '' });
+  assert.equal(map['a3'].showFooter, false);
+  assert.equal(map['a4'].showFooter, false);
+});
+
+test('formatMessageTimestamp omits seconds on today messages and prefixes date on older days', () => {
+  const now = new Date(2026, 10, 22, 14, 0, 0).getTime();
+  const sameDay = new Date(2026, 10, 22, 13, 55, 37).toISOString();
+  const earlierDay = new Date(2026, 10, 20, 9, 5, 12).toISOString();
+  const earlierYear = new Date(2025, 4, 1, 8, 30, 0).toISOString();
+
+  assert.equal(formatMessageTimestamp('', now), '');
+  assert.equal(formatMessageTimestamp('invalid', now), '');
+  const todayLabel = formatMessageTimestamp(sameDay, now);
+  assert.ok(todayLabel.includes('55'));
+  assert.equal(todayLabel.includes(':37'), false);
+  const olderLabel = formatMessageTimestamp(earlierDay, now);
+  assert.ok(olderLabel.includes('20'));
+  assert.ok(olderLabel.includes('05'));
+  const prevYearLabel = formatMessageTimestamp(earlierYear, now);
+  assert.ok(prevYearLabel.includes('2025'));
+});
+
+test('deriveLiveThinkingRow immediately surfaces starting and thinking states and suppresses when live work or streaming starts', async () => {
+  const base = (overrides = {}) => ({
+    draftMode: false,
+    threadSynced: true,
+    runs: [],
+    items: [],
+    messages: [{ id: 'u1', role: 'user', text: '为什么标题会变成英文？', streaming: false, runId: 'r1' }],
+    providerTurns: [],
+    providerSessions: [],
+    nodes: [],
+    details: { id: 't1' },
+    tailGroup: undefined,
+    pendingActionCount: 0,
+    hasPendingBackgroundWork: false,
+    hasWorktreeSetupCard: false,
+    isCompacting: false,
+    isStopping: false,
+    fallbackProviderDriver: '',
+    configProviders: [],
+    ...overrides
+  });
+
+  // 1. Brand-new thread right after send: status=starting, no providerSession yet, resolved from configProviders -> 正在启动 Antigravity…
+  const startingNew = deriveLiveThinkingRow(base({
+    runs: [{ id: 'r1', ordinal: 1, status: 'starting', providerInstanceId: 'antigravity-default', activeAttemptId: 'att-1' }],
+    items: [{ id: 'tu1', type: 'user_message', messageId: 'u1', runId: 'r1', text: '为什么标题会变成英文？' }],
+    configProviders: [{ instanceId: 'antigravity-default', driver: 'antigravity', displayName: 'Antigravity' }]
+  }));
+  assert.deepEqual(startingNew, { visible: true, kind: 'starting', label: '正在启动 Antigravity…', runId: 'r1' });
+
+  // 2. Run switches to running before providerTurn starts -> still 正在启动 Claude Code… (from providerSessions)
+  const runningBeforeTurn = deriveLiveThinkingRow(base({
+    runs: [{ id: 'r1', ordinal: 1, status: 'running', providerInstanceId: 'claude-1', activeAttemptId: 'att-1' }],
+    providerSessions: [{ id: 'ps-1', providerInstanceId: 'claude-1', driver: 'claudeAgent', status: 'starting' }]
+  }));
+  assert.deepEqual(runningBeforeTurn, { visible: true, kind: 'starting', label: '正在启动 Claude Code…', runId: 'r1' });
+
+  // 3. Provider turn started (pending/running), waiting for first reasoning token (TTFT) -> 正在思考…
+  const ttftWaiting = deriveLiveThinkingRow(base({
+    runs: [{ id: 'r1', ordinal: 1, status: 'running', providerInstanceId: 'antigravity-default', activeAttemptId: 'att-1' }],
+    providerTurns: [{ id: 'pt-1', runAttemptId: 'att-1', ordinal: 1, status: 'running' }]
+  }));
+  assert.deepEqual(ttftWaiting, { visible: true, kind: 'thinking', label: '正在思考…', runId: 'r1' });
+
+  // 4. First reasoning item arrives (inProgress) -> tailGroup.summary.running is true -> placeholder hides seamlessly
+  const liveReasoningItems = [
+    { id: 'tu1', type: 'user_message', messageId: 'u1', runId: 'r1', text: 'hi' },
+    { id: 'rs1', type: 'reasoning', runId: 'r1', status: 'inProgress', text: 'Thinking...' }
+  ];
+  const liveRuns = [{ id: 'r1', ordinal: 1, status: 'running', activeAttemptId: 'att-1' }];
+  const liveWork = groupWorkByMessage(liveReasoningItems, liveRuns, [], base().messages);
+  assert.equal(deriveLiveThinkingRow(base({
+    runs: liveRuns,
+    items: liveReasoningItems,
+    providerTurns: [{ id: 'pt-1', runAttemptId: 'att-1', ordinal: 1, status: 'running' }],
+    tailGroup: liveWork.tail
+  })).visible, false);
+
+  // 5. After completed tools in a still-running turn (tailGroup.summary.running === false) -> shows 正在思考…
+  const completedToolItems = [
+    { id: 'tu1', type: 'user_message', messageId: 'u1', runId: 'r1', text: 'check' },
+    { id: 'dt1', type: 'dynamic_tool', runId: 'r1', status: 'completed', title: 'Read App.ets' }
+  ];
+  const completedToolWork = groupWorkByMessage(completedToolItems, liveRuns, [], base().messages);
+  const betweenTools = deriveLiveThinkingRow(base({
+    runs: liveRuns,
+    items: completedToolItems,
+    tailGroup: completedToolWork.tail
+  }));
+  assert.deepEqual(betweenTools, { visible: true, kind: 'thinking', label: '正在思考…', runId: 'r1' });
+
+  // 6. Streaming assistant message hides thinking placeholder
+  assert.equal(deriveLiveThinkingRow(base({
+    runs: liveRuns,
+    messages: [
+      { id: 'u1', role: 'user', text: 'hi', streaming: false, runId: 'r1' },
+      { id: 'a1', role: 'assistant', text: '答复中', streaming: true, runId: 'r1' }
+    ]
+  })).visible, false);
+
+  // 7. Ended providerTurn, pending action, stopping, compacting, preparing with worktree card, waiting with bg work all suppress placeholder
+  assert.equal(deriveLiveThinkingRow(base({
+    runs: liveRuns,
+    providerTurns: [{ id: 'pt-1', runAttemptId: 'att-1', ordinal: 1, status: 'completed' }]
+  })).visible, false);
+  assert.equal(deriveLiveThinkingRow(base({ runs: liveRuns, pendingActionCount: 1 })).visible, false);
+  assert.equal(deriveLiveThinkingRow(base({ runs: liveRuns, isStopping: true })).visible, false);
+  assert.equal(deriveLiveThinkingRow(base({ runs: liveRuns, isCompacting: true })).visible, false);
+  assert.equal(deriveLiveThinkingRow(base({
+    runs: [{ id: 'r1', ordinal: 1, status: 'preparing' }],
+    hasWorktreeSetupCard: true
+  })).visible, false);
+  assert.deepEqual(deriveLiveThinkingRow(base({
+    runs: [{ id: 'r1', ordinal: 1, status: 'preparing' }],
+    hasWorktreeSetupCard: false
+  })), { visible: true, kind: 'preparing', label: '正在准备工作区…', runId: 'r1' });
+  assert.equal(deriveLiveThinkingRow(base({
+    runs: [{ id: 'r1', ordinal: 1, status: 'waiting' }],
+    hasPendingBackgroundWork: true
+  })).visible, false);
+
+  // 8. Trailing active subagents show waiting-subagents label
+  const waitingSubagents = deriveLiveThinkingRow(base({
+    runs: liveRuns,
+    items: [
+      { id: 'tu1', type: 'user_message', messageId: 'u1', runId: 'r1', text: 'delegate' },
+      { id: 'sa1', type: 'subagent', runId: 'r1', status: 'running', title: 'Worker 1' },
+      { id: 'sa2', type: 'subagent', runId: 'r1', status: 'pending', title: 'Worker 2' }
+    ],
+    providerTurns: [{ id: 'pt-1', runAttemptId: 'att-1', ordinal: 1, status: 'running' }]
+  }));
+  assert.deepEqual(waitingSubagents, { visible: true, kind: 'waiting-subagents', label: '等待 2 个子 Agent…', runId: 'r1' });
+
+  // 9. Provider-native runless subagent thread with active root_turn node shows 正在思考…
+  const runlessSubagent = deriveLiveThinkingRow(base({
+    details: { id: 't1', creationSource: 'provider', lineage: { relationshipToParent: 'subagent' } },
+    nodes: [{ id: 'n1', kind: 'root_turn', runId: null, status: 'running' }]
+  }));
+  assert.deepEqual(runlessSubagent, { visible: true, kind: 'thinking', label: '正在思考…', runId: '' });
+
+  // 10. Completed / idle / draft / unsynced thread hides placeholder
+  assert.deepEqual(deriveLiveThinkingRow(base({ runs: [{ id: 'r1', ordinal: 1, status: 'completed' }] })), emptyLiveThinkingRow());
+  assert.equal(deriveLiveThinkingRow(base({ draftMode: true, runs: liveRuns })).visible, false);
+  assert.equal(deriveLiveThinkingRow(base({ threadSynced: false, runs: liveRuns })).visible, false);
+
+  // 11. Provider display name mapping + light/dark thinking icon SVGs exist
+  assert.equal(providerDisplayName('antigravity'), 'Antigravity');
+  assert.equal(providerDisplayName('claudeAgent'), 'Claude Code');
+  assert.equal(providerDisplayName('codex'), 'Codex');
+  for (const theme of ['base', 'dark']) {
+    const svg = await readFile(new URL(`../entry/src/main/resources/${theme}/media/ui_thinking.svg`, import.meta.url), 'utf8');
+    assert.ok(svg.includes('<svg') && svg.includes('viewBox="0 0 24 24"'), `${theme}/ui_thinking.svg`);
+  }
 });

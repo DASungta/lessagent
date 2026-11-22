@@ -6,6 +6,7 @@ import {
   providerGlyph,
   providerLogoKind,
   shortModelDisplayName,
+  composerModelShortName,
   threadSubline
 } from '../entry/src/main/ets/protocol/ThreadRow.ts';
 
@@ -74,6 +75,16 @@ test('shortModelDisplayName trims vendor prefixes and routing suffixes cleanly',
  assert.equal(shortModelDisplayName('OpenAI: GPT-5.4','gpt-5.4'),'GPT-5.4');
  assert.equal(shortModelDisplayName('','codex/gpt-5.4'),'gpt-5.4');
  assert.equal(shortModelDisplayName('',''),'');
+});
+
+test('composerModelShortName strips redundant family prefix next to provider icon',()=>{
+ assert.equal(composerModelShortName('Gemini 4 Neon','gemini-4-neon','antigravity'),'4 Neon');
+ assert.equal(composerModelShortName('Gemini 3.1 Pro','gemini-3.1-pro','antigravity'),'3.1 Pro');
+ assert.equal(composerModelShortName('Gemini 3.1 Pro','gemini-3.1-pro','openrouter'),'Gemini 3.1 Pro');
+ assert.equal(composerModelShortName('Claude Opus 4.8','claude-opus-4-8','claudeAgent'),'Opus 4.8');
+ assert.equal(composerModelShortName('GPT-6.1-Sol','gpt-6.1-sol','codex'),'6.1 Sol');
+ assert.equal(composerModelShortName('GPT-5.4','gpt-5.4','codex'),'GPT-5.4');
+ assert.equal(composerModelShortName('4 Neon','gemini-4-neon','antigravity'),'4 Neon');
 });
 
 test('subline shows error only for failed threads',()=>{

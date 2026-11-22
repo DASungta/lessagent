@@ -364,8 +364,9 @@ export function forkThreadCommand(commandId: string, sourceThreadId: string, tar
   runId: string, title: string, sideChat: boolean): Object {
   safeToken(sourceThreadId, '源会话', 128); safeToken(targetThreadId, '目标会话', 128);
   const source = runId ? { type: 'run', runId } : { type: 'latest_stable' };
+  const trimmedTitle = title.trim();
   return { type: 'thread.fork', commandId, createdBy: 'user', creationSource: 'mobile',
-    sourceThreadId, targetThreadId, sourcePoint: source, ...(title.trim() ? { title: title.slice(0, 200) } : {}),
+    sourceThreadId, targetThreadId, sourcePoint: source, ...(trimmedTitle ? { title: trimmedTitle.slice(0, 200) } : {}),
     ...(sideChat ? { sideChat: true } : {}) };
 }
 

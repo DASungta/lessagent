@@ -16,6 +16,168 @@ export const runtimeModes: string[] = ['approval-required', 'auto-accept-edits',
 function optionalRecord(value: Object | undefined): Record<string, Object> {
   return value === undefined || value === null ? {} : record(value);
 }
+const REASONING_OPTION_IDS: string[] = [
+  'reasoningEffort', 'reasoning_effort', 'effort', 'reasoning', 'variant',
+  'thought_level', 'thinking_level', 'thinkingEffort', 'thinking'
+];
+
+function findSelectionOption(selection: ModelSelection | undefined, id: string): string | boolean | undefined {
+  if (!selection || !selection.options) return undefined;
+  const hit = selection.options.find((option: OptionSelection) => option.id === id);
+  return hit ? hit.value : undefined;
+}
+
+function sameSelectionModel(a: ModelSelection | undefined, b: ModelSelection | undefined): boolean {
+  return !!a && !!b && a.instanceId === b.instanceId && a.model === b.model;
+}
+
+function formatFallbackOptionValue(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized || normalized === 'default') return '';
+  if (normalized === 'xhigh' || normalized === 'extra_high' || normalized === 'extra-high' || normalized === 'extra') {
+    return 'Extra';
+  }
+  if (normalized === 'high') return 'High';
+  if (normalized === 'medium' || normalized === 'med') return 'Medium';
+  if (normalized === 'low') return 'Low';
+  if (normalized === 'minimal' || normalized === 'min') return 'Minimal';
+  if (normalized === 'max') return 'Max';
+  if (normalized === 'none' || normalized === 'off') return 'Off';
+  return value.trim().length <= 16 ? value.trim() : '';
+}
+
+function isReasoningDescriptorRow(row: Record<string, Object>): boolean {
+  return (row.type === 'select' && row.role === 'reasoning') ||
+    (typeof row.id === 'string' && REASONING_OPTION_IDS.includes(row.id));
+}
+
+function resolveDescriptorOptionValue(row: Record<string, Object>, selection: ModelSelection,
+  reportedSelection?: ModelSelection): string | boolean | undefined {
+  const id = typeof row.id === 'string' ? row.id : '';
+  const explicit = findSelectionOption(selection, id);
+  if (explicit !== undefined) return explicit;
+  if (sameSelectionModel(selection, reportedSelection)) {
+    const reported = findSelectionOption(reportedSelection, id);
+    if (reported !== undefined) return reported;
+  }
+  if (row.type === 'boolean') {
+    return typeof row.currentValue === 'boolean' ? row.currentValue : undefined;
+  }
+  if (typeof row.currentValue === 'string' && row.currentValue) return row.currentValue;
+  if (Array.isArray(row.options)) {
+    for (const item of objects(row.options as Object)) {
+      const choice = record(item);
+      if (choice.isDefault === true && typeof choice.id === 'string') return choice.id;
+    }
+  }
+  return undefined;
+}
+
+/** 汇总当前模型的推理强度 / 速度等选项摘要，展示在输入栏模型名称旁（如 Extra、High Fast）。 */
+export function modelOptionsSummary(config: Object, selection: ModelSelection,
+  reportedSelection?: ModelSelection): string {
+  if (!selection.instanceId && !selection.model) return '';
+  const root = optionalRecord(config);
+  const rawProviders = root.providers;
+  const provider = Array.isArray(rawProviders)
+    ? objects(rawProviders as Object).map(record).find((p: Record<string, Object>) => p.instanceId === selection.instanceId)
+    : undefined;
+  const rawModels = provider ? provider.models : undefined;
+  const model = Array.isArray(rawModels)
+    ? objects(rawModels as Object).map(record).find((m: Record<string, Object>) => m.slug === selection.model)
+    : undefined;
+  const caps = model ? optionalRecord(model.capabilities) : {};
+  const rawDescriptors = caps.optionDescriptors;
+  const descriptors = Array.isArray(rawDescriptors) ? objects(rawDescriptors as Object).map(record) : [];
+
+  if (descriptors.length > 0) {
+    let fastModeFallbackLabel = '';
+    let speedLabel = '';
+    let reasoningLabelIndex = -1;
+    const labels: string[] = [];
+
+    for (const row of descriptors) {
+      const id = typeof row.id === 'string' ? row.id : '';
+      const type = typeof row.type === 'string' ? row.type : '';
+      const rowLabel = typeof row.label === 'string' ? row.label : id;
+      const currentValue = resolveDescriptorOptionValue(row, selection, reportedSelection);
+
+      if (id === 'fastMode' && type === 'boolean') {
+        speedLabel = currentValue === true ? 'Fast' : '';
+        fastModeFallbackLabel = speedLabel || 'Normal';
+        continue;
+      }
+      if (id === 'ultracode' && type === 'boolean') {
+        if (currentValue === true) labels.push(rowLabel);
+        continue;
+      }
+      if (id === 'serviceTier' && type === 'select' && Array.isArray(row.options)) {
+        const choices = objects(row.options as Object).map(record);
+        const fastTier = choices.find((c: Record<string, Object>) => c.label === 'Fast');
+        const ultrafastTier = choices.find((c: Record<string, Object>) => c.label === 'Ultrafast');
+        if (((fastTier || ultrafastTier) && currentValue === 'default') ||
+          (fastTier && currentValue === fastTier.id) ||
+          (ultrafastTier && currentValue === ultrafastTier.id)) {
+          speedLabel = ultrafastTier && currentValue === ultrafastTier.id ? 'Ultrafast' :
+            fastTier && currentValue === fastTier.id ? 'Fast' : '';
+          const matchedTier = choices.find((c: Record<string, Object>) => c.id === currentValue);
+          fastModeFallbackLabel = matchedTier && typeof matchedTier.label === 'string' ? matchedTier.label : 'Normal';
+          continue;
+        }
+      }
+
+      let label = '';
+      if (type === 'boolean') {
+        if (typeof currentValue === 'boolean') {
+          label = rowLabel + ' ' + (currentValue ? 'On' : 'Off');
+        }
+      } else if (type === 'select' && typeof currentValue === 'string' && Array.isArray(row.options)) {
+        const choices = objects(row.options as Object).map(record);
+        const matched = choices.find((c: Record<string, Object>) => c.id === currentValue);
+        if (matched) {
+          label = typeof matched.label === 'string' && matched.label.trim()
+            ? matched.label.trim()
+            : formatFallbackOptionValue(currentValue);
+        }
+      }
+      if (label) {
+        if (reasoningLabelIndex === -1 && type === 'select' && isReasoningDescriptorRow(row)) {
+          reasoningLabelIndex = labels.length;
+        }
+        labels.push(label);
+      }
+    }
+
+    if (labels.length === 0 && fastModeFallbackLabel) return fastModeFallbackLabel;
+    if (speedLabel) {
+      if (reasoningLabelIndex >= 0) labels[reasoningLabelIndex] = labels[reasoningLabelIndex] + ' ' + speedLabel;
+      else labels.push(speedLabel);
+    }
+    return labels.join(' · ');
+  }
+
+  const fallbackOptions = (selection.options && selection.options.length > 0)
+    ? selection.options
+    : (sameSelectionModel(selection, reportedSelection) && reportedSelection?.options ? reportedSelection.options : []);
+  const fallbackLabels: string[] = [];
+  let fallbackSpeed = '';
+  for (const option of fallbackOptions) {
+    if ((option.id === 'fastMode' || option.id === 'fast') && typeof option.value === 'boolean') {
+      if (option.value) fallbackSpeed = 'Fast';
+      continue;
+    }
+    if (typeof option.value === 'string') {
+      const formatted = formatFallbackOptionValue(option.value);
+      if (formatted) fallbackLabels.push(formatted);
+    }
+  }
+  if (fallbackSpeed) {
+    if (fallbackLabels.length > 0) fallbackLabels[0] = fallbackLabels[0] + ' ' + fallbackSpeed;
+    else fallbackLabels.push(fallbackSpeed);
+  }
+  return fallbackLabels.join(' · ');
+}
+
 export function optionControls(config: Object, selection: ModelSelection): ModelOptionControl[] {
   const provider = objects(record(config).providers || []).map(record).find((p) => p.instanceId === selection.instanceId);
   const model = provider ? objects(provider.models || []).map(record).find((m) => m.slug === selection.model) : undefined;
