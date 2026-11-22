@@ -1,4 +1,4 @@
-import { parseModelSelection, record, text, objects, sequence, serverBase } from './Wire';
+import { parseModelSelection, record, RpcFailure, text, objects, sequence, serverBase } from './Wire';
 import { ProjectView, ThreadView, RepositoryIdentityView, projectView, threadView, parseProjectIcon, samePath } from './Projects';
 
 export interface Choice { id: string; label: string; projectId: string; }
@@ -377,10 +377,39 @@ export function questionDisplays(questions: Question[]): QuestionDisplay[] {
   return result;
 }
 
+export interface SecretField {
+  name: string;
+  label: string;
+  placeholder: string;
+  secret: boolean;
+}
+export function parseSecretFields(value: Object | undefined): SecretField[] {
+  if (!Array.isArray(value)) return [];
+  const result: SecretField[] = [];
+  const seen = new Set<string>();
+  for (const entry of value as Object[]) {
+    if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) continue;
+    const row = entry as Record<string, Object>;
+    if (typeof row.name !== 'string' || typeof row.label !== 'string') continue;
+    const name = row.name.trim();
+    const label = row.label.trim();
+    if (!name || !label || seen.has(name)) continue;
+    if (row.placeholder !== undefined && typeof row.placeholder !== 'string') continue;
+    if (row.secret !== undefined && typeof row.secret !== 'boolean') continue;
+    seen.add(name);
+    result.push({
+      name,
+      label,
+      placeholder: typeof row.placeholder === 'string' ? row.placeholder : '',
+      secret: row.secret !== false
+    });
+  }
+  return result;
+}
 export interface ActionCard { id: string; requestId: string; kind: string; label: string; questions: Question[];
   enabled: boolean; responseType: string; canDismiss: boolean; approvalOptions: ApprovalChoice[]; requestKind: string;
   detail: string; reason: string; fullAccessOverride: string; secretUrl: string; secretPlaceholder: string;
-  secretDelivery: string; secretReference: boolean; }
+  secretDelivery: string; secretReference: boolean; secretFields: SecretField[]; }
 function safeSecretUrl(value: Object): string {
   if (typeof value !== 'string' || value.length > 2048 || /\s/.test(value)) return '';
   return /^https?:\/\/[^/]+/i.test(value) ? value : '';
@@ -390,6 +419,7 @@ export function cards(requests: Record<string, Object>[], items: Record<string, 
   for (const item of items) {
     if (item.type === 'secret_request' && item.secretStatus === 'pending') {
       const local = (item.visibility === undefined || item.visibility === 'local');
+      const secretFields = parseSecretFields(item.fields);
       result.push({ id: text(item.id), requestId: '', kind: 'secret',
         label: text(item.label) + '\n' + text(item.reason) + (local ? '' : '\n等待在原会话中回答'),
         questions: [], enabled: local, responseType: local ? 'secret' : 'inherited', canDismiss: false,
@@ -397,7 +427,9 @@ export function cards(requests: Record<string, Object>[], items: Record<string, 
         detail: text(item.reason), reason: safeSecretUrl(item.url),
         fullAccessOverride: '', secretUrl: safeSecretUrl(item.url),
         secretPlaceholder: typeof item.placeholder === 'string' ? item.placeholder : '',
-        secretDelivery: typeof item.delivery === 'string' ? item.delivery : '', secretReference: true });
+        secretDelivery: typeof item.delivery === 'string' ? item.delivery : '',
+        secretReference: item.fields === undefined,
+        secretFields });
     } else if (item.type === 'approval_request' || item.type === 'user_input_request') {
       const request = requests.find((row: Record<string, Object>) => row.id === item.requestId);
       if (!request || request.status !== 'pending') continue;
@@ -439,7 +471,7 @@ export function cards(requests: Record<string, Object>[], items: Record<string, 
         detail: item.type === 'approval_request' && typeof item.prompt === 'string' ? item.prompt : '',
         reason: typeof item.reason === 'string' ? item.reason : '',
         fullAccessOverride: typeof item.fullAccessOverride === 'string' ? item.fullAccessOverride : '',
-        secretUrl: '', secretPlaceholder: '', secretDelivery: '', secretReference: true });
+        secretUrl: '', secretPlaceholder: '', secretDelivery: '', secretReference: true, secretFields: [] });
     }
   }
   return result;
@@ -456,6 +488,83 @@ export function stopCommand(commandId: string, threadId: string): Object {
 }
 export function secretAnswer(threadId: string, turnItemId: string, value: string, decline: boolean): Object {
   return { threadId, turnItemId, answer: decline ? { type: 'decline' } : { type: 'save', secret: value } };
+}
+export function secretValuesFromMap(fields: SecretField[], values: Map<string, string>): Record<string, string> {
+  const entries: [string, string][] = [];
+  for (const field of fields) {
+    const raw = values.get(field.name);
+    entries.push([field.name, raw !== undefined ? raw : '']);
+  }
+  return Object.fromEntries(entries) as Record<string, string>;
+}
+export function secretValuesAnswer(threadId: string, turnItemId: string, values: Record<string, string>,
+  expectedFields?: SecretField[]): Object {
+  if (values === null || typeof values !== 'object' || Array.isArray(values)) {
+    throw new Error('请输入所有敏感字段');
+  }
+  const entries: [string, string][] = [];
+  if (expectedFields !== undefined) {
+    if (expectedFields.length === 0) throw new Error('此敏感输入请求不支持多字段提交');
+    const keys = Object.keys(values);
+    if (keys.length !== expectedFields.length) throw new Error('提交字段与请求不匹配');
+    for (const field of expectedFields) {
+      if (!Object.prototype.hasOwnProperty.call(values, field.name) || typeof values[field.name] !== 'string') {
+        throw new Error('请填写所有敏感字段');
+      }
+      const trimmed = values[field.name].trim();
+      if (!trimmed) throw new Error('请填写所有敏感字段');
+      entries.push([field.name, trimmed]);
+    }
+  } else {
+    const keys = Object.keys(values);
+    if (keys.length === 0) throw new Error('请填写所有敏感字段');
+    for (const key of keys) {
+      if (!key.trim() || typeof values[key] !== 'string') throw new Error('请填写所有敏感字段');
+      const trimmed = values[key].trim();
+      if (!trimmed) throw new Error('请填写所有敏感字段');
+      entries.push([key, trimmed]);
+    }
+  }
+  return { threadId, turnItemId, answer: { type: 'save', values: Object.fromEntries(entries) } };
+}
+const SECRET_REQUEST_ERROR_MESSAGES: Record<string, string> = {
+  fields_mismatch: '此请求需要的字段与当前版本不一致，请更新应用后重试',
+  already_answered: '此敏感输入请求已被回答',
+  not_found: '此敏感输入请求已不存在',
+  agent_stopped: '发起请求的智能体已停止，无法再使用该敏感值',
+  reference_unreadable: '无法从秘密来源读取该引用，请解锁后重试或直接输入',
+  store_failed: '无法保存敏感值，请重试',
+  record_failed: '敏感值已保存，但未能更新请求状态',
+  load_failed: '无法加载此敏感输入请求'
+};
+export function secretRequestErrorMessage(error: Object | undefined): string {
+  if (error !== undefined && error !== null && typeof error === 'object') {
+    const row = error as Record<string, Object>;
+    const tag = typeof row.errorTag === 'string' ? row.errorTag : '';
+    const reason = typeof row.errorReason === 'string' ? row.errorReason : '';
+    if ((tag === 'SecretRequestError' || reason === 'fields_mismatch') &&
+      Object.prototype.hasOwnProperty.call(SECRET_REQUEST_ERROR_MESSAGES, reason)) {
+      return SECRET_REQUEST_ERROR_MESSAGES[reason];
+    }
+  }
+  if (error instanceof Error) {
+    if (error.message.includes('fields_mismatch')) {
+      return SECRET_REQUEST_ERROR_MESSAGES.fields_mismatch;
+    }
+    return error.message;
+  }
+  return '提交失败，请重试';
+}
+export function mapSecretRequestError(error: Object): Error {
+  const mapped = secretRequestErrorMessage(error);
+  if (error instanceof RpcFailure) {
+    if (mapped !== error.message) return new RpcFailure(mapped, error.known, error.errorTag, error.errorReason);
+    return error;
+  }
+  if (error instanceof Error) {
+    return mapped !== error.message ? new Error(mapped) : error;
+  }
+  return new Error(mapped);
 }
 export function secretReferenceAnswer(threadId: string, turnItemId: string, provider: string,
   reference: string): Object {

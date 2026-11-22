@@ -228,6 +228,62 @@ test('cachedShellEntry preserves project defaultModelSelection and options', asy
   });
 });
 
+test('secret cards parse multi-value fields, drop malformed entries, forbid reference on fields, and format values answers', async () => {
+  const { cards, secretAnswer, secretValuesAnswer, secretRequestErrorMessage } = await import(coreUrl);
+  const { RpcFailure } = await import('../entry/src/main/ets/protocol/Wire.ts');
+  const single = cards([], [{
+    id: 's1', type: 'secret_request', secretStatus: 'pending', label: 'API Key', reason: 'Auth', placeholder: 'sk-...'
+  }])[0];
+  assert.deepEqual(single.secretFields, []);
+  assert.equal(single.secretReference, true);
+  assert.equal(single.secretPlaceholder, 'sk-...');
+  assert.deepEqual(secretAnswer('t', 's1', 'sk-123', false), {
+    threadId: 't', turnItemId: 's1', answer: { type: 'save', secret: 'sk-123' }
+  });
+
+  const multi = cards([], [{
+    id: 's2', type: 'secret_request', secretStatus: 'pending', label: 'Login', reason: 'Sign in', delivery: 'file',
+    fields: [
+      { name: 'email', label: 'Email', placeholder: 'user@example.com', secret: false },
+      { name: 'password', label: 'Password' },
+      { name: 'email', label: 'Duplicate' },
+      { name: '', label: 'Missing name' },
+      { name: 'no_label', label: '   ' },
+      { name: 'bad_secret', label: 'Bad Secret', secret: 'no' },
+      null,
+      'not-an-object'
+    ]
+  }])[0];
+  assert.equal(multi.secretReference, false);
+  assert.deepEqual(multi.secretFields, [
+    { name: 'email', label: 'Email', placeholder: 'user@example.com', secret: false },
+    { name: 'password', label: 'Password', placeholder: '', secret: true }
+  ]);
+
+  // Even a single-entry fields array disables reference answers
+  const oneField = cards([], [{
+    id: 's3', type: 'secret_request', secretStatus: 'pending', label: 'PIN', reason: 'Unlock',
+    fields: [{ name: 'pin', label: 'PIN' }]
+  }])[0];
+  assert.equal(oneField.secretReference, false);
+  assert.equal(oneField.secretFields.length, 1);
+
+  assert.deepEqual(secretValuesAnswer('t', 's2', { email: ' a@b.dev ', password: ' pw ' }), {
+    threadId: 't', turnItemId: 's2', answer: { type: 'save', values: { email: 'a@b.dev', password: 'pw' } }
+  });
+  // Prototype-named fields work safely without reading Object.prototype
+  const protoAnswer = secretValuesAnswer('t', 's2', { constructor: ' value ' }, [{ name: 'constructor', label: 'Key', placeholder: '', secret: true }]);
+  assert.equal(Object.getPrototypeOf(protoAnswer.answer.values), Object.prototype);
+  assert.equal(protoAnswer.answer.values.constructor, 'value');
+  assert.throws(() => secretValuesAnswer('t', 's2', {}, [{ name: 'constructor', label: 'Key', placeholder: '', secret: true }]));
+  assert.throws(() => secretValuesAnswer('t', 's2', { email: 'a@b.dev' }, multi.secretFields));
+  assert.throws(() => secretValuesAnswer('t', 's2', { email: '   ', password: 'pw' }, multi.secretFields));
+  assert.throws(() => secretValuesAnswer('t', 's2', { email: 'a@b.dev', password: 'pw', extra: 'x' }, multi.secretFields));
+
+  const mismatch = new RpcFailure('服务端拒绝请求或任务失败，请在现有 T3 客户端核对详情', true, 'SecretRequestError', 'fields_mismatch');
+  assert.equal(secretRequestErrorMessage(mismatch), '此请求需要的字段与当前版本不一致，请更新应用后重试');
+});
+
 test('ShellState supports afterSequence incremental resume, ignores unknown stream kinds, and tolerates long/multiline display fields', async () => {
   const { ShellState } = await import(coreUrl);
   const s = new ShellState();

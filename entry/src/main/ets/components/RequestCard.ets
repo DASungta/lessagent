@@ -5,9 +5,12 @@ import {
   Question,
   QuestionDisplay,
   QuestionOption,
+  SecretField,
   answerSelected,
   inputAnswers,
-  questionDisplays
+  questionDisplays,
+  secretRequestErrorMessage,
+  secretValuesFromMap
 } from '../protocol/Core';
 import { AttachmentPicker } from '../services/AttachmentPicker';
 import { DraftAttachment } from '../protocol/R4';
@@ -21,10 +24,20 @@ export struct RequestCard {
   connection: T3Client = client;
   @StorageLink('t3Foreground') @Watch('clearPrivateInput') foreground: boolean = true;
   private clearPrivateInput(): void {
-    if (!this.foreground) { this.secretValue = ''; this.answers = new Map(); this.customAnswers = new Map(); }
+    if (!this.foreground) {
+      this.secretValue = '';
+      this.secretValues = new Map();
+      this.secretVisible = false;
+      this.fieldVisible = new Map();
+      this.answers = new Map();
+      this.customAnswers = new Map();
+    }
   }
   @Prop card: ActionCard;
   @State secretValue: string = '';
+  @State secretValues: Map<string, string> = new Map();
+  @State secretVisible: boolean = false;
+  @State fieldVisible: Map<string, boolean> = new Map();
   @State answers: Map<string, Object> = new Map();
   @State customAnswers: Map<string, string> = new Map();
   @State busy: boolean = false;
@@ -38,7 +51,12 @@ export struct RequestCard {
   private picker: AttachmentPicker | undefined = undefined;
 
   aboutToDisappear(): void {
-    this.secretValue = ''; this.answers = new Map(); this.customAnswers = new Map();
+    this.secretValue = '';
+    this.secretValues = new Map();
+    this.secretVisible = false;
+    this.fieldVisible = new Map();
+    this.answers = new Map();
+    this.customAnswers = new Map();
   }
   aboutToAppear(): void {
     for (const q of this.card.questions) {
@@ -125,16 +143,71 @@ export struct RequestCard {
     return result;
   }
 
+  private hasSecretFields(): boolean {
+    return this.card.secretFields !== undefined && this.card.secretFields.length > 0;
+  }
+
+  private secretFieldText(name: string): string {
+    if (!this.secretValues) return '';
+    const value = this.secretValues.get(name);
+    return value !== undefined ? value : '';
+  }
+
+  private setSecretFieldText(name: string, value: string): void {
+    const next = this.secretValues ? new Map(this.secretValues) : new Map<string, string>();
+    next.set(name, value);
+    this.secretValues = next;
+  }
+
+  private isFieldVisible(name: string): boolean {
+    if (!this.fieldVisible) return false;
+    return this.fieldVisible.get(name) === true;
+  }
+
+  private setFieldVisible(name: string, visible: boolean): void {
+    const next = this.fieldVisible ? new Map(this.fieldVisible) : new Map<string, boolean>();
+    next.set(name, visible);
+    this.fieldVisible = next;
+  }
+
+  private allSecretFieldsFilled(): boolean {
+    if (!this.hasSecretFields()) return this.secretValue.trim().length > 0;
+    for (const field of this.card.secretFields) {
+      if (this.secretFieldText(field.name).trim().length === 0) return false;
+    }
+    return true;
+  }
+
+  private finalSecretValues(): Record<string, string> {
+    if (!this.hasSecretFields()) return {};
+    const map = this.secretValues ? this.secretValues : new Map<string, string>();
+    return secretValuesFromMap(this.card.secretFields, map);
+  }
+
+  private secretDeliveryNote(): string {
+    if (this.card.secretFields !== undefined && this.card.secretFields.length > 1) {
+      return '这些值只会保存在私密文件中，仅所有者可读，供智能体命令在 24 小时内使用。';
+    }
+    return '该值只会保存在一个私密文件中，仅所有者可读，供智能体命令在 24 小时内使用。';
+  }
+
   private async submit(decision: string): Promise<void> {
     if (this.busy || this.submitted) return;
     this.busy = true;
     const value = this.secretValue;
+    const hasFields = this.hasSecretFields();
+    const multiValues = this.finalSecretValues();
     const answers = this.card.kind === 'input' ? this.finalAnswers() : inputAnswers(this.answers);
     this.secretValue = '';
+    this.secretValues = new Map();
+    this.secretVisible = false;
+    this.fieldVisible = new Map();
     try {
       if (this.card.kind === 'secret') {
-        if (this.referenceMode) await this.connection.secretReference(this.card.id, this.referenceProvider, this.referencePath);
-        else await this.connection.secret(this.card.id, value, decision === 'decline');
+        if (decision === 'decline') await this.connection.secret(this.card.id, '', true);
+        else if (this.referenceMode && !hasFields) await this.connection.secretReference(this.card.id, this.referenceProvider, this.referencePath);
+        else if (hasFields) await this.connection.secretValues(this.card.id, multiValues);
+        else await this.connection.secret(this.card.id, value, false);
         this.submitted = true;
       }
       else {
@@ -156,7 +229,9 @@ export struct RequestCard {
         this.submitted = true;
       }
       this.status = '已提交，等待服务端更新';
-    } catch (error) { this.status = (error as Error).message; }
+    } catch (error) {
+      this.status = this.card.kind === 'secret' ? secretRequestErrorMessage(error as Object) : (error as Error).message;
+    }
     finally { this.busy = false; }
   }
 
@@ -264,19 +339,19 @@ export struct RequestCard {
             Text(this.card.detail).fontSize(FontSize.callout).lineHeight(LineHeight.callout).width('100%')
           }
           if (this.card.secretDelivery === 'file') {
-            Text('该值只会写入仅所有者可读的文件，供 Agent 命令使用。').fontSize(FontSize.caption).lineHeight(LineHeight.caption)
+            Text(this.secretDeliveryNote()).fontSize(FontSize.caption).lineHeight(LineHeight.caption)
               .fontColor($r('app.color.muted')).width('100%')
           }
           if (this.card.secretUrl) {
             AppButton({ label: '打开请求页面', kind: 'text', compact: true, onTap: () => { void this.openSecretUrl(); } })
           }
-          if (this.card.secretReference && this.connection.config.secretRequestReferences === true) {
+          if (this.card.secretReference && !this.hasSecretFields() && this.connection.config.secretRequestReferences === true) {
             Row({ space: Space.xs }) {
               AppButton({ label: this.referenceMode ? '使用引用' : '直接输入', kind: 'text', compact: true,
                 onTap: () => { this.referenceMode = !this.referenceMode; } })
             }.width('100%')
           }
-          if (this.referenceMode) {
+          if (this.referenceMode && !this.hasSecretFields()) {
             if (this.secretProviders().length) {
               Text('来源').fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
               Flex({ wrap: FlexWrap.Wrap }) {
@@ -301,8 +376,55 @@ export struct RequestCard {
             AppButton({ label: '使用引用提交', kind: 'primary', compact: true, fill: true,
               disabled: this.busy || this.submitted || !this.referenceProvider.trim() || !this.referencePath.trim(),
               onTap: () => { void this.submit(''); } })
+          } else if (this.hasSecretFields()) {
+            Column({ space: Space.xs }) {
+              ForEach(this.card.secretFields, (field: SecretField) => {
+                Column({ space: 4 }) {
+                  Text(field.label)
+                    .fontSize(FontSize.caption)
+                    .lineHeight(LineHeight.caption)
+                    .fontWeight(Weight.medium)
+                    .fontColor($r('app.color.muted'))
+                    .width('100%')
+                  if (field.secret) {
+                    TextInput({ placeholder: field.placeholder, text: this.secretFieldText(field.name) })
+                      .type(InputType.Password)
+                      .showPasswordIcon(true)
+                      .showPassword(this.isFieldVisible(field.name))
+                      .onSecurityStateChange((visible: boolean) => this.setFieldVisible(field.name, visible))
+                      .enableAutoFill(false)
+                      .enabled(!this.busy && !this.submitted)
+                      .fontSize(FontSize.body).constraintSize({ minHeight: 44 })
+                      .backgroundColor($r('app.color.input_bg')).border({ width: 1, color: $r('app.color.input_border') })
+                      .borderRadius(Radius.button)
+                      .onChange((value: string) => this.setSecretFieldText(field.name, value))
+                  } else {
+                    TextInput({ placeholder: field.placeholder, text: this.secretFieldText(field.name) })
+                      .type(InputType.Normal)
+                      .enableAutoFill(false)
+                      .enabled(!this.busy && !this.submitted)
+                      .fontSize(FontSize.body).constraintSize({ minHeight: 44 })
+                      .backgroundColor($r('app.color.input_bg')).border({ width: 1, color: $r('app.color.input_border') })
+                      .borderRadius(Radius.button)
+                      .onChange((value: string) => this.setSecretFieldText(field.name, value))
+                  }
+                }
+                .width('100%')
+                .alignItems(HorizontalAlign.Start)
+              }, (field: SecretField) => this.card.id + ':' + field.name)
+            }
+            .width('100%')
+            AppButton({ label: '安全提交', kind: 'primary', compact: true, fill: true,
+              disabled: this.busy || this.submitted || !this.allSecretFieldsFilled(),
+              onTap: () => { void this.submit(''); } })
           } else {
-            TextInput({ placeholder: this.card.secretPlaceholder || '敏感输入', text: this.secretValue }).type(InputType.Password).enableAutoFill(false)
+            TextInput({ placeholder: this.card.secretPlaceholder || '敏感输入', text: this.secretValue })
+              .type(InputType.Password)
+              .showPasswordIcon(true)
+              .showPassword(this.secretVisible)
+              .onSecurityStateChange((visible: boolean) => { this.secretVisible = visible; })
+              .enableAutoFill(false)
+              .enabled(!this.busy && !this.submitted)
               .fontSize(FontSize.body).constraintSize({ minHeight: 44 })
               .backgroundColor($r('app.color.input_bg')).border({ width: 1, color: $r('app.color.input_border') })
               .borderRadius(Radius.button).onChange((value: string) => this.secretValue = value)

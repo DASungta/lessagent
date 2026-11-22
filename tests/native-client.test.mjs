@@ -149,6 +149,10 @@ async function setup(options = {}) {
                 socket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Success', value: null } });
               } else {
                 if (options.dropMutation && value.tag !== 'server.getConfig') return;
+                if (options.secretFailureReason && value.tag === 'secrets.answerRequest') {
+                  socket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Failure', cause: { _id: 'Cause', reasons: [{ _tag: 'Fail', error: { _tag: 'SecretRequestError', reason: options.secretFailureReason } }] } } });
+                  return;
+                }
                 const result = value.tag === 'assets.createUrl' ? {relativeUrl:'/api/assets/synthetic',expiresAt:Date.now()+120000,imageDimensions:{width:1260,height:2720}} : value.tag === 'orchestration.launchThread' ? {threadId: options.launchIdentity ?? value.payload.threadId, projection:{},resumed:false} : value.tag === 'attachments.createUploadUrl' ? {attachmentId:'pending-test',relativeUrl:options.uploadPath ?? '/api/attachments/upload/signed.token',expiresAt:Date.now()+60000} : value.tag === 'server.getConfig' ? configPayload : value.tag === 'peerLinks.list' ? {links:[{environmentId:'peer',label:'Synthetic peer',status:'reachable',expiresAt:new Date(Date.now()+86400000).toISOString(),lastError:null}]} : { sequence: 11 };
                 socket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Success', value: result } });
               }
@@ -667,6 +671,43 @@ test('secret references use the configured provider and never send a typed value
     answer:{type:'reference',reference:{provider:'vault',reference:'apps/example'}}});
   assert.ok(!JSON.stringify(frame.payload).includes('secretValue'));
  }finally{client.disconnect()}
+});
+test('multi-field secret requests submit trimmed values, reject references, and map fields_mismatch errors',async()=>{
+ const {client,frames}=await setup({providers:[],secretRequestReferences:true,
+  settings:{secretProviders:{vault:{kind:'vault',label:'Vault'}}}});
+ try{
+  await client.connect('https://test','synthetic');
+  await client.watch('thread-multi-secret');await new Promise(setImmediate);
+  client.thread.items=[{
+   id:'multi-item',type:'secret_request',secretStatus:'pending',label:'Login',reason:'Auth',visibility:'local',delivery:'file',
+   fields:[{name:'email',label:'Email',secret:false},{name:'password',label:'Password'}]
+  }];
+  await assert.rejects(()=>client.secretReference('multi-item','vault','apps/example'),/不支持秘密引用/);
+  await assert.rejects(()=>client.secret('multi-item','single-value',false),/按字段提交/);
+  await assert.rejects(()=>client.secretValues('multi-item',{email:'user@example.com',password:'   '}),/请填写所有敏感字段/);
+  await client.secretValues('multi-item',{email:' user@example.com ',password:' p@ss '});
+  const frame=frames.find(value=>value.tag==='secrets.answerRequest');
+  assert.deepEqual(frame.payload,{threadId:'thread-multi-secret',turnItemId:'multi-item',
+   answer:{type:'save',values:{email:'user@example.com',password:'p@ss'}}});
+  // Decline remains supported on multi-field requests
+  await client.secret('multi-item','',true);
+  const declineFrame=frames.filter(value=>value.tag==='secrets.answerRequest').at(-1);
+  assert.deepEqual(declineFrame.payload,{threadId:'thread-multi-secret',turnItemId:'multi-item',answer:{type:'decline'}});
+ }finally{client.disconnect()}
+
+ const mismatch=await setup({secretFailureReason:'fields_mismatch'});
+ try{
+  await mismatch.client.connect('https://test','synthetic');
+  await mismatch.client.watch('thread-mismatch');await new Promise(setImmediate);
+  mismatch.client.thread.items=[{
+   id:'multi-mismatch',type:'secret_request',secretStatus:'pending',label:'Login',reason:'Auth',visibility:'local',
+   fields:[{name:'email',label:'Email',secret:false}]
+  }];
+  await assert.rejects(
+   ()=>mismatch.client.secretValues('multi-mismatch',{email:'a@b.dev'}),
+   /此请求需要的字段与当前版本不一致，请更新应用后重试/
+  );
+ }finally{mismatch.client.disconnect()}
 });
 test('queue operations recheck live run state and never send a stale queued edit',async()=>{
  const {client,frames}=await setup();

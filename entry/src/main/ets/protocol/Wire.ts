@@ -111,7 +111,55 @@ export interface RpcSender {
 
 export class RpcFailure extends Error {
   known: boolean;
-  constructor(message: string, known: boolean) { super(message); this.known = known; }
+  errorTag: string;
+  errorReason: string;
+  constructor(message: string, known: boolean, errorTag: string = '', errorReason: string = '') {
+    super(message);
+    this.known = known;
+    this.errorTag = errorTag;
+    this.errorReason = errorReason;
+  }
+}
+
+interface FailureCode { tag: string; reason: string; }
+
+function inspectFailureReason(entry: Object | undefined): FailureCode {
+  if (entry === undefined || entry === null || typeof entry !== 'object' || Array.isArray(entry)) {
+    return { tag: '', reason: '' };
+  }
+  const row = entry as Record<string, Object>;
+  if (row._tag !== 'Fail') return { tag: '', reason: '' };
+  const err = row.error;
+  if (err === undefined || err === null || typeof err !== 'object' || Array.isArray(err)) {
+    return { tag: '', reason: '' };
+  }
+  const errObj = err as Record<string, Object>;
+  const tag = typeof errObj._tag === 'string' && /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(errObj._tag) ? errObj._tag : '';
+  const reason = typeof errObj.reason === 'string' && /^[a-z][a-z0-9_]{0,63}$/.test(errObj.reason) ? errObj.reason : '';
+  return { tag, reason };
+}
+
+function extractFailureCode(cause: Object | undefined): FailureCode {
+  if (cause === undefined || cause === null) return { tag: '', reason: '' };
+  if (Array.isArray(cause)) {
+    for (const item of cause as Object[]) {
+      const found = inspectFailureReason(item);
+      if (found.tag || found.reason) return found;
+    }
+    return { tag: '', reason: '' };
+  }
+  if (typeof cause === 'object') {
+    const obj = cause as Record<string, Object>;
+    if (Array.isArray(obj.reasons)) {
+      for (const item of obj.reasons as Object[]) {
+        const found = inspectFailureReason(item);
+        if (found.tag || found.reason) return found;
+      }
+      return { tag: '', reason: '' };
+    }
+    return inspectFailureReason(obj);
+  }
+  return { tag: '', reason: '' };
 }
 
 interface Pending {
@@ -204,7 +252,10 @@ export class RpcClient {
     clearTimeout(pending.timer);
     this.pending.delete(id);
     if (exitTag === 'Success') pending.resolve(exit.value);
-    else pending.reject(new RpcFailure('服务端拒绝请求或任务失败，请在现有 T3 客户端核对详情', true));
+    else {
+      const code = extractFailureCode(exit.cause);
+      pending.reject(new RpcFailure('服务端拒绝请求或任务失败，请在现有 T3 客户端核对详情', true, code.tag, code.reason));
+    }
   }
 
   cancelStream(chunk: (value: Object) => void): void {

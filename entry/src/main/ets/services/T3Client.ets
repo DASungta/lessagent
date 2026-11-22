@@ -21,6 +21,7 @@ import { bootstrapForm, createThread, objects, record, RpcClient, RpcFailure, Rp
 import { directHostKind, shouldBypassSystemProxy, urlHostname } from '../protocol/Hosts';
 
 import { CachedShellEntry, ShellState, ModelChoice, models, SavedSession, SessionStorage, stopCommand, secretAnswer,
+  secretValuesAnswer, parseSecretFields, mapSecretRequestError,
   secretReferenceAnswer, dismissInputCommand, respondCommand, RecoveryState, RecoveryStorage,
   recoveryState, Attachment, PeerLinkView, peerAccessGranted, peerLinkViews,
   LinkAnswer, linkAnswerPayload, peerPairingScopes } from '../protocol/Core';
@@ -2518,23 +2519,47 @@ export class T3Client {
     const item = this.thread.items.find((row: Record<string, Object>) => row.id === itemId);
     if (!item || item.type !== 'secret_request' || item.secretStatus !== 'pending' ||
       (item.visibility !== undefined && item.visibility !== 'local')) throw new Error('敏感输入请求已失效或需在原会话回答');
+    if (!decline && item.fields !== undefined) throw new Error('此敏感输入请求需要按字段提交');
     if (!decline && !value.trim()) throw new Error('请输入敏感值');
-    await this.mutate('secrets.answerRequest', secretAnswer(this.thread.threadId, itemId, decline ? value : value.trim(), decline),
-      util.generateRandomUUID(), 'secret');
+    try {
+      await this.mutate('secrets.answerRequest', secretAnswer(this.thread.threadId, itemId, decline ? value : value.trim(), decline),
+        util.generateRandomUUID(), 'secret');
+    } catch (error) {
+      throw mapSecretRequestError(error as Object);
+    }
+  }
+  async secretValues(itemId: string, values: Record<string, string>): Promise<void> {
+    if (!this.thread) throw new Error('请先选择会话');
+    const item = this.thread.items.find((row: Record<string, Object>) => row.id === itemId);
+    if (!item || item.type !== 'secret_request' || item.secretStatus !== 'pending' ||
+      (item.visibility !== undefined && item.visibility !== 'local')) throw new Error('敏感输入请求已失效或需在原会话回答');
+    const fields = parseSecretFields(item.fields);
+    if (item.fields === undefined || fields.length === 0) throw new Error('此敏感输入请求不支持多字段提交');
+    const payload = secretValuesAnswer(this.thread.threadId, itemId, values, fields);
+    try {
+      await this.mutate('secrets.answerRequest', payload, util.generateRandomUUID(), 'secret');
+    } catch (error) {
+      throw mapSecretRequestError(error as Object);
+    }
   }
   async secretReference(itemId: string, provider: string, reference: string): Promise<void> {
     if (!this.thread) throw new Error('请先选择会话');
     const item = this.thread.items.find((row: Record<string, Object>) => row.id === itemId);
     if (!item || item.type !== 'secret_request' || item.secretStatus !== 'pending' ||
       (item.visibility !== undefined && item.visibility !== 'local')) throw new Error('敏感输入请求已失效或需在原会话回答');
+    if (item.fields !== undefined) throw new Error('多字段敏感输入不支持秘密引用');
     if (this.config.secretRequestReferences !== true) throw new Error('服务端不支持秘密引用');
     const providers = this.serverSettings.secretProviders;
     if (!providers || typeof providers !== 'object' || Array.isArray(providers) ||
       !Object.keys(providers as Record<string, Object>).includes(provider)) {
       throw new Error('请选择服务端已配置的秘密来源');
     }
-    await this.mutate('secrets.answerRequest',
-      secretReferenceAnswer(this.thread.threadId, itemId, provider, reference), util.generateRandomUUID(), 'secret');
+    try {
+      await this.mutate('secrets.answerRequest',
+        secretReferenceAnswer(this.thread.threadId, itemId, provider, reference), util.generateRandomUUID(), 'secret');
+    } catch (error) {
+      throw mapSecretRequestError(error as Object);
+    }
   }
 
   async upload(name: string, bytes: ArrayBuffer, mimeType: string = 'application/octet-stream',

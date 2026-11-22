@@ -43,6 +43,19 @@ test('RPC correlates out-of-order replies and sanitizes server failures', async 
   ]));
   assert.deepEqual(await second, { ok: true });
   await assert.rejects(first, (error) => !error.message.includes('SECRET'));
+  const third = rpc.request('secrets.answerRequest', {});
+  rpc.receive(JSON.stringify({
+    _tag: 'Exit',
+    requestId: '3',
+    exit: {
+      _tag: 'Failure',
+      cause: {
+        _id: 'Cause',
+        reasons: [{ _tag: 'Fail', error: { _tag: 'SecretRequestError', reason: 'fields_mismatch' } }]
+      }
+    }
+  }));
+  await assert.rejects(third, (error) => error.errorTag === 'SecretRequestError' && error.errorReason === 'fields_mismatch');
   rpc.fail('done');
 });
 
