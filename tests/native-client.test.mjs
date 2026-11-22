@@ -102,7 +102,7 @@ async function setup(options = {}) {
     webSocket: {
       createWebSocket: () => {
         const listeners = {};
-        socket = {
+        const currentSocket = {
           on: (type, callback) => listeners[type] = callback,
           close: async () => true,
           connect: async (url, connectOptions) => {
@@ -133,22 +133,26 @@ async function setup(options = {}) {
                 ...(options.newProjectsRoot ? {newProjectsRoot: options.newProjectsRoot} : {}),
                 ...(options.scratchWorkspaceRoot ? {scratchWorkspaceRoot: options.scratchWorkspaceRoot} : {})
               };
+              if (options.onRequest) {
+                const custom = options.onRequest(value, currentSocket);
+                if (custom === 'handled') return;
+              }
               if (value.tag === 'subscribeServerConfig') {
                 if (options.rejectSubscribeConfig) {
-                  socket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Failure', cause: { _tag: 'Fail', error: { message: 'unknown method' } } } });
+                  currentSocket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Failure', cause: { _tag: 'Fail', error: { message: 'unknown method' } } } });
                 } else {
-                  socket.emit({ _tag: 'Chunk', requestId: value.id, values: [{ version: 1, type: 'snapshot', config: configPayload }] });
+                  currentSocket.emit({ _tag: 'Chunk', requestId: value.id, values: [{ version: 1, type: 'snapshot', config: configPayload }] });
                 }
               } else if (value.tag === 'server.probe') {
                 if (options.dropProbe) return;
                 if (options.rejectProbeKnown) {
-                  socket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Failure', cause: { _tag: 'Fail', error: { message: 'unknown method' } } } });
+                  currentSocket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Failure', cause: { _tag: 'Fail', error: { message: 'unknown method' } } } });
                 } else {
-                  socket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Success', value: {} } });
+                  currentSocket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Success', value: {} } });
                 }
               } else if (value.tag === 'orchestration.subscribeShell') {
                 if (!options.delayShellSnapshot) {
-                  socket.emit({ _tag: 'Chunk', requestId: value.id, values: [{ kind: 'snapshot', snapshot: {
+                  currentSocket.emit({ _tag: 'Chunk', requestId: value.id, values: [{ kind: 'snapshot', snapshot: {
                     snapshotSequence: 9,
                     projects: options.shellProjects ?? [],
                     threads: options.shellThreads ?? []
@@ -156,13 +160,13 @@ async function setup(options = {}) {
                 }
               } else if (value.tag === 'orchestration.subscribeThread') {
                 if (options.rejectThread) {
-                  socket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Failure', cause: { _tag: 'Fail', error: { message: 'not found' } } } });
+                  currentSocket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Failure', cause: { _tag: 'Fail', error: { message: 'not found' } } } });
                 } else {
-                  socket.emit({ _tag: 'Chunk', requestId: value.id, values: [{ kind: 'snapshot', snapshotSequence: 10,
+                  currentSocket.emit({ _tag: 'Chunk', requestId: value.id, values: [{ kind: 'snapshot', snapshotSequence: 10,
                     projection: { thread: { id: value.payload.threadId }, messages: options.messages ?? [] } }] });
                 }
               } else if (value.tag === 'git.runStackedAction') {
-                socket.emit({ _tag: 'Chunk', requestId: value.id, values: [
+                currentSocket.emit({ _tag: 'Chunk', requestId: value.id, values: [
                   { kind: 'phase_started', phase: 'commit', label: 'Committing...' },
                   { kind: 'action_finished', result: { action: 'commit',
                     branch: { status: 'skipped_not_requested' },
@@ -170,21 +174,22 @@ async function setup(options = {}) {
                     push: { status: 'skipped_not_requested' },
                     pr: { status: 'skipped_not_requested' }, toast: { title: 'Committed' } } }
                 ] });
-                socket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Success', value: null } });
+                currentSocket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Success', value: null } });
               } else {
                 if (options.dropMutation && value.tag !== 'server.getConfig') return;
                 if (options.secretFailureReason && value.tag === 'secrets.answerRequest') {
-                  socket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Failure', cause: { _id: 'Cause', reasons: [{ _tag: 'Fail', error: { _tag: 'SecretRequestError', reason: options.secretFailureReason } }] } } });
+                  currentSocket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Failure', cause: { _id: 'Cause', reasons: [{ _tag: 'Fail', error: { _tag: 'SecretRequestError', reason: options.secretFailureReason } }] } } });
                   return;
                 }
                 const result = value.tag === 'assets.createUrl' ? {relativeUrl:'/api/assets/synthetic',expiresAt:Date.now()+120000,imageDimensions:{width:1260,height:2720}} : value.tag === 'orchestration.launchThread' ? {threadId: options.launchIdentity ?? value.payload.threadId, projection:{},resumed:false} : value.tag === 'attachments.createUploadUrl' ? {attachmentId:'pending-test',relativeUrl:options.uploadPath ?? '/api/attachments/upload/signed.token',expiresAt:Date.now()+60000} : value.tag === 'server.getConfig' ? configPayload : value.tag === 'peerLinks.list' ? {links:[{environmentId:'peer',label:'Synthetic peer',status:'reachable',expiresAt:new Date(Date.now()+86400000).toISOString(),lastError:null}]} : { sequence: 11 };
-                socket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Success', value: result } });
+                currentSocket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Success', value: result } });
               }
             });
             return true;
           }
         };
-        return socket;
+        socket = currentSocket;
+        return currentSocket;
       }
     },
     dpopSigner: options.dpopSigner
@@ -1753,5 +1758,177 @@ test('legacy Bearer saved sessions keep working without DPoP and reject expiry a
     assert.match(client.status, /没有此服务器的有效会话/);
   } finally {
     client.disconnect();
+  }
+});
+
+test('C1: launch, send, queued send-now/resume and steer replay with the same commandId after socket drop', async () => {
+  const cases = [
+    {
+      name: 'new thread first message (launchThread)',
+      matchTag: 'orchestration.launchThread',
+      run: (client) => client.launch('project', 'first message', taskSettings)
+    },
+    {
+      name: 'follow-up message (message.dispatch)',
+      matchTag: 'orchestration.dispatchCommand',
+      matchType: 'message.dispatch',
+      prepare: async (client) => { await client.watch('t-c1'); await new Promise(setImmediate); },
+      run: (client) => client.send('follow-up')
+    },
+    {
+      name: 'queued send-now (queued-run.start)',
+      matchTag: 'orchestration.dispatchCommand',
+      matchType: 'queued-run.start',
+      prepare: async (client) => {
+        await client.watch('t-c1'); await new Promise(setImmediate);
+        client.thread.runs = [{ id: 'run-q1', status: 'queued', queuePosition: 0 }];
+      },
+      run: (client) => client.queue('start', 'run-q1')
+    },
+    {
+      name: 'queued resume (queue.resume)',
+      matchTag: 'orchestration.dispatchCommand',
+      matchType: 'queue.resume',
+      prepare: async (client) => {
+        await client.watch('t-c1'); await new Promise(setImmediate);
+        client.thread.runs = [{ id: 'run-q1', status: 'queued', queueHeld: true }];
+      },
+      run: (client) => client.queue('resume')
+    },
+    {
+      name: 'queued steer (queued-message.promote-to-steer)',
+      matchTag: 'orchestration.dispatchCommand',
+      matchType: 'queued-message.promote-to-steer',
+      prepare: async (client) => {
+        await client.watch('t-c1'); await new Promise(setImmediate);
+        client.thread.runs = [
+          { id: 'run-active', status: 'running' },
+          { id: 'run-q1', status: 'queued' }
+        ];
+      },
+      run: (client) => client.promoteQueued('run-q1')
+    }
+  ];
+
+  // Test both server-never-received and server-already-processed (idempotent receipt replay)
+  for (const serverProcessedFirst of [false, true]) {
+    for (const tc of cases) {
+      const seenCommandIds = [];
+      const appliedReceipts = new Map();
+      let stored = { base: 'https://test', environmentId: 'env', token: 'SYNTHETIC_TOKEN', expiresAt: Date.now() + 60000 };
+      const { client, socketConnects } = await setup({
+        providers: taskProviders,
+        recoveryStore: memoryRecovery(),
+        onRequest(frame, sock) {
+          if (frame.tag !== tc.matchTag) return;
+          if (tc.matchType && frame.payload?.type !== tc.matchType) return;
+          const cmdId = frame.payload.commandId;
+          seenCommandIds.push(cmdId);
+          if (seenCommandIds.length === 1) {
+            if (serverProcessedFirst) {
+              const receipt = tc.matchTag === 'orchestration.launchThread'
+                ? { threadId: frame.payload.threadId, projection: {}, resumed: false }
+                : { sequence: 42 };
+              appliedReceipts.set(cmdId, receipt);
+            }
+            // Socket drops before Exit reaches client; auto-reconnect should replay with same commandId
+            sock.emitClose({ code: 1006, reason: 'network drop' });
+            return 'handled';
+          }
+          // Second attempt after reconnect
+          if (appliedReceipts.has(cmdId)) {
+            sock.emit({ _tag: 'Exit', requestId: frame.id, exit: { _tag: 'Success', value: appliedReceipts.get(cmdId) } });
+            return 'handled';
+          }
+          const result = tc.matchTag === 'orchestration.launchThread'
+            ? { threadId: frame.payload.threadId, projection: {}, resumed: false }
+            : { sequence: 43 };
+          appliedReceipts.set(cmdId, result);
+          sock.emit({ _tag: 'Exit', requestId: frame.id, exit: { _tag: 'Success', value: result } });
+          return 'handled';
+        }
+      });
+      client.store = {
+        async load() { return structuredClone(stored); },
+        async save(v) { stored = structuredClone(v); },
+        async clear() { stored = undefined; }
+      };
+      try {
+        await client.connect('https://test', 'synthetic');
+        await new Promise(setImmediate);
+        if (tc.prepare) await tc.prepare(client);
+        const socketsBefore = socketConnects.length;
+        await tc.run(client);
+        assert.equal(seenCommandIds.length, 2, `${tc.name} (processedFirst=${serverProcessedFirst}): must replay once`);
+        assert.equal(seenCommandIds[0], seenCommandIds[1], `${tc.name}: commandId must stay identical across replay`);
+        assert.equal(appliedReceipts.size, 1, `${tc.name}: server must apply command exactly once`);
+        assert.ok(socketConnects.length > socketsBefore, `${tc.name}: must have reconnected`);
+        assert.equal(client.recovery.pendingId, '', `${tc.name}: pending recovery cleared after confirmation`);
+      } finally {
+        client.disconnect();
+      }
+    }
+  }
+});
+
+test('C1: known server refusal does not resend and resend cap stops after 2 socket-loss retries', async () => {
+  // 1. Known server refusal on launchThread must NOT resend
+  let launchAttempts = 0;
+  const refused = await setup({
+    providers: taskProviders,
+    recoveryStore: memoryRecovery(),
+    onRequest(frame, sock) {
+      if (frame.tag !== 'orchestration.launchThread') return;
+      launchAttempts++;
+      sock.emit({
+        _tag: 'Exit',
+        requestId: frame.id,
+        exit: { _tag: 'Failure', cause: { reasons: [{ _tag: 'Fail', error: { _tag: 'Refused' } }] } }
+      });
+      return 'handled';
+    }
+  });
+  try {
+    await refused.client.connect('https://test', 'synthetic');
+    await assert.rejects(() => refused.client.launch('project', 'bad', taskSettings));
+    assert.equal(launchAttempts, 1, 'known refusal must not resend');
+    assert.equal(refused.client.recovery, undefined, 'known launch refusal clears provisional recovery');
+  } finally {
+    refused.client.disconnect();
+  }
+
+  // 2. Poison-pill cap: drops on all 3 attempts (initial + 2 resends) then fails and preserves unknown recovery
+  const capCommandIds = [];
+  let stored = { base: 'https://test', environmentId: 'env', token: 'SYNTHETIC_TOKEN', expiresAt: Date.now() + 60000 };
+  const capped = await setup({
+    providers: taskProviders,
+    recoveryStore: memoryRecovery(),
+    onRequest(frame, sock) {
+      if (frame.tag !== 'orchestration.dispatchCommand' || frame.payload?.type !== 'message.dispatch') return;
+      capCommandIds.push(frame.payload.commandId);
+      sock.emitClose({ code: 1006, reason: 'poison drop' });
+      return 'handled';
+    }
+  });
+  capped.client.store = {
+    async load() { return structuredClone(stored); },
+    async save(v) { stored = structuredClone(v); },
+    async clear() { stored = undefined; }
+  };
+  try {
+    await capped.client.connect('https://test', 'synthetic');
+    await capped.client.watch('t-cap');
+    await new Promise(setImmediate);
+    // Speed up reconnect retries for test by calling connect when retry schedules
+    const origRetry = capped.client.retry.bind(capped.client);
+    capped.client.retry = () => {
+      origRetry(10);
+    };
+    await assert.rejects(() => capped.client.send('poison'));
+    assert.equal(capCommandIds.length, 3, 'must try initial + 2 resends then stop');
+    assert.equal(new Set(capCommandIds).size, 1, 'all 3 attempts share one commandId');
+    assert.ok(capped.client.recovery.pendingId, 'unconfirmed command keeps recovery protection');
+  } finally {
+    capped.client.disconnect();
   }
 });

@@ -179,6 +179,8 @@ const HEARTBEAT_INTERVAL_MS = 5000;
 const HEARTBEAT_TIMEOUT_MS = 15000;
 const HEARTBEAT_FREEZE_GAP_MS = 12000;
 const HEARTBEAT_RESUME_GRACE_MS = 5000;
+const MAX_LOST_TRANSPORT_RESENDS = 2;
+const MESSAGE_DISPATCH_TIMEOUT_MS = 60000;
 
 export interface DirectDpopSigner {
   prove(method: string, target: string, accessToken?: string): Promise<string>;
@@ -290,6 +292,9 @@ export class T3Client {
   recoveryStore: RecoveryStorage | undefined = undefined;
   recovery: RecoveryState | undefined = undefined;
   private mutating: boolean = false;
+  private awaitingResend: boolean = false;
+  private deferredResumeThreadId: string = '';
+  private sessionWaiters: Set<() => void> = new Set();
   get mutationPending(): boolean { return this.launching || this.mutating || !!this.recovery?.pendingId; }
   get submitting(): boolean { return this.mutating || this.launching; }
   private reconciled: boolean = false;
@@ -750,16 +755,65 @@ export class T3Client {
     this.status = '已确认核对，允许手动提交新请求'; this.onUpdate();
   }
 
-  private async mutate(method: string, payload: Object, id: string, kind: string, launchOwned: boolean = false): Promise<void> {
-    const rpc = this.requireRpc();
+  private notifySessionWaiters(): void {
+    if (this.sessionWaiters.size === 0) return;
+    const waiters = Array.from(this.sessionWaiters);
+    this.sessionWaiters.clear();
+    for (const wake of waiters) {
+      try { wake(); } catch (_) {}
+    }
+  }
+
+  private waitForReplacementSession(previousRpc: RpcClient, expectedEnvironmentId: string): Promise<RpcClient | undefined> {
+    const currentReplacement = (): RpcClient | undefined => {
+      if (this.ready && this.rpc && this.rpc !== previousRpc) {
+        if (expectedEnvironmentId && this.activeEnvironmentId() && this.activeEnvironmentId() !== expectedEnvironmentId) {
+          return undefined;
+        }
+        return this.rpc;
+      }
+      return undefined;
+    };
+    const isStopped = (): boolean => {
+      if (this.ready && this.rpc && this.rpc !== previousRpc) {
+        return !!expectedEnvironmentId && !!this.activeEnvironmentId() && this.activeEnvironmentId() !== expectedEnvironmentId;
+      }
+      return !this.resumeWanted && this.connectionsPending === 0 && this.retryTimer === 0;
+    };
+    const readyNow = currentReplacement();
+    if (readyNow) return Promise.resolve(readyNow);
+    if (isStopped()) return Promise.resolve(undefined);
+    return new Promise<RpcClient | undefined>((resolve) => {
+      const onStateChange = (): void => {
+        const replacement = currentReplacement();
+        if (replacement) {
+          resolve(replacement);
+          return;
+        }
+        if (isStopped()) {
+          resolve(undefined);
+          return;
+        }
+        this.sessionWaiters.add(onStateChange);
+      };
+      this.sessionWaiters.add(onStateChange);
+    });
+  }
+
+  private async mutate(method: string, payload: Object, id: string, kind: string, launchOwned: boolean = false,
+    resendOnSocketLoss: boolean = false): Promise<void> {
+    let rpc = this.requireRpc();
     if (this.launching && !launchOwned) throw new Error('新任务正在提交，请稍候');
     if (this.mutating || this.recovery?.pendingId) throw new Error('上次提交结果未知，请同步原会话并核对结果');
     if (!this.recovery) throw new Error('请先选择会话');
+    const expectedEnvironmentId = this.recovery.environmentId || this.activeEnvironmentId();
     const previous = this.recovery;
     this.mutating = true;
+    this.awaitingResend = false;
     this.reconciled = false;
     this.recovery.pendingId = id; this.recovery.pendingKind = kind;
     let sent = false;
+    const timeoutMs = resendOnSocketLoss ? MESSAGE_DISPATCH_TIMEOUT_MS : 30000;
     try {
       try {
         await this.saveRecovery(); // Commit the marker before any modifying request leaves the device.
@@ -774,9 +828,39 @@ export class T3Client {
         throw new Error('无法保存提交保护记录，未发送任何请求：' + (error as Error).message);
       }
       sent = true;
-      if (rpc !== this.rpc) throw new Error('连接已变更，请同步原会话核对');
-      const response = await rpc.request(method, payload, undefined, 30000, false);
-      if (rpc !== this.rpc) throw new Error('连接已变更，请核对原会话');
+      let response: Object = {};
+      for (let resends = 0; ; resends += 1) {
+        if (rpc !== this.rpc) {
+          if (!resendOnSocketLoss || resends >= MAX_LOST_TRANSPORT_RESENDS) {
+            throw new Error('连接已变更，请同步原会话核对');
+          }
+          this.awaitingResend = true;
+          this.status = '连接已断开，重连后将自动重发';
+          this.onUpdate();
+          const replacement = await this.waitForReplacementSession(rpc, expectedEnvironmentId);
+          this.awaitingResend = false;
+          if (!replacement) throw new Error('连接已变更，请同步原会话核对');
+          rpc = replacement;
+        }
+        try {
+          response = await rpc.request(method, payload, undefined, timeoutMs, false);
+          if (rpc !== this.rpc) throw new Error('连接已变更，请核对原会话');
+          break;
+        } catch (error) {
+          const knownRefusal = error instanceof RpcFailure && error.known;
+          const lostTransport = !knownRefusal && (rpc !== this.rpc || !this.ready);
+          if (!resendOnSocketLoss || !lostTransport || resends >= MAX_LOST_TRANSPORT_RESENDS) {
+            throw error as Error;
+          }
+          this.awaitingResend = true;
+          this.status = '连接已断开，等待重连后重发';
+          this.onUpdate();
+          const replacement = await this.waitForReplacementSession(rpc, expectedEnvironmentId);
+          this.awaitingResend = false;
+          if (!replacement) throw error as Error;
+          rpc = replacement;
+        }
+      }
       if (method === 'orchestration.launchThread' && record(response).threadId !== this.recovery?.threadId) throw new Error('新任务响应身份不一致，请核对原会话');
       const pending = this.recovery;
       this.recovery = { base: pending.base, environmentId: pending.environmentId, threadId: pending.threadId, pendingId: '', pendingKind: '' };
@@ -790,7 +874,16 @@ export class T3Client {
         this.reconciled = true;
       }
       throw error as Error;
-    } finally { this.mutating = false; this.onUpdate(); }
+    } finally {
+      this.awaitingResend = false;
+      this.mutating = false;
+      const deferred = this.deferredResumeThreadId;
+      this.deferredResumeThreadId = '';
+      this.onUpdate();
+      if (deferred && !launchOwned && this.ready && !this.threadChunk && !this.launching) {
+        void this.watch(deferred).catch(() => {});
+      }
+    }
   }
   attachment: Attachment | undefined = undefined;
   attachments: Attachment[] = [];
@@ -1188,7 +1281,9 @@ export class T3Client {
 
   async connect(address: string, credential: string = '', prechecked?: RouteProbeResult): Promise<void> {
     if (this.cloud) return this.connectCloud();
-    if (this.mutating || this.launching) throw new Error('请求正在提交，请稍候再重连');
+    if ((this.mutating || this.launching) && (!this.awaitingResend || !!credential.trim())) {
+      throw new Error('请求正在提交，请稍候再重连');
+    }
     this.disconnect('正在鉴权', false, false, true);
     this.resumeWanted = true;
     const generation = this.generation;
@@ -1287,13 +1382,16 @@ export class T3Client {
         const canRecover = (!!this.saved || !!this.cloud || (!!this.reconnectSavedRoutes && !!this.store)) && !nonRecoverable;
         this.disconnect(errMsg, canRecover, false);
       }
-    } finally { this.connectionsPending--; }
+    } finally {
+      this.connectionsPending--;
+      this.notifySessionWaiters();
+    }
   }
 
   private async connectCloud(): Promise<void> {
     const transport = this.cloud;
     if (!transport) throw new Error('T3 Connect 传输未就绪');
-    if (this.mutating || this.launching) throw new Error('请求正在提交，请稍候再重连');
+    if ((this.mutating || this.launching) && !this.awaitingResend) throw new Error('请求正在提交，请稍候再重连');
     this.disconnect('正在通过 T3 Connect 授权', false, false, true);
     this.resumeWanted = true;
     const generation = this.generation;
@@ -1350,7 +1448,10 @@ export class T3Client {
         const nonRecoverable = errMsg.includes('账号已切换') || errMsg.includes('身份不一致');
         this.disconnect(errMsg, !nonRecoverable, false);
       }
-    } finally { this.connectionsPending--; }
+    } finally {
+      this.connectionsPending--;
+      this.notifySessionWaiters();
+    }
   }
 
   private mergeProviderDeltas(previous: Object | undefined, deltas: Object): Object[] {
@@ -1622,10 +1723,19 @@ export class T3Client {
     this.status = '已连接';
     void this.refreshSessionAccess();
     const resumeThreadId = this.recovery?.threadId || (!this.draftScope ? this.lastWatchedThreadId : '');
+    if (this.awaitingResend) {
+      this.deferredResumeThreadId = resumeThreadId;
+      this.onUpdate();
+      if (this.cloud) this.scheduleCloudRenewal(generation);
+      else if (saved?.kind === 'dpop') this.scheduleDirectDpopRenewal(generation);
+      this.notifySessionWaiters();
+      return;
+    }
     this.resumingWatchThreadId = resumeThreadId;
     this.onUpdate();
     if (this.cloud) this.scheduleCloudRenewal(generation);
     else if (saved?.kind === 'dpop') this.scheduleDirectDpopRenewal(generation);
+    this.notifySessionWaiters();
     if (resumeThreadId) {
       try { await this.watch(resumeThreadId); }
       finally { if (this.resumingWatchThreadId === resumeThreadId) this.resumingWatchThreadId = ''; }
@@ -1782,6 +1892,7 @@ export class T3Client {
     this.status = message;
     this.onUpdate();
     if (recover) this.retry(this.computeRetryDelay(useFastDropRetry));
+    if (!keepBackoff) this.notifySessionWaiters();
   }
 
   async launch(projectId: string, prompt: string, settings: TaskSettings,
@@ -1804,7 +1915,8 @@ export class T3Client {
       await this.selectRecovery(threadId);
       // Retain the allocated identity if the launch acknowledgement is lost.
       this.thread = new ThreadState(threadId);
-      await this.mutate('orchestration.launchThread', input, messageId, 'message', true);
+      await this.mutate('orchestration.launchThread', input, messageId, 'message', true, true);
+      if (!this.thread) this.thread = new ThreadState(threadId);
       if (workspace.mode === 'worktree') this.watchWorktreeSetup();
       this.draftScope = ''; this.attachment = undefined; this.attachments = [];
       return threadId;
@@ -1860,7 +1972,8 @@ export class T3Client {
       throw new Error('队列任务状态已变化，请同步后再操作');
     }
     const id = util.generateRandomUUID();
-    await this.mutate('orchestration.dispatchCommand', queueCommand(id, this.thread.threadId, action, runId, beforeRunId, prompt), id, 'response');
+    const resend = action === 'start' || action === 'resume';
+    await this.mutate('orchestration.dispatchCommand', queueCommand(id, this.thread.threadId, action, runId, beforeRunId, prompt), id, 'response', false, resend);
   }
 
   async newThread(projectId: string, instanceId: string, model: string): Promise<string> {
@@ -2006,7 +2119,7 @@ export class T3Client {
 
     this.status = '正在提交';
     this.onUpdate();
-    await this.mutate('orchestration.dispatchCommand', command, messageId, 'message');
+    await this.mutate('orchestration.dispatchCommand', command, messageId, 'message', false, true);
     this.attachment = undefined; this.attachments = [];
     this.status = '指令已确认，请等待回复';
     this.onUpdate();
@@ -2474,7 +2587,7 @@ export class T3Client {
     if (!target) throw new Error('当前没有可引导的运行');
     const id = util.generateRandomUUID();
     await this.mutate('orchestration.dispatchCommand',
-      promoteCommand(id, this.thread.threadId, runId, text(target.id)), id, 'response');
+      promoteCommand(id, this.thread.threadId, runId, text(target.id)), id, 'response', false, true);
   }
   async forkThread(runId: string, sideChat: boolean = false, sourceThreadIdOverride: string = '', title: string = ''): Promise<string> {
     if (!this.thread) throw new Error('请先选择会话');
@@ -2526,21 +2639,22 @@ export class T3Client {
     if (status !== 'interrupted' && !(status === 'failed' && errorClass === 'usage_limit')) {
       throw new Error('最近一次运行无需恢复');
     }
+    const threadId = this.thread.threadId;
     const runId = text(latest.id);
     const id = util.generateRandomUUID();
     const mode: MessageDispatchMode = { type: 'start_immediately' };
     const command: ResumeMessageCommand = { type: 'message.dispatch', commandId: id, createdBy: 'user',
-      creationSource: 'mobile', threadId: this.thread.threadId, messageId: util.generateRandomUUID(),
+      creationSource: 'mobile', threadId, messageId: util.generateRandomUUID(),
       text: '', attachments: [], manualContinuationOfRunId: runId, dispatchMode: mode };
     if (this.thread.details.modelSelection !== undefined && this.thread.details.modelSelection !== null) {
       command.modelSelection = record(this.thread.details.modelSelection) as Object as ModelSelection;
     }
-    await this.mutate('orchestration.dispatchCommand', command, id, 'message');
+    await this.mutate('orchestration.dispatchCommand', command, id, 'message', false, true);
     const held = runs.some((run: Record<string, Object>) => run.status === 'queued' && run.queueHeld === true);
     if (held) {
       const queueId = util.generateRandomUUID();
       await this.mutate('orchestration.dispatchCommand',
-        queueCommand(queueId, this.thread.threadId, 'resume', ''), queueId, 'response');
+        queueCommand(queueId, threadId, 'resume', ''), queueId, 'response', false, true);
     }
   }
   async writeWorkspaceFile(cwd: string, relativePath: string, contents: string): Promise<string> {
