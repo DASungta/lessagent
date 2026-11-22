@@ -399,7 +399,7 @@ struct Index {
         this.renderedThreadKey = '';
         this.hasMoreHistory = false;
       } else if (client.thread && client.thread.threadId === this.threadId) {
-        if (client.thread.cursor >= 0) {
+        if (client.thread.cursor >= 0 || (client.thread.resumeCursor >= 0 && client.thread.messages.length > 0)) {
           this.messages = client.thread.messages.slice();
           this.renderedThreadKey = currentThreadKey;
           this.hasMoreHistory = client.thread.hasMoreHistory;
@@ -3934,7 +3934,7 @@ struct Index {
       if (!this.messages.length) {
         if (!this.draftMode && (!this.ready || !client.thread || client.thread.cursor < 0)) {
           ListItem() {
-            this.emptyState(this.ready ? '正在同步会话…' : '正在连接服务器…',
+            this.emptyState(client.threadSyncError ? client.threadSyncError : (this.ready ? '正在同步会话…' : '正在连接服务器…'),
               this.status || '连接恢复后将自动加载最新消息。')
           }
         } else {

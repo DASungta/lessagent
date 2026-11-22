@@ -159,7 +159,9 @@ async function setup(options = {}) {
                   } }] });
                 }
               } else if (value.tag === 'orchestration.subscribeThread') {
-                if (options.rejectThread) {
+                if (typeof options.onSubscribeThread === 'function') {
+                  options.onSubscribeThread(value, currentSocket);
+                } else if (options.rejectThread) {
                   currentSocket.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Failure', cause: { _tag: 'Fail', error: { message: 'not found' } } } });
                 } else {
                   currentSocket.emit({ _tag: 'Chunk', requestId: value.id, values: [{ kind: 'snapshot', snapshotSequence: 10,
@@ -2152,5 +2154,115 @@ test('C3: reconnect loop survives unexpected exceptions in store, reconnectSaved
     globalThis.setInterval = realSetInterval;
     globalThis.clearInterval = realClearInterval;
     s4.client.disconnect();
+  }
+});
+
+test('C4: failed resumed subscribeThread reloads full snapshot without blanking cached messages', async () => {
+  let subAttempt = 0;
+  const seenAfterSequences = [];
+  const cachedMsg = { id: 'm1', threadId: 't-c4', role: 'user', text: 'cached hello', streaming: false };
+  const reloadedMsg = { id: 'm2', threadId: 't-c4', role: 'assistant', text: 'reloaded reply', streaming: false };
+  const s = await setup({
+    onSubscribeThread: (frame, sock) => {
+      subAttempt++;
+      seenAfterSequences.push(frame.payload.afterSequence);
+      if (subAttempt === 1) {
+        sock.emit({
+          _tag: 'Chunk',
+          requestId: frame.id,
+          values: [
+            { kind: 'snapshot', snapshotSequence: 10, projection: { thread: { id: 't-c4', title: 'Initial' }, messages: [cachedMsg] } },
+            { kind: 'synchronized' }
+          ]
+        });
+      } else if (subAttempt === 2) {
+        // Resumed replay hits a decode defect (wrong threadId event).
+        sock.emit({
+          _tag: 'Chunk',
+          requestId: frame.id,
+          values: [{ kind: 'event', sequence: 11, event: { threadId: 'wrong-thread', type: 'message.updated', payload: {} } }]
+        });
+      } else if (subAttempt === 3) {
+        // First full snapshot reload also hits a decode defect -> should back off and show sync error while keeping cache.
+        sock.emit({
+          _tag: 'Chunk',
+          requestId: frame.id,
+          values: [{ kind: 'snapshot', snapshotSequence: -1, projection: {} }]
+        });
+      } else if (subAttempt === 4) {
+        // Backed-off retry delivers valid full snapshot at sequence 15.
+        sock.emit({
+          _tag: 'Chunk',
+          requestId: frame.id,
+          values: [
+            { kind: 'snapshot', snapshotSequence: 15, projection: { thread: { id: 't-c4', title: 'Reloaded' }, messages: [cachedMsg, reloadedMsg] } },
+            { kind: 'synchronized' }
+          ]
+        });
+      } else if (subAttempt === 5) {
+        // Subsequent resumed replay after recovery gets a known server rejection -> falls back immediately without afterSequence.
+        sock.emit({ _tag: 'Exit', requestId: frame.id, exit: { _tag: 'Failure', cause: { _tag: 'Fail', error: { message: 'cursor expired' } } } });
+      } else {
+        sock.emit({
+          _tag: 'Chunk',
+          requestId: frame.id,
+          values: [
+            { kind: 'snapshot', snapshotSequence: 18, projection: { thread: { id: 't-c4', title: 'RecoveredAgain' }, messages: [cachedMsg, reloadedMsg] } },
+            { kind: 'synchronized' }
+          ]
+        });
+      }
+    }
+  });
+  let stored = { base: 'https://test', environmentId: 'env', token: 'SYNTHETIC_TOKEN', expiresAt: Date.now() + 60000 };
+  s.client.store = { async load() { return structuredClone(stored); }, async save(v) { stored = structuredClone(v); }, async clear() {} };
+  try {
+    await s.client.connect('https://test', 'synthetic');
+    await new Promise(setImmediate);
+    await s.client.watch('t-c4');
+    await new Promise(setImmediate);
+    assert.equal(subAttempt, 1);
+    assert.equal(seenAfterSequences[0], undefined);
+    assert.deepEqual(s.client.thread.messages.map((m) => m.id), ['m1']);
+
+    // Speed up backoff so attempt 4 runs promptly while still distinguishing immediate attempt 3 vs backed-off attempt 4.
+    const origSchedule = s.client.scheduleThreadResubscribe.bind(s.client);
+    let backoffCount = 0;
+    s.client.scheduleThreadResubscribe = (threadId, generation) => {
+      backoffCount++;
+      s.client.threadRetryDelay = 40;
+      origSchedule(threadId, generation);
+    };
+
+    // Disconnect and reconnect -> attempt 2 sends afterSequence: 10, fails decode -> attempt 3 fires immediately without afterSequence
+    // -> attempt 3 fails decode -> keeps cached message, sets threadSyncError, schedules backoff attempt 4 without afterSequence.
+    s.client.disconnect('网络抖动', false, false);
+    await s.client.connect('https://test', '');
+    await new Promise((r) => setTimeout(r, 15));
+
+    assert.equal(seenAfterSequences[1], 10, 'resumed subscribe must send cached afterSequence');
+    assert.equal(seenAfterSequences[2], undefined, 'failed resumed replay must fall back immediately without afterSequence');
+    assert.equal(backoffCount, 1, 'only failed full-snapshot reload should back off');
+    assert.equal(s.client.threadSyncError, '无法同步消息', 'failed full reload must expose sync error');
+    assert.deepEqual(s.client.thread.messages.map((m) => m.id), ['m1'], 'cached messages must remain visible during failed reload');
+
+    // Wait for backed-off attempt 4 -> full snapshot without afterSequence succeeds and clears error
+    await new Promise((r) => setTimeout(r, 90));
+    assert.equal(subAttempt, 4);
+    assert.equal(seenAfterSequences[3], undefined, 'backed-off retry must still request full snapshot');
+    assert.equal(s.client.threadSyncError, '', 'successful snapshot must clear sync error');
+    assert.equal(s.client.thread.cursor, 15);
+    assert.deepEqual(s.client.thread.messages.map((m) => m.id), ['m1', 'm2']);
+
+    // Next reconnect resumes from new sequence 15 -> attempt 5 gets known RPC failure -> falls back immediately to attempt 6 without afterSequence
+    s.client.disconnect('再次抖动', false, false);
+    await s.client.connect('https://test', '');
+    await new Promise((r) => setTimeout(r, 30));
+    assert.equal(seenAfterSequences[4], 15, 'after recovery, next reconnect must resume from updated sequence');
+    assert.equal(seenAfterSequences[5], undefined, 'rejected resumed subscribe must immediately fall back to full snapshot');
+    assert.equal(s.client.thread.cursor, 18);
+    assert.deepEqual(s.client.thread.messages.map((m) => m.id), ['m1', 'm2']);
+  } finally {
+    s.client.disconnect();
   }
 });

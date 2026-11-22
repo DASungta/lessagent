@@ -282,6 +282,8 @@ export class T3Client {
   private shellRetryDelay: number = 250;
   private threadRetryTimer: number = 0;
   private threadRetryDelay: number = 250;
+  private forceThreadSnapshotId: string = '';
+  threadSyncError: string = '';
   worktreeSetup: Record<string, Object> | undefined = undefined;
   store: SessionStorage | undefined = undefined;
   shell: ShellState = new ShellState();
@@ -1875,6 +1877,8 @@ export class T3Client {
     if (this.lastShellEnvironmentId && this.lastShellEnvironmentId !== environmentId) {
       this.shell.clear();
       this.preservedThread = undefined;
+      this.forceThreadSnapshotId = '';
+      this.threadSyncError = '';
     }
     this.lastShellEnvironmentId = environmentId;
     this.cachedCapabilities = {};
@@ -2021,11 +2025,13 @@ export class T3Client {
       this.retryFailureCount = 0;
       this.lastConnectionError = '';
     }
-    if (!clearShell && this.thread && this.thread.cursor >= 0) {
+    if (!clearShell && this.thread && (this.thread.cursor >= 0 || this.thread.resumeCursor >= 0)) {
       this.preservedThread = this.thread;
     } else if (clearShell) {
       this.preservedThread = undefined;
+      this.forceThreadSnapshotId = '';
     }
+    this.threadSyncError = '';
     this.connectedAt = 0;
     this.resumeWanted = recover;
     clearTimeout(this.retryTimer); this.retryTimer = 0;
@@ -2213,24 +2219,52 @@ export class T3Client {
     await this.selectRecovery(normalizedId);
     if (rpc !== this.rpc || generation !== this.generation) return;
     const hasPendingRecovery = !!this.recovery?.pendingId && this.recovery.threadId === normalizedId;
+    if (this.forceThreadSnapshotId && this.forceThreadSnapshotId !== normalizedId) {
+      this.forceThreadSnapshotId = '';
+    }
+    if (this.thread?.threadId !== normalizedId && this.preservedThread?.threadId !== normalizedId) {
+      this.threadSyncError = '';
+    }
     const currentReusable = !hasPendingRecovery && this.thread && this.thread.threadId === normalizedId &&
       (this.thread.cursor >= 0 || this.thread.resumeCursor >= 0) ? this.thread : undefined;
     const preservedReusable = !hasPendingRecovery && this.preservedThread && this.preservedThread.threadId === normalizedId &&
       (this.preservedThread.cursor >= 0 || this.preservedThread.resumeCursor >= 0) ? this.preservedThread : undefined;
     const reusable = currentReusable || preservedReusable;
     this.preservedThread = undefined;
+    const forceSnapshot = this.forceThreadSnapshotId === normalizedId;
     let state: ThreadState;
     let afterSequence: number | undefined = undefined;
     if (reusable) {
       state = reusable;
       state.resetForReconnect();
-      if (state.resumeCursor >= 0) afterSequence = state.resumeCursor;
+      if (!forceSnapshot && state.resumeCursor >= 0) afterSequence = state.resumeCursor;
     } else {
       state = new ThreadState(normalizedId);
     }
+    let resuming = afterSequence !== undefined;
+    let receivedSnapshotOrSync = false;
+    const reloadFullSnapshotNow = (): void => {
+      this.forceThreadSnapshotId = state.threadId;
+      this.threadSyncError = '';
+      if (!this.inBackground && this.ready && generation === this.generation &&
+        this.lastWatchedThreadId === state.threadId && !this.mutating && !this.launching) {
+        void this.watch(state.threadId).catch(() => {
+          if (!this.threadChunk) this.scheduleThreadResubscribe(state.threadId, generation);
+        });
+        return;
+      }
+      this.scheduleThreadResubscribe(state.threadId, generation);
+    };
+    const failThreadSync = (): void => {
+      this.forceThreadSnapshotId = state.threadId;
+      this.threadSyncError = '无法同步消息';
+      this.status = '无法同步消息';
+      this.emitUpdate();
+      this.scheduleThreadResubscribe(state.threadId, generation);
+    };
     this.thread = state;
-    this.status = '正在同步会话';
-    this.onUpdate();
+    if (!this.threadSyncError) this.status = '正在同步会话';
+    this.emitUpdate();
     const chunk = (value: Object): void => {
       if (rpc !== this.rpc || generation !== this.generation || this.threadChunk !== chunk) return;
       try {
@@ -2239,12 +2273,27 @@ export class T3Client {
         this.threadChunk = undefined;
         rpc.cancelStream(chunk);
         this.preservedThread = undefined;
-        if (this.thread === state) this.thread = new ThreadState(state.threadId);
-        this.scheduleThreadResubscribe(state.threadId, generation);
+        this.forceThreadSnapshotId = state.threadId;
+        if (resuming) {
+          resuming = false;
+          reloadFullSnapshotNow();
+        } else {
+          failThreadSync();
+        }
         return;
       }
       const kind = typeof record(value).kind === 'string' ? text(record(value).kind) : '';
-      if (kind === 'snapshot' || kind === 'synchronized') this.threadRetryDelay = 250;
+      if (kind === 'snapshot') {
+        receivedSnapshotOrSync = true;
+        resuming = false;
+        if (this.forceThreadSnapshotId === state.threadId) this.forceThreadSnapshotId = '';
+        this.threadSyncError = '';
+        this.threadRetryDelay = 250;
+      } else if (kind === 'synchronized') {
+        receivedSnapshotOrSync = true;
+        this.threadSyncError = '';
+        this.threadRetryDelay = 250;
+      }
       this.status = state.notices || '会话已同步';
       if (kind === 'snapshot' && this.recovery?.pendingId && !this.mutating &&
         this.recovery.threadId === state.threadId) {
@@ -2271,26 +2320,37 @@ export class T3Client {
         this.disconnect('会话订阅已结束，请重新连接', true, false);
         return;
       }
+      if (!receivedSnapshotOrSync && resuming) {
+        resuming = false;
+        reloadFullSnapshotNow();
+        return;
+      }
       this.scheduleThreadResubscribe(state.threadId, generation);
     }).catch((error: Error) => {
       if (this.rpc !== rpc || generation !== this.generation || this.threadChunk !== chunk) return;
       this.threadChunk = undefined;
-      if (error instanceof RpcFailure && error.known && state.cursor < 0 &&
-        (!this.recovery?.pendingId || this.recovery.threadId !== state.threadId)) {
+      if (this.recovery?.pendingId && this.recovery.threadId === state.threadId) {
+        this.disconnect(error.message, true);
+        return;
+      }
+      if (resuming) {
+        resuming = false;
+        reloadFullSnapshotNow();
+        return;
+      }
+      if (error instanceof RpcFailure && error.known && state.cursor < 0) {
         if (this.thread === state) this.thread = undefined;
+        if (this.forceThreadSnapshotId === state.threadId) this.forceThreadSnapshotId = '';
+        this.threadSyncError = '';
         if (this.recovery && !this.recovery.pendingId && this.recovery.threadId === state.threadId) {
           this.recovery = undefined;
           if (this.recoveryStore) void this.recoveryStore.clear().catch(() => {});
         }
         this.status = '已连接';
-        this.onUpdate();
+        this.emitUpdate();
         return;
       }
-      if (this.recovery?.pendingId && this.recovery.threadId === state.threadId) {
-        this.disconnect(error.message, true);
-        return;
-      }
-      this.scheduleThreadResubscribe(state.threadId, generation);
+      failThreadSync();
     });
   }
 
@@ -3028,6 +3088,8 @@ export class T3Client {
     this.lastWatchedThreadId = '';
     this.resumingWatchThreadId = '';
     this.preservedThread = undefined;
+    this.forceThreadSnapshotId = '';
+    this.threadSyncError = '';
     this.lastConnectionError = '';
     this.retryFailureCount = 0;
     this.saved = undefined;
