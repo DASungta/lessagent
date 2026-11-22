@@ -2044,3 +2044,113 @@ test('C2: unreadable later config update or server-ended config stream terminate
     s2.client.disconnect();
   }
 });
+
+test('C3: reconnect loop survives unexpected exceptions in store, reconnectSavedRoutes, onUpdate, resume, and stops on non-recoverable auth/identity errors', async () => {
+  // 1. Unexpected store.load() throw and onUpdate() throw must not kill the retry loop
+  let loadCount = 0;
+  let stored = { base: 'https://test', environmentId: 'env', token: 'SYNTHETIC_TOKEN', expiresAt: Date.now() + 60000 };
+  const s1 = await setup();
+  s1.client.store = {
+    async load() {
+      loadCount++;
+      if (loadCount === 2) throw new Error('unexpected keystore glitch');
+      return structuredClone(stored);
+    },
+    async save(v) { stored = structuredClone(v); },
+    async clear() { stored = undefined; }
+  };
+  try {
+    await s1.client.connect('https://test', 'synthetic');
+    assert.equal(s1.client.ready, true);
+    const origRetry = s1.client.retry.bind(s1.client);
+    s1.client.retry = () => origRetry(15);
+
+    // Inject defect in onUpdate during disconnect
+    let threwUpdate = false;
+    s1.client.onUpdate = () => {
+      if (!threwUpdate) { threwUpdate = true; throw new Error('UI callback exploded'); }
+    };
+    s1.socket().emitClose({ code: 1006, reason: 'drop' });
+    assert.equal(s1.client.ready, false);
+    assert.equal(s1.client.reconnectPending, true, 'onUpdate defect must not prevent scheduling retry');
+
+    // Retry 1 hits unexpected store.load() throw -> loop reschedules -> Retry 2 succeeds!
+    await new Promise((r) => setTimeout(r, 120));
+    assert.ok(loadCount >= 3, 'loop must retry past unexpected store error, loadCount=' + loadCount);
+    assert.equal(s1.client.ready, true, 'client must recover automatically after unexpected defect');
+  } finally {
+    s1.client.disconnect();
+  }
+
+  // 2. reconnectSavedRoutes unexpected error keeps retrying; non-recoverable identity/auth error stops loop
+  const s2 = await setup();
+  let routeCalls = 0;
+  try {
+    await s2.client.connect('https://test', 'synthetic');
+    const origRetry = s2.client.retry.bind(s2.client);
+    s2.client.retry = () => origRetry(15);
+    s2.client.reconnectSavedRoutes = async () => {
+      routeCalls++;
+      if (routeCalls === 1) throw new TypeError('unexpected route defect');
+      if (routeCalls === 2) throw new Error('服务器身份已变化，未发送配对凭据');
+    };
+    s2.client.disconnect('网络波动', true, false);
+    await new Promise((r) => setTimeout(r, 100));
+    assert.equal(routeCalls, 2, 'must retry after unexpected defect and stop after non-recoverable identity error');
+    assert.equal(s2.client.reconnectPending, false, 'non-recoverable error must stop retry loop');
+    assert.match(s2.client.status, /服务器身份/);
+  } finally {
+    s2.client.disconnect();
+  }
+
+  // 3. resume() unexpected failure still schedules retry instead of dying
+  const s3 = await setup();
+  let resumeLoads = 0;
+  s3.client.store = {
+    async load() {
+      resumeLoads++;
+      if (resumeLoads === 2) throw new Error('unexpected resume failure');
+      return structuredClone(stored);
+    },
+    async save(v) { stored = structuredClone(v); },
+    async clear() { stored = undefined; }
+  };
+  try {
+    await s3.client.connect('https://test', 'synthetic');
+    const origRetry = s3.client.retry.bind(s3.client);
+    s3.client.retry = () => origRetry(15);
+    s3.client.suspend();
+    await s3.client.resume(0);
+    assert.equal(s3.client.reconnectPending, true, 'resume unexpected failure must schedule backoff retry');
+    await new Promise((r) => setTimeout(r, 80));
+    assert.equal(s3.client.ready, true, 'subsequent retry after resume defect must succeed');
+  } finally {
+    s3.client.disconnect();
+  }
+
+  // 4. Heartbeat timer survives an unexpected sync throw from rpc.ping()
+  const s4 = await setup();
+  const realSetInterval = globalThis.setInterval;
+  const realClearInterval = globalThis.clearInterval;
+  let capturedTick = null;
+  let cleared = false;
+  globalThis.setInterval = (fn) => { capturedTick = fn; return 99999; };
+  globalThis.clearInterval = (id) => { if (id === 99999) cleared = true; else realClearInterval(id); };
+  try {
+    await s4.client.connect('https://test', 'synthetic');
+    assert.equal(typeof capturedTick, 'function');
+    let pings = 0;
+    s4.client.rpc.ping = () => {
+      pings++;
+      if (pings === 1) throw new Error('unexpected ping defect');
+    };
+    capturedTick();
+    capturedTick();
+    assert.equal(pings, 2, 'heartbeat must keep ticking after an unexpected exception');
+    assert.equal(cleared, false, 'heartbeat timer must not be cleared on defect');
+  } finally {
+    globalThis.setInterval = realSetInterval;
+    globalThis.clearInterval = realClearInterval;
+    s4.client.disconnect();
+  }
+});

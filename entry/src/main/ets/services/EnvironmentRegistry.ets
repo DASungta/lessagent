@@ -624,25 +624,27 @@ export class EnvironmentRegistry {
   suspend(): void {
     this.backgroundedAt = Date.now();
     if (this.cacheDirty) void this.flushShellCache();
-    this.clients.forEach((client: T3Client) => client.enterBackground());
+    this.clients.forEach((client: T3Client) => { try { client.enterBackground(); } catch (_) {} });
   }
   shutdown(): void {
     clearTimeout(this.cacheSaveTimer);
     this.cacheSaveTimer = 0;
     if (this.cacheDirty) void this.flushShellCache();
-    this.clients.forEach((client: T3Client) => client.suspend());
+    this.clients.forEach((client: T3Client) => { try { client.suspend(); } catch (_) {} });
   }
   handleNetworkStatus(offline: boolean): void {
     for (const entry of this.directory.entries) {
       if (!entry.enabled || entry.deleting || !this.entryVisible(entry)) continue;
-      this.clients.get(entry.localId)?.handleNetworkStatus(offline);
+      try { this.clients.get(entry.localId)?.handleNetworkStatus(offline); } catch (_) {}
     }
   }
   handleNetworkPathChange(): void {
     for (const entry of this.directory.entries) {
       if (!entry.enabled || entry.deleting || !this.entryVisible(entry)) continue;
       const client = this.clients.get(entry.localId);
-      if (client) void client.handleNetworkPathChange().catch(() => {});
+      if (client) {
+        try { void client.handleNetworkPathChange().catch(() => {}); } catch (_) {}
+      }
     }
   }
   async resume(): Promise<void> {

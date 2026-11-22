@@ -319,9 +319,13 @@ export class T3Client {
   private retryDelay: number = 1000;
   private notifyTimer: number = 0;
 
+  private emitUpdate(): void {
+    try { this.onUpdate(); } catch (_) {}
+  }
+
   private notify(): void {
     if (this.notifyTimer) return;
-    this.notifyTimer = setTimeout(() => { this.notifyTimer = 0; this.onUpdate(); }, 50);
+    this.notifyTimer = setTimeout(() => { this.notifyTimer = 0; this.emitUpdate(); }, 50);
   }
 
   generationValue(): number { return this.generation; }
@@ -530,18 +534,30 @@ export class T3Client {
       if (generation !== this.generation || this.rpc !== rpc) {
         clearInterval(this.timer); this.timer = 0; return;
       }
-      const tickNow = Date.now();
-      const tickGap = tickNow - this.lastHeartbeatTick;
-      this.lastHeartbeatTick = tickNow;
-      if (tickGap > HEARTBEAT_FREEZE_GAP_MS) {
-        // Timer was frozen by OS power/sleep policy; grant a short grace window and ping first.
-        const minInbound = tickNow - (HEARTBEAT_TIMEOUT_MS - HEARTBEAT_RESUME_GRACE_MS);
-        if (this.lastInbound < minInbound) this.lastInbound = minInbound;
-        rpc.ping();
-        return;
+      try {
+        const tickNow = Date.now();
+        const tickGap = tickNow - this.lastHeartbeatTick;
+        this.lastHeartbeatTick = tickNow;
+        if (tickGap > HEARTBEAT_FREEZE_GAP_MS) {
+          // Timer was frozen by OS power/sleep policy; grant a short grace window and ping first.
+          const minInbound = tickNow - (HEARTBEAT_TIMEOUT_MS - HEARTBEAT_RESUME_GRACE_MS);
+          if (this.lastInbound < minInbound) this.lastInbound = minInbound;
+          rpc.ping();
+          return;
+        }
+        if (tickNow - this.lastInbound > HEARTBEAT_TIMEOUT_MS) {
+          try { rpc.fail('服务端响应超时；请重连并核对任务状态'); }
+          catch (_) {
+            if (generation === this.generation && this.rpc === rpc) {
+              this.disconnect('服务端响应超时；请重连并核对任务状态', true, false);
+            }
+          }
+        } else {
+          rpc.ping();
+        }
+      } catch (_) {
+        // Keep the heartbeat timer alive across unexpected defects; timeout will still fire on later ticks.
       }
-      if (tickNow - this.lastInbound > HEARTBEAT_TIMEOUT_MS) rpc.fail('服务端响应超时；请重连并核对任务状态');
-      else rpc.ping();
     }, HEARTBEAT_INTERVAL_MS);
   }
 
@@ -646,6 +662,43 @@ export class T3Client {
     this.resumeWanted = wanted;
   }
 
+  private isNonRecoverableError(error: Object | undefined): boolean {
+    if (error instanceof ServerConfigIncompatibleError) return true;
+    if (error instanceof HttpFailure) {
+      return error.status === 400 || error.status === 401 || error.status === 403 ||
+        error.status === 404 || error.status === 426;
+    }
+    const errMsg = error instanceof Error ? (error.message || '') : String(error || '');
+    return errMsg.includes('没有此服务器的有效会话') ||
+      errMsg.includes('服务器身份') || errMsg.includes('身份不一致') || errMsg.includes('不兼容') ||
+      errMsg.includes('DPoP') || errMsg.includes('配对') || errMsg.includes('账号已切换') ||
+      errMsg.includes('鉴权失败') || errMsg.includes('权限不足') ||
+      errMsg.includes('HTTP 400') || errMsg.includes('HTTP 401') || errMsg.includes('HTTP 403') ||
+      errMsg.includes('HTTP 404') || errMsg.includes('HTTP 426') ||
+      errMsg.includes('路径已移除') || errMsg.includes('环境不存在') || errMsg.includes('请先启用环境') ||
+      errMsg.includes('无效访问凭据') || errMsg.includes('无效凭据有效期') || errMsg.includes('票据无效');
+  }
+
+  private handleReconnectFailure(error: Object | undefined): void {
+    if (this.ready || !this.resumeWanted) return;
+    const errMsg = error instanceof Error && error.message ? error.message : '连接意外失败，正在重试';
+    if (this.isNonRecoverableError(error)) {
+      this.resumeWanted = false;
+      clearTimeout(this.retryTimer); this.retryTimer = 0;
+      this.status = errMsg;
+      this.emitUpdate();
+      this.notifySessionWaiters();
+      return;
+    }
+    if (this.connectionsPending === 0 && this.retryTimer === 0) {
+      this.retryFailureCount++;
+      this.lastConnectionError = errMsg;
+      this.status = errMsg;
+      this.emitUpdate();
+      this.retry(this.computeRetryDelay(false));
+    }
+  }
+
   handleNetworkStatus(offline: boolean): void {
     const changed = this.networkOffline !== offline;
     this.networkOffline = offline;
@@ -653,24 +706,24 @@ export class T3Client {
       if (!this.isLoopbackTarget()) {
         clearTimeout(this.retryTimer); this.retryTimer = 0;
       }
-      if (changed) this.onUpdate();
+      if (changed) this.emitUpdate();
       return;
     }
     this.retryFailureCount = 0;
     if (this.inBackground) {
-      if (changed) this.onUpdate();
+      if (changed) this.emitUpdate();
       return;
     }
     if (this.ready && this.rpc) {
-      void this.handleNetworkPathChange().catch(() => {});
+      void this.handleNetworkPathChange().catch((error: Error) => this.handleReconnectFailure(error));
       return;
     }
     if (this.resumeWanted && this.connectionsPending === 0) {
       clearTimeout(this.retryTimer); this.retryTimer = 0;
-      void this.reconnectAttempt(0).catch(() => { this.status = '请解锁后安全重连'; this.onUpdate(); });
+      void this.reconnectAttempt(0).catch((error: Error) => this.handleReconnectFailure(error));
       return;
     }
-    if (changed) this.onUpdate();
+    if (changed) this.emitUpdate();
   }
 
   async handleNetworkPathChange(): Promise<void> {
@@ -678,20 +731,31 @@ export class T3Client {
     this.retryFailureCount = 0;
     if (this.inBackground || !this.resumeWanted) return;
     if (this.ready && this.rpc) {
-      const alive = await this.probeLiveSocket(this.probeTimeoutForRoute(0), this.isFastRoute());
+      let alive = false;
+      try {
+        alive = await this.probeLiveSocket(this.probeTimeoutForRoute(0), this.isFastRoute());
+      } catch (_) {
+        alive = false;
+      }
       if (alive) {
-        if (!this.shell.liveSynced && !this.shellChunk) this.subscribeShell();
+        if (!this.shell.liveSynced && !this.shellChunk) {
+          try { this.subscribeShell(); } catch (_) { this.scheduleShellResubscribe(this.generation); }
+        }
         if (this.thread && !this.threadChunk && !this.mutating && !this.launching) {
           void this.watch(this.thread.threadId).catch(() => {});
         }
-        this.onUpdate();
+        this.emitUpdate();
         return;
       }
       if (!this.resumeWanted || this.inBackground) return;
     }
     if (this.connectionsPending === 0) {
       clearTimeout(this.retryTimer); this.retryTimer = 0;
-      await this.reconnectAttempt(0);
+      try {
+        await this.reconnectAttempt(0);
+      } catch (error) {
+        this.handleReconnectFailure(error as Object);
+      }
     }
   }
 
@@ -699,28 +763,39 @@ export class T3Client {
     this.inBackground = false;
     this.retryFailureCount = 0;
     this.retryDelay = 1000;
-    await this.reconnectAttempt(backgroundDurationMs);
+    try {
+      await this.reconnectAttempt(backgroundDurationMs);
+    } catch (error) {
+      this.handleReconnectFailure(error as Object);
+    }
   }
 
   private async reconnectAttempt(backgroundDurationMs: number = 0): Promise<void> {
     clearTimeout(this.retryTimer); this.retryTimer = 0;
     if (!this.resumeWanted) return;
     if (this.networkOffline && !this.isLoopbackTarget()) {
-      this.onUpdate();
+      this.emitUpdate();
       return;
     }
     if (this.ready && this.rpc) {
       this.startHeartbeat(this.rpc, this.generation);
       const probeTimeout = this.probeTimeoutForRoute(backgroundDurationMs);
       const fastFailOnHttp = backgroundDurationMs >= 10000 || this.isFastRoute();
-      const alive = await this.probeLiveSocket(probeTimeout, fastFailOnHttp);
+      let alive = false;
+      try {
+        alive = await this.probeLiveSocket(probeTimeout, fastFailOnHttp);
+      } catch (_) {
+        alive = false;
+      }
       if (alive) {
-        if (!this.shell.liveSynced) this.subscribeShell();
+        if (!this.shell.liveSynced) {
+          try { this.subscribeShell(); } catch (_) { this.scheduleShellResubscribe(this.generation); }
+        }
         if (this.thread && !this.threadChunk && !this.mutating && !this.launching) {
           void this.watch(this.thread.threadId).catch(() => {});
         }
         if (!this.cloud && this.saved?.kind === 'dpop') this.scheduleDirectDpopRenewal(this.generation);
-        this.onUpdate();
+        this.emitUpdate();
         return;
       }
       if (!this.resumeWanted || this.inBackground) return;
@@ -730,9 +805,24 @@ export class T3Client {
       this.disconnect('正在重新连接', false, false, true);
       this.resumeWanted = wanted;
     }
-    if (this.reconnectSavedRoutes) { await this.reconnectSavedRoutes(); return; }
-    const saved = this.store ? await this.store.load() : this.saved;
-    if (saved && (saved.kind === 'dpop' || saved.expiresAt > Date.now())) await this.connect(saved.base);
+    try {
+      if (this.reconnectSavedRoutes) {
+        await this.reconnectSavedRoutes();
+        return;
+      }
+      if (this.cloud) {
+        await this.connectCloud();
+        return;
+      }
+      const saved = this.store ? await this.store.load() : this.saved;
+      if (saved && (saved.kind === 'dpop' || saved.expiresAt > Date.now())) {
+        await this.connect(saved.base);
+      } else if (this.resumeWanted) {
+        this.handleReconnectFailure(new Error('没有此服务器的有效会话，请输入新配对凭据'));
+      }
+    } catch (error) {
+      this.handleReconnectFailure(error as Object);
+    }
   }
 
   private computeRetryDelay(fastDropRetry: boolean): number {
@@ -745,13 +835,14 @@ export class T3Client {
   }
 
   private retry(delayMs: number): void {
-    if (this.inBackground || !this.resumeWanted ||
-      (!this.reconnectSavedRoutes && (!this.saved || (this.saved.kind !== 'dpop' && this.saved.expiresAt <= Date.now())))) return;
+    const hasReconnectSource = !!this.reconnectSavedRoutes || !!this.cloud || !!this.store ||
+      (!!this.saved && (this.saved.kind === 'dpop' || this.saved.expiresAt > Date.now()));
+    if (this.inBackground || !this.resumeWanted || !hasReconnectSource) return;
     if (this.networkOffline && !this.isLoopbackTarget()) return;
     this.retryDelay = delayMs;
     this.retryTimer = setTimeout(() => {
       this.retryTimer = 0;
-      void this.reconnectAttempt(0).catch(() => { this.status = '请解锁后安全重连'; this.onUpdate(); });
+      void this.reconnectAttempt(0).catch((error: Error) => this.handleReconnectFailure(error));
     }, delayMs);
   }
 
@@ -1385,14 +1476,9 @@ export class T3Client {
       await this.finishConnection(targetUrl, environmentId, base, saved, generation, credentialsChanged);
     } catch (error) {
       if (generation === this.generation) {
-        const errMsg = (error as Error).message || '';
-        const nonRecoverable = error instanceof ServerConfigIncompatibleError ||
-          errMsg.includes('没有此服务器的有效会话') ||
-          errMsg.includes('服务器身份') || errMsg.includes('不兼容') ||
-          errMsg.includes('DPoP') || errMsg.includes('配对') || errMsg.includes('HTTP 400') ||
-          errMsg.includes('HTTP 401') || errMsg.includes('HTTP 403') ||
-          errMsg.includes('HTTP 404') || errMsg.includes('无效');
-        const canRecover = (!!this.saved || !!this.cloud || (!!this.reconnectSavedRoutes && !!this.store)) && !nonRecoverable;
+        const errMsg = (error as Error).message || '连接意外失败，正在重试';
+        const nonRecoverable = this.isNonRecoverableError(error as Object) || errMsg.includes('无效');
+        const canRecover = (!!this.saved || !!this.cloud || !!this.store || !!this.reconnectSavedRoutes) && !nonRecoverable;
         this.disconnect(errMsg, canRecover, false);
       }
     } finally {
@@ -1457,9 +1543,8 @@ export class T3Client {
       await this.finishConnection(target, environmentId, base, undefined, generation, false);
     } catch (error) {
       if (generation === this.generation) {
-        const errMsg = (error as Error).message || '';
-        const nonRecoverable = error instanceof ServerConfigIncompatibleError ||
-          errMsg.includes('账号已切换') || errMsg.includes('身份不一致') || errMsg.includes('不兼容');
+        const errMsg = (error as Error).message || '中继连接意外失败，正在重试';
+        const nonRecoverable = this.isNonRecoverableError(error as Object);
         this.disconnect(errMsg, !nonRecoverable, false);
       }
     } finally {
@@ -1877,14 +1962,18 @@ export class T3Client {
         if (generation !== this.generation || !this.ready || this.cloud ||
           !this.saved || this.saved.kind !== 'dpop') return;
         const current = this.saved;
-        void this.ensureDirectDpopToken(current, undefined, true).then((renewed: SavedSession) => {
-          if (generation !== this.generation || !this.ready || this.cloud) return;
-          scheduleNext(Math.max(expiresAt, renewed.expiresAt));
-        }).catch((error: Error) => {
-          if (generation !== this.generation || !this.ready || this.cloud) return;
-          if (this.isBlockedDirectDpopError(error)) return;
+        try {
+          void this.ensureDirectDpopToken(current, undefined, true).then((renewed: SavedSession) => {
+            if (generation !== this.generation || !this.ready || this.cloud) return;
+            scheduleNext(Math.max(expiresAt, renewed.expiresAt));
+          }).catch((error: Error) => {
+            if (generation !== this.generation || !this.ready || this.cloud) return;
+            if (this.isBlockedDirectDpopError(error)) return;
+            scheduleNext(expiresAt);
+          });
+        } catch (_) {
           scheduleNext(expiresAt);
-        });
+        }
       }, delay) as number;
     };
     scheduleNext(this.saved.expiresAt);
@@ -1896,17 +1985,25 @@ export class T3Client {
     const transport = this.cloud;
     const renew = (): void => {
       if (generation !== this.generation || this.cloud !== transport) return;
-      void transport.renew().then((next: number) => {
-        if (generation !== this.generation || this.cloud !== transport) return;
-        this.cloudRenewal = setTimeout(renew, Math.max(5000, next - Date.now() - 30000));
-      }).catch(() => {
+      try {
+        void transport.renew().then((next: number) => {
+          if (generation !== this.generation || this.cloud !== transport) return;
+          this.cloudRenewal = setTimeout(renew, Math.max(5000, next - Date.now() - 30000));
+        }).catch(() => {
+          if (generation !== this.generation || this.cloud !== transport) return;
+          this.status = 'T3 Connect 凭证续期失败，正在重试';
+          this.emitUpdate();
+          this.cloudRenewal = setTimeout(renew, 30000);
+        });
+      } catch (_) {
         if (generation !== this.generation || this.cloud !== transport) return;
         this.status = 'T3 Connect 凭证续期失败，正在重试';
-        this.onUpdate();
+        this.emitUpdate();
         this.cloudRenewal = setTimeout(renew, 30000);
-      });
+      }
     };
-    const knownExpiresAt = transport.tokenExpiresAt ? transport.tokenExpiresAt() : 0;
+    let knownExpiresAt = 0;
+    try { knownExpiresAt = transport.tokenExpiresAt ? transport.tokenExpiresAt() : 0; } catch (_) {}
     const initialDelay = knownExpiresAt > 0 ? Math.max(5000, knownExpiresAt - Date.now() - 30000) : 30000;
     this.cloudRenewal = setTimeout(renew, initialDelay);
   }
@@ -1983,8 +2080,8 @@ export class T3Client {
     rpc?.fail(message);
     if (socket) void socket.close().catch(() => {});
     this.status = message;
-    this.onUpdate();
     if (recover) this.retry(this.computeRetryDelay(useFastDropRetry));
+    this.emitUpdate();
     if (!keepBackoff) this.notifySessionWaiters();
   }
 
@@ -2095,7 +2192,9 @@ export class T3Client {
       this.threadRetryTimer = 0;
       if (this.inBackground || !this.ready || generation !== this.generation || this.lastWatchedThreadId !== threadId) return;
       if (this.mutating || this.launching) return;
-      void this.watch(threadId).catch(() => {});
+      void this.watch(threadId).catch(() => {
+        if (!this.threadChunk) this.scheduleThreadResubscribe(threadId, generation);
+      });
     }, delay) as number;
   }
 
@@ -2870,7 +2969,11 @@ export class T3Client {
     this.shellRetryTimer = setTimeout(() => {
       this.shellRetryTimer = 0;
       if (this.inBackground || !this.ready || generation !== this.generation) return;
-      this.subscribeShell();
+      try {
+        this.subscribeShell();
+      } catch (_) {
+        this.scheduleShellResubscribe(generation);
+      }
     }, delay) as number;
   }
 
