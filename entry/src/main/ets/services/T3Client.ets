@@ -934,7 +934,7 @@ export class T3Client {
         throw new Error('无法保存提交保护记录，未发送任何请求：' + (error as Error).message);
       }
       sent = true;
-      let response: Object = {};
+      let response: Object = {} as EmptyPayload;
       for (let resends = 0; ; resends += 1) {
         if (rpc !== this.rpc) {
           if (!resendOnSocketLoss || resends >= MAX_LOST_TRANSPORT_RESENDS) {
@@ -1591,14 +1591,18 @@ export class T3Client {
     return host + ' 发送了此客户端无法读取的服务器配置更新。';
   }
 
+  private configDecodeError(established: boolean): Error {
+    return established
+      ? new ServerConfigUpdateError(this.incompatibleConfigUpdateMessage())
+      : new ServerConfigIncompatibleError(this.incompatibleConfigMessage());
+  }
+
   private decodeServerConfig(value: Object, environmentId: string, established: boolean): Record<string, Object> {
     let cfg: Record<string, Object>;
     try {
       cfg = validateServerConfig(value);
     } catch (_) {
-      throw established
-        ? new ServerConfigUpdateError(this.incompatibleConfigUpdateMessage())
-        : new ServerConfigIncompatibleError(this.incompatibleConfigMessage());
+      throw this.configDecodeError(established);
     }
     if (text(record(cfg.environment).environmentId) !== environmentId) {
       throw new Error('服务器身份不一致，已中止连接');
@@ -1613,16 +1617,12 @@ export class T3Client {
       event = record(value);
       text(event.type);
     } catch (_) {
-      throw established
-        ? new ServerConfigUpdateError(this.incompatibleConfigUpdateMessage())
-        : new ServerConfigIncompatibleError(this.incompatibleConfigMessage());
+      throw this.configDecodeError(established);
     }
     const type = event.type as string;
     if (type === 'snapshot') {
       if (event.config === undefined || event.config === null) {
-        throw established
-          ? new ServerConfigUpdateError(this.incompatibleConfigUpdateMessage())
-          : new ServerConfigIncompatibleError(this.incompatibleConfigMessage());
+        throw this.configDecodeError(established);
       }
       return this.decodeServerConfig(event.config, environmentId, established);
     }
@@ -1632,9 +1632,7 @@ export class T3Client {
         payload = record(event.payload);
         if (payload.settings !== undefined && payload.settings !== null) record(payload.settings);
       } catch (_) {
-        throw established
-          ? new ServerConfigUpdateError(this.incompatibleConfigUpdateMessage())
-          : new ServerConfigIncompatibleError(this.incompatibleConfigMessage());
+        throw this.configDecodeError(established);
       }
       if (payload.settings !== undefined && payload.settings !== null && Object.keys(this.config).length > 0) {
         const next: Record<string, Object> = {};
@@ -1651,9 +1649,7 @@ export class T3Client {
         payload = record(event.payload);
         if (payload.providers !== undefined && payload.providers !== null) objects(payload.providers);
       } catch (_) {
-        throw established
-          ? new ServerConfigUpdateError(this.incompatibleConfigUpdateMessage())
-          : new ServerConfigIncompatibleError(this.incompatibleConfigMessage());
+        throw this.configDecodeError(established);
       }
       if (payload.providers !== undefined && payload.providers !== null && Object.keys(this.config).length > 0) {
         const next: Record<string, Object> = {};
@@ -1670,9 +1666,7 @@ export class T3Client {
         payload = record(event.payload);
         if (payload.providers !== undefined && payload.providers !== null) objects(payload.providers);
       } catch (_) {
-        throw established
-          ? new ServerConfigUpdateError(this.incompatibleConfigUpdateMessage())
-          : new ServerConfigIncompatibleError(this.incompatibleConfigMessage());
+        throw this.configDecodeError(established);
       }
       if (payload.providers !== undefined && payload.providers !== null && Object.keys(this.config).length > 0) {
         const next: Record<string, Object> = {};
