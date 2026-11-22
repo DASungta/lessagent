@@ -386,6 +386,16 @@ export function promoteCommand(commandId: string, threadId: string, queuedRunId:
   return { type: 'queued-message.promote-to-steer', commandId, threadId, queuedRunId, targetRunId };
 }
 
+export const MANUAL_CONTINUATION_FALLBACK_TEXT = 'Continue where you left off.';
+
+export function manualContinuationText(textValue: string, hasAttachments: boolean,
+  manualContinuationOfRunId: string = ''): string {
+  if (manualContinuationOfRunId.trim() && textValue.trim().length === 0 && !hasAttachments) {
+    return MANUAL_CONTINUATION_FALLBACK_TEXT;
+  }
+  return textValue;
+}
+
 export function latestExecutedRun(runs: Record<string, Object>[]): Record<string, Object> | undefined {
   let latest: Record<string, Object> | undefined = undefined;
   const end = (run: Record<string, Object>): number => typeof run.completedAt === 'string' ?

@@ -2266,3 +2266,23 @@ test('C4: failed resumed subscribeThread reloads full snapshot without blanking 
     s.client.disconnect();
   }
 });
+
+test('C5: resumeLatestRun dispatches fallback continuation text for compatibility with older servers', async () => {
+  const s = await setup();
+  try {
+    await s.client.connect('https://test', 'synthetic');
+    await new Promise(setImmediate);
+    await s.client.watch('t-c5');
+    await new Promise(setImmediate);
+    s.client.thread.runs = [{ id: 'run-interrupted', status: 'interrupted', ordinal: 1, startedAt: '2026-01-01T00:00:00Z', completedAt: '2026-01-01T00:01:00Z' }];
+    await s.client.resumeLatestRun();
+    const dispatch = s.frames.filter((f) => f.tag === 'orchestration.dispatchCommand').at(-1);
+    assert.ok(dispatch);
+    assert.equal(dispatch.payload.type, 'message.dispatch');
+    assert.equal(dispatch.payload.manualContinuationOfRunId, 'run-interrupted');
+    assert.equal(dispatch.payload.text, 'Continue where you left off.');
+    assert.deepEqual(dispatch.payload.dispatchMode, { type: 'start_immediately' });
+  } finally {
+    s.client.disconnect();
+  }
+});

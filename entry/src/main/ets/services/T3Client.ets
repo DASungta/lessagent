@@ -4,7 +4,7 @@ import { BranchView, branches, branchListInput, ComposerContextRecord, ComposerD
   DraftAttachment, DraftWorkspace, draftSettings, emptyWorkspace, forceStopCommand, forkThreadCommand,
   guestShare, GuestShareView, launchWorkspace, promoteCommand, refreshStatusInput, switchBranchInput,
   SubagentView, subagents, BackgroundTaskView, tokenUsage, TokenUsage, attachmentLimitError,
-  uploadAttachmentTarget, attachmentRecord, latestExecutedRun } from '../protocol/R4';
+  uploadAttachmentTarget, attachmentRecord, latestExecutedRun, manualContinuationText } from '../protocol/R4';
 import {
   derivePendingBackgroundWork,
   deriveThreadTurnSubagents,
@@ -2897,7 +2897,8 @@ export class T3Client {
     const mode: MessageDispatchMode = { type: 'start_immediately' };
     const command: ResumeMessageCommand = { type: 'message.dispatch', commandId: id, createdBy: 'user',
       creationSource: 'mobile', threadId, messageId: util.generateRandomUUID(),
-      text: '', attachments: [], manualContinuationOfRunId: runId, dispatchMode: mode };
+      text: manualContinuationText('', false, runId), attachments: [],
+      manualContinuationOfRunId: runId, dispatchMode: mode };
     if (this.thread.details.modelSelection !== undefined && this.thread.details.modelSelection !== null) {
       command.modelSelection = record(this.thread.details.modelSelection) as Object as ModelSelection;
     }

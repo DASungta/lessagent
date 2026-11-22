@@ -90,3 +90,12 @@ test('resume chooses the latest executed run rather than array order',()=>{
  assert.equal(r4.latestExecutedRun(runs.filter(run=>run.id!=='b')).id,'c');
  assert.equal(r4.latestExecutedRun([{id:'x',status:'cancelled',ordinal:1,completedAt:'2026-01-01T00:00:00Z',startedAt:null}]),undefined);
 });
+
+test('C5: empty manual continuation sends fallback text while explicit text, attachments, or normal start stay untouched',()=>{
+ assert.equal(r4.MANUAL_CONTINUATION_FALLBACK_TEXT,'Continue where you left off.');
+ assert.equal(r4.manualContinuationText('',false,'run-1'),'Continue where you left off.');
+ assert.equal(r4.manualContinuationText('   ',false,'run-1'),'Continue where you left off.');
+ assert.equal(r4.manualContinuationText('Keep going',false,'run-1'),'Keep going');
+ assert.equal(r4.manualContinuationText('',true,'run-1'),'');
+ assert.equal(r4.manualContinuationText('',false,''),'');
+});
