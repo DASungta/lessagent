@@ -43,6 +43,15 @@ import { actionInput, applyVcsStatus, commentInput, emptyVcs, firstPullRequestCu
 import { applyAuthAccessEvent, AuthAccess } from '../protocol/Cloud';
 import { capability, objectBool, objectText, offeredProvidersFrom, ProjectView, sessionAllows,
   snoozeSettingsFrom, SnoozePresetSetting } from '../protocol/Projects';
+import {
+  parseTaskFolder,
+  parseTaskFolderResult,
+  parseWorkspaceFolders,
+  parseWorkspaceScan,
+  TaskFolder,
+  WorkspaceFolder,
+  WorkspaceScanResult
+} from '../protocol/ThreadRepositories';
 
 class NativeSender implements RpcSender {
   private socket: webSocket.WebSocket;
@@ -124,6 +133,9 @@ interface SubscribeShellPayload {
   afterSequence?: number;
 }
 interface PathPayload { partialPath: string; }
+interface WorkspaceScanPayload { workspaceRoot: string; }
+interface WorkspaceTaskFolderPayload { worktreePath: string; }
+interface WorkspaceAddTaskFolderRepositoryPayload { threadId: string; repositoryPath: string; }
 interface RepositoryPayload { provider: string; repository: string; }
 interface ProjectIdPayload { projectId: string; }
 interface ThreadSettingPayload {
@@ -497,6 +509,26 @@ export class T3Client {
   async browseFilesystem(partialPath: string): Promise<Object> {
     const payload: PathPayload = { partialPath };
     return this.rpcRequest('filesystem.browse', payload, 10000, false);
+  }
+  async listWorkspaceFolders(projectId: string): Promise<WorkspaceFolder[]> {
+    const payload: ProjectIdPayload = { projectId };
+    const value = await this.rpcRequest('workspace.listFolders', payload, 15000, false);
+    return parseWorkspaceFolders(value);
+  }
+  async scanWorkspaceFolders(workspaceRoot: string): Promise<WorkspaceScanResult> {
+    const payload: WorkspaceScanPayload = { workspaceRoot };
+    const value = await this.rpcRequest('workspace.scanFolders', payload, 15000, false);
+    return parseWorkspaceScan(value);
+  }
+  async getTaskFolder(worktreePath: string): Promise<TaskFolder | undefined> {
+    const payload: WorkspaceTaskFolderPayload = { worktreePath };
+    const value = await this.rpcRequest('workspace.taskFolder', payload, 15000, false);
+    return parseTaskFolderResult(value);
+  }
+  async addTaskFolderRepository(threadId: string, repositoryPath: string): Promise<TaskFolder> {
+    const payload: WorkspaceAddTaskFolderRepositoryPayload = { threadId, repositoryPath };
+    const value = await this.rpcRequest('workspace.addTaskFolderRepository', payload, 60000, false);
+    return parseTaskFolder(value);
   }
   async discoverSourceControl(): Promise<Object> {
     const payload: EmptyPayload = {};
@@ -2087,7 +2119,8 @@ export class T3Client {
   }
 
   async launch(projectId: string, prompt: string, settings: TaskSettings,
-    workspace: DraftWorkspace = emptyWorkspace(), context: ComposerContextRecord[] = []): Promise<string> {
+    workspace: DraftWorkspace = emptyWorkspace(), context: ComposerContextRecord[] = [],
+    isGitRepo: boolean = true): Promise<string> {
     this.requireRpc();
     if (this.mutationPending) throw new Error('请先核对上次提交结果');
     validateTaskSettings(this.config, projectId, settings);
@@ -2100,7 +2133,7 @@ export class T3Client {
     const threadId = util.generateRandomUUID();
     const messageId = util.generateRandomUUID();
     const input = record(launchTask(util.generateRandomUUID(), threadId, messageId, projectId, prompt, settings,
-      attachments, context.length ? contextPayload(context) : undefined, launchWorkspace(draft)));
+      attachments, context.length ? contextPayload(context) : undefined, launchWorkspace(draft, isGitRepo)));
     this.launching = true;
     try {
       await this.selectRecovery(threadId);
@@ -2402,6 +2435,20 @@ export class T3Client {
     const projectId = this.thread && typeof this.thread.details.projectId === 'string' ? this.thread.details.projectId : '';
     const project = this.shell.projects.find((entry: ProjectView) => entry.id === projectId);
     return project ? project.workspaceRoot : '';
+  }
+  threadWorktreePath(): string {
+    return this.thread && typeof this.thread.details.worktreePath === 'string' ? this.thread.details.worktreePath : '';
+  }
+  threadProject(): ProjectView | undefined {
+    const projectId = this.thread && typeof this.thread.details.projectId === 'string' ? this.thread.details.projectId : '';
+    if (!projectId) return undefined;
+    return this.shell.projects.find((entry: ProjectView) => entry.id === projectId);
+  }
+  threadCheckpointScopes(): Record<string, Object>[] {
+    return this.thread ? this.thread.checkpointScopes.slice() : [];
+  }
+  threadCheckpoints(): Record<string, Object>[] {
+    return this.thread ? this.thread.checkpoints.slice() : [];
   }
   async listWorkspaceEntries(cwd: string, directoryPath: string): Promise<WorkspaceEntry[]> {
     const rpc = this.requireRpc();

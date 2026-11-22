@@ -1,5 +1,5 @@
 import { compactArray, compactObjects, parseModelSelection, record, RpcFailure, text, objects, sequence, serverBase } from './Wire';
-import { ProjectView, ThreadView, RepositoryIdentityView, projectView, threadView, parseProjectIcon, samePath } from './Projects';
+import { ProjectView, ThreadView, RepositoryIdentityView, projectView, threadView, parseProjectIcon, parseProjectTrackedFolders, samePath } from './Projects';
 
 export interface Choice { id: string; label: string; projectId: string; }
 export interface ModelChoice { instanceId: string; model: string; label: string; }
@@ -55,6 +55,7 @@ function cachedProjectView(value: Object): ProjectView {
     rawMode === 'local' ? 'local' : (rawMode === 'worktree' ? 'worktree' : (rawMode === null ? null : undefined));
   const defaultModelSelection = row.defaultModelSelection === undefined ? undefined :
     row.defaultModelSelection === null ? null : parseModelSelection(row.defaultModelSelection);
+  const trackedFolders = parseProjectTrackedFolders(row.trackedFolders);
   return {
     defaultThreadEnvMode,
     defaultModelSelection,
@@ -63,6 +64,7 @@ function cachedProjectView(value: Object): ProjectView {
     projectId: typeof row.projectId === 'string' && row.projectId ? row.projectId : id,
     workspaceRoot: cachedString(row.workspaceRoot, 1024),
     repository: cachedRepository(row.repository),
+    ...(trackedFolders !== undefined ? { trackedFolders } : {}),
     projectIcon: parseProjectIcon(row.projectIcon),
     pinnedAt: cachedString(row.pinnedAt, 64),
     archivedAt: cachedString(row.archivedAt, 64),

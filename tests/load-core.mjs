@@ -45,3 +45,8 @@ const floatingStatusSource = (await readFile(new URL('../entry/src/main/ets/prot
   .replace("'./Projects'", JSON.stringify(projectsUrl))
   .replace("'./R4'", JSON.stringify(r4Url));
 export const floatingStatusUrl = data(compile(floatingStatusSource));
+
+const threadReposSource = (await readFile(new URL('../entry/src/main/ets/protocol/ThreadRepositories.ts', import.meta.url), 'utf8'))
+  .replace("'./Wire'", JSON.stringify(wireUrl))
+  .replace("'./Projects'", JSON.stringify(projectsUrl));
+export const threadRepositoriesUrl = data(compile(threadReposSource));

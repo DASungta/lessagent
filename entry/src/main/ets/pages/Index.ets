@@ -91,6 +91,11 @@ import {
   newTaskDestination, pickableProjectGroups, projectGroupRefs, samePath, scopedProjectView, scopedThreadView,
   sortProjectGroups, topOfPinnedRun
 } from '../protocol/Projects';
+import {
+  WorktreeRepositoryChoice,
+  resolveWorktreeRepositorySelection,
+  worktreeRepositoryChoices
+} from '../protocol/ThreadRepositories';
 import { WorkspaceActions, WorkspaceUndo } from '../services/Workspace';
 import { rememberThreadProject, saveWorkspacePreferences, setWorkingShelfEnabled, workspacePrefs } from '../services/WorkspacePrefs';
 import { ThreadList } from '../components/ThreadList';
@@ -288,6 +293,10 @@ struct Index {
   @State draftContext: ComposerContextRecord[] = [];
   @State branches: BranchView[] = [];
   @State branchesLoading: boolean = false;
+  @State draftRepoChoices: WorktreeRepositoryChoice[] = [];
+  @State draftRepoChoicesLoaded: boolean = true;
+  @State draftIsGitRepo: boolean = true;
+  private draftRepoRequest: number = 0;
   @State commandPanel: string = '';
   @State commandQuery: string = '';
   @State mentionFiles: string[] = [];
@@ -1745,6 +1754,7 @@ struct Index {
     this.status = existing ? '已恢复本地草稿' : '新任务草稿已保存';
     if (!existing) { this.draftRecords = [this.draftRecord()!].concat(this.draftRecords); void this.persistDraft().catch(() => {}); }
     void this.loadBranches();
+    void this.loadDraftRepositories();
   }
 
   private refreshAttachments(): void {
@@ -1783,6 +1793,7 @@ struct Index {
       const refs = await owner.listBranches(cwd);
       if (!currentRequest()) return;
       this.branches = refs;
+      if (refs.length > 0) this.draftIsGitRepo = true;
       const current = refs.find((ref: BranchView) => ref.current);
       if (this.draftWorkspace.mode === 'local' && !this.draftWorkspace.branch && current) {
         this.draftWorkspace.branch = current.name;
@@ -1791,8 +1802,73 @@ struct Index {
         this.draftWorkspace.branch = refs.find((ref: BranchView) => ref.isDefault)?.name || current?.name || '';
       }
     } catch (error) {
-      if (currentRequest()) { this.status = (error as Error).message; this.branches = []; }
+      if (currentRequest()) {
+        this.branches = [];
+        const trackedCount = this.draftProject()?.trackedFolders?.length || 0;
+        if (trackedCount === 0) this.status = (error as Error).message;
+      }
     } finally { if (request === this.branchRequest) this.branchesLoading = false; }
+  }
+
+  private async loadDraftRepositories(): Promise<void> {
+    const owner = client;
+    const request = ++this.draftRepoRequest;
+    if (!owner.ready || !this.draftMode || !owner.canReadFiles()) {
+      this.draftRepoChoices = [];
+      this.draftRepoChoicesLoaded = true;
+      this.draftIsGitRepo = true;
+      return;
+    }
+    const project = this.draftProject();
+    if (!project) {
+      this.draftRepoChoices = [];
+      this.draftRepoChoicesLoaded = true;
+      this.draftIsGitRepo = true;
+      return;
+    }
+    const trackedCount = project.trackedFolders?.length || 0;
+    if (trackedCount === 0) {
+      this.draftRepoChoices = [];
+      this.draftRepoChoicesLoaded = true;
+      this.draftIsGitRepo = true;
+      return;
+    }
+    const generation = owner.generationValue();
+    const projectId = project.id;
+    const workspaceRoot = project.workspaceRoot;
+    const currentRequest = (): boolean => request === this.draftRepoRequest && this.alive &&
+      this.draftMode && client === owner && owner.ready && owner.generationValue() === generation &&
+      this.projectId === projectId;
+    this.draftRepoChoicesLoaded = false;
+    try {
+      const folders = await owner.listWorkspaceFolders(projectId);
+      if (!currentRequest()) return;
+      this.draftRepoChoices = worktreeRepositoryChoices(folders, workspaceRoot);
+      this.draftRepoChoicesLoaded = true;
+      if (workspaceRoot) {
+        try {
+          const scanned = await owner.scanWorkspaceFolders(workspaceRoot);
+          if (currentRequest()) this.draftIsGitRepo = scanned.isGitRepository;
+        } catch (_) {}
+      }
+    } catch (_) {
+      if (currentRequest()) {
+        this.draftRepoChoices = [];
+        this.draftRepoChoicesLoaded = true;
+      }
+    }
+  }
+
+  private updateDraftRepositories(paths: string[]): void {
+    if (!this.draftMode || this.busy || this.unknown) return;
+    this.draftWorkspace = {
+      mode: this.draftWorkspace.mode,
+      branch: this.draftWorkspace.branch,
+      worktreePath: this.draftWorkspace.worktreePath,
+      startFromOrigin: this.draftWorkspace.startFromOrigin,
+      repositories: paths.slice()
+    };
+    this.scheduleDraftSave();
   }
 
   private setWorkspaceMode(mode: string): void {
@@ -1957,6 +2033,10 @@ struct Index {
   private openComposerCommand(mode: string): void {
     this.commandPanel = mode; this.commandQuery = ''; this.mentionFiles = [];
     if (mode === 'branch' && !this.branches.length) void this.loadBranches();
+    if ((mode === 'branch' || mode === 'repositories') && !this.draftRepoChoices.length &&
+      (this.draftProject()?.trackedFolders?.length || 0) > 0) {
+      void this.loadDraftRepositories();
+    }
     this.openPanel('composer-command');
   }
 
@@ -2561,7 +2641,8 @@ struct Index {
     try {
       if (this.draftMode) {
         await this.persistDraft();
-        const id = await owner.launch(this.projectId, submitted, this.taskSettings, this.draftWorkspace, submittedContext);
+        const isRootGit = this.draftIsGitRepo !== false || !Array.isArray(this.draftRepoChoices) || this.draftRepoChoices.length === 0;
+        const id = await owner.launch(this.projectId, submitted, this.taskSettings, this.draftWorkspace, submittedContext, isRootGit);
         if (owner !== client || localId !== this.selectedLocalId) return;
         this.draftMode = false; this.threadId = id; this.activeDraftId = '';
         this.pendingScrollBottomKey = localId + ':' + id;
@@ -3249,6 +3330,9 @@ struct Index {
       ComposerCommandPanel({ mode: this.commandPanel, query: this.commandQuery, busy: this.busy,
         commands: client.providerCommands(), skills: client.providerSkills(), files: this.mentionFiles,
         branches: this.branches, environments: this.environmentLabels(),
+        repoChoices: this.draftRepoChoices,
+        repoChoicesLoaded: this.draftRepoChoicesLoaded,
+        selectedRepos: this.draftWorkspace.repositories,
         worktree: this.draftWorkspace.mode === 'worktree',
         startFromOrigin: this.draftWorkspace.startFromOrigin,
         onClose: () => this.panelOpen = false,
@@ -3269,7 +3353,9 @@ struct Index {
           if (!this.draftMode || this.busy || this.unknown || this.draftWorkspace.mode !== 'worktree') return;
           this.draftWorkspace.startFromOrigin = value; this.scheduleDraftSave();
         },
-        onSwitchCheckout: () => { void this.applyCurrentCheckoutBranch().catch((error: Error) => this.status = error.message); }
+        onSwitchCheckout: () => { void this.applyCurrentCheckoutBranch().catch((error: Error) => this.status = error.message); },
+        onRepositoriesChange: (paths: string[]) => this.updateDraftRepositories(paths),
+        onOpenRepositories: () => { this.commandPanel = 'repositories'; this.commandQuery = ''; }
       })
     } else if (this.panel === 'extras') {
       ThreadExtrasPanel({ busy: this.busy, plans: this.extraPlans, subagents: this.extraSubagents,
@@ -3935,13 +4021,34 @@ struct Index {
           Row({ space: 4 }) {
             Text((this.draftWorkspace.mode === 'worktree' ? '新工作树' :
               this.draftWorkspace.worktreePath ? '已有工作树' : '当前 checkout') + ' · ' +
-              (this.draftWorkspace.branch || '未选分支'))
+              (this.draftWorkspace.branch || (this.draftWorkspace.mode === 'worktree' && !this.draftIsGitRepo && this.draftRepoChoices.length > 0 ? '各仓库默认分支' : '未选分支')) +
+              (this.draftWorkspace.mode === 'local' && this.draftRepoChoices.length > 0 ? (' · ' + this.draftRepoChoices.length + ' 个仓库') : ''))
               .fontSize(FontSize.callout).fontColor($r('app.color.ink')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
             Image($r('app.media.ui_chevron_right')).width(12).height(12).accessibilityLevel('no')
           }.width('100%').alignItems(VerticalAlign.Center)
         }.width('100%').constraintSize({ minHeight: 36 }).padding({ left: Space.sm, right: Space.xs })
           .backgroundColor($r('app.color.group')).borderRadius(Radius.button).enabled(!this.busy)
           .accessibilityDescription('选择分支与工作区').onClick(() => this.openComposerCommand('branch'))
+        if (this.draftWorkspace.mode === 'worktree' && (this.draftRepoChoices.length > 0 || !this.draftRepoChoicesLoaded)) {
+          Button({ type: ButtonType.Normal }) {
+            Row({ space: 4 }) {
+              Text('关联仓库 · ' + resolveWorktreeRepositorySelection(
+                this.draftRepoChoicesLoaded ? this.draftRepoChoices : null,
+                this.draftWorkspace.repositories
+              ).label)
+                .fontSize(FontSize.callout)
+                .fontColor(resolveWorktreeRepositorySelection(
+                  this.draftRepoChoicesLoaded ? this.draftRepoChoices : null,
+                  this.draftWorkspace.repositories
+                ).needsChoice ? $r('app.color.warning') : $r('app.color.ink'))
+                .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
+              Image($r('app.media.ui_chevron_right')).width(12).height(12).accessibilityLevel('no')
+            }.width('100%').alignItems(VerticalAlign.Center)
+          }.width('100%').constraintSize({ minHeight: 36 }).padding({ left: Space.sm, right: Space.xs })
+            .backgroundColor($r('app.color.group')).borderRadius(Radius.button).enabled(!this.busy)
+            .accessibilityDescription('选择新工作树包含的关联仓库')
+            .onClick(() => this.openComposerCommand('repositories'))
+        }
       }.width('100%').padding({ left: Space.md, right: Space.md, top: Space.sm, bottom: Space.xs })
     }
     Stack({ alignContent: Alignment.Bottom }) {
@@ -4643,6 +4750,14 @@ struct Index {
           onRename: (group: ProjectGroup, title: string) => this.renameGroup(group, title),
           onPin: (group: ProjectGroup, pinned: boolean) => this.pinGroup(group, pinned),
           onArchive: (group: ProjectGroup, archived: boolean) => this.archiveGroup(group, archived),
+          onTrackFolder: async (project: ScopedProject, folderPath: string, name: string): Promise<void> => {
+            await this.workspace().trackProjectFolder(project, folderPath, name);
+            this.rebuildWorkspace();
+          },
+          onUntrackFolder: async (project: ScopedProject, folderPath: string): Promise<void> => {
+            await this.workspace().untrackProjectFolder(project, folderPath);
+            this.rebuildWorkspace();
+          },
           onRemoveCheckout: (project: ScopedProject) => this.confirmRemoveCheckout(project),
           onRemoveProject: (group: ProjectGroup) => this.confirmRemoveProject(group) })
       } else if (this.page === 'archive') {
@@ -4800,6 +4915,10 @@ struct Index {
       } else if (this.page === 'git') {
         GitPanel({ connection: client, cwd: this.currentWorkspace(), threadId: this.threadId,
           projectId: this.projectId,
+          worktreePath: this.draftMode ? this.draftWorkspace.worktreePath : client.threadWorktreePath(),
+          project: this.draftMode ? this.draftProject() : client.threadProject(),
+          checkpointScopes: this.draftMode ? [] : client.threadCheckpointScopes(),
+          checkpoints: this.draftMode ? [] : client.threadCheckpoints(),
           onBack: () => this.page = 'chat', onStatus: (value: string) => this.status = value })
       } else if (this.page === 'pull-requests') {
         PullRequestsPanel({ connection: client, projectId: this.projectId,

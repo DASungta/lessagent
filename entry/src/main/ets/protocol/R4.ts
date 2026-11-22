@@ -21,6 +21,7 @@ export interface DraftWorkspace {
   branch: string;
   worktreePath: string;
   startFromOrigin: boolean;
+  repositories?: string[];
 }
 
 export interface ComposerContextRecord {
@@ -180,6 +181,23 @@ export function composerDraft(value: Object): ComposerDraft {
   const workspace = record(row.workspace);
   const mode = text(workspace.mode);
   if (mode !== 'local' && mode !== 'worktree') throw new Error('工作区模式无效');
+  let repositories: string[] | undefined = undefined;
+  if (workspace.repositories !== undefined) {
+    if (!Array.isArray(workspace.repositories)) throw new Error('工作区仓库列表无效');
+    const seen = new Set<string>();
+    repositories = [];
+    for (const entry of workspace.repositories as Object[]) {
+      if (typeof entry !== 'string' || !entry.trim() || entry.length > 2048 || /[\x00-\x1f]/.test(entry)) {
+        throw new Error('工作区仓库路径无效');
+      }
+      const trimmed = entry.trim();
+      if (!seen.has(trimmed)) {
+        seen.add(trimmed);
+        repositories.push(trimmed);
+      }
+    }
+    if (repositories.length > 128) throw new Error('工作区仓库数量超限');
+  }
   return {
     version: 1, draftId, localId: safeToken(text(row.localId), '本地环境标识', 128),
     environmentId: safeToken(text(row.environmentId), '环境标识', 128),
@@ -189,7 +207,8 @@ export function composerDraft(value: Object): ComposerDraft {
     ...(row.modelCustomized === true ? { modelCustomized: true } : {}),
     runtimeMode: text(row.runtimeMode), interactionMode: text(row.interactionMode),
     workspace: { mode, branch: text(workspace.branch), worktreePath: text(workspace.worktreePath),
-      startFromOrigin: workspace.startFromOrigin !== false },
+      startFromOrigin: workspace.startFromOrigin !== false,
+      ...(repositories !== undefined ? { repositories } : {}) },
     attachments: objects(row.attachments).map(attachmentRecord),
     context: objects(row.context).map(contextRecord),
     updatedAt: typeof row.updatedAt === 'number' ? row.updatedAt : Date.now()
@@ -201,11 +220,21 @@ export function draftSettings(draft: ComposerDraft): TaskSettings {
     interactionMode: draft.interactionMode };
 }
 
-export function launchWorkspace(draft: ComposerDraft): Object {
+interface LaunchRepositoryEntry { path: string; }
+
+export function launchWorkspace(draft: ComposerDraft, isGitRepo: boolean = true): Object {
   if (draft.workspace.mode === 'worktree') {
-    if (!draft.workspace.branch.trim()) throw new Error('请选择新工作树的基础分支');
-    return { type: 'worktree', baseRef: draft.workspace.branch,
-      startFromOrigin: draft.workspace.startFromOrigin };
+    const baseRef = draft.workspace.branch.trim() || (isGitRepo ? '' : 'HEAD');
+    if (!baseRef) throw new Error('请选择新工作树的基础分支');
+    const repos: LaunchRepositoryEntry[] | undefined = draft.workspace.repositories !== undefined
+      ? draft.workspace.repositories.map((path: string): LaunchRepositoryEntry => ({ path }))
+      : undefined;
+    return {
+      type: 'worktree',
+      baseRef,
+      startFromOrigin: draft.workspace.startFromOrigin,
+      ...(repos !== undefined ? { repositories: repos } : {})
+    };
   }
   if (draft.workspace.worktreePath.trim()) {
     return { type: 'existing_worktree', worktreePath: draft.workspace.worktreePath,
@@ -225,13 +254,24 @@ export function switchDraftWorkspaceMode(workspace: DraftWorkspace, mode: string
   const branch = mode === 'worktree'
     ? workspace.branch || refs.find(ref => ref.isDefault)?.name || ''
     : refs.find(ref => ref.current)?.name || workspace.branch;
-  return { mode, branch, worktreePath: '', startFromOrigin: workspace.startFromOrigin };
+  return {
+    mode, branch, worktreePath: '', startFromOrigin: workspace.startFromOrigin,
+    ...(workspace.repositories !== undefined ? { repositories: workspace.repositories.slice() } : {})
+  };
 }
 
 export function draftWorkspaceForBranch(workspace: DraftWorkspace, ref: BranchView): DraftWorkspace {
-  if (ref.isRemote) return { mode: 'worktree', branch: ref.name, worktreePath: '', startFromOrigin: true };
-  return { mode: 'local', branch: ref.name, worktreePath: ref.current ? '' : ref.worktreePath,
-    startFromOrigin: workspace.startFromOrigin };
+  if (ref.isRemote) {
+    return {
+      mode: 'worktree', branch: ref.name, worktreePath: '', startFromOrigin: true,
+      ...(workspace.repositories !== undefined ? { repositories: workspace.repositories.slice() } : {})
+    };
+  }
+  return {
+    mode: 'local', branch: ref.name, worktreePath: ref.current ? '' : ref.worktreePath,
+    startFromOrigin: workspace.startFromOrigin,
+    ...(workspace.repositories !== undefined ? { repositories: workspace.repositories.slice() } : {})
+  };
 }
 
 export function branches(value: Object): BranchView[] {

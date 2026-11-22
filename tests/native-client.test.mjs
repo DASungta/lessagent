@@ -1,5 +1,5 @@
 // Execute the actual NetworkKit adapter with a small fake kit; HAP build checks the SDK types.
-import { coreUrl, projectsUrl, composerUrl, r4Url, filesUrl, r5Url, floatingStatusUrl, markdownUrl } from './load-core.mjs';
+import { coreUrl, projectsUrl, composerUrl, r4Url, filesUrl, r5Url, floatingStatusUrl, markdownUrl, threadRepositoriesUrl } from './load-core.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -208,6 +208,7 @@ async function setup(options = {}) {
     .replace("'../protocol/Core'", JSON.stringify(coreUrl))
     .replace("'../protocol/Cloud'", JSON.stringify(cloud))
     .replace("'../protocol/Projects'", JSON.stringify(projectsUrl))
+    .replace("'../protocol/ThreadRepositories'", JSON.stringify(threadRepositoriesUrl))
     .replace("'../protocol/Composer'", JSON.stringify(composerUrl))
     .replace("'../protocol/FloatingStatus'", JSON.stringify(floatingStatusUrl))
     .replace("'../protocol/Files'", JSON.stringify(filesUrl))
@@ -2332,6 +2333,80 @@ test('U1: T3Client tracks attempts and blocks resumeLatestRun when provider lack
     await s.client.resumeLatestRun();
     const dispatch = s.frames.filter((f) => f.tag === 'orchestration.dispatchCommand').at(-1);
     assert.equal(dispatch.payload.manualContinuationOfRunId, 'run-stop');
+  } finally {
+    s.client.disconnect();
+  }
+});
+
+test('M1: T3Client calls workspace.listFolders, workspace.scanFolders, workspace.taskFolder, workspace.addTaskFolderRepository and forwards launch repositories', async () => {
+  const s = await setup({
+    onRequest: (frame, sock) => {
+      if (frame.tag === 'workspace.listFolders') {
+        sock.emit({ _tag: 'Exit', requestId: frame.id, exit: { _tag: 'Success', value: { folders: [
+          { name: 'api', path: '/work/hub/api', state: 'git', discovered: true },
+          { name: 'web', path: '/work/web', state: 'git' }
+        ] } } });
+        return 'handled';
+      }
+      if (frame.tag === 'workspace.scanFolders') {
+        sock.emit({ _tag: 'Exit', requestId: frame.id, exit: { _tag: 'Success', value: {
+          workspaceRoot: '/work/hub', isGitRepository: false, codeWorkspaceFile: null,
+          folders: [{ path: '/work/hub/api', name: 'api', isGitRepository: true, source: 'child' }]
+        } } });
+        return 'handled';
+      }
+      if (frame.tag === 'workspace.taskFolder') {
+        sock.emit({ _tag: 'Exit', requestId: frame.id, exit: { _tag: 'Success', value: {
+          taskFolder: {
+            root: '/tmp/wt/t1', projectId: 'proj-multi', projectRoot: '/work/hub', anchor: '/work',
+            projectPath: '/tmp/wt/t1/hub', projectIsWorktree: false,
+            repositories: [{ repositoryPath: '/work/hub/api', worktreePath: '/tmp/wt/t1/hub/api', name: 'api' }]
+          }
+        } } });
+        return 'handled';
+      }
+      if (frame.tag === 'workspace.addTaskFolderRepository') {
+        sock.emit({ _tag: 'Exit', requestId: frame.id, exit: { _tag: 'Success', value: {
+          root: '/tmp/wt/t1', projectId: 'proj-multi', projectRoot: '/work/hub', anchor: '/work',
+          projectPath: '/tmp/wt/t1/hub', projectIsWorktree: false,
+          repositories: [
+            { repositoryPath: '/work/hub/api', worktreePath: '/tmp/wt/t1/hub/api', name: 'api' },
+            { repositoryPath: '/work/web', worktreePath: '/tmp/wt/t1/web', name: 'web' }
+          ]
+        } } });
+        return 'handled';
+      }
+      return undefined;
+    },
+    providers: [{ instanceId: 'codex', driver: 'codex', enabled: true, installed: true, models: [{ slug: 'gpt-5', name: 'GPT-5' }] }]
+  });
+  try {
+    await s.client.connect('https://test', 'synthetic');
+    await new Promise(setImmediate);
+    const folders = await s.client.listWorkspaceFolders('proj-multi');
+    assert.equal(folders.length, 2);
+    const scan = await s.client.scanWorkspaceFolders('/work/hub');
+    assert.equal(scan.isGitRepository, false);
+    const tf = await s.client.getTaskFolder('/tmp/wt/t1/hub');
+    assert.equal(tf.repositories.length, 1);
+    const updated = await s.client.addTaskFolderRepository('t-1', '/work/web');
+    assert.equal(updated.repositories.length, 2);
+
+    await s.client.launch(
+      'proj-multi',
+      'Inspect repos',
+      { modelSelection: { instanceId: 'codex', model: 'gpt-5' }, runtimeMode: 'approval-required', interactionMode: 'default' },
+      { mode: 'worktree', branch: '', worktreePath: '', startFromOrigin: true, repositories: ['/work/hub/api'] },
+      [],
+      false
+    );
+    const launchFrame = s.frames.find((f) => f.tag === 'orchestration.launchThread');
+    assert.deepEqual(launchFrame.payload.workspaceStrategy, {
+      type: 'worktree',
+      baseRef: 'HEAD',
+      startFromOrigin: true,
+      repositories: [{ path: '/work/hub/api' }]
+    });
   } finally {
     s.client.disconnect();
   }

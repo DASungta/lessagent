@@ -364,6 +364,7 @@ export class ThreadState {
   requests: Record<string, Object>[] = [];
   items: Record<string, Object>[] = [];
   checkpoints: Record<string, Object>[] = [];
+  checkpointScopes: Record<string, Object>[] = [];
   details: Record<string, Object> = {};
   runs: Record<string, Object>[] = [];
   attempts: Record<string, Object>[] = [];
@@ -416,6 +417,7 @@ export class ThreadState {
         });
       this.requests = projection.runtimeRequests ? compactObjects(projection.runtimeRequests) : [];
       this.checkpoints = projection.checkpoints ? compactObjects(projection.checkpoints) : [];
+      this.checkpointScopes = projection.checkpointScopes ? compactObjects(projection.checkpointScopes) : [];
       const rawItems = visible.length ? visible : (projection.turnItems ? compactObjects(projection.turnItems) : []);
       this.items = rawItems.map((entry: Record<string, Object>) => this.restoreDedupedTurnItem(entry));
       this.messages = [];
@@ -460,6 +462,7 @@ export class ThreadState {
     }
     else if (type === 'runtime-request.updated') this.merge(this.requests, record(event.payload));
     else if (type === 'checkpoint.captured' || type === 'checkpoint.updated') this.merge(this.checkpoints, record(event.payload));
+    else if (type === 'checkpoint-scope.created' || type === 'checkpoint-scope.updated') this.merge(this.checkpointScopes, record(event.payload));
     else if (type === 'run.created' || type === 'run.updated') {
       const run = record(event.payload);
       this.merge(this.runs, run);

@@ -24,6 +24,14 @@ export const PROJECT_ICON_COLORS: string[] = [
   'cyan', 'sky', 'blue', 'indigo', 'violet', 'purple', 'fuchsia', 'pink', 'rose'
 ];
 
+export const PROJECT_TRACKED_FOLDERS_MAX = 128;
+
+export interface ProjectTrackedFolder {
+  path: string;
+  name: string;
+  discovered?: boolean;
+}
+
 export interface ProjectView {
   defaultThreadEnvMode?: string | null;
   defaultModelSelection?: ModelSelection | null;
@@ -32,6 +40,7 @@ export interface ProjectView {
   projectId: string;
   workspaceRoot: string;
   repository: RepositoryIdentityView | undefined;
+  trackedFolders?: ProjectTrackedFolder[];
   projectIcon?: ProjectIconView;
   pinnedAt: string;
   archivedAt: string;
@@ -344,6 +353,29 @@ export function groupProjectIcon(group: ProjectGroup | undefined): ProjectIconVi
   return group.projects.find((project: ScopedProject) => project.projectIcon !== undefined)?.projectIcon;
 }
 
+export function parseProjectTrackedFolders(value: Object | undefined): ProjectTrackedFolder[] | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (!Array.isArray(value)) return undefined;
+  const result: ProjectTrackedFolder[] = [];
+  const seen = new Set<string>();
+  for (const entry of value as Object[]) {
+    if (result.length >= PROJECT_TRACKED_FOLDERS_MAX) break;
+    if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) continue;
+    const row = entry as Record<string, Object>;
+    if (typeof row.path !== 'string' || typeof row.name !== 'string') continue;
+    const folderPath = row.path.trim();
+    const folderName = row.name.replace(/[\u0000-\u001f\u007f]+/g, ' ').trim();
+    if (!folderPath || folderPath.length > 2048 || /[\u0000-\u001f\u007f]/.test(folderPath)) continue;
+    if (!folderName || folderName.length > 128) continue;
+    if (seen.has(folderPath)) continue;
+    seen.add(folderPath);
+    const folder: ProjectTrackedFolder = { path: folderPath, name: folderName };
+    if (row.discovered === true) folder.discovered = true;
+    result.push(folder);
+  }
+  return result;
+}
+
 export function projectView(value: Object): ProjectView {
   const row = record(value);
   const rawMode = row.defaultThreadEnvMode;
@@ -351,6 +383,7 @@ export function projectView(value: Object): ProjectView {
     rawMode === 'local' ? 'local' : (rawMode === 'worktree' ? 'worktree' : (rawMode === null ? null : undefined));
   const defaultModelSelection = row.defaultModelSelection === undefined ? undefined :
     row.defaultModelSelection === null ? null : parseModelSelection(row.defaultModelSelection);
+  const trackedFolders = parseProjectTrackedFolders(row.trackedFolders);
   const id = cleanId(row.id, '项目标识');
   return {
     defaultThreadEnvMode,
@@ -360,6 +393,7 @@ export function projectView(value: Object): ProjectView {
     projectId: id,
     workspaceRoot: optionalDisplayText(row.workspaceRoot),
     repository: repositoryIdentity(row.repositoryIdentity),
+    ...(trackedFolders !== undefined ? { trackedFolders } : {}),
     projectIcon: parseProjectIcon(row.projectIcon),
     pinnedAt: optionalIso(row.pinnedAt, '项目固定时间'),
     archivedAt: optionalIso(row.archivedAt, '项目归档时间'),
@@ -1028,6 +1062,7 @@ export function scopedProjectView(project: ProjectView, localId: string, environ
     defaultThreadEnvMode: project.defaultThreadEnvMode,
     defaultModelSelection: project.defaultModelSelection,
     workspaceRoot: project.workspaceRoot, repository: project.repository,
+    ...(project.trackedFolders !== undefined ? { trackedFolders: project.trackedFolders } : {}),
     projectIcon: project.projectIcon,
     pinnedAt: project.pinnedAt, archivedAt: project.archivedAt,
     createdAt: project.createdAt, updatedAt: project.updatedAt, hasCustomTitle: project.hasCustomTitle,

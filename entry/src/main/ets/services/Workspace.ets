@@ -4,7 +4,7 @@ import { EnvironmentRegistry } from './EnvironmentRegistry';
 import { T3Client } from './T3Client';
 import {
   ProjectGroup, ScopedProject, ScopedThread, SnoozePresetSetting,
-  cloneDestination, cloneDirectoryPath, newProjectPathPreview, projectCreateCommand,
+  cloneDestination, cloneDirectoryPath, inferProjectTitle, newProjectPathPreview, projectCreateCommand,
   projectDeleteCommand, projectUpdateCommand, resolveProjectPath, threadCommand,
   threadMetadataCommand, threadRegenerateCommand, threadMovePayload, threadView, ThreadView, topOfPinnedRun
 } from '../protocol/Projects';
@@ -57,6 +57,9 @@ interface AutoSettleExtra { enabled: boolean; }
 interface CloneStartPayload {
   projectId: string; title: string; createdAt: string; remoteUrl: string; destinationPath: string;
 }
+interface TrackFolderEntryPayload { path: string; name: string; }
+interface TrackFoldersPatchPayload { trackFolders: TrackFolderEntryPayload[]; }
+interface UntrackFoldersPatchPayload { untrackFolders: string[]; }
 interface PublishPayload { cwd: string; provider: string; repository: string; visibility: string; }
 interface SearchPayload { query: string; limit: number; projectIds?: string[]; }
 interface EmptyPayload { }
@@ -286,6 +289,23 @@ export class WorkspaceActions {
         await this.client(project.localId).projectMutate(projectUpdateCommand(commandId(), project.id, patch));
       });
     }
+  }
+  async trackProjectFolder(project: ScopedProject, folderPath: string, name: string): Promise<void> {
+    const cleanPath = resolveProjectPath(folderPath, this.client(project.localId).platform);
+    const cleanName = (name.trim() || inferProjectTitle(cleanPath)).slice(0, 128);
+    if (!cleanName) throw new Error('请输入仓库名称');
+    const patch: TrackFoldersPatchPayload = { trackFolders: [{ path: cleanPath, name: cleanName }] };
+    await this.run(this.key(project.localId, project.id, 'project-track:' + cleanPath), async () => {
+      await this.client(project.localId).projectMutate(projectUpdateCommand(commandId(), project.id, patch));
+    });
+  }
+  async untrackProjectFolder(project: ScopedProject, folderPath: string): Promise<void> {
+    const cleanPath = folderPath.trim();
+    if (!cleanPath) throw new Error('缺少目录路径');
+    const patch: UntrackFoldersPatchPayload = { untrackFolders: [cleanPath] };
+    await this.run(this.key(project.localId, project.id, 'project-untrack:' + cleanPath), async () => {
+      await this.client(project.localId).projectMutate(projectUpdateCommand(commandId(), project.id, patch));
+    });
   }
   async deleteProject(project: ScopedProject): Promise<void> {
     await this.run(this.key(project.localId, project.id, 'project-delete'), async () => {

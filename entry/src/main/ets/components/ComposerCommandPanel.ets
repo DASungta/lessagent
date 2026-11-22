@@ -1,5 +1,10 @@
 import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { BranchView } from '../protocol/R4';
+import {
+  TASK_FOLDER_DEFAULT_REPOSITORIES_MAX,
+  WorktreeRepositoryChoice,
+  resolveWorktreeRepositorySelection
+} from '../protocol/ThreadRepositories';
 import { AppButton } from './ui/AppButton';
 import { TopBar } from './ui/TopBar';
 
@@ -13,6 +18,9 @@ export struct ComposerCommandPanel {
   @Prop files: string[] = [];
   @Prop branches: BranchView[] = [];
   @Prop environments: string[] = [];
+  @Prop repoChoices: WorktreeRepositoryChoice[] = [];
+  @Prop repoChoicesLoaded: boolean = true;
+  @Prop selectedRepos: string[] | undefined = undefined;
   onClose: () => void = () => {};
   onQuery: (value: string) => void = () => {};
   onCommand: (value: string) => void = () => {};
@@ -23,11 +31,31 @@ export struct ComposerCommandPanel {
   onWorktree: (value: boolean) => void = () => {};
   onStartFromOrigin: (value: boolean) => void = () => {};
   onSwitchCheckout: () => void = () => {};
+  onRepositoriesChange: (paths: string[]) => void = () => {};
+  onOpenRepositories: () => void = () => {};
   @Prop worktree: boolean = false;
   @Prop startFromOrigin: boolean = true;
 
   private match(value: string): boolean {
     return value.toLowerCase().includes(this.query.trim().toLowerCase());
+  }
+
+  private effectiveSelectedRepos(): string[] {
+    return resolveWorktreeRepositorySelection(
+      this.repoChoicesLoaded ? this.repoChoices : null,
+      this.selectedRepos
+    ).selected;
+  }
+
+  private toggleRepo(path: string): void {
+    const current = this.effectiveSelectedRepos();
+    const exists = current.includes(path);
+    const next = exists
+      ? current.filter((item: string) => item !== path)
+      : this.repoChoices
+          .map((choice: WorktreeRepositoryChoice) => choice.repositoryPath)
+          .filter((candidate: string) => candidate === path || current.includes(candidate));
+    this.onRepositoriesChange(next);
   }
 
   @Builder row(label: string, detail: string, action: () => void) {
@@ -48,11 +76,35 @@ export struct ComposerCommandPanel {
       .enabled(!this.busy).onClick(action)
   }
 
+  @Builder checkRow(label: string, detail: string, checked: boolean, action: () => void) {
+    Button({ type: ButtonType.Normal }) {
+      Row({ space: Space.sm }) {
+        Column({ space: 2 }) {
+          Text(label).fontSize(FontSize.body).lineHeight(LineHeight.body).fontWeight(Weight.medium)
+            .fontColor($r('app.color.ink')).width('100%').maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          if (detail) {
+            Text(detail).fontSize(FontSize.caption).lineHeight(LineHeight.caption)
+              .fontColor($r('app.color.muted')).width('100%').maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+          }
+        }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+        Text(checked ? '✓' : '')
+          .fontSize(FontSize.headline).fontWeight(Weight.semibold).fontColor($r('app.color.primary_text'))
+          .width(22).textAlign(TextAlign.End)
+      }.width('100%').padding({ left: Space.md, right: Space.md, top: Space.sm, bottom: Space.sm })
+    }.width('100%').padding(0).backgroundColor($r('app.color.card')).borderRadius(Radius.card)
+      .enabled(!this.busy)
+      .accessibilityText(label + (checked ? '，已选中' : '，未选中'))
+      .onClick(action)
+  }
+
   build() {
     Column() {
       TopBar({
-        title: this.mode === 'branch' ? '分支与工作区' : this.mode === 'environment' ? '环境' :
-          this.mode === 'mention' ? '文件与提及' : this.mode === 'skill' ? 'Skills' : '命令',
+        title: this.mode === 'branch' ? '分支与工作区' : this.mode === 'repositories' ? '选择关联仓库' :
+          this.mode === 'environment' ? '环境' : this.mode === 'mention' ? '文件与提及' :
+          this.mode === 'skill' ? 'Skills' : '命令',
         showBack: true,
         closeStyle: true,
         onBack: this.onClose
@@ -61,7 +113,8 @@ export struct ComposerCommandPanel {
         Row({ space: Space.xs }) {
           Image($r('app.media.ui_search')).width(16).height(16).opacity(0.6).accessibilityLevel('no')
           TextInput({
-            placeholder: this.mode === 'mention' ? '搜索工作区文件' : this.mode === 'branch' ? '搜索分支' : '输入以筛选',
+            placeholder: this.mode === 'mention' ? '搜索工作区文件' : this.mode === 'branch' ? '搜索分支' :
+              this.mode === 'repositories' ? '筛选仓库' : '输入以筛选',
             text: this.query
           })
             .layoutWeight(1).height(40).fontSize(FontSize.body).fontColor($r('app.color.ink'))
@@ -96,11 +149,65 @@ export struct ComposerCommandPanel {
             } else if (this.mode === 'environment') {
               ForEach(this.environments, (label: string) =>
                 this.row(label, '切换到该环境', () => this.onEnvironment(label)))
+            } else if (this.mode === 'repositories') {
+              if (!this.repoChoicesLoaded) {
+                Text('正在加载项目关联仓库…').fontSize(FontSize.callout).fontColor($r('app.color.muted')).padding(Space.sm)
+              } else if (this.repoChoices.length === 0) {
+                Text('此项目未关联其他 Git 仓库').fontSize(FontSize.callout).fontColor($r('app.color.muted')).padding(Space.sm)
+              } else {
+                Text(this.repoChoices.length > TASK_FOLDER_DEFAULT_REPOSITORIES_MAX
+                  ? '此项目关联仓库较多（>' + TASK_FOLDER_DEFAULT_REPOSITORIES_MAX + ' 个），请手动勾选需要创建独立工作树的仓库。'
+                  : '选择新建工作树任务时一并隔离的关联仓库。')
+                  .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted'))
+                  .width('100%').padding({ left: Space.xxs, right: Space.xxs })
+                Row({ space: Space.xs }) {
+                  AppButton({
+                    label: '全选',
+                    kind: 'secondary',
+                    compact: true,
+                    disabled: this.busy || this.effectiveSelectedRepos().length === this.repoChoices.length,
+                    onTap: () => this.onRepositoriesChange(
+                      this.repoChoices.map((choice: WorktreeRepositoryChoice) => choice.repositoryPath)
+                    )
+                  })
+                  AppButton({
+                    label: '全不选',
+                    kind: 'secondary',
+                    compact: true,
+                    disabled: this.busy || (this.selectedRepos !== undefined && this.effectiveSelectedRepos().length === 0),
+                    onTap: () => this.onRepositoriesChange([])
+                  })
+                }.width('100%').padding({ bottom: Space.xxs })
+                ForEach(
+                  this.repoChoices.filter((choice: WorktreeRepositoryChoice) =>
+                    this.match(choice.name) || this.match(choice.relativePath || choice.repositoryPath)),
+                  (choice: WorktreeRepositoryChoice) => {
+                    this.checkRow(
+                      choice.name,
+                      choice.relativePath && choice.relativePath !== choice.name ? choice.relativePath : choice.repositoryPath,
+                      this.effectiveSelectedRepos().includes(choice.repositoryPath),
+                      () => this.toggleRepo(choice.repositoryPath)
+                    )
+                  },
+                  (choice: WorktreeRepositoryChoice) => choice.repositoryPath + ':' +
+                    (this.effectiveSelectedRepos().includes(choice.repositoryPath) ? '1' : '0')
+                )
+              }
             } else {
               if (this.worktree) {
                 this.row('工作区：新工作树', '切换到当前 checkout', () => this.onWorktree(false))
               } else {
                 this.row('工作区：当前 checkout', '切换到新工作树', () => this.onWorktree(true))
+              }
+              if (this.worktree && this.repoChoices.length > 0) {
+                this.row(
+                  '关联仓库：' + resolveWorktreeRepositorySelection(
+                    this.repoChoicesLoaded ? this.repoChoices : null,
+                    this.selectedRepos
+                  ).label,
+                  '选择新工作树包含的仓库',
+                  () => this.onOpenRepositories()
+                )
               }
               if (this.worktree) {
                 Row() {
@@ -132,4 +239,3 @@ export struct ComposerCommandPanel {
     }.width('100%').height('100%').foregroundColor($r('app.color.ink')).backgroundColor($r('app.color.group'))
   }
 }
-
