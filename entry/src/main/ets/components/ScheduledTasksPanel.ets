@@ -5,7 +5,7 @@ import { AppButton } from './ui/AppButton';
 import { StatusBadge } from './ui/StatusBadge';
 import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { T3Client } from '../services/T3Client';
-import { record } from '../protocol/Wire';
+import { configEnvironmentId, record } from '../protocol/Wire';
 import { ProjectView, ScopedProject, ThreadView, isListedThread } from '../protocol/Projects';
 import { validateTaskSettings } from '../protocol/Composer';
 import { BranchView } from '../protocol/R4';
@@ -123,7 +123,8 @@ export struct ScheduledTasksPanel {
   private async refresh(): Promise<void> {
     const owner = this.connection;
     if (!this.alive || !owner?.ready || this.busy || this.editor || this.confirmation) return;
-    const environmentId = String(record(owner.config.environment).environmentId || '');
+    const environmentId = configEnvironmentId(owner.config);
+    if (!environmentId) return;
     const generation = owner.generationValue();
     const epoch = ++this.requestEpoch;
     const current = (): boolean => this.alive && this.requestEpoch === epoch && this.connection === owner &&

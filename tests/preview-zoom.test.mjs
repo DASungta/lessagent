@@ -44,7 +44,7 @@ const methods = index.slice(index.indexOf('  private previewZoomRepairRequired')
 const protocol = new URL('../entry/src/main/ets/protocol/Preview.ts', import.meta.url).href;
 const { IndexHarness } = await import(data(compile(`
   import { previewTabs, previewZoomInput, previewZoomTarget, verifyPreviewZoom, previewNeedsZoomRepair, repairPreviewZoom100 } from ${JSON.stringify(protocol)};
-  import { record } from ${JSON.stringify(new URL('../entry/src/main/ets/protocol/Wire.ts', import.meta.url).href)};
+  import { optionalRecord, record } from ${JSON.stringify(new URL('../entry/src/main/ets/protocol/Wire.ts', import.meta.url).href)};
   export class IndexHarness {
     page = 'preview';
     appForeground = true;

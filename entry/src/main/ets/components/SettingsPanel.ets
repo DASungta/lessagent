@@ -371,7 +371,7 @@ export struct SettingsPanel {
             }.width('100%').padding({ top: Space.md })
           } else if (this.section === 'about') {
             Column({ space: 6 }) {
-              Text('T3 Code Harmony')
+              Text('T3 Harmony')
                 .fontSize(FontSize.title)
                 .lineHeight(LineHeight.title)
                 .fontWeight(Weight.bold)
@@ -675,7 +675,7 @@ export struct SettingsPanel {
           }
         }.width('100%').alignItems(HorizontalAlign.Start)
           .padding({ left: Space.sm, right: Space.sm, top: Space.xxs, bottom: 20 + (this.embedded && !this.section ? this.bottomInset : 0) })
-      }.width('100%').layoutWeight(1).align(Alignment.TopStart)
+      }.width('100%').layoutWeight(1).align(Alignment.TopStart).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     }.width('100%').height('100%').foregroundColor($r('app.color.ink')).backgroundColor($r('app.color.group'))
     }
   }

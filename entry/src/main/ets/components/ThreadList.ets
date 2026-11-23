@@ -457,5 +457,6 @@ export struct ThreadList {
     }.width('100%').layoutWeight(1).cachedCount(6).foregroundColor($r('app.color.ink'))
       .contentStartOffset(Space.xs).contentEndOffset(this.bottomInset)
       .scrollBar(BarState.Off)
+      .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
   }
 }

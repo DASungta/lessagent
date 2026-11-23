@@ -4,7 +4,7 @@ import { FormRow } from './ui/FormRow';
 import { AppButton } from './ui/AppButton';
 import { FontSize, LineHeight, Sizes, Space } from '../common/Theme';
 import { T3Client } from '../services/T3Client';
-import { record } from '../protocol/Wire';
+import { configEnvironmentId } from '../protocol/Wire';
 import {
   WORKTREE_KEEP_VALUES, WorktreeStorage, readWorktreeStorage, worktreeStorageField, worktreeStorageNeedsConfirmation,
   worktreeStorageText, worktreeStorageValue, writeWorktreeStorage
@@ -31,8 +31,7 @@ export struct WorktreeStoragePanel {
 
   private environmentId(connection: T3Client): string {
     if (!connection.ready) return '';
-    const id = record(connection.config.environment).environmentId;
-    return typeof id === 'string' ? id : '';
+    return configEnvironmentId(connection.config);
   }
   private async refresh(): Promise<void> {
     const connection = this.connection;
@@ -244,7 +243,7 @@ export struct WorktreeStoragePanel {
             }
           }
         }.width('100%').padding({ left: Space.sm, right: Space.sm, bottom: Space.lg })
-      }.width('100%').layoutWeight(1).align(Alignment.TopStart)
+      }.width('100%').layoutWeight(1).align(Alignment.TopStart).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

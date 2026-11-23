@@ -719,4 +719,68 @@ test('live subagent approvals, user-only inputs, and side-chat requests roll up 
   assert.equal(P.threadStatus(byId['parent-native'], now), '等待');
   assert.equal(P.threadStatus(byId['parent-delegated'], now), '等待批准');
   assert.equal(shelves.snoozedCount, 0);
+  // Delegated child whose unarchived parent is connected is hidden from thread shelves while still rolling up approvals
+  assert.equal(byId['remote-child'], undefined);
+});
+
+test('workflowStep threads and delegated tasks with an unarchived connected parent are hidden from shelves like Android', () => {
+  const now = Date.parse('2026-11-23T01:30:00.000Z');
+  const row = (env, id, extra) => scopedThread(env, thread(id, 'p', id, extra));
+
+  const parentActive = row('ca02', 'parent-ca02', { status: 'completed' });
+  const parentArchived = row('ca02', 'parent-archived', { status: 'completed', archivedAt: '2026-11-23T01:00:00.000Z' });
+  const delegatedUnderActive = row('imac', 'child-hidden', {
+    delegatedFrom: { environmentId: 'env-ca02', threadId: 'parent-ca02', title: 'Parent' }
+  });
+  const delegatedUnderArchived = row('imac', 'child-archived-parent', {
+    delegatedFrom: { environmentId: 'env-ca02', threadId: 'parent-archived', title: 'Archived parent' }
+  });
+  const delegatedOrphanEnv = row('imac', 'child-unconnected-env', {
+    delegatedFrom: { environmentId: 'env-offline-unadded', threadId: 'remote-parent', title: 'Offline env' }
+  });
+  const workflowStepThread = row('imac', 'wf-step-1', {
+    lineage: { parentThreadId: 'parent-ca02', relationshipToParent: 'workflow', workflowStep: true }
+  });
+  const normalImac = row('imac', 'normal-imac', { status: 'completed' });
+
+  assert.equal(P.isListedThread(workflowStepThread), false);
+
+  const allThreads = [
+    parentActive, parentArchived, delegatedUnderActive,
+    delegatedUnderArchived, delegatedOrphanEnv, workflowStepThread, normalImac
+  ];
+
+  // Unfiltered view hides delegatedUnderActive and workflowStepThread, keeps parentActive + orphan/archived-parent tasks
+  const unfiltered = P.buildThreadShelves({
+    threads: allThreads,
+    environmentId: '',
+    projectRefs: [],
+    query: '',
+    searchHits: {},
+    nowMs: now,
+    capabilities: { ca02: caps(), imac: caps() },
+    sortOrder: 'updated_at',
+    selectedKey: '',
+    workingShelfEnabled: true
+  });
+  assert.deepEqual(unfiltered.active.map(t => t.id).sort(), [
+    'child-archived-parent', 'child-unconnected-env', 'normal-imac', 'parent-ca02'
+  ]);
+
+  // Filtering to the child's environment STILL hides delegatedUnderActive because its parent is listed in allThreads
+  const filteredImac = P.buildThreadShelves({
+    threads: allThreads,
+    environmentId: 'imac',
+    projectRefs: [],
+    query: '',
+    searchHits: {},
+    nowMs: now,
+    capabilities: { ca02: caps(), imac: caps() },
+    sortOrder: 'updated_at',
+    selectedKey: '',
+    workingShelfEnabled: true
+  });
+  assert.deepEqual(filteredImac.active.map(t => t.id).sort(), [
+    'child-archived-parent', 'child-unconnected-env', 'normal-imac'
+  ]);
 });

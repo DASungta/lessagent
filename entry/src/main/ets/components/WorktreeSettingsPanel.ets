@@ -4,7 +4,7 @@ import { FormRow } from './ui/FormRow';
 import { AppButton } from './ui/AppButton';
 import { FontSize, LineHeight, Sizes, Space } from '../common/Theme';
 import { T3Client } from '../services/T3Client';
-import { record } from '../protocol/Wire';
+import { configEnvironmentId } from '../protocol/Wire';
 import { WorktreeDefaults, readWorktreeDefaults, worktreeSettingLocked, worktreeValue, writeWorktreeDefault } from '../protocol/WorktreeSettings';
 
 @Component
@@ -24,10 +24,7 @@ export struct WorktreeSettingsPanel {
 
   aboutToAppear(): void {
     this.alive = true;
-    if (this.connection) {
-      const id = record(this.connection.config.environment).environmentId;
-      this.environmentId = typeof id === 'string' ? id : '';
-    }
+    this.environmentId = this.connection ? configEnvironmentId(this.connection.config) : '';
     void this.refresh();
   }
   aboutToDisappear(): void { this.alive = false; }
@@ -46,6 +43,9 @@ export struct WorktreeSettingsPanel {
   private async refresh(): Promise<void> {
     if (!this.connection || this.busy) return;
     const connection = this.connection;
+    const id = this.environmentId || configEnvironmentId(connection.config);
+    if (!connection.ready || !id) { this.error = '请先连接一个环境'; return; }
+    this.environmentId = id;
     this.busy = true;
     try {
       const result = await readWorktreeDefaults(connection, this.environmentId);
@@ -241,7 +241,7 @@ export struct WorktreeSettingsPanel {
             }
           }
         }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: Space.sm, right: Space.sm, bottom: Space.lg })
-      }.width('100%').layoutWeight(1).align(Alignment.TopStart)
+      }.width('100%').layoutWeight(1).align(Alignment.TopStart).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

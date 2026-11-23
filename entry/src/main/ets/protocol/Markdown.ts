@@ -52,14 +52,15 @@ const SUMMARY = /<summary\b[^>]*>([\s\S]*?)<\/summary\s*>/i;
 
 function isBlank(line: string): boolean { return !line.trim(); }
 
-function isBlockStart(line: string, next: string | undefined): boolean {
+function isBlockStart(line: string, next: string | undefined, defs?: Record<string, string>): boolean {
   if (isBlank(line)) return true;
   if (FENCE.test(line) || HEADING.test(line) || HR.test(line) || DETAILS.test(line)) return true;
   if (/^ {0,3}>/.test(line)) return true;
   if (LIST.test(line)) return true;
   if (/^\s*\$\$/.test(line)) return true;
   if (isTableHeader(line, next)) return true;
-  if (standaloneImage(line) !== undefined) return true;
+  if (standaloneImage(line, defs) !== undefined) return true;
+  if (REFERENCE_DEF.test(line)) return true;
   if (next !== undefined && /^ {0,3}(=+|-+)\s*$/.test(next) && line.trim()) return true;
   return false;
 }
@@ -132,12 +133,14 @@ function parseLinkDestination(raw: string): string {
     const close = trimmed.indexOf('>');
     if (close > 1) return trimmed.slice(1, close).trim();
   }
-  if (/^(?:\/|file:|~\/|[A-Za-z]:[\\/])/i.test(trimmed)) return trimmed;
-  const space = trimmed.search(/\s/);
-  return space >= 0 ? trimmed.slice(0, space) : trimmed;
+  if (/^(?:https?:|mailto:|t3-thread:|t3-context:)/i.test(trimmed)) {
+    const space = trimmed.search(/\s/);
+    return space >= 0 ? trimmed.slice(0, space) : trimmed;
+  }
+  return trimmed;
 }
 
-function scanLink(value: string, start: number): { text: string; url: string; end: number } | undefined {
+function scanLink(value: string, start: number, defs?: Record<string, string>): { text: string; url: string; end: number } | undefined {
   let close = -1;
   let brackets = 0;
   for (let pos = start + 1; pos < value.length; pos += 1) {
@@ -149,36 +152,147 @@ function scanLink(value: string, start: number): { text: string; url: string; en
       brackets -= 1;
     }
   }
-  if (close < 0 || value[close + 1] !== '(') return undefined;
-  let depth = 1;
-  let index = close + 2;
-  let url = '';
-  while (index < value.length) {
-    const char = value[index];
-    if (char === '\\' && index + 1 < value.length) { url += value[index + 1]; index += 2; continue; }
-    if (char === '(') depth += 1;
-    if (char === ')') { depth -= 1; if (depth === 0) break; }
-    url += char;
-    index += 1;
+  if (close < 0) return undefined;
+  if (value[close + 1] === '(') {
+    let index = close + 2;
+    while (index < value.length && (value[index] === ' ' || value[index] === '\t')) index += 1;
+    let url = '';
+    if (value[index] === '<') {
+      index += 1;
+      let closedAngle = false;
+      while (index < value.length) {
+        const char = value[index];
+        if (char === '\\' && value[index + 1] === '>') { url += '>'; index += 2; continue; }
+        if (char === '>') { closedAngle = true; index += 1; break; }
+        if (char === '\n') break;
+        url += char;
+        index += 1;
+      }
+      if (!closedAngle) return undefined;
+      let depth = 1;
+      while (index < value.length && depth > 0) {
+        const char = value[index];
+        if (char === '\\' && index + 1 < value.length) { index += 2; continue; }
+        if (char === '(') depth += 1;
+        else if (char === ')') { depth -= 1; if (depth === 0) break; }
+        index += 1;
+      }
+      if (depth !== 0) return undefined;
+      return { text: value.slice(start + 1, close), url: url.trim(), end: index + 1 };
+    }
+    const isWindowsBackslash = /^[A-Za-z]:\\/.test(value.slice(index));
+    let depth = 1;
+    while (index < value.length) {
+      const char = value[index];
+      if (!isWindowsBackslash && char === '\\' && (value[index + 1] === '(' || value[index + 1] === ')')) {
+        url += value[index + 1];
+        index += 2;
+        continue;
+      }
+      if (char === '(') depth += 1;
+      if (char === ')') { depth -= 1; if (depth === 0) break; }
+      url += char;
+      index += 1;
+    }
+    if (depth !== 0) return undefined;
+    const destination = parseLinkDestination(url);
+    return { text: value.slice(start + 1, close), url: destination, end: index + 1 };
   }
-  if (depth !== 0) return undefined;
-  const destination = parseLinkDestination(url);
-  return { text: value.slice(start + 1, close), url: destination, end: index + 1 };
+  if (defs) {
+    const labelText = value.slice(start + 1, close);
+    if (value[close + 1] === '[') {
+      const refClose = value.indexOf(']', close + 2);
+      if (refClose > close + 1) {
+        const refId = (value.slice(close + 2, refClose).trim() || labelText.trim()).replace(/\s+/g, ' ').toLowerCase();
+        const resolved = defs[refId];
+        if (resolved) return { text: labelText, url: resolved, end: refClose + 1 };
+      }
+    } else {
+      const refId = labelText.trim().replace(/\s+/g, ' ').toLowerCase();
+      const resolved = defs[refId];
+      if (resolved) return { text: labelText, url: resolved, end: close + 1 };
+    }
+  }
+  return undefined;
 }
 
-function standaloneImage(line: string): { alt: string; url: string } | undefined {
+function htmlAttribute(tag: string, name: string): string {
+  const pattern = /([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g;
+  let match: RegExpExecArray | null = pattern.exec(tag);
+  while (match !== null) {
+    if (match[1].toLowerCase() === name) {
+      return decodeEntity(match[2] !== undefined ? match[2] : (match[3] !== undefined ? match[3] : (match[4] || ''))).trim();
+    }
+    match = pattern.exec(tag);
+  }
+  return '';
+}
+
+function standaloneHtmlMedia(line: string): { alt: string; url: string } | undefined {
   const trimmed = line.trim();
-  if (!trimmed.startsWith('![')) return undefined;
-  const parsed = scanLink(trimmed, 1);
-  if (!parsed || parsed.end !== trimmed.length || !parsed.url) return undefined;
-  return { alt: plainInline(parsed.text), url: parsed.url };
+  const imgMatch = /^<img\b([^>]*)\/?>$/i.exec(trimmed);
+  if (imgMatch) {
+    const src = htmlAttribute(trimmed, 'src');
+    if (!src) return undefined;
+    return { alt: htmlAttribute(trimmed, 'alt') || htmlAttribute(trimmed, 'title'), url: src };
+  }
+  const videoMatch = /^<video\b([^>]*)>([\s\S]*?)<\/video\s*>$/i.exec(trimmed);
+  if (videoMatch) {
+    let src = htmlAttribute('<video ' + videoMatch[1] + '>', 'src');
+    if (!src) {
+      const sourceMatch = /<source\b[^>]*>/i.exec(videoMatch[2]);
+      if (sourceMatch) src = htmlAttribute(sourceMatch[0], 'src');
+    }
+    if (!src) return undefined;
+    const alt = htmlAttribute('<video ' + videoMatch[1] + '>', 'title') ||
+      htmlAttribute('<video ' + videoMatch[1] + '>', 'aria-label') ||
+      plainInline(videoMatch[2]).trim();
+    return { alt, url: src };
+  }
+  return undefined;
 }
 
-export function inlineSpans(source: string): InlineSpan[] {
+function standaloneImage(line: string, defs?: Record<string, string>): { alt: string; url: string } | undefined {
+  const trimmed = line.trim();
+  if (trimmed.startsWith('![')) {
+    const parsed = scanLink(trimmed, 1, defs);
+    if (parsed && parsed.end === trimmed.length && parsed.url) {
+      return { alt: plainInline(parsed.text), url: parsed.url };
+    }
+  }
+  return standaloneHtmlMedia(trimmed);
+}
+
+const REFERENCE_DEF = /^ {0,3}\[([^\]]+)\]:\s*(.+)$/;
+
+function collectReferenceDefinitions(lines: string[]): Record<string, string> {
+  const defs: Record<string, string> = {};
+  let inFence = false;
+  let fenceMarker = '';
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (!inFence) {
+      const fence = FENCE.exec(line);
+      if (fence) { inFence = true; fenceMarker = fence[1][0]; continue; }
+      const match = REFERENCE_DEF.exec(line);
+      if (match) {
+        const key = match[1].trim().replace(/\s+/g, ' ').toLowerCase();
+        const url = parseLinkDestination(match[2]);
+        if (key && url && defs[key] === undefined) defs[key] = url;
+      }
+    } else if (new RegExp('^ {0,3}' + fenceMarker + '{3,}\\s*$').test(line)) {
+      inFence = false;
+      fenceMarker = '';
+    }
+  }
+  return defs;
+}
+
+export function inlineSpans(source: string, defs?: Record<string, string>): InlineSpan[] {
   const spans: InlineSpan[] = [];
   let buffer = '';
   const push = (kind: InlineKind, text: string, href?: string): void => {
-    if (!text) return;
+    if (!text && kind !== 'image') return;
     if (kind === 'text' && buffer) { spans.push({ kind: 'text', text: buffer }); buffer = ''; }
     spans.push({ kind, text, ...(href === undefined ? {} : { href }) });
   };
@@ -200,8 +314,8 @@ export function inlineSpans(source: string): InlineSpan[] {
       }
     }
     if (char === '!' && source[index + 1] === '[') {
-      const link = scanLink(source, index + 1);
-      if (link) {
+      const link = scanLink(source, index + 1, defs);
+      if (link && link.url) {
         flush();
         push('image', plainInline(link.text), link.url);
         index = link.end;
@@ -209,8 +323,8 @@ export function inlineSpans(source: string): InlineSpan[] {
       }
     }
     if (char === '[') {
-      const link = scanLink(source, index);
-      if (link) {
+      const link = scanLink(source, index, defs);
+      if (link && link.url) {
         flush();
         push('link', plainInline(link.text).replace(/^`+([^`]+)`+$/, '$1'), link.url);
         index = link.end;
@@ -220,6 +334,16 @@ export function inlineSpans(source: string): InlineSpan[] {
     if (char === '<') {
       const close = source.indexOf('>', index + 1);
       if (close > index) {
+        const rawTag = source.slice(index, close + 1);
+        if (/^<img\b/i.test(rawTag)) {
+          const src = htmlAttribute(rawTag, 'src');
+          if (src) {
+            flush();
+            push('image', htmlAttribute(rawTag, 'alt') || htmlAttribute(rawTag, 'title'), src);
+            index = close + 1;
+            continue;
+          }
+        }
         const value = source.slice(index + 1, close);
         if (/^(https?:\/\/|mailto:|t3-thread:\/\/v[12]\/)/i.test(value) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
           flush();
@@ -315,7 +439,7 @@ function collectDetails(lines: string[], start: number): { body: string; open: b
   return { body: summaryMatch ? body.replace(SUMMARY, '') : body, open, next: index + 1 };
 }
 
-function parseItems(lines: string[], start: number): { items: MarkdownListItem[]; next: number } {
+function parseItems(lines: string[], start: number, defs?: Record<string, string>): { items: MarkdownListItem[]; next: number } {
   const items: MarkdownListItem[] = [];
   let index = start;
   let orderStart = 0;
@@ -333,12 +457,12 @@ function parseItems(lines: string[], start: number): { items: MarkdownListItem[]
     index += 1;
     while (index < lines.length && !isBlank(lines[index]) && !LIST.test(lines[index]) &&
       /^\s{2,}|^\t/.test(lines[index]) && !FENCE.test(lines[index]) &&
-      standaloneImage(lines[index]) === undefined) {
+      standaloneImage(lines[index], defs) === undefined) {
       text += ' ' + lines[index].trim();
       index += 1;
     }
     items.push({ depth: Math.floor(indent / 2), ordered, marker, checked,
-      text: plainInline(text), spans: inlineSpans(text) });
+      text: plainInline(text), spans: inlineSpans(text, defs) });
     while (index < lines.length && isBlank(lines[index])) {
       const ahead = lines.findIndex((line: string, position: number) => position > index && !isBlank(line));
       if (ahead < 0 || !LIST.test(lines[ahead])) break;
@@ -351,6 +475,7 @@ function parseItems(lines: string[], start: number): { items: MarkdownListItem[]
 export function markdownDocument(source: string): MarkdownBlock[] {
   const blocks: MarkdownBlock[] = [];
   const lines = source.replace(/\r\n?/g, '\n').split('\n');
+  const defs = collectReferenceDefinitions(lines);
   let index = 0;
   while (index < lines.length) {
     const line = lines[index];
@@ -413,7 +538,7 @@ export function markdownDocument(source: string): MarkdownBlock[] {
       const title = block('heading');
       title.level = heading[1].length;
       title.text = text;
-      title.spans = inlineSpans(text);
+      title.spans = inlineSpans(text, defs);
       blocks.push(title);
       index += 1;
       continue;
@@ -423,12 +548,13 @@ export function markdownDocument(source: string): MarkdownBlock[] {
       const title = block('heading');
       title.level = lines[index + 1].trim().startsWith('=') ? 1 : 2;
       title.text = text;
-      title.spans = inlineSpans(text);
+      title.spans = inlineSpans(text, defs);
       blocks.push(title);
       index += 2;
       continue;
     }
     if (HR.test(line)) { blocks.push(block('hr')); index += 1; continue; }
+    if (REFERENCE_DEF.test(line)) { index += 1; continue; }
     if (/^ {0,3}>/.test(line)) {
       const body: string[] = [];
       while (index < lines.length && (/^ {0,3}>/.test(lines[index]) || (body.length > 0 && !isBlank(lines[index])))) {
@@ -438,12 +564,12 @@ export function markdownDocument(source: string): MarkdownBlock[] {
       const textValue = plainInline(body.join('\n'));
       const quote = block('quote');
       quote.text = textValue;
-      quote.spans = inlineSpans(body.join('\n'));
+      quote.spans = inlineSpans(body.join('\n'), defs);
       blocks.push(quote);
       continue;
     }
     if (LIST.test(line)) {
-      const parsed = parseItems(lines, index);
+      const parsed = parseItems(lines, index, defs);
       const ordered = parsed.items.length > 0 && parsed.items[0].ordered;
       const startValue = ordered ? Number.parseInt(parsed.items[0].marker, 10) : 1;
       const list = block('list');
@@ -470,7 +596,7 @@ export function markdownDocument(source: string): MarkdownBlock[] {
       blocks.push(table);
       continue;
     }
-    const image = standaloneImage(line);
+    const image = standaloneImage(line, defs);
     if (image) {
       const imageBlock = block('image');
       imageBlock.alt = image.alt;
@@ -482,14 +608,14 @@ export function markdownDocument(source: string): MarkdownBlock[] {
     const paragraphLines: string[] = [line];
     index += 1;
     while (index < lines.length && !isBlank(lines[index]) &&
-      !isBlockStart(lines[index], lines[index + 1])) {
+      !isBlockStart(lines[index], lines[index + 1], defs)) {
       paragraphLines.push(lines[index]);
       index += 1;
     }
     const textValue = paragraphLines.map((value: string) => value.trim()).join('\n');
     const paragraph = block('paragraph');
     paragraph.text = plainInline(textValue);
-    paragraph.spans = inlineSpans(textValue);
+    paragraph.spans = inlineSpans(textValue, defs);
     blocks.push(paragraph);
   }
   return blocks;
@@ -625,7 +751,7 @@ export interface DraftWorkspaceAssetResource {
 
 const DIRECT_MEDIA_PATTERN = /^(?:https?:\/\/|data:(?:image|video)\/)/i;
 const URI_SCHEME_PATTERN = /^[A-Za-z][A-Za-z0-9+.-]*:/;
-const VIDEO_EXT_PATTERN = /\.(?:mp4|webm|mov|m4v|ogv)$/i;
+const VIDEO_EXT_PATTERN = /\.(?:mp4|webm|mov|m4v|ogv|mkv|avi|3gp)$/i;
 const AUDIO_EXT_PATTERN = /\.(?:mp3|wav|ogg|oga|flac|aac|m4a|opus|aiff|weba)$/i;
 
 function safeDecodeUriPart(value: string): string {
@@ -652,6 +778,10 @@ function stripQueryAndHash(value: string): string {
 }
 
 function parseLocalFileUrl(source: string): string {
+  const driveTwoSlash = /^file:\/\/([A-Za-z]:[\\/][^?#]*)/i.exec(source);
+  if (driveTwoSlash) {
+    return safeDecodeUriPart(driveTwoSlash[1]);
+  }
   const match = /^file:\/\/([^/?#]*)(\/[^?#]*)/i.exec(source);
   if (!match) return '';
   const authority = match[1].toLowerCase();
@@ -715,16 +845,26 @@ export function classifyMarkdownMediaSource(value: string, workspaceRoot: string
   if (URI_SCHEME_PATTERN.test(hostPath) || hostPath.startsWith('~/') || hostPath.startsWith('~\\')) {
     return blockedMedia();
   }
-  const normalized = hostPath.replace(/\\/g, '/').replace(/^(?:\.\/)+/, '');
-  const parts = normalized.split('/').filter((segment: string) => segment.length > 0);
-  if (!parts.length || parts.some((segment: string) => segment === '..' || segment === '.')) {
+  const normalized = hostPath.replace(/\\/g, '/');
+  const parts: string[] = [];
+  for (const segment of normalized.split('/')) {
+    if (!segment || segment === '.') continue;
+    if (segment === '..') {
+      if (!parts.length) return blockedMedia();
+      parts.pop();
+    } else {
+      parts.push(segment);
+    }
+  }
+  if (!parts.length) {
     return blockedMedia();
   }
-  const kind = classifyMediaKind(normalized);
+  const relativeJoined = parts.join('/');
+  const kind = classifyMediaKind(relativeJoined);
   if (kind === 'audio') return blockedMedia();
   const root = workspaceRoot.trim();
   if (!root) return blockedMedia();
-  const joined = joinWorkspaceMediaPath(root, parts.join('/'));
+  const joined = joinWorkspaceMediaPath(root, relativeJoined);
   if (joined.length > 1024) return blockedMedia();
   return {
     access: 'environment',
@@ -732,7 +872,7 @@ export function classifyMarkdownMediaSource(value: string, workspaceRoot: string
     uri: '',
     path: joined,
     relative: true,
-    displayPath: parts.join('/')
+    displayPath: relativeJoined
   };
 }
 

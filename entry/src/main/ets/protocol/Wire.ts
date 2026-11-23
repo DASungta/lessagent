@@ -6,6 +6,18 @@ export function record(value: Object): Record<string, Object> {
   return value as Record<string, Object>;
 }
 
+export function optionalRecord(value: Object | undefined | null): Record<string, Object> | undefined {
+  if (value === undefined || value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+  return value as Record<string, Object>;
+}
+
+export function configEnvironmentId(config: Record<string, Object> | undefined): string {
+  const env = optionalRecord(config ? config.environment : undefined);
+  return env && typeof env.environmentId === 'string' ? env.environmentId : '';
+}
+
 export function text(value: Object): string {
   if (typeof value !== 'string') throw new Error('协议格式错误：需要字符串');
   return value;
@@ -373,6 +385,14 @@ export class RpcClient {
   }
 }
 
+export interface ChatAttachment {
+  id: string;
+  type: string;
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+}
+
 export interface ChatMessage {
   id: string;
   role: string;
@@ -380,6 +400,7 @@ export interface ChatMessage {
   streaming: boolean;
   runId?: string;
   attachmentNames?: string[];
+  attachments?: ChatAttachment[];
   timestamp?: string;
 }
 
@@ -651,6 +672,25 @@ export class ThreadState {
     return names;
   }
 
+  private extractAttachments(source: Object | undefined): ChatAttachment[] {
+    if (!Array.isArray(source)) return [];
+    const items: ChatAttachment[] = [];
+    for (const entry of source as Object[]) {
+      if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) continue;
+      const row = entry as Record<string, Object>;
+      const id = typeof row.id === 'string' ? row.id.trim() : '';
+      const name = typeof row.name === 'string' ? row.name.trim() : '';
+      const mimeType = typeof row.mimeType === 'string' ? row.mimeType.trim() : '';
+      const type = typeof row.type === 'string' && row.type.trim() ? row.type.trim() :
+        (mimeType.toLowerCase().startsWith('image/') ? 'image' : 'file');
+      const sizeBytes = typeof row.sizeBytes === 'number' && Number.isFinite(row.sizeBytes) ? row.sizeBytes : 0;
+      if (id && name) {
+        items.push({ id, type, name, mimeType, sizeBytes });
+      }
+    }
+    return items;
+  }
+
   private mergeItemByOrdinal(payload: Record<string, Object>): void {
     const id = text(payload.id);
     const existingIndex = this.items.findIndex((item: Record<string, Object>) => item.id === id);
@@ -702,6 +742,7 @@ export class ThreadState {
     if (createdAt) msgRecord.createdAt = createdAt;
     if (Array.isArray(attachmentsSource)) {
       msgRecord.attachmentNames = this.extractAttachmentNames(attachmentsSource);
+      msgRecord.attachments = attachmentsSource as Object;
     }
     this.upsert(msgRecord);
   }
@@ -714,6 +755,7 @@ export class ThreadState {
         const isQueued = item.inputIntent === 'queued_turn' && item.status === 'pending';
         if (!isQueued && !this.isHiddenContinuationMessage(item)) {
           const names = this.extractAttachmentNames(item.attachments);
+          const attachments = this.extractAttachments(item.attachments);
           if (item.text.trim() || names.length) {
             const matched = this.findMessageRecord(item.messageId);
             const ts = (matched && typeof matched.createdAt === 'string' ? matched.createdAt : undefined) ||
@@ -722,6 +764,7 @@ export class ThreadState {
             const entry: ChatMessage = { id: item.messageId, role: 'user', text: item.text,
               streaming: false, timestamp: ts,
               attachmentNames: names };
+            if (attachments.length > 0) entry.attachments = attachments;
             if (typeof item.runId === 'string' && item.runId) entry.runId = item.runId;
             older.push(entry);
           }
@@ -732,9 +775,11 @@ export class ThreadState {
           (typeof item.startedAt === 'string' ? item.startedAt : undefined) ||
           (typeof item.createdAt === 'string' ? item.createdAt : undefined) ||
           (typeof item.completedAt === 'string' ? item.completedAt : undefined);
+        const attachments = this.extractAttachments(item.attachments);
         const entry: ChatMessage = { id: item.messageId, role: 'assistant', text: item.text, streaming: item.streaming === true,
           timestamp: ts,
           attachmentNames: this.extractAttachmentNames(item.attachments) };
+        if (attachments.length > 0) entry.attachments = attachments;
         if (typeof item.runId === 'string' && item.runId) entry.runId = item.runId;
         older.push(entry);
       }
@@ -781,6 +826,8 @@ export class ThreadState {
     const attachmentNames = message.attachments !== undefined ? this.extractAttachmentNames(message.attachments) :
       Array.isArray(message.attachmentNames) ? this.extractAttachmentNames(message.attachmentNames) :
       (existing?.attachmentNames || []);
+    const attachments = message.attachments !== undefined ? this.extractAttachments(message.attachments) :
+      (existing?.attachments || []);
     const next: ChatMessage = {
       id: text(message.id),
       role,
@@ -790,6 +837,7 @@ export class ThreadState {
         (typeof message.timestamp === 'string' ? message.timestamp : existing?.timestamp),
       attachmentNames
     };
+    if (attachments.length > 0) next.attachments = attachments;
     const runId = typeof message.runId === 'string' && message.runId ? message.runId : existing?.runId;
     if (runId) next.runId = runId;
     if (index < 0) this.messages.push(next);

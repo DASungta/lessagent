@@ -37,6 +37,9 @@ export const markdownLinksUrl = data(compile(markdownLinksSource));
 const markdownSource = (await readFile(new URL('../entry/src/main/ets/protocol/Markdown.ts', import.meta.url), 'utf8'));
 export const markdownUrl = data(compile(markdownSource));
 
+const mediaTransferSource = (await readFile(new URL('../entry/src/main/ets/protocol/MediaTransfer.ts', import.meta.url), 'utf8'));
+export const mediaTransferUrl = data(compile(mediaTransferSource));
+
 const mermaidSource = (await readFile(new URL('../entry/src/main/ets/protocol/Mermaid.ts', import.meta.url), 'utf8'));
 export const mermaidUrl = data(compile(mermaidSource));
 

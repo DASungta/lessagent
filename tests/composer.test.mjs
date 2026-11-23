@@ -2,7 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {composerUrl} from './load-core.mjs';
 import {ThreadState} from '../entry/src/main/ets/protocol/Wire.ts';
-const {launchTask,validateTaskSettings,optionControls,supportedModes,queuedRuns,queueCommand,modelOptionsSummary}=await import(composerUrl);
+const {
+  launchTask, validateTaskSettings, optionControls, supportedModes, queuedRuns, queueCommand, modelOptionsSummary,
+  shouldExpandComposer, resolveCompactEditorGeometry, layoutExpandedModelControl
+}=await import(composerUrl);
 const config={providers:[{instanceId:'codex',driver:'codex',installed:true,enabled:true,models:[{slug:'m',capabilities:{optionDescriptors:[{id:'reasoningEffort',label:'Reasoning',type:'select',options:[{id:'high',label:'High'}]},{id:'fast',label:'Fast',type:'boolean'}]}}],supportedRuntimeModes:['approval-required','full-access']}],settings:{}};
 const settings={modelSelection:{instanceId:'codex',model:'m',options:[{id:'reasoningEffort',value:'high'},{id:'fast',value:false}]},runtimeMode:'approval-required',interactionMode:'default'};
 test('first send builds one launch with initial message and no client thread.create',()=>{
@@ -71,4 +74,86 @@ test('modelOptionsSummary formats reasoning effort, defaults, speed traits, and 
  assert.equal(modelOptionsSummary(cfg,{instanceId:'codex',model:'gpt-6',options:[{id:'reasoningEffort',value:'high'},{id:'fastMode',value:true}]}),'High Fast');
  assert.equal(modelOptionsSummary({},{instanceId:'antigravity',model:'gemini-4-neon',options:[{id:'thought_level',value:'xhigh'}]}),'Extra');
  assert.equal(modelOptionsSummary(cfg,{instanceId:'',model:''}),'');
+});
+
+test('shouldExpandComposer stays single-line until newline, wrap, or overflow and prevents oscillation',()=>{
+ assert.equal(shouldExpandComposer({text:'',previewText:'',compactTextWidthVp:180,singleLineTextWidthVp:0,measuredLineCount:2,currentlyExpanded:true}),false);
+ assert.equal(shouldExpandComposer({text:'hello',previewText:'',compactTextWidthVp:180,singleLineTextWidthVp:42,measuredLineCount:1,currentlyExpanded:false}),false);
+ assert.equal(shouldExpandComposer({text:'\n',previewText:'',compactTextWidthVp:180,singleLineTextWidthVp:0,measuredLineCount:1,currentlyExpanded:false}),true);
+ assert.equal(shouldExpandComposer({text:'line 1\nline 2',previewText:'',compactTextWidthVp:180,singleLineTextWidthVp:60,measuredLineCount:1,currentlyExpanded:false}),true);
+ assert.equal(shouldExpandComposer({text:'wrapped',previewText:'',compactTextWidthVp:180,singleLineTextWidthVp:140,measuredLineCount:2,currentlyExpanded:false}),true);
+ // Single line wider than compact slot expands immediately, and stays expanded even when widened layout reports 1 line
+ assert.equal(shouldExpandComposer({text:'long single line text',previewText:'',compactTextWidthVp:180,singleLineTextWidthVp:188,measuredLineCount:1,currentlyExpanded:false}),true);
+ assert.equal(shouldExpandComposer({text:'long single line text',previewText:'',compactTextWidthVp:180,singleLineTextWidthVp:188,measuredLineCount:1,currentlyExpanded:true}),true);
+ // Hysteresis band keeps it stable at compactWidth - 3, then collapses once comfortably shorter
+ assert.equal(shouldExpandComposer({text:'boundary',previewText:'',compactTextWidthVp:180,singleLineTextWidthVp:177,measuredLineCount:1,currentlyExpanded:true}),true);
+ assert.equal(shouldExpandComposer({text:'shorter',previewText:'',compactTextWidthVp:180,singleLineTextWidthVp:170,measuredLineCount:1,currentlyExpanded:true}),false);
+ // Active IME preview text crossing compact width expands smoothly
+ assert.equal(shouldExpandComposer({text:'测试',previewText:'一长段拼音预览',compactTextWidthVp:120,singleLineTextWidthVp:135,measuredLineCount:1,currentlyExpanded:false}),true);
+});
+
+test('resolveCompactEditorGeometry prefers measured slot and handles badge and zero-width fallbacks',()=>{
+ assert.deepEqual(
+  resolveCompactEditorGeometry({rowWidthVp:360,measuredSlotLeftVp:48,measuredSlotWidthVp:216,hasSendModeBadge:false}),
+  {leftVp:48,widthVp:216,textWidthVp:200}
+ );
+ const fallbackPlain=resolveCompactEditorGeometry({rowWidthVp:360,measuredSlotLeftVp:0,measuredSlotWidthVp:0,hasSendModeBadge:false});
+ const fallbackBadge=resolveCompactEditorGeometry({rowWidthVp:360,measuredSlotLeftVp:0,measuredSlotWidthVp:0,hasSendModeBadge:true});
+ assert.equal(fallbackPlain.leftVp,48);
+ assert.ok(fallbackBadge.leftVp>fallbackPlain.leftVp);
+ assert.ok(fallbackBadge.widthVp<fallbackPlain.widthVp);
+ assert.equal(resolveCompactEditorGeometry({rowWidthVp:0,measuredSlotLeftVp:0,measuredSlotWidthVp:0,hasSendModeBadge:false}).widthVp,140);
+});
+
+test('layoutExpandedModelControl never overflows slot for long model names, long summaries, or narrow widths',()=>{
+ // Short model + short summary both fit with no truncation
+ const shortFit=layoutExpandedModelControl(240,52,34,true);
+ assert.equal(shortFit.iconOnly,false);
+ assert.equal(shortFit.showSummary,true);
+ assert.ok(shortFit.maxLabelWidthVp>=54);
+ assert.ok(shortFit.maxSummaryWidthVp>=36);
+ assert.ok(shortFit.maxLabelWidthVp+shortFit.maxSummaryWidthVp+60<=240);
+
+ // Very long model name (e.g. DeepSeek V4.1 Flash 1017 Preview) + short summary (High): summary preserved, label truncated inside slot
+ const longModel=layoutExpandedModelControl(220,260,32,true);
+ assert.equal(longModel.iconOnly,false);
+ assert.equal(longModel.showSummary,true);
+ assert.equal(longModel.maxSummaryWidthVp,34);
+ assert.equal(longModel.maxLabelWidthVp,220-60-34);
+ assert.ok(longModel.maxLabelWidthVp+longModel.maxSummaryWidthVp+60<=220);
+
+ // Long model + long summary: both bounded cleanly
+ const bothLong=layoutExpandedModelControl(220,260,150,true);
+ assert.equal(bothLong.showSummary,true);
+ assert.ok(bothLong.maxLabelWidthVp>=24 && bothLong.maxSummaryWidthVp>=24);
+ assert.ok(bothLong.maxLabelWidthVp+bothLong.maxSummaryWidthVp+60<=220);
+
+ // Short model + long summary: summary gets remaining width
+ const shortModelLongSummary=layoutExpandedModelControl(220,48,140,true);
+ assert.equal(shortModelLongSummary.maxLabelWidthVp,50);
+ assert.equal(shortModelLongSummary.maxSummaryWidthVp,220-60-50);
+
+ // Narrow slot drops summary before clipping model name; ultra-narrow drops to icon-only
+ const narrow=layoutExpandedModelControl(110,160,32,true);
+ assert.equal(narrow.iconOnly,false);
+ assert.equal(narrow.showSummary,false);
+ assert.equal(narrow.maxLabelWidthVp,110-55);
+ assert.equal(layoutExpandedModelControl(48,160,32,true).iconOnly,true);
+
+ // Exhaustive sweep invariant: never exceeds slot budget
+ for(const slot of [40,56,90,132,180,220,300,420]){
+  for(const lw of [0,30,90,260]){
+   for(const sw of [0,25,80,180]){
+    for(const hasSum of [false,true]){
+     const out=layoutExpandedModelControl(slot,lw,sw,hasSum);
+     assert.ok(out.maxButtonWidthVp<=slot,`slot=${slot} maxButtonWidthVp=${out.maxButtonWidthVp}`);
+     if(!out.iconOnly){
+      const chrome=out.showSummary?60:55;
+      assert.ok(out.maxLabelWidthVp+out.maxSummaryWidthVp+chrome<=slot,
+       `overflow slot=${slot} lw=${lw} sw=${sw} hasSum=${hasSum}: ${JSON.stringify(out)}`);
+     }
+    }
+   }
+  }
+ }
 });

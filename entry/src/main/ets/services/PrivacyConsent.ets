@@ -10,10 +10,10 @@ export interface PrivacyConsentRecord {
 }
 
 export const PRIVACY_POLICY_SUMMARY: string =
-  '欢迎使用 T3 Code Harmony。本应用是一款独立开发的自托管远程研发工作区客户端，仅在您主动添加连接环境或点击使用具体功能时处理必要信息。';
+  '欢迎使用 T3 Harmony。本应用是一款独立开发的自托管远程研发工作区客户端，仅在您主动添加连接环境或点击使用具体功能时处理必要信息。';
 
 export const PRIVACY_POLICY_DETAIL: string =
-  'T3 Code Harmony 隐私声明\n\n' +
+  'T3 Harmony 隐私声明\n\n' +
   '1. 应用定位与数据流向\n' +
   '本应用作为远程研发工作区的移动端瘦客户端运行，不内置开发者自有业务后台，不接入任何第三方统计、推送或广告 SDK。您的项目文件、代码片段、会话内容及语音转写文本仅在您本地设备或您主动配对连接的目标服务端之间传输。\n\n' +
   '2. 权限用途与最小必要原则\n' +

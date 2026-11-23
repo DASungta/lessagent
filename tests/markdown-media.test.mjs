@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { compile, data, markdownUrl } from './load-core.mjs';
+import { compile, data, markdownUrl, mediaTransferUrl } from './load-core.mjs';
 
 const md = await import(markdownUrl);
+const mediaTransfer = await import(mediaTransferUrl);
 
 const cacheSource = (await readFile(new URL('../entry/src/main/ets/services/MarkdownMediaCache.ets', import.meta.url), 'utf8'))
   .replace("'../protocol/Markdown'", JSON.stringify(markdownUrl));
@@ -208,4 +209,117 @@ test('MarkdownMediaCache deduplicates in-flight requests, refreshes near expiry,
     height: 100
   }), false, 200);
   assert.equal(recovered.url, 'https://host/api/assets/ok');
+});
+
+test('Markdown parses Windows backslash paths, spaces, HTML img/video tags, and reference-style media without stripping backslashes', () => {
+  const doc = [
+    '![v11 低清小样](D:\\projects\\harry-potter\\outputs\\v11_lowres.mp4)',
+    '![Windows parens](D:\\(renders)\\v11 (1).mp4)',
+    '![Angle win](<C:\\Users\\demo\\My Folder\\shot (1).png> "win title")',
+    '![Relative space](renders/v11 lowres.mp4)',
+    '![Relative backslash](outputs\\frames\\frame_01.png)',
+    '<img src="D:\\projects\\preview\\cover.webp" alt="Cover shot" />',
+    '<video controls><source src="D:\\projects\\preview\\demo.mp4" type="video/mp4">Demo clip</video>',
+    '![Ref preview][clip-ref]',
+    '',
+    '[clip-ref]: D:\\projects\\preview\\ref_clip.mov'
+  ].join('\n');
+
+  const blocks = md.markdownDocument(doc);
+  const media = blocks.filter(block => block.kind === 'image');
+  assert.equal(media.length, 8);
+  assert.deepEqual(media.map(b => [b.alt, b.url]), [
+    ['v11 低清小样', 'D:\\projects\\harry-potter\\outputs\\v11_lowres.mp4'],
+    ['Windows parens', 'D:\\(renders)\\v11 (1).mp4'],
+    ['Angle win', 'C:\\Users\\demo\\My Folder\\shot (1).png'],
+    ['Relative space', 'renders/v11 lowres.mp4'],
+    ['Relative backslash', 'outputs\\frames\\frame_01.png'],
+    ['Cover shot', 'D:\\projects\\preview\\cover.webp'],
+    ['Demo clip', 'D:\\projects\\preview\\demo.mp4'],
+    ['Ref preview', 'D:\\projects\\preview\\ref_clip.mov']
+  ]);
+
+  const winVideo = md.classifyMarkdownMediaSource(media[0].url, 'D:\\projects\\harry-potter');
+  assert.equal(winVideo.access, 'environment');
+  assert.equal(winVideo.kind, 'video');
+  assert.equal(winVideo.path, 'D:\\projects\\harry-potter\\outputs\\v11_lowres.mp4');
+
+  const twoSlashFile = md.classifyMarkdownMediaSource('file://D:/projects/harry-potter/v11.mp4', '');
+  assert.equal(twoSlashFile.access, 'environment');
+  assert.equal(twoSlashFile.kind, 'video');
+  assert.equal(twoSlashFile.path, 'D:/projects/harry-potter/v11.mp4');
+
+  const relSafe = md.classifyMarkdownMediaSource('./renders/sub/../v11 lowres.mp4', 'D:\\projects\\harry-potter');
+  assert.equal(relSafe.access, 'environment');
+  assert.equal(relSafe.kind, 'video');
+  assert.equal(relSafe.path, 'D:\\projects\\harry-potter\\renders\\v11 lowres.mp4');
+  assert.equal(relSafe.displayPath, 'renders/v11 lowres.mp4');
+});
+
+test('MediaTransfer infers filenames, sanitized titles, UTDs, gallery eligibility, data URIs and copy actions', () => {
+  // Windows & POSIX paths, URLs, and data URIs
+  assert.equal(
+    mediaTransfer.mediaFileName('D:\\projects\\harry-potter\\outputs\\v11_lowres.mp4', 'v11 低清小样', '', '', 'video'),
+    'v11_lowres.mp4'
+  );
+  assert.equal(
+    mediaTransfer.mediaFileName('', '渲染图', 'https://cdn.example.com/assets/render%2001.webp?sig=abc', '', 'image'),
+    'render 01.webp'
+  );
+  assert.equal(
+    mediaTransfer.mediaFileName('', '内嵌截图', 'data:image/png;base64,iVBORw0KGgo=', '', 'image'),
+    '内嵌截图.png'
+  );
+  assert.equal(
+    mediaTransfer.mediaFileName('outputs/clip_no_ext', '演示', '', 'video/quicktime', 'video'),
+    'clip_no_ext.mov'
+  );
+  assert.equal(
+    mediaTransfer.sanitizeMediaFileName('..bad:name/with*chars?.png'),
+    'bad_name_with_chars_.png'
+  );
+
+  // Gallery extensions & titles
+  assert.equal(mediaTransfer.photoGalleryExtension('/tmp/photo.JPEG', '', 'image'), 'jpg');
+  assert.equal(mediaTransfer.photoGalleryExtension('clip.mp4', '', 'video'), 'mp4');
+  assert.equal(mediaTransfer.mediaAssetTitle('v11:低清 (1).mp4', 'video'), 'v11_低清_1');
+  assert.equal(mediaTransfer.mediaAssetTitle('...', 'image'), 'T3_image');
+
+  // Gallery eligibility matches Android (supports raster images & videos; excludes SVG/ICO/PDF)
+  assert.equal(mediaTransfer.canSaveToPhotoGallery('photo.png', 'image/png', 'image'), true);
+  assert.equal(mediaTransfer.canSaveToPhotoGallery('photo.jpeg', '', 'image'), true);
+  assert.equal(mediaTransfer.canSaveToPhotoGallery('clip.mp4', 'video/mp4', 'video'), true);
+  assert.equal(mediaTransfer.canSaveToPhotoGallery('clip.mov', '', 'video'), true);
+  assert.equal(mediaTransfer.canSaveToPhotoGallery('diagram.svg', 'image/svg+xml', 'image'), false);
+  assert.equal(mediaTransfer.canSaveToPhotoGallery('favicon.ico', 'image/x-icon', 'image'), false);
+  assert.equal(mediaTransfer.canSaveToPhotoGallery('report.pdf', 'application/pdf', ''), false);
+  assert.equal(mediaTransfer.isGalleryVideo('clip.mp4', '', ''), true);
+  assert.equal(mediaTransfer.isGalleryVideo('shot.png', '', ''), false);
+
+  // UTD mapping for HarmonyOS systemShare
+  assert.equal(mediaTransfer.mediaUtdType('shot.png', '', 'image'), 'general.png');
+  assert.equal(mediaTransfer.mediaUtdType('shot.jpg', '', 'image'), 'general.jpeg');
+  assert.equal(mediaTransfer.mediaUtdType('anim.gif', '', 'image'), 'general.gif');
+  assert.equal(mediaTransfer.mediaUtdType('clip.mp4', '', 'video'), 'general.mpeg-4');
+  assert.equal(mediaTransfer.mediaUtdType('clip.mkv', '', 'video'), 'org.matroska.mkv');
+  assert.equal(mediaTransfer.mediaUtdType('clip.webm', '', 'video'), 'general.video');
+  assert.equal(mediaTransfer.mediaUtdType('doc.pdf', 'application/pdf', ''), 'com.adobe.pdf');
+  assert.equal(mediaTransfer.mediaUtdType('archive.bin', '', ''), 'general.file');
+
+  // Base64 data URI parsing
+  const parsed = mediaTransfer.parseBase64DataUri('data:image/jpeg;charset=utf-8;base64,/9j/4AAQ\nSkZJRg==');
+  assert.ok(parsed);
+  assert.equal(parsed.mimeType, 'image/jpeg');
+  assert.equal(parsed.extension, 'jpg');
+  assert.equal(parsed.kind, 'image');
+  assert.equal(parsed.base64, '/9j/4AAQSkZJRg==');
+  assert.equal(mediaTransfer.parseBase64DataUri('data:text/html;base64,PGI+'), undefined);
+
+  // Copy value & label
+  assert.equal(mediaTransfer.mediaCopyValue('D:\\outputs\\v11.mp4', 'http://127.0.0.1/api/assets/1'), 'D:\\outputs\\v11.mp4');
+  assert.equal(mediaTransfer.mediaCopyLabel('D:\\outputs\\v11.mp4', 'http://127.0.0.1/api/assets/1'), '复制路径');
+  assert.equal(mediaTransfer.mediaCopyValue('', 'https://example.com/a.png'), 'https://example.com/a.png');
+  assert.equal(mediaTransfer.mediaCopyLabel('', 'https://example.com/a.png'), '复制链接');
+  assert.equal(mediaTransfer.mediaCopyValue('data:image/png;base64,AAAA', 'data:image/png;base64,AAAA'), '');
+  assert.equal(mediaTransfer.mediaCopyValue('file://com.dasungta.t3codebridge/data/storage/el2/base/haps/entry/cache/a.mp4', ''), '');
 });

@@ -7,7 +7,7 @@ import { ProviderLogo } from './ui/ProviderLogo';
 import { FontSize, LineHeight, Opacity, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { common } from '@kit.AbilityKit';
 import { T3Client } from '../services/T3Client';
-import { record } from '../protocol/Wire';
+import { configEnvironmentId } from '../protocol/Wire';
 import { ProviderView, ProviderModelView, ProviderAuthView, providerCatalog, providerStatus,
   providerAuthView, providerAuthActive, providerAuthLabel } from '../protocol/ProviderSettings';
 
@@ -58,8 +58,8 @@ export struct ProviderSettingsPanel {
     this.busy = true; this.error = ''; this.notice = '';
     this.stopWatch(); this.auth = undefined;
     try {
-      const expected = record(owner.config.environment).environmentId;
-      if (typeof expected !== 'string' || (this.environmentId && expected !== this.environmentId)) throw new Error('identity');
+      const expected = configEnvironmentId(owner.config);
+      if (!expected || (this.environmentId && expected !== this.environmentId)) throw new Error('identity');
       this.environmentId = expected;
       const generation = owner.generationValue();
       if (refresh) await owner.refreshProviders(this.selectedId);
@@ -328,7 +328,7 @@ export struct ProviderSettingsPanel {
             }
           }
         }.width('100%').padding({ left: Space.sm, right: Space.sm, bottom: Space.lg }).alignItems(HorizontalAlign.Start)
-      }.width('100%').layoutWeight(1).align(Alignment.TopStart)
+      }.width('100%').layoutWeight(1).align(Alignment.TopStart).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

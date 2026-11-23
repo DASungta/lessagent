@@ -20,6 +20,7 @@ import {
   TurnWorkGroup
 } from '../protocol/ThreadItems';
 import { MarkdownView } from './MarkdownView';
+import { iconForActivityKind } from './ThreadActivity';
 import { AppButton } from './ui/AppButton';
 import { StatusBadge } from './ui/StatusBadge';
 import { TopBar } from './ui/TopBar';
@@ -34,6 +35,11 @@ export struct LinkedThreadPanel {
   onOpenInMain: () => void = () => {};
   onCopy: (text: string) => void = () => {};
   onOpenLink: (url: string) => void = () => {};
+  onOpenImage: (source: string) => void = () => {};
+  onShareMedia: ((source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => void) | undefined = undefined;
+  onSaveMediaToGallery: ((source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => void) | undefined = undefined;
+  onSaveMediaToFile: ((source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => void) | undefined = undefined;
+  downloadLocalMedia: ((url: string, kind: string, displayPath: string) => Promise<string>) | undefined = undefined;
   onConnect: ((target: LinkedThreadTarget) => Promise<void>) | undefined = undefined;
   @Prop connecting: boolean = false;
   @Prop connectNotice: string = '';
@@ -309,6 +315,14 @@ export struct LinkedThreadPanel {
             Column({ space: Space.xxs }) {
               Button({ type: ButtonType.Normal }) {
                 Row({ space: Space.xs }) {
+                  Row() {
+                    Image(iconForActivityKind(activitySummary(line).icon))
+                      .width(activitySummary(line).icon === 't3' ? 16 : 14)
+                      .height(activitySummary(line).icon === 't3' ? 10 : 14)
+                      .objectFit(ImageFit.Contain)
+                      .opacity(0.85)
+                      .accessibilityLevel('no')
+                  }.width(17).height(15).justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center)
                   Text(activitySummary(line).title || line.label)
                     .fontSize(FontSize.caption)
                     .lineHeight(LineHeight.caption)
@@ -490,7 +504,12 @@ export struct LinkedThreadPanel {
                   MarkdownView({
                     markdown: msg.text,
                     onCopy: this.onCopy,
-                    onOpenLink: this.onOpenLink
+                    onOpenLink: this.onOpenLink,
+                    onOpenImage: this.onOpenImage,
+                    onShareMedia: this.onShareMedia,
+                    onSaveMediaToGallery: this.onSaveMediaToGallery,
+                    onSaveMediaToFile: this.onSaveMediaToFile,
+                    downloadLocalMedia: this.downloadLocalMedia
                   })
                 }
               }

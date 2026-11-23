@@ -154,10 +154,11 @@ test('draft mode exposes project switching and retargets active drafts across pr
  assert.match(p.status, /附件未带入/);
 });
 
-test('composer uses stacked layout without external gallery button and consolidates actions inside plus menu', () => {
+test('composer starts single-line with icon-only model trigger, expands to stacked layout with bounded long model names, and consolidates actions inside plus menu', () => {
  assert.doesNotMatch(source, /app\.media\.ui_image/);
  assert.doesNotMatch(source, /composerToolsOpen/);
- assert.match(source, /TextArea\(\{[\s\S]*?\.width\('100%'\)[\s\S]*?Image\(\$r\('app\.media\.ui_plus'\)\)[\s\S]*?this\.currentModelSummary\(\)[\s\S]*?this\.openTaskSettings\(\)/);
+ assert.match(source, /Stack\(\{ alignContent: Alignment\.BottomStart \}\)[\s\S]*?Image\(\$r\('app\.media\.ui_plus'\)\)[\s\S]*?if \(!this\.composerExpanded\)[\s\S]*?ProviderLogo[\s\S]*?this\.expandedModelMaxLabelWidth\(\)[\s\S]*?this\.expandedModelMaxSummaryWidth\(\)[\s\S]*?this\.expandedModelMaxButtonWidth\(\)[\s\S]*?this\.openTaskSettings\(\)[\s\S]*?TextArea\(\{[\s\S]*?controller: this\.composerController[\s\S]*?\.width\(this\.composerExpanded \? '100%' : this\.compactEditorGeometry\(\)\.widthVp\)/);
+ assert.equal((source.match(/TextArea\(\{\s*placeholder: this\.draftMode/g) || []).length, 1, 'single mounted TextArea preserves focus and IME composition across single-line/expanded transitions');
  assert.match(source, /\.bindMenu\(this\.composerAttachmentMenu\(\s*this\.uploadingAttachment,\s*this\.canRetryAttachment,\s*this\.attachments\.length > 0,\s*this\.draftMode,\s*this\.sendMode,\s*this\.queued\.length,\s*this\.threadRunning\s*\)\)/);
 
  const menuMethod = source.slice(

@@ -14,7 +14,7 @@ export function diagnosticSummary(version: string, environments: number, project
   const counts = [environments, projects, archived];
   if (!counts.every(value => Number.isSafeInteger(value) && value >= 0)) throw new Error('诊断计数无效');
   if (!/^[a-zA-Z0-9.+_-]{1,64}$/.test(version)) throw new Error('版本信息无效');
-  return `T3 Code Harmony\n客户端版本: ${version}\n环境数: ${environments}\n项目数: ${projects}\n归档会话数: ${archived}\n平台: HarmonyOS\n不包含地址、账号、凭据或消息内容。`;
+  return `T3 Harmony\n客户端版本: ${version}\n环境数: ${environments}\n项目数: ${projects}\n归档会话数: ${archived}\n平台: HarmonyOS\n不包含地址、账号、凭据或消息内容。`;
 }
 
 export function followUpDelivery(selected: string, running: boolean, preference: string): string {

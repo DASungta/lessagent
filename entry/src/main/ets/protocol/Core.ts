@@ -140,6 +140,7 @@ function cachedThreadView(value: Object): ThreadView {
     lineageRelationship: cachedString(row.lineageRelationship, 64),
     lineageParentThreadId: cachedString(row.lineageParentThreadId, 256),
     lineageSideChat: row.lineageSideChat === true,
+    lineageWorkflowStep: row.lineageWorkflowStep === true,
     delegatedFromEnvironmentId: cachedString(row.delegatedFromEnvironmentId, 256),
     delegatedFromThreadId: cachedString(row.delegatedFromThreadId, 256),
     lastSnoozeWakeAt: cachedString(row.lastSnoozeWakeAt, 64),

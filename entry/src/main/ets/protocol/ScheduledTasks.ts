@@ -158,7 +158,9 @@ async function verifyScheduleDestination(connection: ScheduleConnection, environ
       throw new Error('目标会话不存在、已归档或不属于所选项目');
     }
     const lineage = thread.lineage === undefined || thread.lineage === null ? {} as Record<string, Object> : record(thread.lineage);
-    if (lineage.relationshipToParent === 'subagent' || lineage.sideChat === true) throw new Error('此会话不可绑定');
+    if (lineage.relationshipToParent === 'subagent' || lineage.sideChat === true || lineage.workflowStep === true) {
+      throw new Error('此会话不可绑定');
+    }
     const savedModel = record(payload.modelSelection);
     if (thread.modelSelection === undefined || thread.modelSelection === null || Object.keys(savedModel).length !== 2 ||
       !sameScheduledModel(thread.modelSelection, required(savedModel.instanceId), required(savedModel.model))) {

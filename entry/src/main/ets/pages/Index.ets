@@ -20,7 +20,10 @@ import { loadStagedShareThumbnail, peekIncomingShare, removeIncomingShare, remov
 import { IncomingShareAttachment, MAX_SHARED_TEXT_CHARS, SharePart, shareDraftText } from '../protocol/IncomingShare';
 import { TerminalPanel } from '../components/TerminalPanel';
 import { TerminalSize, terminalInput, terminalAccess } from '../protocol/Terminal';
-import { TaskSettings, ModelSelection, OptionSelection, QueuedRun, queuedRuns, validateTaskSettings, modelOptionsSummary } from '../protocol/Composer';
+import {
+  TaskSettings, ModelSelection, OptionSelection, QueuedRun, queuedRuns, validateTaskSettings, modelOptionsSummary,
+  CompactEditorGeometry, ExpandedModelLayout, shouldExpandComposer, resolveCompactEditorGeometry, layoutExpandedModelControl
+} from '../protocol/Composer';
 import { BranchView, branches, ComposerContextRecord, ComposerDraft, composerDraftLabel, composerDraft, contextRecord,
   draftSettings, emptyWorkspace, DraftWorkspace, switchDraftWorkspaceMode, draftWorkspaceForBranch, mentionContext, skillContext, attachmentLimitError,
   terminalContext,
@@ -70,9 +73,17 @@ import { EnvironmentEntry, environmentRoutes, DirectRoute } from '../protocol/En
 import { ConnectionsPanel } from '../components/ConnectionsPanel';
 import { PairingScanCard } from '../components/PairingScanCard';
 import { PairingTarget } from '../protocol/Pairing';
-import { ChatMessage, objects, parseModelSelection, record, text } from '../protocol/Wire';
-import { MarkdownView } from '../components/MarkdownView';
+import { ChatAttachment, ChatMessage, objects, optionalRecord, parseModelSelection, record, text } from '../protocol/Wire';
+import { MarkdownMediaBlock, MarkdownView } from '../components/MarkdownView';
 import { classifyMarkdownMediaSource, ResolvedMarkdownMedia } from '../protocol/Markdown';
+import { canSaveToPhotoGallery, mediaCopyLabel, mediaCopyValue, mediaFileName } from '../protocol/MediaTransfer';
+import {
+  decodeDataUriBytes,
+  readLocalFileUriBytes,
+  saveBytesToDocumentPicker,
+  saveBytesToPhotoGallery,
+  shareBytesWithSystemSheet
+} from '../services/MediaActions';
 import { FilesPanel } from '../components/FilesPanel';
 import { ReviewPanel } from '../components/ReviewPanel';
 import { GitPanel } from '../components/GitPanel';
@@ -94,7 +105,7 @@ import { CloudDevice, CloudPairingLink, deviceApprovalPrompts } from '../protoco
 import {
   ArchiveEnvironmentEntry, ArchiveProjectGroup, ProjectGroup, ProjectView, ScopedProject, ScopedThread, ThreadCapabilities,
   ThreadProjectRef, ThreadShelfState, ThreadView, attachPendingSubagentRequests, buildArchiveGroups, buildProjectGroups, buildThreadShelves,
-  newTaskDestination, pickableProjectGroups, projectGroupRefs, samePath, scopedProjectView, scopedThreadView,
+  isListedThread, newTaskDestination, pickableProjectGroups, projectGroupRefs, samePath, scopedProjectView, scopedThreadView,
   sortProjectGroups, topOfPinnedRun
 } from '../protocol/Projects';
 import {
@@ -163,13 +174,26 @@ interface ShareUploadPlan {
   uploaded: Map<string, DraftAttachment>;
 }
 
+interface MediaCacheEntry {
+  full: string;
+  mtime: number;
+}
+
 @Entry
 @Component
 struct Index {
   private keyboard: KeyboardCommands = new KeyboardCommands();
+  private composerController: TextAreaController = new TextAreaController();
   @State composerFocused: boolean = false;
+  @State composerExpanded: boolean = false;
+  @State composerRowWidth: number = 0;
+  @State compactSlotLeft: number = 0;
+  @State compactSlotWidth: number = 0;
+  @State expandedModelSlotWidth: number = 0;
   @State searchFocused: boolean = false;
   private composingText: boolean = false;
+  private composerPreviewText: string = '';
+  private lastComposerEditorHeight: number = 0;
 
   @StorageLink('t3PrivacyAccepted') privacyAccepted: boolean = true;
   @State privacyDetailExpanded: boolean = false;
@@ -372,14 +396,22 @@ struct Index {
   @State markdownImageUrl: string = '';
   @State markdownImageKind: string = 'image';
   @State markdownImagePath: string = '';
+  @State markdownImageAlt: string = '';
+  @State markdownImageSource: string = '';
+  @State markdownImageStatus: string = '';
+  @State markdownImageBusy: boolean = false;
+  private markdownImageOwner: T3Client | undefined = undefined;
+  private markdownImageThreadId: string = '';
+  private markdownImageCwd: string = '';
+  private markdownImageScopeId: string = '';
   @State promptSuggestion: string = '';
   @State draftEnvironmentError: string = '';
   @State pendingDraftId: string = '';
   private draftSaveTimer: number = 0;
-  @State sendMode: string = 'auto';
+  @State @Watch('onComposerChromeChanged') sendMode: string = 'auto';
   @State queued: QueuedRun[] = [];
   @State threadId: string = '';
-  @State prompt: string = '';
+  @State @Watch('onPromptStateChanged') prompt: string = '';
   @State status: string = '未连接';
   @State server: string = '';
   @State ready: boolean = false;
@@ -1788,7 +1820,8 @@ struct Index {
     const workspaceRoot = project.workspaceRoot;
     const defaults = await readDraftDefaults(owner, environmentId, {
       id: project.id, workspaceRoot: project.workspaceRoot, isScratch: project.isScratch,
-      hasThreads: this.scopedThreads.some((item: ScopedThread) => item.localId === localId && item.projectId === projectId),
+      hasThreads: this.scopedThreads.some((item: ScopedThread) =>
+        item.localId === localId && item.projectId === projectId && isListedThread(item)),
       defaultThreadEnvMode: project.defaultThreadEnvMode,
       defaultModelSelection: project.defaultModelSelection
     });
@@ -2543,18 +2576,31 @@ struct Index {
 
   private async saveAttachment(): Promise<void> {
     const item = this.selectedAttachment;
-    if (!item) return;
+    if (!item || this.busy) return;
     this.busy = true; this.attachmentStatus = '正在下载…';
     try {
       const bytes = await client.downloadAttachment(item.id, item.name, item.mimeType);
-      const options = new picker.DocumentSaveOptions();
-      options.newFileNames = [item.name];
-      const target = await new picker.DocumentViewPicker().save(options);
-      if (!target.length) { this.attachmentStatus = '已取消保存'; return; }
-      const file = fileIo.openSync(target[0], fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC);
-      try { fileIo.writeSync(file.fd, bytes); fileIo.fsyncSync(file.fd); } finally { fileIo.closeSync(file); }
-      this.attachmentStatus = '已保存到所选位置';
-    } catch (error) { this.attachmentStatus = (error as Error).message; }
+      const outcome = await saveBytesToDocumentPicker(bytes, item.name);
+      this.attachmentStatus = outcome === 'saved' ? '已保存到所选位置' : '已取消保存';
+    } catch (error) { this.attachmentStatus = '保存失败：' + (error as Error).message; }
+    finally { this.busy = false; }
+  }
+
+  private async saveAttachmentToGallery(viaSaveButton: boolean): Promise<void> {
+    const item = this.selectedAttachment;
+    if (!item || this.busy) return;
+    const kind = this.attachmentMediaKind(item);
+    if (!canSaveToPhotoGallery(item.name, item.mimeType, kind)) {
+      await this.saveAttachment();
+      return;
+    }
+    this.busy = true; this.attachmentStatus = '正在保存到相册…';
+    try {
+      const bytes = await client.downloadAttachment(item.id, item.name, item.mimeType);
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      const outcome = await saveBytesToPhotoGallery(context, bytes, item.name, item.mimeType, kind, viaSaveButton);
+      this.attachmentStatus = outcome === 'saved' ? '已保存到相册' : '已取消保存';
+    } catch (error) { this.attachmentStatus = '保存失败：' + (error as Error).message; }
     finally { this.busy = false; }
   }
 
@@ -2567,14 +2613,8 @@ struct Index {
       const bytes = await owner.downloadAttachment(item.id, item.name, item.mimeType);
       if (owner !== client || scope !== this.selectedLocalId || threadId !== this.threadId) throw new Error('分享目标已变化');
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-      const safeName = item.name.replace(/[\\/:*?"<>|\x00-\x1f]/g, '_').slice(-180) || 'attachment';
-      const path = context.cacheDir + '/share-' + Date.now() + '-' + safeName;
-      const file = fileIo.openSync(path, fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC);
-      try { fileIo.writeSync(file.fd, bytes); fileIo.fsyncSync(file.fd); } finally { fileIo.closeSync(file); }
-      registerSharedFile(context.cacheDir, path.substring(context.cacheDir.length + 1), scope);
-      const shared = new systemShare.SharedData({ utd: 'general.file',
-        uri: fileUri.getUriFromPath(path), title: item.name });
-      await new systemShare.ShareController(shared).show(context, {});
+      const kind = this.attachmentMediaKind(item);
+      await shareBytesWithSystemSheet(context, bytes, item.name, scope, item.mimeType, kind);
       this.attachmentStatus = '已打开系统分享';
     } catch (error) { this.attachmentStatus = '分享失败：' + (error as Error).message; }
     finally { this.busy = false; }
@@ -3346,16 +3386,355 @@ struct Index {
   private markdownMediaScopeKey(): string {
     return this.selectedLocalId + ':' + this.threadId + ':' + client.generationValue() + ':' + (this.ready ? '1' : '0');
   }
-  private resolveMarkdownMedia(source: string, refresh: boolean): Promise<ResolvedMarkdownMedia> {
+  private attachmentMediaKind(att: ChatAttachment): string {
+    const mime = (att.mimeType || '').toLowerCase();
+    const name = att.name || '';
+    if (mime.startsWith('video/') || /\.(?:mp4|webm|mov|m4v|ogv|mkv|avi|3gp)$/i.test(name)) return 'video';
+    if (att.type === 'image' || mime.startsWith('image/') || /\.(?:png|jpe?g|gif|webp|bmp|svg|avif|heic)$/i.test(name)) return 'image';
+    return '';
+  }
+  private resolveAttachmentById(attachmentId: string): ChatAttachment | undefined {
+    for (const msg of this.messages) {
+      if (!msg.attachments) continue;
+      const found = msg.attachments.find((item: ChatAttachment) => item.id === attachmentId);
+      if (found) return found;
+    }
+    const threadAtt = this.threadAttachments().find((item: DraftAttachment) => item.id === attachmentId);
+    if (threadAtt) {
+      return { id: threadAtt.id, type: threadAtt.type, name: threadAtt.name, mimeType: threadAtt.mimeType, sizeBytes: threadAtt.sizeBytes };
+    }
+    return undefined;
+  }
+  private async resolveMarkdownMedia(source: string, refresh: boolean): Promise<ResolvedMarkdownMedia> {
+    if (source.startsWith('t3-attachment://')) {
+      const id = source.slice('t3-attachment://'.length);
+      const att = this.resolveAttachmentById(id);
+      if (!att) throw new Error('附件已不在当前快照中');
+      const url = await client.attachmentUrl(att.id, att.name, att.mimeType || 'application/octet-stream', true);
+      return {
+        url,
+        kind: this.attachmentMediaKind(att) || 'image',
+        displayPath: att.name,
+        expiresAt: 0,
+        width: 0,
+        height: 0
+      };
+    }
     return client.markdownMediaUrl(source, this.currentWorkspace(), refresh);
   }
-  private async openMarkdownImage(value: string): Promise<void> {
-    const cwd = this.currentWorkspace();
+  private mediaFileExtension(hint: string, url: string, kind: string): string {
+    const combined = (hint || '') + ' ' + (url || '');
+    const match = /\.(mp4|webm|mov|m4v|ogv|mkv|avi|3gp|png|jpe?g|gif|webp|bmp|svg|avif|heic)(?:[?#\s]|$)/i.exec(combined);
+    if (match) return '.' + match[1].toLowerCase();
+    return kind === 'video' ? '.mp4' : '.png';
+  }
+  private async downloadMediaToLocalCache(owner: T3Client, url: string, kind: string, displayPath: string): Promise<string> {
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+    const dir = context.cacheDir + '/t3-media-cache';
+    try { fileIo.mkdirSync(dir); } catch (_) {}
+    let hash = 2166136261;
+    for (let i = 0; i < url.length; i += 1) {
+      hash ^= url.charCodeAt(i);
+      hash = Math.imul(hash, 16777619) >>> 0;
+    }
+    const ext = this.mediaFileExtension(displayPath, url, kind);
+    const filePath = dir + '/m-' + hash.toString(16) + '-' + url.length + ext;
+    try {
+      const stat = fileIo.statSync(filePath);
+      if (stat.size > 0) return fileUri.getUriFromPath(filePath);
+    } catch (_) {}
+    const bytes = await owner.downloadUrlBytes(url);
+    const tmpPath = filePath + '.tmp-' + Date.now();
+    const file = fileIo.openSync(tmpPath, fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC);
+    try {
+      fileIo.writeSync(file.fd, bytes);
+      fileIo.fsyncSync(file.fd);
+    } finally {
+      fileIo.closeSync(file);
+    }
+    try { fileIo.renameSync(tmpPath, filePath); }
+    catch (_) {
+      try { fileIo.unlinkSync(tmpPath); } catch (_) {}
+      const direct = fileIo.openSync(filePath, fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC);
+      try { fileIo.writeSync(direct.fd, bytes); fileIo.fsyncSync(direct.fd); } finally { fileIo.closeSync(direct); }
+    }
+    try {
+      const entries = fileIo.listFileSync(dir);
+      if (entries.length > 24) {
+        const dated: MediaCacheEntry[] = entries.map((name: string): MediaCacheEntry => {
+          const full = dir + '/' + name;
+          let mtime = 0;
+          try { mtime = fileIo.statSync(full).mtime; } catch (_) {}
+          return { full, mtime };
+        }).sort((a: MediaCacheEntry, b: MediaCacheEntry): number => a.mtime - b.mtime);
+        for (let i = 0; i < dated.length - 24; i += 1) {
+          if (dated[i].full !== filePath) {
+            try { fileIo.unlinkSync(dated[i].full); } catch (_) {}
+          }
+        }
+      }
+    } catch (_) {}
+    return fileUri.getUriFromPath(filePath);
+  }
+  private async loadMediaBytesFor(
+    owner: T3Client,
+    threadId: string,
+    cwd: string,
+    source: string,
+    currentUrl: string
+  ): Promise<ArrayBuffer> {
+    if (source.startsWith('t3-attachment://')) {
+      const id = source.slice('t3-attachment://'.length);
+      const att = this.resolveAttachmentById(id);
+      if (!att) throw new Error('附件已不在当前快照中');
+      return owner.downloadAttachment(att.id, att.name, att.mimeType || 'application/octet-stream');
+    }
+    if (currentUrl && currentUrl.startsWith('file://')) {
+      try {
+        return readLocalFileUriBytes(currentUrl);
+      } catch (_) {}
+    }
+    if (currentUrl && /^data:/i.test(currentUrl)) {
+      const decoded = decodeDataUriBytes(currentUrl);
+      if (decoded) return decoded;
+    }
+    if (source && /^data:/i.test(source)) {
+      const decoded = decodeDataUriBytes(source);
+      if (decoded) return decoded;
+    }
+    if (currentUrl && /^https?:\/\//i.test(currentUrl)) {
+      try {
+        return await owner.downloadUrlBytes(currentUrl);
+      } catch (firstError) {
+        if (source) {
+          const classified = classifyMarkdownMediaSource(source, cwd);
+          if (classified.access === 'environment') {
+            const refreshed = await owner.markdownMediaUrlForThread(threadId, source, cwd, true);
+            if (refreshed.url) return owner.downloadUrlBytes(refreshed.url);
+          }
+        }
+        throw firstError as Error;
+      }
+    }
+    if (source) {
+      const resolved = await owner.markdownMediaUrlForThread(threadId, source, cwd, false);
+      if (resolved.url) {
+        if (/^data:/i.test(resolved.url)) {
+          const decoded = decodeDataUriBytes(resolved.url);
+          if (decoded) return decoded;
+        }
+        return owner.downloadUrlBytes(resolved.url);
+      }
+    }
+    throw new Error('没有可下载的媒体资源');
+  }
+
+  private markdownPreviewFileName(): string {
+    return mediaFileName(this.markdownImagePath, this.markdownImageAlt, this.markdownImageUrl, '', this.markdownImageKind);
+  }
+
+  private markdownPreviewCanSaveGallery(): boolean {
+    return !!this.markdownImageUrl && canSaveToPhotoGallery(this.markdownPreviewFileName(), '', this.markdownImageKind);
+  }
+
+  private async saveMarkdownMediaToGallery(viaSaveButton: boolean): Promise<void> {
+    if (this.markdownImageBusy || (!this.markdownImageUrl && !this.markdownImageSource)) return;
+    const owner = this.markdownImageOwner || client;
+    const fileName = this.markdownPreviewFileName();
+    if (!canSaveToPhotoGallery(fileName, '', this.markdownImageKind)) {
+      await this.saveMarkdownMediaToFile();
+      return;
+    }
+    this.markdownImageBusy = true;
+    this.markdownImageStatus = '正在保存到相册…';
+    try {
+      const bytes = await this.loadMediaBytesFor(
+        owner,
+        this.markdownImageThreadId,
+        this.markdownImageCwd,
+        this.markdownImageSource,
+        this.markdownImageUrl
+      );
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      const outcome = await saveBytesToPhotoGallery(context, bytes, fileName, '', this.markdownImageKind, viaSaveButton);
+      this.markdownImageStatus = outcome === 'saved' ? '已保存到相册' : '已取消保存';
+    } catch (error) {
+      this.markdownImageStatus = '保存失败：' + (error as Error).message;
+    } finally {
+      this.markdownImageBusy = false;
+    }
+  }
+
+  private async saveMarkdownMediaToFile(): Promise<void> {
+    if (this.markdownImageBusy || (!this.markdownImageUrl && !this.markdownImageSource)) return;
+    const owner = this.markdownImageOwner || client;
+    const fileName = this.markdownPreviewFileName();
+    this.markdownImageBusy = true;
+    this.markdownImageStatus = '正在下载…';
+    try {
+      const bytes = await this.loadMediaBytesFor(
+        owner,
+        this.markdownImageThreadId,
+        this.markdownImageCwd,
+        this.markdownImageSource,
+        this.markdownImageUrl
+      );
+      const outcome = await saveBytesToDocumentPicker(bytes, fileName);
+      this.markdownImageStatus = outcome === 'saved' ? '已保存到所选位置' : '已取消保存';
+    } catch (error) {
+      this.markdownImageStatus = '保存失败：' + (error as Error).message;
+    } finally {
+      this.markdownImageBusy = false;
+    }
+  }
+
+  private async shareMarkdownMedia(): Promise<void> {
+    if (this.markdownImageBusy || (!this.markdownImageUrl && !this.markdownImageSource)) return;
+    const owner = this.markdownImageOwner || client;
+    const scope = this.markdownImageScopeId || this.selectedLocalId || 'media';
+    const expectedUrl = this.markdownImageUrl;
+    const expectedSource = this.markdownImageSource;
+    const fileName = this.markdownPreviewFileName();
+    this.markdownImageBusy = true;
+    this.markdownImageStatus = '正在准备分享…';
+    try {
+      const bytes = await this.loadMediaBytesFor(
+        owner,
+        this.markdownImageThreadId,
+        this.markdownImageCwd,
+        expectedSource,
+        expectedUrl
+      );
+      if (this.panel !== 'markdown-image' || this.markdownImageSource !== expectedSource) {
+        throw new Error('分享目标已变化');
+      }
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      await shareBytesWithSystemSheet(context, bytes, fileName, scope, '', this.markdownImageKind);
+      this.markdownImageStatus = '已打开系统分享';
+    } catch (error) {
+      this.markdownImageStatus = '分享失败：' + (error as Error).message;
+    } finally {
+      this.markdownImageBusy = false;
+    }
+  }
+
+  private async saveInlineMediaToGalleryFor(
+    owner: T3Client,
+    threadId: string,
+    cwd: string,
+    source: string,
+    alt: string,
+    kind: string,
+    resolvedUrl: string,
+    displayPath: string
+  ): Promise<void> {
+    if (this.busy) return;
+    const att = source.startsWith('t3-attachment://') ? this.resolveAttachmentById(source.slice('t3-attachment://'.length)) : undefined;
+    const mime = att ? att.mimeType : '';
+    const fileName = att ? att.name : mediaFileName(displayPath || source, alt, resolvedUrl, mime, kind);
+    if (!canSaveToPhotoGallery(fileName, mime, kind)) {
+      await this.saveInlineMediaToFileFor(owner, threadId, cwd, source, alt, kind, resolvedUrl, displayPath);
+      return;
+    }
+    this.busy = true;
+    this.status = '正在保存到相册…';
+    try {
+      const bytes = await this.loadMediaBytesFor(owner, threadId, cwd, source, resolvedUrl);
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      const outcome = await saveBytesToPhotoGallery(context, bytes, fileName, mime, kind, false);
+      this.status = outcome === 'saved' ? '已保存到相册' : '已取消保存';
+    } catch (error) {
+      this.status = '保存失败：' + (error as Error).message;
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  private async saveInlineMediaToFileFor(
+    owner: T3Client,
+    threadId: string,
+    cwd: string,
+    source: string,
+    alt: string,
+    kind: string,
+    resolvedUrl: string,
+    displayPath: string
+  ): Promise<void> {
+    if (this.busy) return;
+    const att = source.startsWith('t3-attachment://') ? this.resolveAttachmentById(source.slice('t3-attachment://'.length)) : undefined;
+    const mime = att ? att.mimeType : '';
+    const fileName = att ? att.name : mediaFileName(displayPath || source, alt, resolvedUrl, mime, kind);
+    this.busy = true;
+    this.status = '正在下载…';
+    try {
+      const bytes = await this.loadMediaBytesFor(owner, threadId, cwd, source, resolvedUrl);
+      const outcome = await saveBytesToDocumentPicker(bytes, fileName);
+      this.status = outcome === 'saved' ? '已保存到所选位置' : '已取消保存';
+    } catch (error) {
+      this.status = '保存失败：' + (error as Error).message;
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  private async shareInlineMediaFor(
+    owner: T3Client,
+    scopeId: string,
+    threadId: string,
+    cwd: string,
+    source: string,
+    alt: string,
+    kind: string,
+    resolvedUrl: string,
+    displayPath: string
+  ): Promise<void> {
+    if (this.busy) return;
+    const att = source.startsWith('t3-attachment://') ? this.resolveAttachmentById(source.slice('t3-attachment://'.length)) : undefined;
+    const mime = att ? att.mimeType : '';
+    const fileName = att ? att.name : mediaFileName(displayPath || source, alt, resolvedUrl, mime, kind);
+    this.busy = true;
+    this.status = '正在准备分享…';
+    try {
+      const bytes = await this.loadMediaBytesFor(owner, threadId, cwd, source, resolvedUrl);
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      await shareBytesWithSystemSheet(context, bytes, fileName, scopeId || this.selectedLocalId || 'media', mime, kind);
+      this.status = '已打开系统分享';
+    } catch (error) {
+      this.status = '分享失败：' + (error as Error).message;
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  private async openMarkdownImageFor(
+    owner: T3Client,
+    threadId: string,
+    cwd: string,
+    value: string,
+    scopeId: string = '',
+    alt: string = ''
+  ): Promise<void> {
+    if (value.startsWith('t3-attachment://')) {
+      const id = value.slice('t3-attachment://'.length);
+      const att = this.resolveAttachmentById(id);
+      if (att) {
+        await this.openAttachment(att.name);
+        return;
+      }
+    }
     const classified = classifyMarkdownMediaSource(value, cwd);
     if (classified.access === 'direct') {
+      this.markdownImageOwner = owner;
+      this.markdownImageScopeId = scopeId || this.selectedLocalId;
+      this.markdownImageThreadId = threadId;
+      this.markdownImageCwd = cwd;
+      this.markdownImageSource = value;
+      this.markdownImageAlt = alt;
       this.markdownImageUrl = classified.uri;
       this.markdownImageKind = classified.kind;
-      this.markdownImagePath = '';
+      this.markdownImagePath = /^https?:\/\//i.test(classified.uri) ? classified.uri : '';
+      this.markdownImageStatus = '';
+      this.markdownImageBusy = false;
       this.openPanel('markdown-image');
       return;
     }
@@ -3364,12 +3743,24 @@ struct Index {
       return;
     }
     try {
-      const resolved = await client.markdownMediaUrl(value, cwd, true);
+      const resolved = await owner.markdownMediaUrlForThread(threadId, value, cwd, true);
+      this.markdownImageOwner = owner;
+      this.markdownImageScopeId = scopeId || this.selectedLocalId;
+      this.markdownImageThreadId = threadId;
+      this.markdownImageCwd = cwd;
+      this.markdownImageSource = value;
+      this.markdownImageAlt = alt;
       this.markdownImageUrl = resolved.url;
       this.markdownImageKind = resolved.kind;
       this.markdownImagePath = resolved.displayPath;
+      this.markdownImageStatus = '';
+      this.markdownImageBusy = false;
       this.openPanel('markdown-image');
     } catch (error) { this.status = (error as Error).message; }
+  }
+  private async openMarkdownImage(value: string): Promise<void> {
+    const tid = !this.draftMode && client.thread ? client.thread.threadId : '';
+    await this.openMarkdownImageFor(client, tid, this.currentWorkspace(), value, this.selectedLocalId);
   }
   private addExternalContext(value: Object, label: string): void {
     try {
@@ -3435,8 +3826,9 @@ struct Index {
     return text(result.tabId);
   }
   private previewZoomRepairRequired(): boolean {
+    const env = this.previewConnection ? optionalRecord(this.previewConnection.config.environment) : undefined;
     return this.previewCurrent() && !!this.previewConnection?.ready &&
-      previewNeedsZoomRepair(record(this.previewConnection.config.environment).serverVersion);
+      previewNeedsZoomRepair(env ? env.serverVersion : undefined);
   }
   private async adjustPreviewZoom(tabId: string, zoomFactor: number, viewport?: PreviewViewport,
     stillControlled?: () => boolean): Promise<PreviewZoomResult> {
@@ -3791,6 +4183,42 @@ struct Index {
   }
 
   @Builder
+  attachmentActionsMenu() {
+    Menu() {
+      if (this.selectedAttachment && canSaveToPhotoGallery(
+        this.selectedAttachment.name,
+        this.selectedAttachment.mimeType,
+        this.attachmentMediaKind(this.selectedAttachment)
+      )) {
+        MenuItem({ content: '保存到相册' }).onClick(() => { void this.saveAttachmentToGallery(false); })
+      }
+      MenuItem({ content: '保存到文件' }).onClick(() => { void this.saveAttachment(); })
+      MenuItem({ content: '分享' }).onClick(() => { void this.shareAttachment(); })
+      if (this.attachmentPreviewUrl && /^https?:\/\//i.test(this.attachmentPreviewUrl)) {
+        MenuItem({ content: '复制预览链接' }).onClick(() => { void this.copy(this.attachmentPreviewUrl); })
+      }
+    }
+  }
+
+  @Builder
+  markdownMediaActionsMenu() {
+    Menu() {
+      if (this.markdownPreviewCanSaveGallery()) {
+        MenuItem({ content: '保存到相册' }).onClick(() => { void this.saveMarkdownMediaToGallery(false); })
+      }
+      MenuItem({ content: '保存到文件' }).onClick(() => { void this.saveMarkdownMediaToFile(); })
+      MenuItem({ content: '分享' }).onClick(() => { void this.shareMarkdownMedia(); })
+      if (mediaCopyValue(this.markdownImagePath, this.markdownImageUrl)) {
+        MenuItem({ content: mediaCopyLabel(this.markdownImagePath, this.markdownImageUrl) })
+          .onClick(() => {
+            const target = mediaCopyValue(this.markdownImagePath, this.markdownImageUrl);
+            if (target) void this.copy(target);
+          })
+      }
+    }
+  }
+
+  @Builder
   panelContent() {
     if (this.panel === 'attachment' && this.selectedAttachment) {
       Column() {
@@ -3800,12 +4228,23 @@ struct Index {
           showBack: true,
           closeStyle: true,
           onBack: () => { this.panelOpen = false; }
-        })
-        Column({ space: Space.sm }) {
-          if (this.selectedAttachment.type === 'image' && this.attachmentPreviewUrl) {
-            Image(this.attachmentPreviewUrl).width('100%').constraintSize({ maxHeight: 420 })
-              .objectFit(ImageFit.Contain).backgroundColor($r('app.color.card')).borderRadius(Radius.card)
-          } else if (this.attachmentPreviewUrl && (this.selectedAttachment.mimeType === 'text/html' || isHtml(this.selectedAttachment.name))) {
+        }) {
+          Button({ type: ButtonType.Circle, stateEffect: true }) {
+            Image($r('app.media.ui_more'))
+              .width(Sizes.icon)
+              .height(Sizes.icon)
+              .objectFit(ImageFit.Contain)
+              .draggable(false)
+              .accessibilityLevel('no')
+          }
+          .width(Sizes.iconHit)
+          .height(Sizes.iconHit)
+          .backgroundColor(Color.Transparent)
+          .accessibilityText('附件操作')
+          .bindMenu(this.attachmentActionsMenu())
+        }
+        if (this.attachmentPreviewUrl && (this.selectedAttachment.mimeType === 'text/html' || isHtml(this.selectedAttachment.name))) {
+          Column({ space: Space.sm }) {
             Column() {
               HtmlRenderWebView({
                 uri: this.attachmentPreviewUrl,
@@ -3820,72 +4259,324 @@ struct Index {
             .backgroundColor($r('app.color.card'))
             .borderRadius(Radius.card)
             .clip(true)
-          }
-          if (this.selectedAttachment.mimeType.startsWith('video/') && this.attachmentPreviewUrl) {
-            Video({ src: this.attachmentPreviewUrl }).width('100%').height(320).controls(true)
-              .backgroundColor(Color.Black).borderRadius(Radius.card)
-          }
-          if (this.attachmentPreviewUrl) {
-            AppButton({
-              label: '复制预览链接',
-              kind: 'secondary',
-              fill: true,
-              compact: true,
-              onTap: () => { void this.copy(this.attachmentPreviewUrl); }
-            })
-          }
-          AppButton({
-            label: this.busy ? '保存中…' : '保存到文件',
-            kind: 'primary',
-            fill: true,
-            disabled: this.busy,
-            onTap: () => { void this.saveAttachment(); }
-          })
-          AppButton({
-            label: '分享文件',
-            kind: 'secondary',
-            fill: true,
-            disabled: this.busy,
-            onTap: () => { void this.shareAttachment(); }
-          })
-          if (this.attachmentStatus) {
-            Text(this.attachmentStatus).fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
-          }
-        }.layoutWeight(1).width('100%').padding({ left: Space.page, right: Space.page, top: Space.xs, bottom: Space.md }).alignItems(HorizontalAlign.Start)
+            Row({ space: Space.xs }) {
+              Column() {
+                AppButton({
+                  label: this.busy ? '保存中…' : '保存到文件',
+                  kind: 'primary',
+                  fill: true,
+                  disabled: this.busy,
+                  onTap: () => { void this.saveAttachment(); }
+                })
+              }.layoutWeight(1)
+              Column() {
+                AppButton({
+                  label: '分享',
+                  kind: 'secondary',
+                  fill: true,
+                  disabled: this.busy,
+                  onTap: () => { void this.shareAttachment(); }
+                })
+              }.layoutWeight(1)
+            }.width('100%')
+            if (this.attachmentStatus) {
+              Text(this.attachmentStatus).fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
+            }
+          }.layoutWeight(1).width('100%').padding({ left: Space.page, right: Space.page, top: Space.xs, bottom: Space.md }).alignItems(HorizontalAlign.Start)
+        } else {
+          Scroll() {
+            Column({ space: Space.sm }) {
+              if (this.selectedAttachment.type === 'image' && this.attachmentPreviewUrl) {
+                Image(this.attachmentPreviewUrl).width('100%').constraintSize({ maxHeight: 420 })
+                  .objectFit(ImageFit.Contain).backgroundColor($r('app.color.card')).borderRadius(Radius.card)
+                  .onError(() => {
+                    const failedUrl = this.attachmentPreviewUrl;
+                    const att = this.selectedAttachment;
+                    if (att && /^https?:\/\//i.test(failedUrl)) {
+                      void this.downloadMediaToLocalCache(client, failedUrl, 'image', att.name).then((localUri: string) => {
+                        if (this.attachmentPreviewUrl === failedUrl && localUri) this.attachmentPreviewUrl = localUri;
+                      }).catch((err: Error) => { this.attachmentStatus = err.message || '图片加载失败'; });
+                    }
+                  })
+              }
+              if ((this.selectedAttachment.mimeType.startsWith('video/') || this.attachmentMediaKind(this.selectedAttachment) === 'video') && this.attachmentPreviewUrl) {
+                Video({ src: this.attachmentPreviewUrl }).width('100%').height(320).objectFit(ImageFit.Contain).controls(true)
+                  .backgroundColor(Color.Black).borderRadius(Radius.card)
+                  .onError(() => {
+                    const failedUrl = this.attachmentPreviewUrl;
+                    const att = this.selectedAttachment;
+                    if (att && /^https?:\/\//i.test(failedUrl)) {
+                      void this.downloadMediaToLocalCache(client, failedUrl, 'video', att.name).then((localUri: string) => {
+                        if (this.attachmentPreviewUrl === failedUrl && localUri) this.attachmentPreviewUrl = localUri;
+                      }).catch((err: Error) => { this.attachmentStatus = err.message || '视频加载失败'; });
+                    }
+                  })
+              }
+              if (canSaveToPhotoGallery(
+                this.selectedAttachment.name,
+                this.selectedAttachment.mimeType,
+                this.attachmentMediaKind(this.selectedAttachment)
+              )) {
+                Column({ space: Space.xs }) {
+                  Row({ space: Space.xs }) {
+                    Column() {
+                      SaveButton({
+                        icon: SaveIconStyle.FULL_FILLED,
+                        text: SaveDescription.SAVE_TO_GALLERY,
+                        buttonType: ButtonType.Normal
+                      })
+                        .width('100%')
+                        .height(Sizes.buttonHeight)
+                        .borderRadius(Radius.button)
+                        .backgroundColor($r('app.color.prominent'))
+                        .fontColor($r('app.color.on_prominent'))
+                        .iconColor($r('app.color.on_prominent'))
+                        .fontSize(FontSize.body)
+                        .iconSize(16)
+                        .onClick((event: ClickEvent, result: SaveButtonOnClickResult) => {
+                          if (this.busy) return;
+                          if (result === SaveButtonOnClickResult.SUCCESS) {
+                            void this.saveAttachmentToGallery(true);
+                          } else if (result === SaveButtonOnClickResult.CANCELED_BY_USER) {
+                            this.attachmentStatus = '已取消保存';
+                          } else {
+                            void this.saveAttachmentToGallery(false);
+                          }
+                        })
+                    }.layoutWeight(1)
+                    Column() {
+                      AppButton({
+                        label: '分享',
+                        kind: 'secondary',
+                        fill: true,
+                        disabled: this.busy,
+                        onTap: () => { void this.shareAttachment(); }
+                      })
+                    }.layoutWeight(1)
+                  }.width('100%')
+                  Row({ space: Space.xs }) {
+                    Column() {
+                      AppButton({
+                        label: this.busy ? '保存中…' : '保存到文件',
+                        kind: 'secondary',
+                        compact: true,
+                        fill: true,
+                        disabled: this.busy,
+                        onTap: () => { void this.saveAttachment(); }
+                      })
+                    }.layoutWeight(1)
+                    if (this.attachmentPreviewUrl && /^https?:\/\//i.test(this.attachmentPreviewUrl)) {
+                      Column() {
+                        AppButton({
+                          label: '复制链接',
+                          kind: 'secondary',
+                          compact: true,
+                          fill: true,
+                          onTap: () => { void this.copy(this.attachmentPreviewUrl); }
+                        })
+                      }.layoutWeight(1)
+                    }
+                  }.width('100%')
+                }
+                .width('100%')
+                .padding(Space.sm)
+                .backgroundColor($r('app.color.card'))
+                .borderRadius(Radius.card)
+              } else {
+                Column({ space: Space.xs }) {
+                  if (this.attachmentPreviewUrl && /^https?:\/\//i.test(this.attachmentPreviewUrl)) {
+                    AppButton({
+                      label: '复制预览链接',
+                      kind: 'secondary',
+                      fill: true,
+                      compact: true,
+                      onTap: () => { void this.copy(this.attachmentPreviewUrl); }
+                    })
+                  }
+                  AppButton({
+                    label: this.busy ? '保存中…' : '保存到文件',
+                    kind: 'primary',
+                    fill: true,
+                    disabled: this.busy,
+                    onTap: () => { void this.saveAttachment(); }
+                  })
+                  AppButton({
+                    label: '分享文件',
+                    kind: 'secondary',
+                    fill: true,
+                    disabled: this.busy,
+                    onTap: () => { void this.shareAttachment(); }
+                  })
+                }
+                .width('100%')
+                .padding(Space.sm)
+                .backgroundColor($r('app.color.card'))
+                .borderRadius(Radius.card)
+              }
+              if (this.attachmentStatus) {
+                Text(this.attachmentStatus).fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
+              }
+            }.width('100%').padding({ left: Space.page, right: Space.page, top: Space.xs, bottom: Space.md }).alignItems(HorizontalAlign.Start)
+          }.layoutWeight(1).width('100%').align(Alignment.TopStart)
+        }
       }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
     } else if (this.panel === 'markdown-image') {
       Column() {
         TopBar({
-          title: '图片预览',
+          title: this.markdownPreviewFileName(),
+          subtitle: this.markdownImageKind === 'video' ? '视频预览' : '图片预览',
           showBack: true,
           closeStyle: true,
           onBack: () => { this.panelOpen = false; }
-        })
-        Column({ space: Space.sm }) {
+        }) {
+          if (this.markdownImageUrl || this.markdownImageSource) {
+            Button({ type: ButtonType.Circle, stateEffect: true }) {
+              Image($r('app.media.ui_more'))
+                .width(Sizes.icon)
+                .height(Sizes.icon)
+                .objectFit(ImageFit.Contain)
+                .draggable(false)
+                .accessibilityLevel('no')
+            }
+            .width(Sizes.iconHit)
+            .height(Sizes.iconHit)
+            .backgroundColor(Color.Transparent)
+            .accessibilityText('媒体操作')
+            .bindMenu(this.markdownMediaActionsMenu())
+          }
+        }
+        Scroll() {
           Column({ space: Space.sm }) {
-            if (this.markdownImageUrl && this.markdownImageKind === 'video') {
-              Video({ src: this.markdownImageUrl }).width('100%').height(320).controls(true)
-                .backgroundColor(Color.Black).borderRadius(Radius.tool)
-            } else if (this.markdownImageUrl) {
-              Image(this.markdownImageUrl).width('100%').constraintSize({ maxHeight: 460 })
-                .objectFit(ImageFit.Contain).borderRadius(Radius.tool)
-            } else {
-              Text('没有可显示的图片').fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%')
+            Column({ space: Space.sm }) {
+              if (this.markdownImageUrl && this.markdownImageKind === 'video') {
+                Video({ src: this.markdownImageUrl }).width('100%').height(320).objectFit(ImageFit.Contain).controls(true)
+                  .backgroundColor(Color.Black).borderRadius(Radius.tool)
+                  .onError(() => {
+                    const failedUrl = this.markdownImageUrl;
+                    const owner = this.markdownImageOwner || client;
+                    if (/^https?:\/\//i.test(failedUrl)) {
+                      void this.downloadMediaToLocalCache(owner, failedUrl, 'video', this.markdownImagePath).then((localUri: string) => {
+                        if (this.markdownImageUrl === failedUrl && localUri) this.markdownImageUrl = localUri;
+                      }).catch((err: Error) => { this.markdownImageStatus = err.message || '视频加载失败'; });
+                    }
+                  })
+              } else if (this.markdownImageUrl) {
+                Image(this.markdownImageUrl).width('100%').constraintSize({ maxHeight: 460 })
+                  .objectFit(ImageFit.Contain).borderRadius(Radius.tool)
+                  .onError(() => {
+                    const failedUrl = this.markdownImageUrl;
+                    const owner = this.markdownImageOwner || client;
+                    if (/^https?:\/\//i.test(failedUrl)) {
+                      void this.downloadMediaToLocalCache(owner, failedUrl, 'image', this.markdownImagePath).then((localUri: string) => {
+                        if (this.markdownImageUrl === failedUrl && localUri) this.markdownImageUrl = localUri;
+                      }).catch((err: Error) => { this.markdownImageStatus = err.message || '图片加载失败'; });
+                    }
+                  })
+              } else {
+                Text(this.markdownImageKind === 'video' ? '没有可播放的视频' : '没有可显示的图片').fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%')
+              }
+              if (this.markdownImagePath) {
+                Text(this.markdownImagePath)
+                  .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted'))
+                  .width('100%').maxLines(2).wordBreak(WordBreak.BREAK_ALL)
+              }
+            }.padding(Space.md).width('100%').backgroundColor($r('app.color.card')).borderRadius(Radius.card).alignItems(HorizontalAlign.Start)
+
+            if (this.markdownImageUrl || this.markdownImageSource) {
+              Column({ space: Space.xs }) {
+                Row({ space: Space.xs }) {
+                  if (this.markdownPreviewCanSaveGallery()) {
+                    Column() {
+                      SaveButton({
+                        icon: SaveIconStyle.FULL_FILLED,
+                        text: SaveDescription.SAVE_TO_GALLERY,
+                        buttonType: ButtonType.Normal
+                      })
+                        .width('100%')
+                        .height(Sizes.buttonHeight)
+                        .borderRadius(Radius.button)
+                        .backgroundColor($r('app.color.prominent'))
+                        .fontColor($r('app.color.on_prominent'))
+                        .iconColor($r('app.color.on_prominent'))
+                        .fontSize(FontSize.body)
+                        .iconSize(16)
+                        .onClick((event: ClickEvent, result: SaveButtonOnClickResult) => {
+                          if (this.markdownImageBusy) return;
+                          if (result === SaveButtonOnClickResult.SUCCESS) {
+                            void this.saveMarkdownMediaToGallery(true);
+                          } else if (result === SaveButtonOnClickResult.CANCELED_BY_USER) {
+                            this.markdownImageStatus = '已取消保存';
+                          } else {
+                            void this.saveMarkdownMediaToGallery(false);
+                          }
+                        })
+                    }.layoutWeight(1)
+                  } else {
+                    Column() {
+                      AppButton({
+                        label: this.markdownImageBusy ? '保存中…' : '保存到文件',
+                        kind: 'primary',
+                        fill: true,
+                        disabled: this.markdownImageBusy,
+                        onTap: () => { void this.saveMarkdownMediaToFile(); }
+                      })
+                    }.layoutWeight(1)
+                  }
+                  Column() {
+                    AppButton({
+                      label: '分享',
+                      kind: 'secondary',
+                      fill: true,
+                      disabled: this.markdownImageBusy,
+                      onTap: () => { void this.shareMarkdownMedia(); }
+                    })
+                  }.layoutWeight(1)
+                }.width('100%')
+
+                Row({ space: Space.xs }) {
+                  if (this.markdownPreviewCanSaveGallery()) {
+                    Column() {
+                      AppButton({
+                        label: this.markdownImageBusy ? '处理中…' : '保存到文件',
+                        kind: 'secondary',
+                        compact: true,
+                        fill: true,
+                        disabled: this.markdownImageBusy,
+                        onTap: () => { void this.saveMarkdownMediaToFile(); }
+                      })
+                    }.layoutWeight(1)
+                  }
+                  if (mediaCopyValue(this.markdownImagePath, this.markdownImageUrl)) {
+                    Column() {
+                      AppButton({
+                        label: mediaCopyLabel(this.markdownImagePath, this.markdownImageUrl),
+                        kind: 'secondary',
+                        compact: true,
+                        fill: true,
+                        onTap: () => {
+                          const target = mediaCopyValue(this.markdownImagePath, this.markdownImageUrl);
+                          if (target) void this.copy(target);
+                        }
+                      })
+                    }.layoutWeight(1)
+                  }
+                }.width('100%')
+              }
+              .width('100%')
+              .padding(Space.sm)
+              .backgroundColor($r('app.color.card'))
+              .borderRadius(Radius.card)
             }
-            if (this.markdownImagePath) {
-              Text(this.markdownImagePath)
-                .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted'))
-                .width('100%').maxLines(2).wordBreak(WordBreak.BREAK_ALL)
-              AppButton({
-                label: '复制路径',
-                kind: 'secondary',
-                compact: true,
-                fill: true,
-                onTap: () => { void this.copy(this.markdownImagePath); }
-              })
+
+            if (this.markdownImageStatus) {
+              Text(this.markdownImageStatus)
+                .fontSize(FontSize.caption)
+                .lineHeight(LineHeight.caption)
+                .fontColor($r('app.color.muted'))
+                .width('100%')
             }
-          }.padding(Space.md).width('100%').backgroundColor($r('app.color.card')).borderRadius(Radius.card).alignItems(HorizontalAlign.Start)
-        }.layoutWeight(1).width('100%').padding({ left: Space.page, right: Space.page, top: Space.xs, bottom: Space.md }).alignItems(HorizontalAlign.Start)
+          }.width('100%').padding({ left: Space.page, right: Space.page, top: Space.xs, bottom: Space.md }).alignItems(HorizontalAlign.Start)
+        }.layoutWeight(1).width('100%').align(Alignment.TopStart)
       }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
     } else if (this.panel === 'paste-context') {
       Column() {
@@ -4092,7 +4783,7 @@ struct Index {
               })
             }.width('100%').padding({ top: Space.md })
           }.width('100%').padding({ left: Space.sm, right: Space.sm, bottom: Space.lg }).alignItems(HorizontalAlign.Start)
-        }.width('100%').layoutWeight(1).align(Alignment.TopStart)
+        }.width('100%').layoutWeight(1).align(Alignment.TopStart).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
       }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
     } else if (this.panel === 'cloud') {
       CloudAccountPanel({ configured: this.cloudConfigured, signInReady: this.cloudSignInReady,
@@ -4121,7 +4812,32 @@ struct Index {
           void this.openSideThread(current.kind, current.threadId, current.environmentId, current.environmentLabel, 'main');
         },
         onCopy: (value: string) => { void this.copy(value); },
-        onOpenLink: (url: string) => { void this.openLink(url); }
+        onOpenLink: (url: string) => { void this.openLink(url); },
+        onOpenImage: (source: string) => {
+          const target = this.sideThreadTarget;
+          const owner = target ? (this.registry().clients.get(target.localId) || client) : client;
+          void this.openMarkdownImageFor(owner, target ? target.threadId : '', owner.threadCwd(), source, target ? target.localId : this.selectedLocalId);
+        },
+        onShareMedia: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
+          const target = this.sideThreadTarget;
+          const owner = target ? (this.registry().clients.get(target.localId) || client) : client;
+          void this.shareInlineMediaFor(owner, target ? target.localId : this.selectedLocalId, target ? target.threadId : '', owner.threadCwd(), source, alt, kind, resolvedUrl, displayPath);
+        },
+        onSaveMediaToGallery: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
+          const target = this.sideThreadTarget;
+          const owner = target ? (this.registry().clients.get(target.localId) || client) : client;
+          void this.saveInlineMediaToGalleryFor(owner, target ? target.threadId : '', owner.threadCwd(), source, alt, kind, resolvedUrl, displayPath);
+        },
+        onSaveMediaToFile: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
+          const target = this.sideThreadTarget;
+          const owner = target ? (this.registry().clients.get(target.localId) || client) : client;
+          void this.saveInlineMediaToFileFor(owner, target ? target.threadId : '', owner.threadCwd(), source, alt, kind, resolvedUrl, displayPath);
+        },
+        downloadLocalMedia: (url: string, kind: string, displayPath: string): Promise<string> => {
+          const target = this.sideThreadTarget;
+          const owner = target ? (this.registry().clients.get(target.localId) || client) : client;
+          return this.downloadMediaToLocalCache(owner, url, kind, displayPath);
+        }
       })
     } else if (this.panel === 'linked-thread' && this.linkedThreadTarget) {
       LinkedThreadPanel({
@@ -4151,7 +4867,22 @@ struct Index {
           this.linkedConnectError = false;
         },
         onCopy: (value: string) => { void this.copy(value); },
-        onOpenLink: (url: string) => { void this.openLink(url); }
+        onOpenLink: (url: string) => { void this.openLink(url); },
+        onOpenImage: (source: string) => { void this.openMarkdownImage(source); },
+        onShareMedia: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
+          const tid = !this.draftMode && client.thread ? client.thread.threadId : '';
+          void this.shareInlineMediaFor(client, this.selectedLocalId, tid, this.currentWorkspace(), source, alt, kind, resolvedUrl, displayPath);
+        },
+        onSaveMediaToGallery: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
+          const tid = !this.draftMode && client.thread ? client.thread.threadId : '';
+          void this.saveInlineMediaToGalleryFor(client, tid, this.currentWorkspace(), source, alt, kind, resolvedUrl, displayPath);
+        },
+        onSaveMediaToFile: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
+          const tid = !this.draftMode && client.thread ? client.thread.threadId : '';
+          void this.saveInlineMediaToFileFor(client, tid, this.currentWorkspace(), source, alt, kind, resolvedUrl, displayPath);
+        },
+        downloadLocalMedia: (url: string, kind: string, displayPath: string): Promise<string> =>
+          this.downloadMediaToLocalCache(client, url, kind, displayPath)
       })
     } else if (this.panel === 'peer-link' && this.activeLink && this.linkOwner) {
       PeerLinkForm({ request: this.activeLink, machines: this.linkMachines, connection: this.linkOwner,
@@ -4265,7 +4996,7 @@ struct Index {
               }
             }
           }.width('100%').padding({ left: Space.sm, right: Space.sm, top: Space.xs, bottom: Space.lg }).alignItems(HorizontalAlign.Start)
-        }.width('100%').layoutWeight(1).align(Alignment.TopStart)
+        }.width('100%').layoutWeight(1).align(Alignment.TopStart).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
       }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
     } else {
       Column() {
@@ -4396,7 +5127,7 @@ struct Index {
               })
             }
           }.padding({ left: Space.page, right: Space.page, top: Space.xs, bottom: Space.lg }).width('100%').alignItems(HorizontalAlign.Start)
-        }.width('100%').layoutWeight(1).align(Alignment.TopStart)
+        }.width('100%').layoutWeight(1).align(Alignment.TopStart).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
       }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
     }
   }
@@ -4510,16 +5241,63 @@ struct Index {
   }
 
   @Builder
+  messageAttachmentsView(message: ChatMessage, userStyle: boolean) {
+    if (message.attachments && message.attachments.length > 0) {
+      ForEach(message.attachments, (att: ChatAttachment) => {
+        if (this.attachmentMediaKind(att) !== '') {
+          Column() {
+            MarkdownMediaBlock({
+              source: 't3-attachment://' + att.id,
+              alt: att.name,
+              initialKind: this.attachmentMediaKind(att),
+              scopeKey: this.markdownMediaScopeKey(),
+              mediaReady: this.ready,
+              resolveMedia: (source: string, refresh: boolean): Promise<ResolvedMarkdownMedia> =>
+                this.resolveMarkdownMedia(source, refresh),
+              downloadLocalMedia: (url: string, kind: string, displayPath: string): Promise<string> =>
+                this.downloadMediaToLocalCache(client, url, kind, displayPath),
+              onOpenImage: () => { void this.openAttachment(att.name); },
+              onCopy: (value: string) => { void this.copy(value); },
+              onShareMedia: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
+                const tid = !this.draftMode && client.thread ? client.thread.threadId : '';
+                void this.shareInlineMediaFor(client, this.selectedLocalId, tid, this.currentWorkspace(), source, alt, kind, resolvedUrl, displayPath);
+              },
+              onSaveMediaToGallery: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
+                const tid = !this.draftMode && client.thread ? client.thread.threadId : '';
+                void this.saveInlineMediaToGalleryFor(client, tid, this.currentWorkspace(), source, alt, kind, resolvedUrl, displayPath);
+              },
+              onSaveMediaToFile: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
+                const tid = !this.draftMode && client.thread ? client.thread.threadId : '';
+                void this.saveInlineMediaToFileFor(client, tid, this.currentWorkspace(), source, alt, kind, resolvedUrl, displayPath);
+              }
+            })
+          }.width(userStyle ? '84%' : '100%')
+        } else {
+          Button('附件 · ' + att.name, { type: ButtonType.Normal })
+            .constraintSize({ minHeight: 36, minWidth: userStyle ? 0 : '100%' })
+            .fontSize(FontSize.callout).fontColor($r('app.color.ink'))
+            .backgroundColor($r('app.color.card')).border({ width: Sizes.hairline, color: $r('app.color.border') })
+            .borderRadius(Radius.tool).padding({ left: Space.sm, right: Space.sm })
+            .onClick(() => { void this.openAttachment(att.name); })
+        }
+      }, (att: ChatAttachment) => att.id + ':' + att.name)
+    } else if (message.attachmentNames && message.attachmentNames.length > 0) {
+      ForEach(message.attachmentNames, (name: string) => {
+        Button('附件 · ' + name, { type: ButtonType.Normal })
+          .constraintSize({ minHeight: 36, minWidth: userStyle ? 0 : '100%' })
+          .fontSize(FontSize.callout).fontColor($r('app.color.ink'))
+          .backgroundColor($r('app.color.card')).border({ width: Sizes.hairline, color: $r('app.color.border') })
+          .borderRadius(Radius.tool).padding({ left: Space.sm, right: Space.sm })
+          .onClick(() => { void this.openAttachment(name); })
+      })
+    }
+  }
+
+  @Builder
   userBubble(message: ChatMessage) {
     Row() {
       Column({ space: Space.xs }) {
-        ForEach(message.attachmentNames || [], (name: string) => {
-          Button('附件 · ' + name, { type: ButtonType.Normal })
-            .fontSize(FontSize.callout).fontColor($r('app.color.ink'))
-            .backgroundColor($r('app.color.card')).border({ width: Sizes.hairline, color: $r('app.color.border') })
-            .borderRadius(Radius.tool).constraintSize({ minHeight: 36 }).padding({ left: Space.sm, right: Space.sm })
-            .onClick(() => { void this.openAttachment(name); })
-        })
+        this.messageAttachmentsView(message, true)
         if (isPlainUserText(message.text)) {
           Column() {
             CollapsibleUserMessageBody({
@@ -4550,8 +5328,22 @@ struct Index {
                 onCopy: (value: string) => { void this.copy(value); },
                 onOpenLink: (url: string) => { void this.openLink(url); },
                 onOpenImage: (url: string) => { void this.openMarkdownImage(url); },
+                onShareMedia: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
+                  const tid = !this.draftMode && client.thread ? client.thread.threadId : '';
+                  void this.shareInlineMediaFor(client, this.selectedLocalId, tid, this.currentWorkspace(), source, alt, kind, resolvedUrl, displayPath);
+                },
+                onSaveMediaToGallery: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
+                  const tid = !this.draftMode && client.thread ? client.thread.threadId : '';
+                  void this.saveInlineMediaToGalleryFor(client, tid, this.currentWorkspace(), source, alt, kind, resolvedUrl, displayPath);
+                },
+                onSaveMediaToFile: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
+                  const tid = !this.draftMode && client.thread ? client.thread.threadId : '';
+                  void this.saveInlineMediaToFileFor(client, tid, this.currentWorkspace(), source, alt, kind, resolvedUrl, displayPath);
+                },
                 resolveMedia: (source: string, refresh: boolean): Promise<ResolvedMarkdownMedia> =>
-                  this.resolveMarkdownMedia(source, refresh) })
+                  this.resolveMarkdownMedia(source, refresh),
+                downloadLocalMedia: (url: string, kind: string, displayPath: string): Promise<string> =>
+                  this.downloadMediaToLocalCache(client, url, kind, displayPath) })
             }
           }.alignItems(HorizontalAlign.Start)
             .width('84%').clip(true)
@@ -4570,21 +5362,29 @@ struct Index {
       if (message.streaming) {
         Text('正在回复…').fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
       }
-      ForEach(message.attachmentNames || [], (name: string) => {
-        Button('附件 · ' + name, { type: ButtonType.Normal }).width('100%')
-          .fontSize(FontSize.callout).fontColor($r('app.color.ink'))
-          .backgroundColor($r('app.color.card')).border({ width: Sizes.hairline, color: $r('app.color.border') })
-          .borderRadius(Radius.tool).constraintSize({ minHeight: 36 }).padding({ left: Space.sm, right: Space.sm })
-          .onClick(() => { void this.openAttachment(name); })
-      })
+      this.messageAttachmentsView(message, false)
       MarkdownView({ markdown: message.text, selectable: true,
         mediaScopeKey: this.markdownMediaScopeKey(),
         mediaReady: this.ready,
         onCopy: (value: string) => { void this.copy(value); },
         onOpenLink: (url: string) => { void this.openLink(url); },
         onOpenImage: (url: string) => { void this.openMarkdownImage(url); },
+        onShareMedia: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
+          const tid = !this.draftMode && client.thread ? client.thread.threadId : '';
+          void this.shareInlineMediaFor(client, this.selectedLocalId, tid, this.currentWorkspace(), source, alt, kind, resolvedUrl, displayPath);
+        },
+        onSaveMediaToGallery: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
+          const tid = !this.draftMode && client.thread ? client.thread.threadId : '';
+          void this.saveInlineMediaToGalleryFor(client, tid, this.currentWorkspace(), source, alt, kind, resolvedUrl, displayPath);
+        },
+        onSaveMediaToFile: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
+          const tid = !this.draftMode && client.thread ? client.thread.threadId : '';
+          void this.saveInlineMediaToFileFor(client, tid, this.currentWorkspace(), source, alt, kind, resolvedUrl, displayPath);
+        },
         resolveMedia: (source: string, refresh: boolean): Promise<ResolvedMarkdownMedia> =>
-          this.resolveMarkdownMedia(source, refresh) })
+          this.resolveMarkdownMedia(source, refresh),
+        downloadLocalMedia: (url: string, kind: string, displayPath: string): Promise<string> =>
+          this.downloadMediaToLocalCache(client, url, kind, displayPath) })
     }.width('100%').alignItems(HorizontalAlign.Start)
       .accessibilityText('回复：' + message.text)
   }
@@ -4610,6 +5410,7 @@ struct Index {
       htmlRenderScopeKey: this.markdownMediaScopeKey(),
       headerLabel: group.runMeta ? group.runMeta.headerLabel : '',
       summaryLabel: group.summary.label,
+      summaryIcon: group.summary.summaryIcon,
       failureLabel: group.summary.failureLabel,
       checkpointText: group.checkpoint ? group.checkpoint.label : '',
       checkpointAdditions: group.checkpoint ? group.checkpoint.additionsText : '',
@@ -4969,6 +5770,7 @@ struct Index {
         .contentStartOffset(Space.xs)
         .contentEndOffset(this.floatingCapsule.visible ? 56 : Space.sm)
         .scrollBar(BarState.Off)
+        .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
         .onScrollIndex((start: number): void => {
           this.chatScrollIndex = start;
         })
@@ -5044,122 +5846,318 @@ struct Index {
           }.padding({ left: 12, right: 12, top: 10, bottom: 2 })
         }.scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).align(Alignment.Start).width('100%')
       }
-      TextArea({ placeholder: this.draftMode ? '描述要完成的任务…' : '继续追问…', text: this.prompt })
-        .width('100%')
-        .fontSize(FontSize.body).lineHeight(LineHeight.body)
-        .fontColor($r('app.color.ink')).placeholderColor($r('app.color.placeholder'))
-        .onChange((value: string, preview: PreviewText) => { this.composingText = !!preview?.value; this.prompt = value; this.scheduleDraftSave(); })
-        .onFocus(() => { this.composerFocused = true; this.keyboard.reset(); })
-        .onBlur(() => { this.composerFocused = false; this.composingText = false; this.keyboard.reset(); })
-        .onKeyPreIme((event: KeyEvent): boolean => this.keyboardEvent(event, true))
-        .constraintSize({ minHeight: 42 }).maxLines(5, { overflowMode: MaxLinesMode.SCROLL })
-        .padding({ left: 14, right: 14, top: (this.draftContext.length || this.attachments.length) ? 6 : 12, bottom: 4 })
-        .backgroundColor(Color.Transparent).accessibilityText('消息输入框')
-      Row({ space: 4 }) {
-        Button({ type: ButtonType.Circle, stateEffect: true }) {
-          Image($r('app.media.ui_plus'))
-            .width(20).height(20)
-            .opacity(this.busy || this.unknown ? Opacity.disabled : 0.9)
-            .accessibilityLevel('no')
-        }.width(38).height(38)
-          .backgroundColor(Color.Transparent)
-          .accessibilityText('添加附件与工具')
-          .bindMenu(this.composerAttachmentMenu(
-            this.uploadingAttachment,
-            this.canRetryAttachment,
-            this.attachments.length > 0,
-            this.draftMode,
-            this.sendMode,
-            this.queued.length,
-            this.threadRunning
-          ))
-        if (!this.draftMode && this.sendMode !== 'auto') {
-          Button({ type: ButtonType.Capsule, stateEffect: true }) {
-            Text(this.sendMode === 'queue' ? '排队' : '引导')
-              .fontSize(FontSize.caption).lineHeight(LineHeight.caption)
-              .fontWeight(Weight.medium)
-              .fontColor($r('app.color.primary_text'))
-          }.height(28).padding({ left: 10, right: 10 })
-            .backgroundColor($r('app.color.info_bg'))
-            .accessibilityText('消息发送方式，' + (this.sendMode === 'queue' ? '排队' : '引导'))
-            .bindMenu(this.composerSendModeMenu())
-        }
-        Row() {
-          Button({ type: ButtonType.Normal, stateEffect: true }) {
-            Row({ space: 5 }) {
-              if (this.hasCurrentModelLogo()) {
-                ProviderLogo({ driver: this.currentModelDriver(), model: this.currentModelSlug(), logoSize: 17 })
-              } else {
-                Image($r('app.media.ui_settings')).width(16).height(16).opacity(0.75).flexShrink(0).accessibilityLevel('no')
-              }
-              Text(this.currentModelDisplayLabel() || '模型')
-                .fontSize(FontSize.body).lineHeight(LineHeight.body)
-                .fontWeight(Weight.medium)
-                .fontColor($r('app.color.ink'))
-                .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-                .wordBreak(WordBreak.BREAK_ALL)
-                .constraintSize({ minWidth: 0 })
-                .flexShrink(1)
-              if (this.currentModelSummary()) {
-                Text(this.currentModelSummary())
-                  .fontSize(FontSize.callout).lineHeight(LineHeight.callout)
-                  .fontColor($r('app.color.muted'))
-                  .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-                  .flexShrink(0)
-              }
-              Image($r('app.media.ui_chevron_down')).width(12).height(12).opacity(0.7).flexShrink(0).accessibilityLevel('no')
-            }.alignItems(VerticalAlign.Center)
-          }.height(36).padding({ left: 8, right: 6 })
+      Stack({ alignContent: Alignment.BottomStart }) {
+        Row({ space: 4 }) {
+          Button({ type: ButtonType.Circle, stateEffect: true }) {
+            Image($r('app.media.ui_plus'))
+              .width(20).height(20)
+              .opacity(this.busy || this.unknown ? Opacity.disabled : 0.9)
+              .accessibilityLevel('no')
+          }.width(38).height(38).flexShrink(0)
             .backgroundColor(Color.Transparent)
-            .borderRadius(Radius.button)
-            .constraintSize({ minWidth: 0 })
-            .enabled(!this.busy && !this.unknown)
-            .opacity(!this.busy && !this.unknown ? 1 : Opacity.disabled)
-            .accessibilityText('模型与选项，' + (this.currentModelDisplayLabel() || '模型') +
-              (this.currentModelSummary() ? ' ' + this.currentModelSummary() : ''))
-            .onClick(() => this.openTaskSettings())
-        }.layoutWeight(1).constraintSize({ minWidth: 0 }).justifyContent(FlexAlign.End).alignItems(VerticalAlign.Center)
-        if (!this.draftMode && this.threadRunning && !this.busy && !this.unknown &&
-          this.prompt.trim().length === 0 && this.attachments.length === 0) {
-          Button({ type: ButtonType.Circle, stateEffect: true }) {
-            Rect().width(11).height(11).radius(2.5).fill($r('app.color.danger'))
-          }.width(36).height(36)
-            .backgroundColor($r('app.color.danger_bg'))
-            .border({ width: 1, color: $r('app.color.danger_border') })
-            .enabled(this.ready)
-            .opacity(this.ready ? 1 : Opacity.disabled)
-            .accessibilityText('停止任务')
-            .onClick(() => this.stop())
-        } else if (this.draftMode) {
-          Button({ type: ButtonType.Circle, stateEffect: true }) {
-            if (this.busy) {
-              LoadingProgress().width(16).height(16).color($r('app.color.on_prominent')).accessibilityLevel('no')
-            } else {
-              Image($r('app.media.ui_send')).width(17).height(17).accessibilityLevel('no')
+            .accessibilityText('添加附件与工具')
+            .bindMenu(this.composerAttachmentMenu(
+              this.uploadingAttachment,
+              this.canRetryAttachment,
+              this.attachments.length > 0,
+              this.draftMode,
+              this.sendMode,
+              this.queued.length,
+              this.threadRunning
+            ))
+          if (!this.draftMode && this.sendMode !== 'auto') {
+            Button({ type: ButtonType.Capsule, stateEffect: true }) {
+              Text(this.sendMode === 'queue' ? '排队' : '引导')
+                .fontSize(FontSize.caption).lineHeight(LineHeight.caption)
+                .fontWeight(Weight.medium)
+                .fontColor($r('app.color.primary_text'))
+            }.height(28).padding({ left: 10, right: 10 }).flexShrink(0)
+              .backgroundColor($r('app.color.info_bg'))
+              .accessibilityText('消息发送方式，' + (this.sendMode === 'queue' ? '排队' : '引导'))
+              .bindMenu(this.composerSendModeMenu())
+          }
+          if (!this.composerExpanded) {
+            Row()
+              .layoutWeight(1)
+              .height(38)
+              .constraintSize({ minWidth: 60 })
+              .hitTestBehavior(HitTestMode.None)
+              .onAreaChange((_, area: Area) => {
+                const x = Number(area.position.x);
+                const w = Number(area.width);
+                if (Number.isFinite(x) && Number.isFinite(w) && w > 0) {
+                  if (Math.abs(x - this.compactSlotLeft) > 0.5 || Math.abs(w - this.compactSlotWidth) > 0.5) {
+                    this.compactSlotLeft = x;
+                    this.compactSlotWidth = w;
+                    this.syncComposerExpanded();
+                  }
+                }
+              })
+            Button({ type: ButtonType.Normal, stateEffect: true }) {
+              Row({ space: 3 }) {
+                if (this.hasCurrentModelLogo()) {
+                  Row() {
+                    ProviderLogo({ driver: this.currentModelDriver(), model: this.currentModelSlug(), logoSize: 18 })
+                  }.width(18).height(18).justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center).flexShrink(0)
+                } else {
+                  Image($r('app.media.ui_settings')).width(17).height(17).opacity(0.75).flexShrink(0).accessibilityLevel('no')
+                }
+                Image($r('app.media.ui_chevron_down')).width(11).height(11).opacity(0.65).flexShrink(0).accessibilityLevel('no')
+              }.alignItems(VerticalAlign.Center)
+            }.height(36).padding({ left: 8, right: 6 }).flexShrink(0)
+              .backgroundColor(Color.Transparent)
+              .borderRadius(Radius.button)
+              .enabled(!this.busy && !this.unknown)
+              .opacity(!this.busy && !this.unknown ? 1 : Opacity.disabled)
+              .accessibilityText('模型与选项，' + (this.currentModelDisplayLabel() || '模型') +
+                (this.currentModelSummary() ? ' ' + this.currentModelSummary() : ''))
+              .onClick(() => this.openTaskSettings())
+          } else {
+            Row() {
+              Button({ type: ButtonType.Normal, stateEffect: true }) {
+                Row({ space: this.expandedModelIconOnly() ? 3 : 5 }) {
+                  if (this.hasCurrentModelLogo()) {
+                    Row() {
+                      ProviderLogo({ driver: this.currentModelDriver(), model: this.currentModelSlug(), logoSize: 17 })
+                    }.width(17).height(17).justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center).flexShrink(0)
+                  } else {
+                    Image($r('app.media.ui_settings')).width(16).height(16).opacity(0.75).flexShrink(0).accessibilityLevel('no')
+                  }
+                  if (!this.expandedModelIconOnly()) {
+                    Text(this.currentModelDisplayLabel() || '模型')
+                      .fontSize(FontSize.callout).lineHeight(LineHeight.callout)
+                      .fontWeight(Weight.medium)
+                      .fontColor($r('app.color.ink'))
+                      .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+                      .wordBreak(WordBreak.BREAK_ALL)
+                      .constraintSize({ minWidth: 0, maxWidth: this.expandedModelMaxLabelWidth() })
+                      .flexShrink(1)
+                    if (this.expandedModelShowSummary()) {
+                      Text(this.currentModelSummary())
+                        .fontSize(FontSize.caption).lineHeight(LineHeight.caption)
+                        .fontColor($r('app.color.muted'))
+                        .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+                        .wordBreak(WordBreak.BREAK_ALL)
+                        .constraintSize({ minWidth: 0, maxWidth: this.expandedModelMaxSummaryWidth() })
+                        .flexShrink(1)
+                    }
+                  }
+                  Image($r('app.media.ui_chevron_down')).width(12).height(12).opacity(0.7).flexShrink(0).accessibilityLevel('no')
+                }
+                .alignItems(VerticalAlign.Center)
+                .constraintSize({ minWidth: 0, maxWidth: this.expandedModelMaxButtonWidth() })
+                .clip(true)
+              }.height(36).padding({ left: 8, right: 6 })
+                .backgroundColor(Color.Transparent)
+                .borderRadius(Radius.button)
+                .constraintSize({ minWidth: 0, maxWidth: this.expandedModelMaxButtonWidth() })
+                .clip(true)
+                .enabled(!this.busy && !this.unknown)
+                .opacity(!this.busy && !this.unknown ? 1 : Opacity.disabled)
+                .accessibilityText('模型与选项，' + (this.currentModelDisplayLabel() || '模型') +
+                  (this.currentModelSummary() ? ' ' + this.currentModelSummary() : ''))
+                .onClick(() => this.openTaskSettings())
+            }.layoutWeight(1).constraintSize({ minWidth: 0 }).justifyContent(FlexAlign.End).alignItems(VerticalAlign.Center).clip(true)
+              .onAreaChange((_, area: Area) => {
+                const w = Number(area.width);
+                if (Number.isFinite(w) && w > 0 && Math.abs(w - this.expandedModelSlotWidth) > 0.5) {
+                  this.expandedModelSlotWidth = w;
+                }
+              })
+          }
+          if (!this.draftMode && this.threadRunning && !this.busy && !this.unknown &&
+            this.prompt.trim().length === 0 && this.attachments.length === 0) {
+            Button({ type: ButtonType.Circle, stateEffect: true }) {
+              Rect().width(11).height(11).radius(2.5).fill($r('app.color.danger'))
+            }.width(36).height(36).flexShrink(0)
+              .backgroundColor($r('app.color.danger_bg'))
+              .border({ width: 1, color: $r('app.color.danger_border') })
+              .enabled(this.ready)
+              .opacity(this.ready ? 1 : Opacity.disabled)
+              .accessibilityText('停止任务')
+              .onClick(() => this.stop())
+          } else if (this.draftMode) {
+            Button({ type: ButtonType.Circle, stateEffect: true }) {
+              if (this.busy) {
+                LoadingProgress().width(16).height(16).color($r('app.color.on_prominent')).accessibilityLevel('no')
+              } else {
+                Image($r('app.media.ui_send')).width(17).height(17).accessibilityLevel('no')
+              }
+            }.width(36).height(36).flexShrink(0).backgroundColor($r('app.color.prominent'))
+              .opacity(this.busy || (this.ready && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0)) ? 1 : 0.28)
+              .accessibilityText(this.busy ? '正在提交' : '发送消息')
+              .enabled(this.ready && !this.busy && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0))
+              .onClick(() => this.send())
+          } else {
+            Button({ type: ButtonType.Circle, stateEffect: true }) {
+              if (this.busy) {
+                LoadingProgress().width(16).height(16).color($r('app.color.on_prominent')).accessibilityLevel('no')
+              } else {
+                Image($r('app.media.ui_send')).width(17).height(17).accessibilityLevel('no')
+              }
+            }.width(36).height(36).flexShrink(0).backgroundColor($r('app.color.prominent'))
+              .opacity(this.busy || (this.ready && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0)) ? 1 : 0.28)
+              .accessibilityText(this.busy ? '正在提交' : '发送消息')
+              .enabled(this.ready && !this.busy && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0))
+              .bindContextMenu(this.sendModeContextMenu(), ResponseType.LongPress)
+              .onClick(() => this.send())
+          }
+        }.width('100%').height(this.composerExpanded ? 46 : 48)
+          .padding({ left: 6, right: 8, top: 0, bottom: this.composerExpanded ? 2 : 0 })
+          .alignItems(VerticalAlign.Center)
+        TextArea({
+          placeholder: this.draftMode ? '描述要完成的任务…' : '继续追问…',
+          text: this.prompt,
+          controller: this.composerController
+        })
+          .id('composer-input')
+          .width(this.composerExpanded ? '100%' : this.compactEditorGeometry().widthVp)
+          .fontSize(FontSize.body).lineHeight(LineHeight.body)
+          .fontColor($r('app.color.ink')).placeholderColor($r('app.color.placeholder'))
+          .onChange((value: string, preview: PreviewText) => {
+            const previewValue = preview?.value || '';
+            this.composerPreviewText = previewValue;
+            this.composingText = !!previewValue;
+            const unchanged = this.prompt === value;
+            this.prompt = value;
+            if (unchanged) this.syncComposerExpanded(value, previewValue);
+            this.scheduleDraftSave();
+          })
+          .onFocus(() => { this.composerFocused = true; this.keyboard.reset(); })
+          .onBlur(() => { this.composerFocused = false; this.composingText = false; this.composerPreviewText = ''; this.keyboard.reset(); })
+          .onKeyPreIme((event: KeyEvent): boolean => this.keyboardEvent(event, true))
+          .onAreaChange((_, area: Area) => {
+            const h = Number(area.height);
+            if (Number.isFinite(h) && h > 0 && Math.abs(h - this.lastComposerEditorHeight) > 1) {
+              this.lastComposerEditorHeight = h;
+              this.syncComposerExpanded();
             }
-          }.width(36).height(36).backgroundColor($r('app.color.prominent'))
-            .opacity(this.busy || (this.ready && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0)) ? 1 : 0.28)
-            .accessibilityText(this.busy ? '正在提交' : '发送消息')
-            .enabled(this.ready && !this.busy && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0))
-            .onClick(() => this.send())
-        } else {
-          Button({ type: ButtonType.Circle, stateEffect: true }) {
-            if (this.busy) {
-              LoadingProgress().width(16).height(16).color($r('app.color.on_prominent')).accessibilityLevel('no')
-            } else {
-              Image($r('app.media.ui_send')).width(17).height(17).accessibilityLevel('no')
-            }
-          }.width(36).height(36).backgroundColor($r('app.color.prominent'))
-            .opacity(this.busy || (this.ready && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0)) ? 1 : 0.28)
-            .accessibilityText(this.busy ? '正在提交' : '发送消息')
-            .enabled(this.ready && !this.busy && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0))
-            .bindContextMenu(this.sendModeContextMenu(), ResponseType.LongPress)
-            .onClick(() => this.send())
+          })
+          .constraintSize({ minHeight: this.composerExpanded ? 46 : 38 })
+          .maxLines(5, { overflowMode: MaxLinesMode.SCROLL })
+          .padding(this.composerExpanded
+            ? { left: 14, right: 14, top: (this.draftContext.length || this.attachments.length) ? 6 : 12, bottom: 4 }
+            : { left: 4, right: 4, top: 8, bottom: 8 })
+          .margin(this.composerExpanded
+            ? { left: 0, bottom: 46 }
+            : { left: this.compactEditorGeometry().leftVp, top: 5, bottom: 5 })
+          .align(this.composerExpanded ? Alignment.TopStart : Alignment.Center)
+          .backgroundColor(Color.Transparent).accessibilityText('消息输入框')
+      }
+      .width('100%')
+      .onAreaChange((_, area: Area) => {
+        const w = Number(area.width);
+        if (Number.isFinite(w) && w > 0 && Math.abs(w - this.composerRowWidth) > 0.5) {
+          const widthChanged = this.composerRowWidth > 0 && Math.abs(w - this.composerRowWidth) > 2;
+          this.composerRowWidth = w;
+          if (widthChanged && this.composerExpanded) {
+            this.compactSlotWidth = 0;
+          }
+          this.syncComposerExpanded();
         }
-      }.width('100%').padding({ left: 6, right: 8, top: 2, bottom: 6 }).alignItems(VerticalAlign.Center)
+      })
     }.margin({ left: Space.sm, right: Space.sm, top: Space.xxs, bottom: this.composerFocused ? Space.xs : Space.sm })
       .backgroundColor($r('app.color.group')).borderRadius(Radius.composer)
       .border({ width: 1, color: $r('app.color.border') })
+  }
+
+  private measureTextVp(value: string, fontSize: number, fontWeight: number = Weight.regular): number {
+    if (!value) return 0;
+    try {
+      const ui = this.getUIContext();
+      const px = ui.getMeasureUtils().measureText({ textContent: value, fontSize, fontWeight });
+      const vp = ui.px2vp(px);
+      return Number.isFinite(vp) && vp > 0 ? vp : 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  private composerLineCount(): number {
+    try {
+      const count = this.composerController.getTextContentLineCount();
+      return Number.isFinite(count) && count > 0 ? count : 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  private compactEditorGeometry(): CompactEditorGeometry {
+    return resolveCompactEditorGeometry({
+      rowWidthVp: this.composerRowWidth,
+      measuredSlotLeftVp: this.compactSlotLeft,
+      measuredSlotWidthVp: this.compactSlotWidth,
+      hasSendModeBadge: !this.draftMode && this.sendMode !== 'auto'
+    });
+  }
+
+  private syncComposerExpanded(text: string = this.prompt, previewText: string = this.composerPreviewText): void {
+    const effective = (text || '') + (previewText || '');
+    const geom = this.compactEditorGeometry();
+    const needsWidthMeasure = effective.length > 0 && !effective.includes('\n') && !effective.includes('\r');
+    const singleLineTextWidthVp = needsWidthMeasure ? this.measureTextVp(effective, FontSize.body, Weight.regular) : 0;
+    const next = shouldExpandComposer({
+      text,
+      previewText,
+      compactTextWidthVp: geom.textWidthVp,
+      singleLineTextWidthVp,
+      measuredLineCount: effective.length > 0 ? this.composerLineCount() : 0,
+      currentlyExpanded: this.composerExpanded
+    });
+    if (next !== this.composerExpanded) {
+      this.composerExpanded = next;
+    }
+  }
+
+  private onPromptStateChanged(): void {
+    if (!this.prompt) this.composerPreviewText = '';
+    this.syncComposerExpanded(this.prompt, this.composerPreviewText);
+  }
+
+  private onComposerChromeChanged(): void {
+    if (this.composerExpanded) {
+      this.compactSlotWidth = 0;
+      this.expandedModelSlotWidth = 0;
+    }
+    this.syncComposerExpanded();
+  }
+
+  private expandedModelSlotWidthVp(): number {
+    if (this.expandedModelSlotWidth > 0) return this.expandedModelSlotWidth;
+    if (this.composerRowWidth > 0) {
+      const reserved = (!this.draftMode && this.sendMode !== 'auto') ? 154 : 100;
+      return Math.max(0, this.composerRowWidth - reserved);
+    }
+    return 0;
+  }
+
+  private expandedModelLayout(measureText: boolean): ExpandedModelLayout {
+    const summary = this.currentModelSummary();
+    const hasSummary = summary.length > 0;
+    const label = this.currentModelDisplayLabel() || '模型';
+    const labelWidth = measureText ? this.measureTextVp(label, FontSize.callout, Weight.medium) : 0;
+    const summaryWidth = measureText && hasSummary ? this.measureTextVp(summary, FontSize.caption, Weight.regular) : 0;
+    return layoutExpandedModelControl(this.expandedModelSlotWidthVp(), labelWidth, summaryWidth, hasSummary);
+  }
+
+  private expandedModelIconOnly(): boolean {
+    return this.expandedModelLayout(false).iconOnly;
+  }
+
+  private expandedModelShowSummary(): boolean {
+    return this.expandedModelLayout(false).showSummary && this.currentModelSummary().length > 0;
+  }
+
+  private expandedModelMaxButtonWidth(): number {
+    return this.expandedModelLayout(false).maxButtonWidthVp;
+  }
+
+  private expandedModelMaxLabelWidth(): number {
+    return this.expandedModelLayout(true).maxLabelWidthVp;
+  }
+
+  private expandedModelMaxSummaryWidth(): number {
+    return this.expandedModelLayout(true).maxSummaryWidthVp;
   }
 
   private resolveActiveModel(owner: T3Client): void {
@@ -5675,7 +6673,22 @@ struct Index {
             onConnect: (target: LinkedThreadTarget) => this.connectLinkedThreadEnvironment(target),
             onClose: () => { void this.leaveLinkedThreadPage(); },
             onCopy: (value: string) => { void this.copy(value); },
-            onOpenLink: (url: string) => { void this.openLink(url); }
+            onOpenLink: (url: string) => { void this.openLink(url); },
+            onOpenImage: (source: string) => { void this.openMarkdownImage(source); },
+            onShareMedia: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
+              const tid = !this.draftMode && client.thread ? client.thread.threadId : '';
+              void this.shareInlineMediaFor(client, this.selectedLocalId, tid, this.currentWorkspace(), source, alt, kind, resolvedUrl, displayPath);
+            },
+            onSaveMediaToGallery: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
+              const tid = !this.draftMode && client.thread ? client.thread.threadId : '';
+              void this.saveInlineMediaToGalleryFor(client, tid, this.currentWorkspace(), source, alt, kind, resolvedUrl, displayPath);
+            },
+            onSaveMediaToFile: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
+              const tid = !this.draftMode && client.thread ? client.thread.threadId : '';
+              void this.saveInlineMediaToFileFor(client, tid, this.currentWorkspace(), source, alt, kind, resolvedUrl, displayPath);
+            },
+            downloadLocalMedia: (url: string, kind: string, displayPath: string): Promise<string> =>
+              this.downloadMediaToLocalCache(client, url, kind, displayPath)
           })
         } else if (this.page === 'chat') {
           Row({ space: Space.xxs }) {
@@ -5838,6 +6851,7 @@ struct Index {
               }
               .width('100%')
               .constraintSize({ maxHeight: 220 })
+              .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
               .padding(Space.sm)
               .backgroundColor($r('app.color.group'))
               .borderRadius(Radius.tool)

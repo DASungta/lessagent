@@ -8,7 +8,7 @@
           "certpath": "/Users/zhangyc/.ohos/config/default_t3code-harmony_nNY_J9ZC9fsmBjO0gb87HFAQa_56alFUewEAJL61jBo=.cer",
           "keyAlias": "debugKey",
           "keyPassword": "0000001B7EC9D0C0559DE4F1BFD2415760F17AB5DC288707E6D98DFA6D6C8625F56C752519CFB71B0B0E90",
-          "profile": "/Users/zhangyc/.ohos/config/default_t3code-harmony_nNY_J9ZC9fsmBjO0gb87HFAQa_56alFUewEAJL61jBo=.p7b",
+          "profile": "/Users/zhangyc/.ohos/config/t3codebridge_debug_profileDebug.p7b",
           "signAlg": "SHA256withECDSA",
           "storeFile": "/Users/zhangyc/.ohos/config/default_t3code-harmony_nNY_J9ZC9fsmBjO0gb87HFAQa_56alFUewEAJL61jBo=.p12",
           "storePassword": "0000001BF1B778975FA9E03D60210C7C6590D7EE05ED7ED7480FF95D97E857251D45DE8C08DBB318FBE981"

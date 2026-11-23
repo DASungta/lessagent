@@ -50,6 +50,7 @@ test('ShellCacheStore persists atomically, drops expired or malformed records, a
             interactionMode: 'plan', creationSource: 'web', blockedOnThreadWait: true,
             activityRunStartedAt: '2026-01-01T00:00:00.000Z', pendingUserOnly: true,
             delegatedFromEnvironmentId: 'env-parent', delegatedFromThreadId: 'parent-1',
+            lineageWorkflowStep: true,
             pendingBackgroundTasks: [{ taskId: 'bg-1', kind: 'subagent', childThreadId: 'c1' }]
           },
           { id: 't-deleted', label: 'Removed', projectId: 'p1', deletedAt: '2026-01-01T00:00:00Z' }
@@ -68,6 +69,7 @@ test('ShellCacheStore persists atomically, drops expired or malformed records, a
     assert.equal(loaded['env-local-1'].threads[0].activityRunStartedAt, '2026-01-01T00:00:00.000Z');
     assert.equal(loaded['env-local-1'].threads[0].pendingUserOnly, true);
     assert.equal(loaded['env-local-1'].threads[0].delegatedFromEnvironmentId, 'env-parent');
+    assert.equal(loaded['env-local-1'].threads[0].lineageWorkflowStep, true);
     assert.deepEqual(loaded['env-local-1'].threads[0].pendingBackgroundTasks, [{ taskId: 'bg-1', kind: 'subagent', childThreadId: 'c1' }]);
     assert.equal(loaded['env-local-1'].capabilities.threadSettlement, true);
 

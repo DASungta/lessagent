@@ -95,6 +95,7 @@ export interface ThreadView {
   lineageRelationship: string;
   lineageParentThreadId: string;
   lineageSideChat: boolean;
+  lineageWorkflowStep: boolean;
   delegatedFromEnvironmentId: string;
   delegatedFromThreadId: string;
   lastSnoozeWakeAt: string;
@@ -463,6 +464,7 @@ export function threadView(value: Object): ThreadView {
     lineageRelationship: lineage === undefined ? '' : optionalText(lineage.relationshipToParent, '会话关系'),
     lineageParentThreadId: lineage === undefined ? '' : optionalText(lineage.parentThreadId, '父会话'),
     lineageSideChat: lineage !== undefined && optionalBoolean(lineage.sideChat),
+    lineageWorkflowStep: lineage !== undefined && optionalBoolean(lineage.workflowStep),
     delegatedFromEnvironmentId: delegatedFrom === undefined ? '' : optionalText(delegatedFrom.environmentId, '委派来源环境'),
     delegatedFromThreadId: delegatedFrom === undefined ? '' : optionalText(delegatedFrom.threadId, '委派来源会话'),
     lastSnoozeWakeAt: optionalIso(row.lastSnoozeWakeAt, '暂缓唤醒时间'),
@@ -474,7 +476,7 @@ export function threadView(value: Object): ThreadView {
 }
 
 export function isListedThread(thread: ThreadView): boolean {
-  return thread.lineageRelationship !== 'subagent' && !thread.lineageSideChat;
+  return thread.lineageRelationship !== 'subagent' && !thread.lineageSideChat && !thread.lineageWorkflowStep;
 }
 
 export function hasPendingApprovals(thread: ThreadView): boolean {
@@ -817,9 +819,10 @@ export function sortProjectGroups(groups: ProjectGroup[], threads: ScopedThread[
   for (const group of groups) {
     for (const ref of group.projectRefs) activity.set(ref.localId + ':' + ref.projectId, 0);
   }
+  const underParent = delegatedUnderParentKeys(threads);
   for (const thread of threads) {
     const key = thread.localId + ':' + thread.projectId;
-    if (!activity.has(key) || thread.archivedAt) continue;
+    if (!activity.has(key) || thread.archivedAt || isShownUnderParent(thread, underParent)) continue;
     activity.set(key, Math.max(activity.get(key) || 0, threadSortTimestamp(thread, 'updated_at')));
   }
   return groups.slice().sort((left: ProjectGroup, right: ProjectGroup) => {
@@ -942,6 +945,27 @@ export function attachPendingSubagentRequests(threads: ScopedThread[]): ScopedTh
   });
 }
 
+export function delegatedUnderParentKeys(threads: ScopedThread[]): Set<string> {
+  const activeByKey = new Set<string>();
+  for (const thread of threads) {
+    if (thread.archivedAt || thread.deletedAt) continue;
+    activeByKey.add(threadScopeKey(thread.environmentId || thread.localId, thread.id));
+  }
+  const hidden = new Set<string>();
+  for (const thread of threads) {
+    if (!thread.delegatedFromEnvironmentId || !thread.delegatedFromThreadId) continue;
+    if (activeByKey.has(threadScopeKey(thread.delegatedFromEnvironmentId, thread.delegatedFromThreadId))) {
+      hidden.add(threadScopeKey(thread.environmentId || thread.localId, thread.id));
+    }
+  }
+  return hidden;
+}
+
+export function isShownUnderParent(thread: ScopedThread, delegatedUnderParent: Set<string>): boolean {
+  if (!isListedThread(thread)) return true;
+  return delegatedUnderParent.has(threadScopeKey(thread.environmentId || thread.localId, thread.id));
+}
+
 export function buildThreadShelves(input: {
   threads: ScopedThread[]; environmentId: string; projectRefs: string[]; query: string;
   searchHits: Record<string, string>; nowMs: number; capabilities: Record<string, ThreadCapabilities>;
@@ -949,6 +973,7 @@ export function buildThreadShelves(input: {
 }): ThreadShelfState {
   const workingShelfEnabled = input.workingShelfEnabled !== false;
   const annotatedThreads = attachPendingSubagentRequests(input.threads);
+  const underParent = delegatedUnderParentKeys(annotatedThreads);
   const matching: ScopedThread[] = [];
   const pinned: ScopedThread[] = [];
   const active: ScopedThread[] = [];
@@ -956,7 +981,7 @@ export function buildThreadShelves(input: {
   const snoozed: ScopedThread[] = [];
   const settled: ScopedThread[] = [];
   for (const thread of annotatedThreads) {
-    if (thread.archivedAt || !isListedThread(thread)) continue;
+    if (thread.archivedAt || isShownUnderParent(thread, underParent)) continue;
     if (input.environmentId && thread.localId !== input.environmentId) continue;
     if (!threadInProjectRefs(thread, input.projectRefs)) continue;
     const hitKey = thread.localId + ':' + thread.id;
@@ -1099,6 +1124,7 @@ export function scopedThreadView(thread: ThreadView, localId: string, environmen
     lineageRelationship: thread.lineageRelationship,
     lineageParentThreadId: thread.lineageParentThreadId,
     lineageSideChat: thread.lineageSideChat,
+    lineageWorkflowStep: thread.lineageWorkflowStep,
     delegatedFromEnvironmentId: thread.delegatedFromEnvironmentId,
     delegatedFromThreadId: thread.delegatedFromThreadId,
     lastSnoozeWakeAt: thread.lastSnoozeWakeAt,

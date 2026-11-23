@@ -24,7 +24,7 @@ async function loadSchedulePanel() {
     .replace("'./R4'", JSON.stringify(r4Url)).replace("'./Projects'", JSON.stringify(projectsUrl))));
   const code = component.slice(component.indexOf('@Component'), component.indexOf('  build() {')) + '}';
   return (await import(data(compile(`
-    import { record } from ${wire};
+    import { configEnvironmentId, record } from ${wire};
     import { validateTaskSettings } from ${JSON.stringify(composerUrl)};
     import { isListedThread } from ${JSON.stringify(projectsUrl)};
     import { providerCatalog } from ${JSON.stringify(providerUrl)};

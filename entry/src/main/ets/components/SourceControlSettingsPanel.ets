@@ -2,7 +2,7 @@ import { FontSize, LineHeight, Radius, Sizes, Space } from '../common/Theme';
 import { AppButton } from './ui/AppButton';
 import { GroupCard } from './ui/GroupCard';
 import { TopBar } from './ui/TopBar';
-import { record } from '../protocol/Wire';
+import { configEnvironmentId } from '../protocol/Wire';
 import { SourceControlSettings, SourceControlField, readSourceControlSettings,
   sourceControlField, writeSourceControlSetting } from '../protocol/SourceControlSettings';
 import { T3Client } from '../services/T3Client';
@@ -40,8 +40,7 @@ export struct SourceControlSettingsPanel {
   }
   private environmentId(connection: T3Client): string {
     if (!connection.ready) return '';
-    const value = record(connection.config.environment).environmentId;
-    return typeof value === 'string' ? value : '';
+    return configEnvironmentId(connection.config);
   }
   private isCurrent(connection: T3Client, id: string, generation: number, epoch: number): boolean {
     return this.alive && this.foreground && this.epoch === epoch && this.connection === connection &&
@@ -233,7 +232,7 @@ export struct SourceControlSettingsPanel {
             }
           }
         }.width('100%').padding({ left: Space.page, right: Space.page, bottom: Space.lg })
-      }.width('100%').layoutWeight(1).align(Alignment.TopStart)
+      }.width('100%').layoutWeight(1).align(Alignment.TopStart).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

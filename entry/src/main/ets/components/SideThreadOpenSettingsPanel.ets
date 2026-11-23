@@ -66,6 +66,7 @@ export struct SideThreadOpenSettingsPanel {
       .width('100%')
       .layoutWeight(1)
       .align(Alignment.TopStart)
+      .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     }
     .width('100%')
     .height('100%')

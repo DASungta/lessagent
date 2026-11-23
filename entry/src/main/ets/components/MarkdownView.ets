@@ -10,6 +10,7 @@ import {
   mathText,
   ResolvedMarkdownMedia
 } from '../protocol/Markdown';
+import { canSaveToPhotoGallery, mediaCopyLabel, mediaCopyValue, mediaFileName } from '../protocol/MediaTransfer';
 import { parseMermaid, parseMermaidClass, parseMermaidSequence, parseMermaidState } from '../protocol/Mermaid';
 import { MermaidView } from './MermaidView';
 import { SequenceView } from './SequenceView';
@@ -18,13 +19,19 @@ import { StateDiagramView } from './StateDiagramView';
 import { FontSize, LineHeight, Radius, Space } from '../common/Theme';
 
 @Component
-struct MarkdownMediaBlock {
+export struct MarkdownMediaBlock {
   @Prop @Watch('onSourceChange') source: string = '';
   @Prop alt: string = '';
+  @Prop initialKind: string = '';
   @Prop @Watch('onSourceChange') scopeKey: string = '';
   @Prop @Watch('onSourceChange') mediaReady: boolean = true;
   resolveMedia: ((source: string, refresh: boolean) => Promise<ResolvedMarkdownMedia>) | undefined = undefined;
+  downloadLocalMedia: ((url: string, kind: string, displayPath: string) => Promise<string>) | undefined = undefined;
   onOpenImage: (source: string) => void = () => {};
+  onCopy: ((value: string) => void) | undefined = undefined;
+  onShareMedia: ((source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => void) | undefined = undefined;
+  onSaveMediaToGallery: ((source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => void) | undefined = undefined;
+  onSaveMediaToFile: ((source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => void) | undefined = undefined;
   @State resolvedUrl: string = '';
   @State resolvedKind: string = 'image';
   @State loading: boolean = false;
@@ -33,6 +40,8 @@ struct MarkdownMediaBlock {
   @State mediaAspectRatio: number = 0;
   private loadSeq: number = 0;
   private retriedAfterError: boolean = false;
+  private fallbackTried: boolean = false;
+  private displayPath: string = '';
 
   aboutToAppear(): void {
     this.startResolve();
@@ -44,12 +53,22 @@ struct MarkdownMediaBlock {
 
   onSourceChange(): void {
     this.retriedAfterError = false;
+    this.fallbackTried = false;
     this.startResolve();
   }
 
+  private isAttachmentSource(): boolean {
+    return this.source.startsWith('t3-attachment://');
+  }
+
   private isEnvironmentSource(): boolean {
+    if (this.isAttachmentSource()) return true;
     const classified = classifyMarkdownMediaSource(this.source, '/');
     return classified.access === 'environment';
+  }
+
+  private mediaTypeLabel(): string {
+    return this.resolvedKind === 'video' ? '视频' : '图片';
   }
 
   private clampRatio(width: number, height: number): number {
@@ -58,11 +77,34 @@ struct MarkdownMediaBlock {
   }
 
   private startResolve(): void {
+    if (this.isAttachmentSource()) {
+      this.resolvedKind = this.initialKind === 'video' ? 'video' : 'image';
+      if (this.resolveMedia) {
+        if (!this.mediaReady) {
+          this.loadSeq += 1;
+          this.loading = !this.resolvedUrl;
+          this.loadFailed = false;
+          this.errorText = '';
+          return;
+        }
+        void this.load(false);
+        return;
+      }
+      this.loadSeq += 1;
+      this.resolvedUrl = '';
+      this.loading = false;
+      this.loadFailed = false;
+      this.errorText = '';
+      this.mediaAspectRatio = 0;
+      return;
+    }
     const classified = classifyMarkdownMediaSource(this.source, '/');
+    const inferredKind = this.initialKind === 'video' ? 'video' : (classified.kind || 'image');
     if (classified.access === 'direct') {
       this.loadSeq += 1;
       this.resolvedUrl = classified.uri;
-      this.resolvedKind = classified.kind;
+      this.resolvedKind = inferredKind;
+      this.displayPath = classified.displayPath;
       this.loading = false;
       this.loadFailed = false;
       this.errorText = '';
@@ -70,6 +112,7 @@ struct MarkdownMediaBlock {
       return;
     }
     if (classified.access === 'environment' && this.resolveMedia) {
+      this.resolvedKind = inferredKind;
       if (!this.mediaReady) {
         this.loadSeq += 1;
         this.loading = !this.resolvedUrl;
@@ -82,7 +125,8 @@ struct MarkdownMediaBlock {
     }
     this.loadSeq += 1;
     this.resolvedUrl = '';
-    this.resolvedKind = classified.kind || 'image';
+    this.resolvedKind = inferredKind;
+    this.displayPath = '';
     this.loading = false;
     this.loadFailed = false;
     this.errorText = '';
@@ -100,40 +144,177 @@ struct MarkdownMediaBlock {
       const resolved = await this.resolveMedia(this.source, refresh);
       if (seq !== this.loadSeq) return;
       this.resolvedUrl = resolved.url;
-      this.resolvedKind = resolved.kind || 'image';
+      this.resolvedKind = resolved.kind || this.resolvedKind || 'image';
+      this.displayPath = resolved.displayPath || this.alt || this.source;
       this.mediaAspectRatio = this.clampRatio(resolved.width, resolved.height);
       this.loading = false;
       this.loadFailed = !resolved.url;
-      this.errorText = resolved.url ? '' : '图片链接无效';
+      this.errorText = resolved.url ? '' : (this.mediaTypeLabel() + '链接无效');
     } catch (error) {
       if (seq !== this.loadSeq) return;
       this.loading = false;
       this.resolvedUrl = '';
       this.loadFailed = true;
-      this.errorText = (error as Error).message || '图片加载失败';
+      this.errorText = (error as Error).message || (this.mediaTypeLabel() + '加载失败');
     }
   }
 
-  private handleImageError(): void {
+  private async tryLocalFallback(remoteUrl: string): Promise<void> {
+    if (!this.downloadLocalMedia) return;
+    const seq = ++this.loadSeq;
+    this.loading = true;
+    this.loadFailed = false;
+    this.errorText = '';
+    this.resolvedUrl = '';
+    try {
+      const localUri = await this.downloadLocalMedia(remoteUrl, this.resolvedKind, this.displayPath || this.alt || this.source);
+      if (seq !== this.loadSeq) return;
+      if (localUri) {
+        this.resolvedUrl = localUri;
+        this.loading = false;
+        this.loadFailed = false;
+        this.errorText = '';
+        return;
+      }
+      throw new Error(this.mediaTypeLabel() + '本地缓存失败');
+    } catch (error) {
+      if (seq !== this.loadSeq) return;
+      this.loading = false;
+      this.resolvedUrl = '';
+      this.loadFailed = true;
+      this.errorText = (error as Error).message || (this.mediaTypeLabel() + '无法加载，点按重试');
+    }
+  }
+
+  private handleMediaError(): void {
+    const failedUrl = this.resolvedUrl;
     if (!this.retriedAfterError && this.resolveMedia && this.isEnvironmentSource()) {
       this.retriedAfterError = true;
       void this.load(true);
       return;
     }
+    if (!this.fallbackTried && this.downloadLocalMedia && /^https?:\/\//i.test(failedUrl)) {
+      this.fallbackTried = true;
+      void this.tryLocalFallback(failedUrl);
+      return;
+    }
     this.resolvedUrl = '';
     this.loading = false;
     this.loadFailed = true;
-    this.errorText = '图片无法加载，点按重试';
+    this.errorText = this.mediaTypeLabel() + '无法加载，点按重试';
+  }
+
+  private effectiveDisplayPath(): string {
+    if (this.displayPath) return this.displayPath;
+    if (this.isAttachmentSource()) return this.alt;
+    return this.source;
+  }
+
+  private effectiveFileName(): string {
+    return mediaFileName(this.effectiveDisplayPath(), this.alt, this.resolvedUrl, '', this.resolvedKind);
+  }
+
+  private canSaveGallery(): boolean {
+    return canSaveToPhotoGallery(this.effectiveFileName(), '', this.resolvedKind);
+  }
+
+  private copyValue(): string {
+    return mediaCopyValue(this.effectiveDisplayPath(), this.resolvedUrl);
+  }
+
+  private copyLabel(): string {
+    return mediaCopyLabel(this.effectiveDisplayPath(), this.resolvedUrl);
+  }
+
+  @Builder
+  mediaContextMenu() {
+    Menu() {
+      MenuItem({ content: this.resolvedKind === 'video' ? '全屏播放' : '全屏预览' })
+        .onClick(() => { this.onOpenImage(this.source); })
+      if (this.onSaveMediaToGallery && this.canSaveGallery()) {
+        MenuItem({ content: '保存到相册' })
+          .onClick(() => {
+            this.onSaveMediaToGallery!(this.source, this.alt, this.resolvedKind, this.resolvedUrl, this.effectiveDisplayPath());
+          })
+      }
+      if (this.onSaveMediaToFile) {
+        MenuItem({ content: '保存到文件' })
+          .onClick(() => {
+            this.onSaveMediaToFile!(this.source, this.alt, this.resolvedKind, this.resolvedUrl, this.effectiveDisplayPath());
+          })
+      }
+      if (this.onShareMedia) {
+        MenuItem({ content: '分享' })
+          .onClick(() => {
+            this.onShareMedia!(this.source, this.alt, this.resolvedKind, this.resolvedUrl, this.effectiveDisplayPath());
+          })
+      }
+      if (this.onCopy && this.copyValue()) {
+        MenuItem({ content: this.copyLabel() })
+          .onClick(() => {
+            const value = this.copyValue();
+            if (value) this.onCopy!(value);
+          })
+      }
+    }
   }
 
   build() {
     if (this.resolvedUrl && this.resolvedKind === 'video') {
-      Video({ src: this.resolvedUrl })
+      Column({ space: 0 }) {
+        Video({ src: this.resolvedUrl })
+          .width('100%')
+          .height(220)
+          .objectFit(ImageFit.Contain)
+          .controls(true)
+          .backgroundColor(Color.Black)
+          .onError(() => { this.handleMediaError(); })
+        Row({ space: 10 }) {
+          Text(this.alt || '视频')
+            .fontSize(12)
+            .fontColor($r('app.color.muted'))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .layoutWeight(1)
+            .onClick(() => this.onOpenImage(this.source))
+          if (this.onSaveMediaToGallery || this.onSaveMediaToFile) {
+            Text('保存')
+              .fontSize(12)
+              .fontColor($r('app.color.primary_text'))
+              .padding({ left: 4, right: 4, top: 2, bottom: 2 })
+              .onClick(() => {
+                if (this.onSaveMediaToGallery && this.canSaveGallery()) {
+                  this.onSaveMediaToGallery(this.source, this.alt, this.resolvedKind, this.resolvedUrl, this.effectiveDisplayPath());
+                } else if (this.onSaveMediaToFile) {
+                  this.onSaveMediaToFile(this.source, this.alt, this.resolvedKind, this.resolvedUrl, this.effectiveDisplayPath());
+                }
+              })
+          }
+          if (this.onShareMedia) {
+            Text('分享')
+              .fontSize(12)
+              .fontColor($r('app.color.primary_text'))
+              .padding({ left: 4, right: 4, top: 2, bottom: 2 })
+              .onClick(() => {
+                this.onShareMedia!(this.source, this.alt, this.resolvedKind, this.resolvedUrl, this.effectiveDisplayPath());
+              })
+          }
+          Text('全屏')
+            .fontSize(12)
+            .fontColor($r('app.color.primary_text'))
+            .padding({ left: 4, right: 2, top: 2, bottom: 2 })
+            .onClick(() => this.onOpenImage(this.source))
+        }
         .width('100%')
-        .height(220)
-        .controls(true)
-        .borderRadius(10)
-        .backgroundColor(Color.Black)
+        .padding({ left: 10, right: 10, top: 8, bottom: 8 })
+        .backgroundColor($r('app.color.card'))
+        .alignItems(VerticalAlign.Center)
+      }
+      .width('100%')
+      .borderRadius(10)
+      .border({ width: 1, color: $r('app.color.border') })
+      .clip(true)
+      .bindContextMenu(this.mediaContextMenu(), ResponseType.LongPress)
     } else if (this.resolvedUrl) {
       Column() {
         if (this.mediaAspectRatio > 0) {
@@ -142,20 +323,22 @@ struct MarkdownMediaBlock {
             .aspectRatio(this.mediaAspectRatio)
             .constraintSize({ maxHeight: 360 })
             .objectFit(ImageFit.Contain)
+            .draggable(false)
             .accessibilityText(this.alt || '图片')
-            .onError(() => { this.handleImageError(); })
+            .onError(() => { this.handleMediaError(); })
         } else {
           Image(this.resolvedUrl)
             .width('100%')
             .constraintSize({ minHeight: 120, maxHeight: 360 })
             .objectFit(ImageFit.Contain)
+            .draggable(false)
             .accessibilityText(this.alt || '图片')
             .onComplete((event) => {
               if (event && event.width > 0 && event.height > 0 && this.mediaAspectRatio <= 0) {
                 this.mediaAspectRatio = this.clampRatio(event.width, event.height);
               }
             })
-            .onError(() => { this.handleImageError(); })
+            .onError(() => { this.handleMediaError(); })
         }
       }
       .width('100%')
@@ -164,10 +347,11 @@ struct MarkdownMediaBlock {
       .border({ width: 1, color: $r('app.color.border') })
       .clip(true)
       .onClick(() => this.onOpenImage(this.source))
+      .bindContextMenu(this.mediaContextMenu(), ResponseType.LongPress)
     } else if (this.loading) {
       Row({ space: 8 }) {
         LoadingProgress().width(16).height(16).color($r('app.color.muted'))
-        Text(this.alt ? '正在加载图片：' + this.alt : '正在加载图片…')
+        Text(this.alt ? '正在加载' + this.mediaTypeLabel() + '：' + this.alt : '正在加载' + this.mediaTypeLabel() + '…')
           .fontSize(13)
           .fontColor($r('app.color.muted'))
           .layoutWeight(1)
@@ -195,7 +379,7 @@ struct MarkdownMediaBlock {
               .textOverflow({ overflow: TextOverflow.Ellipsis })
           }
         }.layoutWeight(1).alignItems(HorizontalAlign.Start)
-        if (this.resolveMedia && this.isEnvironmentSource()) {
+        if ((this.resolveMedia && this.isEnvironmentSource()) || this.downloadLocalMedia) {
           Button('重试', { type: ButtonType.Normal })
             .fontSize(12)
             .fontColor($r('app.color.primary_text'))
@@ -205,7 +389,12 @@ struct MarkdownMediaBlock {
             .padding({ left: 10, right: 10 })
             .onClick(() => {
               this.retriedAfterError = false;
-              void this.load(true);
+              this.fallbackTried = false;
+              if (this.resolveMedia && this.isEnvironmentSource()) {
+                void this.load(true);
+              } else {
+                this.startResolve();
+              }
             })
         }
       }
@@ -217,7 +406,7 @@ struct MarkdownMediaBlock {
       .onClick(() => this.onOpenImage(this.source))
     } else {
       Row({ space: 8 }) {
-        Text('图片').fontSize(12).fontColor($r('app.color.muted'))
+        Text(this.mediaTypeLabel()).fontSize(12).fontColor($r('app.color.muted'))
         Text(this.alt || this.source).fontSize(13).fontColor($r('app.color.primary_text'))
           .layoutWeight(1).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
       }.padding(10).width('100%').backgroundColor($r('app.color.group')).borderRadius(10)
@@ -236,7 +425,11 @@ export struct MarkdownView {
   onCopy: (value: string) => void = () => {};
   onOpenLink: (url: string) => void = () => {};
   onOpenImage: (path: string) => void = () => {};
+  onShareMedia: ((source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => void) | undefined = undefined;
+  onSaveMediaToGallery: ((source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => void) | undefined = undefined;
+  onSaveMediaToFile: ((source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => void) | undefined = undefined;
   resolveMedia: ((source: string, refresh: boolean) => Promise<ResolvedMarkdownMedia>) | undefined = undefined;
+  downloadLocalMedia: ((url: string, kind: string, displayPath: string) => Promise<string>) | undefined = undefined;
   @State expanded: Record<string, boolean> = {};
   @State wrapCode: Record<string, boolean> = {};
 
@@ -301,7 +494,8 @@ export struct MarkdownView {
                 .onClick(() => { if (span.href) this.onOpenLink(span.href); })
             }
           } else if (span.kind === 'image') {
-            Span('[图片] ' + span.text).fontColor($r('app.color.muted'))
+            Span((classifyMarkdownMediaSource(span.href || '', '/').kind === 'video' ? '[视频] ' : '[图片] ') + (span.text || '媒体'))
+              .fontColor($r('app.color.muted'))
               .onClick(() => { if (span.href) this.onOpenImage(span.href); })
           } else if (span.kind === 'math') {
             Span(mathText(span.text)).fontFamily('monospace').fontColor($r('app.color.ink'))
@@ -321,7 +515,12 @@ export struct MarkdownView {
             scopeKey: this.mediaScopeKey,
             mediaReady: this.mediaReady,
             resolveMedia: this.resolveMedia,
-            onOpenImage: this.onOpenImage
+            downloadLocalMedia: this.downloadLocalMedia,
+            onOpenImage: this.onOpenImage,
+            onCopy: this.onCopy,
+            onShareMedia: this.onShareMedia,
+            onSaveMediaToGallery: this.onSaveMediaToGallery,
+            onSaveMediaToFile: this.onSaveMediaToFile
           })
         }, (span: InlineSpan, index: number) => index + ':' + (span.href || '') + ':' + span.text)
       }.width('100%').margin({ top: this.hasNonImageText(spans) ? 6 : 0 })
@@ -494,7 +693,11 @@ export struct MarkdownView {
           onCopy: this.onCopy,
           onOpenLink: this.onOpenLink,
           onOpenImage: this.onOpenImage,
-          resolveMedia: this.resolveMedia
+          onShareMedia: this.onShareMedia,
+          onSaveMediaToGallery: this.onSaveMediaToGallery,
+          onSaveMediaToFile: this.onSaveMediaToFile,
+          resolveMedia: this.resolveMedia,
+          downloadLocalMedia: this.downloadLocalMedia
         })
       }
     }.width('100%').padding(10).border({ width: 1, color: $r('app.color.border') }).borderRadius(10)
@@ -545,7 +748,12 @@ export struct MarkdownView {
         scopeKey: this.mediaScopeKey,
         mediaReady: this.mediaReady,
         resolveMedia: this.resolveMedia,
-        onOpenImage: this.onOpenImage
+        downloadLocalMedia: this.downloadLocalMedia,
+        onOpenImage: this.onOpenImage,
+        onCopy: this.onCopy,
+        onShareMedia: this.onShareMedia,
+        onSaveMediaToGallery: this.onSaveMediaToGallery,
+        onSaveMediaToFile: this.onSaveMediaToFile
       })
     }
   }

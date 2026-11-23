@@ -4,7 +4,7 @@ import { FormRow } from './ui/FormRow';
 import { AppButton } from './ui/AppButton';
 import { FontSize, LineHeight, Space } from '../common/Theme';
 import { T3Client } from '../services/T3Client';
-import { record } from '../protocol/Wire';
+import { configEnvironmentId } from '../protocol/Wire';
 import { ThreadDefaults, threadDefaultField, threadDefaultAllowed, readThreadDefaults, writeThreadDefault } from '../protocol/ThreadDefaults';
 
 @Component
@@ -21,20 +21,20 @@ export struct ThreadDefaultsPanel {
 
   aboutToAppear(): void {
     this.alive = true;
-    if (this.connection) {
-      const id = record(this.connection.config.environment).environmentId;
-      this.environmentId = typeof id === 'string' ? id : '';
-    }
+    this.environmentId = this.connection ? configEnvironmentId(this.connection.config) : '';
     void this.refresh();
   }
   aboutToDisappear(): void { this.alive = false; this.epoch++; }
   private current(connection: T3Client, epoch: number): boolean {
-    return this.alive && this.epoch === epoch && this.connection === connection && connection.ready &&
-      record(connection.config.environment).environmentId === this.environmentId;
+    return this.alive && this.epoch === epoch && this.connection === connection && connection.ready && !!this.environmentId &&
+      configEnvironmentId(connection.config) === this.environmentId;
   }
   private async refresh(): Promise<void> {
     const connection = this.connection;
     if (!connection || this.busy) return;
+    const id = this.environmentId || configEnvironmentId(connection.config);
+    if (!connection.ready || !id) { this.message = '请先连接一个环境'; return; }
+    this.environmentId = id;
     const epoch = ++this.epoch;
     this.busy = true;
     try {
@@ -172,7 +172,7 @@ export struct ThreadDefaultsPanel {
             }.width('100%').backgroundColor($r('app.color.card')).borderRadius(14).clip(true)
           }
         }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: Space.sm, right: Space.sm, bottom: Space.lg })
-      }.width('100%').layoutWeight(1).align(Alignment.TopStart)
+      }.width('100%').layoutWeight(1).align(Alignment.TopStart).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

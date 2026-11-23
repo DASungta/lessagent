@@ -255,3 +255,148 @@ export function queueCommand(commandId: string, threadId: string, action: string
   return { type: 'queued-run.' + action, commandId, threadId, runId,
     ...(action === 'edit' ? { text: prompt } : {}), ...(action === 'reorder' ? { beforeRunId } : {}) };
 }
+
+export interface ComposerExpandInput {
+  text: string;
+  previewText?: string;
+  compactTextWidthVp: number;
+  singleLineTextWidthVp: number;
+  measuredLineCount: number;
+  currentlyExpanded: boolean;
+}
+
+export interface CompactEditorGeometryInput {
+  rowWidthVp: number;
+  measuredSlotLeftVp: number;
+  measuredSlotWidthVp: number;
+  hasSendModeBadge: boolean;
+}
+
+export interface CompactEditorGeometry {
+  leftVp: number;
+  widthVp: number;
+  textWidthVp: number;
+}
+
+export interface ExpandedModelLayout {
+  iconOnly: boolean;
+  showSummary: boolean;
+  maxLabelWidthVp: number;
+  maxSummaryWidthVp: number;
+  maxButtonWidthVp: number;
+}
+
+const COMPACT_LEFT_DEFAULT_VP = 48;
+const COMPACT_RIGHT_RESERVED_VP = 94;
+const COMPACT_BADGE_RESERVED_VP = 54;
+const COMPACT_FALLBACK_WIDTH_VP = 140;
+const COMPACT_TEXT_INSET_VP = 16;
+const EXPAND_HYSTERESIS_VP = 4;
+
+const EXPANDED_MODEL_FALLBACK_SLOT_VP = 180;
+const EXPANDED_MODEL_ICON_ONLY_MIN_VP = 56;
+const EXPANDED_MODEL_CHROME_NO_SUMMARY_VP = 55;
+const EXPANDED_MODEL_CHROME_WITH_SUMMARY_VP = 60;
+const EXPANDED_MODEL_SUMMARY_MIN_BUDGET_VP = 72;
+const EXPANDED_MODEL_SUMMARY_MAX_VP = 88;
+const EXPANDED_MODEL_MIN_PART_VP = 24;
+
+/** 决定输入框是否应从紧凑单行胶囊切换为多行上下布局（与原版 useCompactComposerEditor 一致并防边界抖动）。 */
+export function shouldExpandComposer(input: ComposerExpandInput): boolean {
+  const effective = (input.text || '') + (input.previewText || '');
+  if (effective.length === 0) return false;
+  if (effective.includes('\n') || effective.includes('\r')) return true;
+  if (Number.isFinite(input.measuredLineCount) && input.measuredLineCount > 1) return true;
+  const compactWidth = Number.isFinite(input.compactTextWidthVp) ? Math.max(0, input.compactTextWidthVp) : 0;
+  const singleLineWidth = Number.isFinite(input.singleLineTextWidthVp) ? Math.max(0, input.singleLineTextWidthVp) : 0;
+  if (compactWidth > 0 && singleLineWidth > 0) {
+    const threshold = input.currentlyExpanded ? Math.max(0, compactWidth - EXPAND_HYSTERESIS_VP) : compactWidth;
+    if (singleLineWidth > threshold) return true;
+  }
+  return false;
+}
+
+/** 计算单行输入态中间 TextArea 槽位坐标、总宽及用于换行判断的可用文字宽度。 */
+export function resolveCompactEditorGeometry(input: CompactEditorGeometryInput): CompactEditorGeometry {
+  const measuredW = Number.isFinite(input.measuredSlotWidthVp) ? input.measuredSlotWidthVp : 0;
+  const measuredL = Number.isFinite(input.measuredSlotLeftVp) ? input.measuredSlotLeftVp : 0;
+  if (measuredW > 0) {
+    const widthVp = Math.max(40, measuredW);
+    return {
+      leftVp: Math.max(0, measuredL),
+      widthVp,
+      textWidthVp: Math.max(0, widthVp - COMPACT_TEXT_INSET_VP)
+    };
+  }
+  const rowW = Number.isFinite(input.rowWidthVp) ? input.rowWidthVp : 0;
+  const leftVp = COMPACT_LEFT_DEFAULT_VP + (input.hasSendModeBadge ? COMPACT_BADGE_RESERVED_VP : 0);
+  const widthVp = rowW > 0
+    ? Math.max(60, rowW - leftVp - COMPACT_RIGHT_RESERVED_VP)
+    : COMPACT_FALLBACK_WIDTH_VP;
+  return {
+    leftVp,
+    widthVp,
+    textWidthVp: Math.max(0, widthVp - COMPACT_TEXT_INSET_VP)
+  };
+}
+
+/** 为展开态底部模型选择器计算严格不溢出的名称与选项摘要最大宽度预算，兼容超长模型名与大字体。 */
+export function layoutExpandedModelControl(
+  slotWidthVp: number,
+  labelWidthVp: number,
+  summaryWidthVp: number,
+  hasSummary: boolean
+): ExpandedModelLayout {
+  const rawSlot = Number.isFinite(slotWidthVp) && slotWidthVp > 0 ? Math.floor(slotWidthVp) : EXPANDED_MODEL_FALLBACK_SLOT_VP;
+  const safeSlot = Math.max(0, rawSlot);
+  if (safeSlot < EXPANDED_MODEL_ICON_ONLY_MIN_VP) {
+    return {
+      iconOnly: true,
+      showSummary: false,
+      maxLabelWidthVp: 0,
+      maxSummaryWidthVp: 0,
+      maxButtonWidthVp: safeSlot
+    };
+  }
+  const withSummaryBudget = Math.max(0, safeSlot - EXPANDED_MODEL_CHROME_WITH_SUMMARY_VP);
+  const canShowSummary = hasSummary && withSummaryBudget >= EXPANDED_MODEL_SUMMARY_MIN_BUDGET_VP;
+  if (!canShowSummary) {
+    return {
+      iconOnly: false,
+      showSummary: false,
+      maxLabelWidthVp: Math.max(0, safeSlot - EXPANDED_MODEL_CHROME_NO_SUMMARY_VP),
+      maxSummaryWidthVp: 0,
+      maxButtonWidthVp: safeSlot
+    };
+  }
+  const budget = withSummaryBudget;
+  const defaultSummaryCap = Math.max(EXPANDED_MODEL_MIN_PART_VP, Math.min(EXPANDED_MODEL_SUMMARY_MAX_VP, Math.floor(budget * 0.36)));
+  const needLabel = Number.isFinite(labelWidthVp) && labelWidthVp > 0 ? Math.ceil(labelWidthVp) + 2 : budget;
+  const needSummary = Number.isFinite(summaryWidthVp) && summaryWidthVp > 0 ? Math.ceil(summaryWidthVp) + 2 : defaultSummaryCap;
+
+  let maxLabelWidthVp: number;
+  let maxSummaryWidthVp: number;
+  if (needLabel + needSummary <= budget) {
+    maxSummaryWidthVp = needSummary;
+    maxLabelWidthVp = Math.max(needLabel, budget - needSummary);
+  } else if (needSummary <= defaultSummaryCap) {
+    maxSummaryWidthVp = needSummary;
+    maxLabelWidthVp = Math.max(EXPANDED_MODEL_MIN_PART_VP, budget - maxSummaryWidthVp);
+  } else if (needLabel <= budget - defaultSummaryCap) {
+    maxLabelWidthVp = needLabel;
+    maxSummaryWidthVp = Math.max(EXPANDED_MODEL_MIN_PART_VP, budget - maxLabelWidthVp);
+  } else {
+    maxSummaryWidthVp = defaultSummaryCap;
+    maxLabelWidthVp = Math.max(EXPANDED_MODEL_MIN_PART_VP, budget - maxSummaryWidthVp);
+  }
+  if (maxLabelWidthVp + maxSummaryWidthVp > budget) {
+    maxLabelWidthVp = Math.max(0, budget - maxSummaryWidthVp);
+  }
+  return {
+    iconOnly: false,
+    showSummary: true,
+    maxLabelWidthVp,
+    maxSummaryWidthVp,
+    maxButtonWidthVp: safeSlot
+  };
+}

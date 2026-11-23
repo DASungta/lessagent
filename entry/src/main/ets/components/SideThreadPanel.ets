@@ -1,6 +1,7 @@
 import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { T3Client } from '../services/T3Client';
 import { ChatMessage, ThreadState } from '../protocol/Wire';
+import { ProjectView } from '../protocol/Projects';
 import { isLinkedThreadWorking } from '../protocol/LinkedThread';
 import { sideThreadComposer, sideThreadKindLabel, SideThreadTarget } from '../protocol/SideThread';
 import {
@@ -15,6 +16,8 @@ import {
   TurnWorkGroup
 } from '../protocol/ThreadItems';
 import { MarkdownView } from './MarkdownView';
+import { iconForActivityKind } from './ThreadActivity';
+import { ResolvedMarkdownMedia } from '../protocol/Markdown';
 import { AppButton } from './ui/AppButton';
 import { StatusBadge } from './ui/StatusBadge';
 import { TopBar } from './ui/TopBar';
@@ -28,6 +31,11 @@ export struct SideThreadPanel {
   onOpenInMain: () => void = () => {};
   onCopy: (text: string) => void = () => {};
   onOpenLink: (url: string) => void = () => {};
+  onOpenImage: (source: string) => void = () => {};
+  onShareMedia: ((source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => void) | undefined = undefined;
+  onSaveMediaToGallery: ((source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => void) | undefined = undefined;
+  onSaveMediaToFile: ((source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => void) | undefined = undefined;
+  downloadLocalMedia: ((url: string, kind: string, displayPath: string) => Promise<string>) | undefined = undefined;
 
   @State private threadTitle: string = '';
   @State private messages: ChatMessage[] = [];
@@ -68,6 +76,28 @@ export struct SideThreadPanel {
       this.cancelStream = undefined;
       cancel();
     }
+  }
+
+  private sideThreadCwd(): string {
+    const state = this.state;
+    if (state) {
+      if (typeof state.details.worktreePath === 'string' && state.details.worktreePath.trim()) {
+        return state.details.worktreePath.trim();
+      }
+      if (typeof state.details.workspaceRoot === 'string' && state.details.workspaceRoot.trim()) {
+        return state.details.workspaceRoot.trim();
+      }
+      const projectId = typeof state.details.projectId === 'string' ? state.details.projectId : '';
+      if (projectId && this.ownerClient) {
+        const project = this.ownerClient.shell.projects.find((entry: ProjectView) => entry.id === projectId);
+        if (project && project.workspaceRoot.trim()) return project.workspaceRoot.trim();
+      }
+    }
+    return this.ownerClient ? this.ownerClient.threadCwd() : '';
+  }
+
+  private sideMediaScopeKey(): string {
+    return (this.target?.threadId || '') + ':' + (this.ownerClient ? this.ownerClient.generationValue() : 0) + ':' + (this.ownerReady ? '1' : '0');
   }
 
   private syncViewFromState(): void {
@@ -257,6 +287,14 @@ export struct SideThreadPanel {
             Column({ space: Space.xxs }) {
               Button({ type: ButtonType.Normal }) {
                 Row({ space: Space.xs }) {
+                  Row() {
+                    Image(iconForActivityKind(activitySummary(line).icon))
+                      .width(activitySummary(line).icon === 't3' ? 16 : 14)
+                      .height(activitySummary(line).icon === 't3' ? 10 : 14)
+                      .objectFit(ImageFit.Contain)
+                      .opacity(0.85)
+                      .accessibilityLevel('no')
+                  }.width(17).height(15).justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center)
                   Text(activitySummary(line).title || line.label)
                     .fontSize(FontSize.caption)
                     .lineHeight(LineHeight.caption)
@@ -409,8 +447,17 @@ export struct SideThreadPanel {
                 } else {
                   MarkdownView({
                     markdown: msg.text,
+                    mediaScopeKey: this.sideMediaScopeKey(),
+                    mediaReady: this.ownerReady && !!this.ownerClient && this.ownerClient.ready,
                     onCopy: this.onCopy,
-                    onOpenLink: this.onOpenLink
+                    onOpenLink: this.onOpenLink,
+                    onOpenImage: this.onOpenImage,
+                    onShareMedia: this.onShareMedia,
+                    onSaveMediaToGallery: this.onSaveMediaToGallery,
+                    onSaveMediaToFile: this.onSaveMediaToFile,
+                    resolveMedia: this.ownerClient && this.target ? (source: string, refresh: boolean): Promise<ResolvedMarkdownMedia> =>
+                      this.ownerClient!.markdownMediaUrlForThread(this.target!.threadId, source, this.sideThreadCwd(), refresh) : undefined,
+                    downloadLocalMedia: this.downloadLocalMedia
                   })
                 }
               }

@@ -2640,13 +2640,27 @@ export class T3Client {
     return objects(value.entries).map((entry: Object) => text(record(entry).path));
   }
   threadCwd(): string {
-    if (this.thread && typeof this.thread.details.worktreePath === 'string') return this.thread.details.worktreePath;
+    if (this.thread && typeof this.thread.details.worktreePath === 'string' && this.thread.details.worktreePath.trim()) {
+      return this.thread.details.worktreePath.trim();
+    }
     const projectId = this.thread && typeof this.thread.details.projectId === 'string' ? this.thread.details.projectId : '';
     const project = this.shell.projects.find((entry: ProjectView) => entry.id === projectId);
-    return project ? project.workspaceRoot : '';
+    if (project && project.workspaceRoot.trim()) return project.workspaceRoot.trim();
+    if (this.thread && typeof this.thread.details.workspaceRoot === 'string' && this.thread.details.workspaceRoot.trim()) {
+      return this.thread.details.workspaceRoot.trim();
+    }
+    return '';
   }
   threadWorktreePath(): string {
-    return this.thread && typeof this.thread.details.worktreePath === 'string' ? this.thread.details.worktreePath : '';
+    return this.thread && typeof this.thread.details.worktreePath === 'string' ? this.thread.details.worktreePath.trim() : '';
+  }
+  private resolveAssetExpiresAt(raw: Object | undefined, errorMessage: string = '文件链接已过期'): number {
+    if (typeof raw !== 'number' || !Number.isFinite(raw) || raw <= 0) {
+      throw new Error(errorMessage);
+    }
+    const now = Date.now();
+    // Remote host clocks can lag behind the phone; keep a freshly minted URL valid locally.
+    return raw <= now + 60000 ? now + 300000 : raw;
   }
   threadProject(): ProjectView | undefined {
     const projectId = this.thread && typeof this.thread.details.projectId === 'string' ? this.thread.details.projectId : '';
@@ -2685,7 +2699,7 @@ export class T3Client {
     const value = record(await rpc.request('assets.createUrl', payload, undefined, 15000, false));
     if (rpc !== this.rpc) throw new Error('连接已变更');
     const relative = text(value.relativeUrl);
-    if (typeof value.expiresAt !== 'number' || value.expiresAt <= Date.now()) throw new Error('文件链接已过期');
+    this.resolveAssetExpiresAt(value.expiresAt, '文件链接已过期');
     return safeAssetUrl(this.activeBase(), relative);
   }
   async filePreviewUrl(cwd: string, path: string, inline: boolean = true): Promise<string> {
@@ -2696,7 +2710,7 @@ export class T3Client {
     const value = record(await rpc.request('assets.createUrl', payload, undefined, 15000, false));
     if (rpc !== this.rpc) throw new Error('连接已变更');
     const relative = text(value.relativeUrl);
-    if (typeof value.expiresAt !== 'number' || value.expiresAt <= Date.now()) throw new Error('文件链接已过期');
+    this.resolveAssetExpiresAt(value.expiresAt, '文件链接已过期');
     return safeAssetUrl(this.activeBase(), relative);
   }
   async fileMetadataKind(path: string): Promise<string> {
@@ -2717,6 +2731,10 @@ export class T3Client {
     }
   }
   async markdownMediaUrl(source: string, cwd: string = '', refresh: boolean = false): Promise<ResolvedMarkdownMedia> {
+    const threadId = !this.draftScope && this.thread ? this.thread.threadId : '';
+    return this.markdownMediaUrlForThread(threadId, source, cwd || this.threadCwd(), refresh);
+  }
+  async markdownMediaUrlForThread(threadId: string, source: string, cwd: string = '', refresh: boolean = false): Promise<ResolvedMarkdownMedia> {
     const effectiveCwd = cwd || this.threadCwd();
     const classified = classifyMarkdownMediaSource(source, effectiveCwd);
     if (classified.access === 'blocked') throw new Error('不支持此图片或媒体路径');
@@ -2732,7 +2750,6 @@ export class T3Client {
     }
     const rpc = this.requireRpc();
     const generation = this.generation;
-    const threadId = !this.draftScope && this.thread ? this.thread.threadId : '';
     const resource = markdownMediaAssetResource(threadId, effectiveCwd, classified, false);
     const cacheKey = this.mediaCache.key(generation, threadId, effectiveCwd, classified.path);
     return this.mediaCache.resolve(generation, cacheKey, async (): Promise<ResolvedMarkdownMedia> => {
@@ -2741,8 +2758,7 @@ export class T3Client {
       const value = record(await rpc.request('assets.createUrl', payload, undefined, 15000, false));
       if (rpc !== this.rpc || generation !== this.generation) throw new Error('连接已变更');
       const relative = text(value.relativeUrl);
-      const expiresAt = typeof value.expiresAt === 'number' ? value.expiresAt : 0;
-      if (expiresAt <= Date.now()) throw new Error('文件链接已过期');
+      const expiresAt = this.resolveAssetExpiresAt(value.expiresAt, '文件链接已过期');
       const url = safeAssetUrl(this.activeBase(), relative);
       let width = 0;
       let height = 0;
@@ -2763,13 +2779,32 @@ export class T3Client {
       };
     }, refresh);
   }
+  async downloadUrlBytes(url: string, maxBytes: number = 100 * 1024 * 1024): Promise<ArrayBuffer> {
+    const request = http.createHttp();
+    try {
+      const limit = Math.min(Math.max(maxBytes, 10 * 1024 * 1024), 100 * 1024 * 1024);
+      const options: http.HttpRequestOptions = withDirectProxyPolicy(url, {
+        method: http.RequestMethod.GET, usingCache: false,
+        maxRedirects: 0, connectTimeout: 10000, readTimeout: 120000, maxLimit: limit,
+        expectDataType: http.HttpDataType.ARRAY_BUFFER
+      });
+      const response = await request.request(url, options);
+      if (response.responseCode !== 200) throw new Error('媒体下载失败（' + response.responseCode + '）');
+      if (!(response.result instanceof ArrayBuffer)) throw new Error('媒体响应不是二进制数据');
+      if (response.result.byteLength === 0 || response.result.byteLength > maxBytes) {
+        throw new Error('媒体文件大小超出预览限制');
+      }
+      return response.result;
+    } finally { request.destroy(); }
+  }
   async downloadWorkspaceFile(cwd: string, path: string): Promise<ArrayBuffer> {
     const url = await this.filePreviewUrl(cwd, path, false);
     const request = http.createHttp();
     try {
       const options: http.HttpRequestOptions = withDirectProxyPolicy(url, {
         method: http.RequestMethod.GET, usingCache: false,
-        maxRedirects: 0, connectTimeout: 10000, readTimeout: 60000, expectDataType: http.HttpDataType.ARRAY_BUFFER
+        maxRedirects: 0, connectTimeout: 10000, readTimeout: 120000, maxLimit: 100 * 1024 * 1024,
+        expectDataType: http.HttpDataType.ARRAY_BUFFER
       });
       const response = await request.request(url, options);
       if (response.responseCode !== 200) throw new Error('文件下载失败（' + response.responseCode + '）');
@@ -3270,7 +3305,7 @@ export class T3Client {
     const value = record(await rpc.request('assets.createUrl', input, undefined, 15000, false));
     if (rpc !== this.rpc) throw new Error('连接已变更');
     const relative = text(value.relativeUrl);
-    if (typeof value.expiresAt !== 'number' || value.expiresAt <= Date.now()) throw new Error('附件链接已过期');
+    this.resolveAssetExpiresAt(value.expiresAt, '附件链接已过期');
     return safeAssetUrl(this.activeBase(), relative);
   }
   async htmlRenderUrl(attachmentId: string, title: string): Promise<string> {
@@ -3282,7 +3317,8 @@ export class T3Client {
     try {
       const options: http.HttpRequestOptions = withDirectProxyPolicy(url, {
         method: http.RequestMethod.GET, usingCache: false,
-        maxRedirects: 0, connectTimeout: 10000, readTimeout: 60000, expectDataType: http.HttpDataType.ARRAY_BUFFER
+        maxRedirects: 0, connectTimeout: 10000, readTimeout: 120000, maxLimit: 100 * 1024 * 1024,
+        expectDataType: http.HttpDataType.ARRAY_BUFFER
       });
       const response = await request.request(url, options);
       if (response.responseCode !== 200) throw new Error('附件下载失败（' + response.responseCode + '）');

@@ -4,18 +4,17 @@ import { GroupCard } from './ui/GroupCard';
 import { AppButton } from './ui/AppButton';
 import { StatusBadge } from './ui/StatusBadge';
 import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
-import { registerSharedFile } from '../services/ShareCache';
 import { T3Client } from '../services/T3Client';
 import { ContentMatch, directEntries, fileLines, FileLine, isAudio, isHtml, isImage, isMarkdown, matchesContentSearchLine,
   isPdf, isVideo, WorkspaceEntry, WorkspaceFile } from '../protocol/Files';
+import { canSaveToPhotoGallery, mediaFileName } from '../protocol/MediaTransfer';
+import { saveBytesToDocumentPicker, saveBytesToPhotoGallery, shareBytesWithSystemSheet } from '../services/MediaActions';
 import { HtmlRenderWebView } from './HtmlRenderView';
 import { MarkdownView } from './MarkdownView';
 import { ResolvedMarkdownMedia, resolveRelativeMarkdownPath } from '../protocol/Markdown';
 import { CodeLine } from './CodeLine';
 import { DiffLineNumber } from './DiffLineNumber';
 import { fileCommentContext, fileSelectionContext } from '../protocol/R5';
-import { picker, fileIo, fileUri } from '@kit.CoreFileKit';
-import { systemShare } from '@kit.ShareKit';
 import { common } from '@kit.AbilityKit';
 
 @Component
@@ -64,6 +63,7 @@ export struct FilesPanel {
   @State wrap: boolean = false;
   @State fileCommentOpen: boolean = false;
   @State fileComment: string = '';
+  @State mediaBusy: boolean = false;
   private generation: number = 0;
   private alive: boolean = false;
 
@@ -292,39 +292,149 @@ export struct FilesPanel {
     } catch (reason) { this.reportStatus((reason as Error).message); }
   }
 
+  private selectedMediaKind(): string {
+    if (isVideo(this.selectedPath)) return 'video';
+    if (isImage(this.selectedPath)) return 'image';
+    if (isAudio(this.selectedPath)) return 'audio';
+    return '';
+  }
+
   private async saveFile(): Promise<void> {
     const connection = this.connection;
-    if (!connection || !this.selectedPath) return;
+    const selected = this.selectedPath;
+    if (!connection || !selected || this.mediaBusy) return;
+    this.mediaBusy = true;
+    this.reportStatus('正在下载…');
     try {
-      const options = new picker.DocumentSaveOptions();
-      options.newFileNames = [this.selectedPath.split('/').pop() || 'file'];
-      const target = await new picker.DocumentViewPicker().save(options);
-      if (!target.length) { this.reportStatus('已取消保存'); return; }
-      const bytes = await connection.downloadWorkspaceFile(this.cwd, this.selectedPath);
-      const handle = fileIo.openSync(target[0], fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC);
-      try { fileIo.writeSync(handle.fd, bytes); fileIo.fsyncSync(handle.fd); } finally { fileIo.closeSync(handle); }
-      this.reportStatus('已保存到所选位置');
+      const bytes = await connection.downloadWorkspaceFile(this.cwd, selected);
+      const fileName = mediaFileName(selected, '', '', '', this.selectedMediaKind());
+      const outcome = await saveBytesToDocumentPicker(bytes, fileName);
+      this.reportStatus(outcome === 'saved' ? '已保存到所选位置' : '已取消保存');
     } catch (reason) { this.reportStatus('保存失败：' + (reason as Error).message); }
+    finally { this.mediaBusy = false; }
+  }
+
+  private async saveMediaToGallery(viaSaveButton: boolean): Promise<void> {
+    const connection = this.connection;
+    const selected = this.selectedPath;
+    if (!connection || !selected || this.mediaBusy) return;
+    const kind = this.selectedMediaKind();
+    if (!canSaveToPhotoGallery(selected, '', kind)) {
+      await this.saveFile();
+      return;
+    }
+    this.mediaBusy = true;
+    this.reportStatus('正在保存到相册…');
+    try {
+      const bytes = await connection.downloadWorkspaceFile(this.cwd, selected);
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      const fileName = mediaFileName(selected, '', '', '', kind);
+      const outcome = await saveBytesToPhotoGallery(context, bytes, fileName, '', kind, viaSaveButton);
+      this.reportStatus(outcome === 'saved' ? '已保存到相册' : '已取消保存');
+    } catch (reason) { this.reportStatus('保存失败：' + (reason as Error).message); }
+    finally { this.mediaBusy = false; }
   }
 
   private async shareFile(): Promise<void> {
     const connection = this.connection;
     const scope = this.cacheScope;
     const generation = this.generation;
-    if (!connection || !this.selectedPath) return;
+    const selected = this.selectedPath;
+    if (!connection || !selected || this.mediaBusy) return;
+    this.mediaBusy = true;
+    this.reportStatus('正在准备分享…');
     try {
-      const bytes = await connection.downloadWorkspaceFile(this.cwd, this.selectedPath);
+      const bytes = await connection.downloadWorkspaceFile(this.cwd, selected);
       if (generation !== this.generation || connection !== this.connection || scope !== this.cacheScope) throw new Error('分享目标已变化');
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-      const name = (this.selectedPath.split('/').pop() || 'file').replace(/[\\/:*?"<>|\x00-\x1f]/g, '_');
-      const path = context.cacheDir + '/share-' + Date.now() + '-' + name;
-      const handle = fileIo.openSync(path, fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC);
-      try { fileIo.writeSync(handle.fd, bytes); fileIo.fsyncSync(handle.fd); } finally { fileIo.closeSync(handle); }
-      registerSharedFile(context.cacheDir, path.substring(context.cacheDir.length + 1), scope);
-      const shared = new systemShare.SharedData({ utd: 'general.file', uri: fileUri.getUriFromPath(path), title: name });
-      await new systemShare.ShareController(shared).show(context, {});
+      const kind = this.selectedMediaKind();
+      const fileName = mediaFileName(selected, '', '', '', kind);
+      await shareBytesWithSystemSheet(context, bytes, fileName, scope, '', kind);
       this.reportStatus('已打开系统分享');
     } catch (reason) { this.reportStatus('分享失败：' + (reason as Error).message); }
+    finally { this.mediaBusy = false; }
+  }
+
+  @Builder
+  fileActionsMenu() {
+    Menu() {
+      MenuItem({ content: '复制路径' }).onClick(() => this.onCopy(this.selectedPath))
+      MenuItem({ content: this.fileCommentOpen ? '关闭文件评论' : '文件评论' })
+        .onClick(() => { this.fileCommentOpen = !this.fileCommentOpen; })
+      if (canSaveToPhotoGallery(this.selectedPath, '', this.selectedMediaKind())) {
+        MenuItem({ content: '保存到相册' }).onClick(() => { void this.saveMediaToGallery(false); })
+      }
+      MenuItem({ content: '分享' }).onClick(() => { void this.shareFile(); })
+      MenuItem({ content: '保存到文件' }).onClick(() => { void this.saveFile(); })
+    }
+  }
+
+  @Builder
+  mediaActionBar() {
+    Column({ space: Space.xs }) {
+      Row({ space: Space.xs }) {
+        if (canSaveToPhotoGallery(this.selectedPath, '', this.selectedMediaKind())) {
+          Column() {
+            SaveButton({
+              icon: SaveIconStyle.FULL_FILLED,
+              text: SaveDescription.SAVE_TO_GALLERY,
+              buttonType: ButtonType.Normal
+            })
+              .width('100%')
+              .height(Sizes.buttonHeight)
+              .borderRadius(Radius.button)
+              .backgroundColor($r('app.color.prominent'))
+              .fontColor($r('app.color.on_prominent'))
+              .iconColor($r('app.color.on_prominent'))
+              .fontSize(FontSize.body)
+              .iconSize(16)
+              .onClick((event: ClickEvent, result: SaveButtonOnClickResult) => {
+                if (this.mediaBusy) return;
+                if (result === SaveButtonOnClickResult.SUCCESS) {
+                  void this.saveMediaToGallery(true);
+                } else if (result === SaveButtonOnClickResult.CANCELED_BY_USER) {
+                  this.reportStatus('已取消保存');
+                } else {
+                  void this.saveMediaToGallery(false);
+                }
+              })
+          }.layoutWeight(1)
+        } else {
+          Column() {
+            AppButton({
+              label: this.mediaBusy ? '保存中…' : '保存到文件',
+              kind: 'primary',
+              fill: true,
+              disabled: this.mediaBusy,
+              onTap: () => { void this.saveFile(); }
+            })
+          }.layoutWeight(1)
+        }
+        Column() {
+          AppButton({
+            label: '分享',
+            kind: 'secondary',
+            fill: true,
+            disabled: this.mediaBusy,
+            onTap: () => { void this.shareFile(); }
+          })
+        }.layoutWeight(1)
+      }.width('100%')
+      if (canSaveToPhotoGallery(this.selectedPath, '', this.selectedMediaKind())) {
+        AppButton({
+          label: '保存到文件',
+          kind: 'secondary',
+          compact: true,
+          fill: true,
+          disabled: this.mediaBusy,
+          onTap: () => { void this.saveFile(); }
+        })
+      }
+    }
+    .width('100%')
+    .padding(Space.sm)
+    .backgroundColor($r('app.color.card'))
+    .borderRadius(Radius.card)
   }
 
   @Builder
@@ -346,18 +456,19 @@ export struct FilesPanel {
       }
     }) {
       if (this.selectedPath) {
-        IconButton({
-          icon: $r('app.media.ui_more'),
-          label: '文件操作',
-          onTap: () => {}
-        })
-          .bindMenu([
-            { value: '复制路径', action: () => this.onCopy(this.selectedPath) },
-            { value: this.fileCommentOpen ? '关闭文件评论' : '文件评论',
-              action: () => { this.fileCommentOpen = !this.fileCommentOpen; } },
-            { value: '分享', action: () => { void this.shareFile(); } },
-            { value: '保存到文件', action: () => { void this.saveFile(); } }
-          ])
+        Button({ type: ButtonType.Circle, stateEffect: true }) {
+          Image($r('app.media.ui_more'))
+            .width(Sizes.icon)
+            .height(Sizes.icon)
+            .objectFit(ImageFit.Contain)
+            .draggable(false)
+            .accessibilityLevel('no')
+        }
+        .width(Sizes.iconHit)
+        .height(Sizes.iconHit)
+        .backgroundColor(Color.Transparent)
+        .accessibilityText('文件操作')
+        .bindMenu(this.fileActionsMenu())
       }
     }
   }
@@ -595,11 +706,18 @@ export struct FilesPanel {
         .borderRadius(Radius.card)
         .clip(true)
       } else if (this.imageUrl && isImage(this.selectedPath)) {
-        Scroll() {
-          Image(this.imageUrl).width('100%').objectFit(ImageFit.Contain)
-        }.width('100%').layoutWeight(1).backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
+        Column({ space: Space.sm }) {
+          Scroll() {
+            Image(this.imageUrl).width('100%').objectFit(ImageFit.Contain)
+          }.width('100%').layoutWeight(1).backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
+          this.mediaActionBar()
+        }.width('100%').layoutWeight(1)
       } else if (this.imageUrl && isVideo(this.selectedPath)) {
-        Video({ src: this.imageUrl }).width('100%').height(320).controls(true).borderRadius(Radius.card).clip(true)
+        Column({ space: Space.sm }) {
+          Video({ src: this.imageUrl }).width('100%').height(320).objectFit(ImageFit.Contain).controls(true)
+            .backgroundColor(Color.Black).borderRadius(Radius.card).clip(true)
+          this.mediaActionBar()
+        }.width('100%').layoutWeight(1)
       } else if (this.imageUrl) {
         GroupCard() {
           Column({ space: Space.xs }) {

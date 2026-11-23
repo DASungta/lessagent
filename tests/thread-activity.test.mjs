@@ -47,7 +47,7 @@ test('file_search, reasoning, checkpoint and error summarize cleanly', () => {
   ]).map(activitySummary);
 
   assert.deepEqual(search, { icon: 'file', title: '搜索 *.ets', badge: '完成', badgeTone: 'success', additions: '', deletions: '' });
-  assert.deepEqual(reasoning, { icon: 'info', title: '思考过程', badge: '思考中', badgeTone: 'neutral', additions: '', deletions: '' });
+  assert.deepEqual(reasoning, { icon: 'thinking', title: 'thinking...', badge: '思考中', badgeTone: 'neutral', additions: '', deletions: '' });
   assert.deepEqual(checkpoint, { icon: 'info', title: '检查点', badge: '', badgeTone: 'neutral', additions: '', deletions: '' });
   assert.equal(err.badge, '失败');
   assert.equal(err.badgeTone, 'danger');
@@ -427,17 +427,65 @@ test('wire v2 statuses (running/pending/waiting) and untitled dynamic_tool summa
   assert.equal(isActivityInProgress(lines[0]), true);
   assert.equal(summaries[1].badge, '思考中');
   assert.equal(isActivityInProgress(lines[1]), true);
-  assert.equal(summaries[2].title, 't3_thread_read');
+  assert.equal(summaries[2].icon, 't3');
+  assert.equal(summaries[2].title, '已读取会话');
   assert.equal(summaries[2].badge, '完成');
   assert.equal(isActivityInProgress(lines[2]), false);
   assert.equal(summaries[3].title, '工具调用');
   assert.equal(summaries[3].title.includes('completed'), false);
   assert.equal(summaries[4].title, '执行 schedule');
   assert.equal(summaries[4].badge, '进行中');
+  assert.equal(summaries[5].icon, 'browser');
   assert.equal(summaries[5].title, '搜索 harmony');
   assert.equal(summaries[5].badge, '进行中');
 
   assert.equal(isHiddenWorkItem({ id: 'prep-run', type: 'command_execution', status: 'running', input: 'Preparing workspace' }), false);
+});
+
+test('T3 MCP tools, eye file reads, and thinking reasoning rows resolve Android-parity icons, labels, and SVG assets', async () => {
+  const lines = activityLines([
+    { id: 't1', type: 'dynamic_tool', status: 'completed', toolName: 'mcp__t3-code__t3_environment_links', title: null },
+    { id: 't2', type: 'dynamic_tool', status: 'running', toolName: 'default_api:mcp_t3-code_t3_thread_search', title: null },
+    { id: 't3', type: 'dynamic_tool', status: 'completed', toolName: 't3-code.t3_thread_read', title: '已读取会话“打包”' },
+    { id: 't4', type: 'dynamic_tool', status: 'completed', toolName: 't3-code · orchestrator_capabilities', title: null },
+    { id: 't5', type: 'dynamic_tool', status: 'completed', toolName: 't3-code.preview_snapshot', title: null },
+    { id: 't6', type: 'dynamic_tool', status: 'completed', toolName: 't3-code.pull_request_read', title: null },
+    { id: 'r1', type: 'dynamic_tool', status: 'completed', toolName: 'read_file', title: 'Read /Users/zhangyc/App.ets' },
+    { id: 'r2', type: 'dynamic_tool', status: 'running', toolName: 'read_file', title: null, input: '/Users/zhangyc/Index.ets' },
+    { id: 'th1', type: 'reasoning', status: 'completed', text: '**The Antigravity** check\nsecond line' },
+    { id: 'th2', type: 'reasoning', status: 'running', text: '' }
+  ]);
+  const s = lines.map(activitySummary);
+
+  assert.equal(s[0].icon, 't3');
+  assert.equal(s[0].title, '已列出关联的环境');
+  assert.equal(s[1].icon, 't3');
+  assert.equal(s[1].title, '正在搜索会话内容');
+  assert.equal(s[2].icon, 't3');
+  assert.equal(s[2].title, '已读取会话“打包”');
+  assert.equal(s[3].icon, 't3');
+  assert.equal(s[3].title, '已获取编排能力');
+  assert.equal(s[4].icon, 'browser');
+  assert.equal(s[5].icon, 'pr');
+  assert.equal(s[6].icon, 'eye');
+  assert.equal(s[6].title, '已读取 App.ets');
+  assert.equal(s[7].icon, 'eye');
+  assert.equal(s[7].title, '正在读取 /Users/zhangyc/Index.ets');
+  assert.equal(s[8].icon, 'thinking');
+  assert.equal(s[8].title, 'The Antigravity check');
+  assert.equal(s[9].icon, 'thinking');
+  assert.equal(s[9].title, '思考过程');
+
+  assert.equal(summarizeWork(lines.slice(0, 4)).summaryIcon, 't3');
+  assert.equal(summarizeWork([lines[6], lines[7]]).summaryIcon, 'eye');
+  assert.equal(summarizeWork([lines[8], lines[9]]).summaryIcon, 'thinking');
+
+  for (const theme of ['base', 'dark']) {
+    const t3Svg = await readFile(new URL(`../entry/src/main/resources/${theme}/media/ui_tool_t3.svg`, import.meta.url), 'utf8');
+    assert.ok(t3Svg.includes('<svg') && t3Svg.includes('94.3941 56.96'), `${theme}/ui_tool_t3.svg`);
+    const eyeSvg = await readFile(new URL(`../entry/src/main/resources/${theme}/media/ui_tool_eye.svg`, import.meta.url), 'utf8');
+    assert.ok(eyeSvg.includes('<svg') && eyeSvg.includes('viewBox="0 0 24 24"'), `${theme}/ui_tool_eye.svg`);
+  }
 });
 
 test('canForkAssistantItem mirrors upstream native fork, full handoff, and historical fallback rules', () => {

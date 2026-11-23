@@ -1,6 +1,6 @@
 import { T3Client } from '../services/T3Client';
 import {
-  activityLines, ActivityLine, activitySummary, ActivitySummary, appendOutput,
+  ActivityIcon, activityLines, ActivityLine, activitySummary, ActivitySummary, appendOutput,
   ColoredDiffLine, isActivityInProgress, MessageWorkMap, parseDiffPreviewLines, resolveExpandedActivityBody, TurnWorkGroup
 } from '../protocol/ThreadItems';
 import { HtmlRenderEntry } from '../protocol/HtmlRender';
@@ -10,9 +10,14 @@ import { ResolvedMarkdownMedia } from '../protocol/Markdown';
 import { record, text } from '../protocol/Wire';
 import { FontSize, LineHeight, Radius, Space, Weight } from '../common/Theme';
 
-function iconForKind(kind: 'cmd' | 'file' | 'info'): Resource {
+export function iconForActivityKind(kind: ActivityIcon): Resource {
   if (kind === 'cmd') return $r('app.media.ui_tool_cmd');
   if (kind === 'file') return $r('app.media.ui_tool_file');
+  if (kind === 'eye') return $r('app.media.ui_tool_eye');
+  if (kind === 't3') return $r('app.media.ui_tool_t3');
+  if (kind === 'thinking') return $r('app.media.ui_thinking');
+  if (kind === 'browser') return $r('app.media.ui_globe');
+  if (kind === 'pr') return $r('app.media.ui_tab_pulls');
   return $r('app.media.ui_tool_info');
 }
 
@@ -78,12 +83,18 @@ struct ActivityRowView {
 
   build() {
     Row({ space: 6 }) {
-      Image(iconForKind(this.summary().icon))
-        .width(15)
-        .height(15)
-        .objectFit(ImageFit.Contain)
-        .opacity(0.85)
-        .accessibilityLevel('no')
+      Row() {
+        Image(iconForActivityKind(this.summary().icon))
+          .width(this.summary().icon === 't3' ? 17 : 15)
+          .height(this.summary().icon === 't3' ? 11 : 15)
+          .objectFit(ImageFit.Contain)
+          .opacity(this.summary().icon === 't3' ? 0.92 : 0.85)
+          .accessibilityLevel('no')
+      }
+      .width(18)
+      .height(16)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
       Text(this.summary().title)
         .fontSize(FontSize.callout)
         .lineHeight(LineHeight.callout)
@@ -221,6 +232,7 @@ export struct ThreadActivity {
   @Prop htmlRenderScopeKey: string = '';
   @Prop headerLabel: string = '';
   @Prop summaryLabel: string = '';
+  @Prop summaryIcon: ActivityIcon = 'cmd';
   @Prop failureLabel: string = '';
   @Prop checkpointText: string = '';
   @Prop checkpointAdditions: string = '';
@@ -549,11 +561,18 @@ export struct ThreadActivity {
         Column({ space: 4 }) {
           Button({ type: ButtonType.Normal, stateEffect: true }) {
             Row({ space: 6 }) {
-              Image($r('app.media.ui_tool_cmd'))
-                .width(14)
-                .height(14)
-                .opacity(0.7)
-                .accessibilityLevel('no')
+              Row() {
+                Image(iconForActivityKind(this.summaryIcon))
+                  .width(this.summaryIcon === 't3' ? 16 : 14)
+                  .height(this.summaryIcon === 't3' ? 10 : 14)
+                  .objectFit(ImageFit.Contain)
+                  .opacity(this.summaryIcon === 't3' ? 0.85 : 0.7)
+                  .accessibilityLevel('no')
+              }
+              .width(18)
+              .height(16)
+              .justifyContent(FlexAlign.Center)
+              .alignItems(VerticalAlign.Center)
               Text(this.summaryLabel || (activityLines(this.items).length + ' 项执行步骤'))
                 .fontSize(FontSize.callout)
                 .lineHeight(LineHeight.callout)
@@ -670,6 +689,7 @@ export struct MessageWorkSlot {
             htmlRenderScopeKey: this.htmlRenderScopeKey,
             headerLabel: this.currentGroup()!.runMeta ? this.currentGroup()!.runMeta!.headerLabel : '',
             summaryLabel: this.currentGroup()!.summary.label,
+            summaryIcon: this.currentGroup()!.summary.summaryIcon,
             failureLabel: this.currentGroup()!.summary.failureLabel,
             checkpointText: this.currentGroup()!.checkpoint ? this.currentGroup()!.checkpoint!.label : '',
             checkpointAdditions: this.currentGroup()!.checkpoint ? this.currentGroup()!.checkpoint!.additionsText : '',

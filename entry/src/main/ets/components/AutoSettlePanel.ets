@@ -4,7 +4,7 @@ import { FormRow } from './ui/FormRow';
 import { AppButton } from './ui/AppButton';
 import { FontSize, LineHeight, Sizes, Space } from '../common/Theme';
 import { T3Client } from '../services/T3Client';
-import { record } from '../protocol/Wire';
+import { configEnvironmentId } from '../protocol/Wire';
 import {
   AutoSettleKey, AutoSettleSettings, AutoSettleValue, DEFAULT_AUTO_SETTLE_DAYS,
   autoSettleField, readAutoSettleSettings, validAutoSettleDays, writeAutoSettleSetting
@@ -23,16 +23,15 @@ export struct AutoSettlePanel {
   private epoch: number = 0;
 
   aboutToAppear(): void {
-    const id = this.connection ? record(this.connection.config.environment).environmentId : '';
-    this.environmentId = typeof id === 'string' ? id : '';
+    this.environmentId = this.connection ? configEnvironmentId(this.connection.config) : '';
     this.busy = false;
     void this.refresh();
   }
   aboutToDisappear(): void { this.epoch++; }
 
   private current(connection: T3Client, epoch: number): boolean {
-    return this.epoch === epoch && this.connection === connection && connection.ready &&
-      record(connection.config.environment).environmentId === this.environmentId;
+    return this.epoch === epoch && this.connection === connection && connection.ready && !!this.environmentId &&
+      configEnvironmentId(connection.config) === this.environmentId;
   }
   private accept(snapshot: AutoSettleSettings): void {
     this.snapshot = snapshot;
@@ -43,6 +42,9 @@ export struct AutoSettlePanel {
   private async refresh(): Promise<void> {
     const connection = this.connection;
     if (!connection || this.busy) return;
+    const id = this.environmentId || configEnvironmentId(connection.config);
+    if (!connection.ready || !id) { this.message = '请先连接一个环境'; return; }
+    this.environmentId = id;
     const epoch = ++this.epoch;
     this.busy = true;
     try {
@@ -185,7 +187,7 @@ export struct AutoSettlePanel {
             }
           }
         }.width('100%').alignItems(HorizontalAlign.Start).padding({ left: Space.sm, right: Space.sm, bottom: Space.lg })
-      }.width('100%').layoutWeight(1).align(Alignment.TopStart)
+      }.width('100%').layoutWeight(1).align(Alignment.TopStart).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
   }
 }

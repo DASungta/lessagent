@@ -55,7 +55,7 @@ import {
   usageSourceMessages,
   usageWindowPayload,
 } from '../protocol/Usage';
-import { record } from '../protocol/Wire';
+import { optionalRecord, record } from '../protocol/Wire';
 import { T3Client } from '../services/T3Client';
 import { AppButton } from './ui/AppButton';
 import { IconButton } from './ui/IconButton';
@@ -315,10 +315,7 @@ export struct UsagePanel {
     }
     if (out.length === 0 && this.connection) {
       const emptyEnv: Record<string, Object> = {};
-      const cfgEnv =
-        this.connection.config.environment !== undefined && this.connection.config.environment !== null
-          ? record(this.connection.config.environment)
-          : emptyEnv;
+      const cfgEnv = optionalRecord(this.connection.config.environment) || emptyEnv;
       const envId = typeof cfgEnv.environmentId === 'string' && cfgEnv.environmentId ? cfgEnv.environmentId : 'current';
       const label = typeof cfgEnv.label === 'string' && cfgEnv.label ? cfgEnv.label : '当前环境';
       out.push({ environmentId: envId, localId: envId, label, client: this.connection });

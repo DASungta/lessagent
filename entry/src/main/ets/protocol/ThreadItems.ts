@@ -1,7 +1,7 @@
 import { ChatMessage, compactArray, compactObjects, record, text } from './Wire';
 import { HtmlRenderEntry, htmlRenderFromToolItem } from './HtmlRender';
 
-export interface ActivityLine { label: string; text: string; kind: string; itemId: string; status?: string; }
+export interface ActivityLine { label: string; text: string; kind: string; itemId: string; status?: string; toolName?: string; }
 
 function optional(value: Object | undefined): string { return typeof value === 'string' ? value : ''; }
 
@@ -131,15 +131,30 @@ export function activityLines(items: Record<string, Object>[]): ActivityLine[] {
       continue;
     }
     if (type === 'dynamic_tool') {
-      const toolTitle = optional(item.title).trim() || optional(item.toolName).trim();
-      result.push({ itemId: id, kind: type, status,
+      const rawToolName = optional(item.toolName).trim();
+      const toolTitle = optional(item.title).trim() || rawToolName;
+      const line: ActivityLine = {
+        itemId: id,
+        kind: type,
+        status,
         label: type + (toolTitle ? ' · ' + toolTitle : '') + (status ? ' · ' + status : ''),
-        text: optional(item.input) + (optional(item.output) ? '\n' + optional(item.output) : '') });
+        text: optional(item.input) + (optional(item.output) ? '\n' + optional(item.output) : '')
+      };
+      if (rawToolName) line.toolName = rawToolName;
+      result.push(line);
       continue;
     }
     const title = optional(item.title);
-    result.push({ itemId: id, kind: type, status, label: type + (title ? ' · ' + title : '') + (status ? ' · ' + status : ''),
-      text: optional(item.input) + (optional(item.output) ? '\n' + optional(item.output) : '') });
+    const rawToolName = optional(item.toolName).trim();
+    const fallbackLine: ActivityLine = {
+      itemId: id,
+      kind: type,
+      status,
+      label: type + (title ? ' · ' + title : '') + (status ? ' · ' + status : ''),
+      text: optional(item.input) + (optional(item.output) ? '\n' + optional(item.output) : '')
+    };
+    if (rawToolName) fallbackLine.toolName = rawToolName;
+    result.push(fallbackLine);
   }
   return result;
 }
@@ -151,13 +166,195 @@ export function appendOutput(previous: string, kind: string, textValue: string, 
   return (truncated ? '' : '…') + next.slice(next.length - 200000);
 }
 
+export type ActivityIcon = 'cmd' | 'file' | 'eye' | 'info' | 't3' | 'thinking' | 'browser' | 'pr';
+
 export interface ActivitySummary {
-  icon: 'cmd' | 'file' | 'info';
+  icon: ActivityIcon;
   title: string;
   badge: string;
   badgeTone: 'success' | 'danger' | 'neutral';
   additions: string;
   deletions: string;
+}
+
+interface T3McpToolSpec {
+  completedLabel: string;
+  runningLabel: string;
+  icon: ActivityIcon;
+}
+
+function t3Tool(runningLabel: string, completedLabel: string, icon: ActivityIcon = 't3'): T3McpToolSpec {
+  return { completedLabel, runningLabel, icon };
+}
+
+const T3_MCP_SERVER_ALIASES: string[] = ['t3-code', 't3_code', 't3code', 't3-code-direct', 't3_code_direct'];
+
+const T3_MCP_TOOLS: Record<string, T3McpToolSpec> = {
+  link_pull_request: t3Tool('正在关联 PR', '已关联 PR', 'pr'),
+  link_pull_requests: t3Tool('正在关联多个 PR', '已关联多个 PR', 'pr'),
+  unlink_pull_request: t3Tool('正在取消关联 PR', '已取消关联 PR', 'pr'),
+  unlink_pull_requests: t3Tool('正在按状态取消关联 PR', '已按状态取消关联 PR', 'pr'),
+  list_thread_pull_requests: t3Tool('正在查看关联的 PR', '已查看关联的 PR', 'pr'),
+  watch_pull_request: t3Tool('正在监控 PR', '正在监控 PR', 'pr'),
+  unwatch_pull_request: t3Tool('正在停止监控 PR', '已停止监控 PR', 'pr'),
+  write_pull_request_guides: t3Tool('正在生成审查指南', '已开始生成审查指南', 'pr'),
+  read_pull_request_guide: t3Tool('正在读取审查指南', '已读取审查指南', 'pr'),
+  list_issues: t3Tool('正在列出议题', '已列出议题'),
+  read_issue: t3Tool('正在读取议题', '已读取议题'),
+  create_issue: t3Tool('正在创建议题', '已创建议题'),
+  comment_on_issue: t3Tool('正在评论议题', '已评论议题'),
+  set_issue_state: t3Tool('正在修改议题状态', '已修改议题状态'),
+  link_issue: t3Tool('正在关联议题', '已关联议题'),
+  unlink_issue: t3Tool('正在取消关联议题', '已取消关联议题'),
+  list_thread_issues: t3Tool('正在查看关联的议题', '已查看关联的议题'),
+  pull_request_read: t3Tool('正在读取 PR', '已读取 PR', 'pr'),
+  pull_request_list: t3Tool('正在列出 PR', '已列出 PR', 'pr'),
+  pull_request_create: t3Tool('正在创建 PR', '已创建 PR', 'pr'),
+  pull_request_update: t3Tool('正在更新 PR', '已更新 PR', 'pr'),
+  pull_request_respond: t3Tool('正在回复 PR 评审', '已回复 PR 评审', 'pr'),
+  pull_request_review: t3Tool('正在提交 PR 评审', '已提交 PR 评审', 'pr'),
+  ci_logs: t3Tool('正在读取 CI 日志', '已读取 CI 日志', 'pr'),
+  ci_rerun: t3Tool('正在重跑 CI', '已重跑 CI', 'pr'),
+  pull_request_merge: t3Tool('正在合并 PR', '已合并 PR', 'pr'),
+  orchestrator_capabilities: t3Tool('正在获取编排能力', '已获取编排能力'),
+  delegate_task: t3Tool('正在委派子任务', '已委派子任务'),
+  task_status: t3Tool('正在获取子任务状态', '已获取子任务状态'),
+  task_cancel: t3Tool('正在取消子任务', '已请求取消子任务'),
+  schedule_task: t3Tool('正在创建定时任务', '已创建定时任务'),
+  list_scheduled_tasks: t3Tool('正在列出定时任务', '已列出定时任务'),
+  update_scheduled_task: t3Tool('正在更新定时任务', '已更新定时任务'),
+  delete_scheduled_task: t3Tool('正在删除定时任务', '已请求删除定时任务'),
+  run_scheduled_task_now: t3Tool('正在运行定时任务', '已触发定时任务'),
+  request_secret: t3Tool('正在请求凭据', '已请求凭据'),
+  create_threads: t3Tool('正在创建 T3 会话', '已创建 T3 会话'),
+  t3_thread_start: t3Tool('正在启动 T3 会话', '已启动 T3 会话'),
+  t3_thread_launch: t3Tool('正在启动项目会话', '已启动项目会话'),
+  t3_thread_list: t3Tool('正在列出 T3 会话', '已列出 T3 会话'),
+  t3_thread_read: t3Tool('正在读取会话', '已读取会话'),
+  t3_thread_send: t3Tool('正在发送到会话', '已发送到会话'),
+  t3_thread_wait: t3Tool('正在等待会话', '已等待会话'),
+  t3_workflow_stop: t3Tool('正在停止工作流', '已请求停止工作流'),
+  t3_background_wait: t3Tool('正在更新后台等待', '已更新后台等待'),
+  t3_thread_interrupt: t3Tool('正在中断会话', '已请求中断会话'),
+  t3_worktree_handoff: t3Tool('正在切换会话到工作树', '已切换会话到工作树'),
+  t3_worktree_status: t3Tool('正在获取工作树状态', '已获取工作树状态'),
+  t3_worktree_list: t3Tool('正在列出工作区分支', '已列出工作区分支'),
+  preview_status: t3Tool('正在获取预览浏览器状态', '已获取预览浏览器状态', 'browser'),
+  preview_open: t3Tool('正在打开预览页面', '已打开预览页面', 'browser'),
+  preview_navigate: t3Tool('正在导航预览浏览器', '已导航预览浏览器', 'browser'),
+  preview_dialog: t3Tool('正在处理预览弹窗', '已处理预览弹窗', 'browser'),
+  preview_snapshot: t3Tool('正在抓取预览页面快照', '已抓取预览页面快照', 'browser'),
+  preview_act: t3Tool('正在操作预览浏览器', '已操作预览浏览器', 'browser'),
+  preview_click: t3Tool('正在点击预览页面', '已点击预览页面', 'browser'),
+  preview_press: t3Tool('正在发送按键到预览浏览器', '已发送按键到预览浏览器', 'browser'),
+  preview_type: t3Tool('正在在预览页面输入', '已在预览页面输入', 'browser'),
+  preview_hover: t3Tool('正在悬停预览元素', '已悬停预览元素', 'browser'),
+  preview_select: t3Tool('正在选择预览选项', '已选择预览选项', 'browser'),
+  preview_drag: t3Tool('正在拖拽预览元素', '已拖拽预览元素', 'browser'),
+  preview_upload: t3Tool('正在上传文件到预览浏览器', '已上传文件到预览浏览器', 'browser'),
+  preview_scroll: t3Tool('正在滚动预览页面', '已滚动预览页面', 'browser'),
+  preview_resize: t3Tool('正在调整预览窗口大小', '已调整预览窗口大小', 'browser'),
+  preview_evaluate: t3Tool('正在预览页执行脚本', '已在预览页执行脚本', 'browser'),
+  preview_wait_for: t3Tool('正在等待预览页面', '已等待预览页面', 'browser'),
+  preview_set_appearance: t3Tool('正在设置预览外观', '已设置预览外观', 'browser'),
+  preview_recording_start: t3Tool('正在开始录制预览浏览器', '已开始录制预览浏览器', 'browser'),
+  preview_recording_stop: t3Tool('正在停止录制预览浏览器', '已停止录制预览浏览器', 'browser'),
+  t3_preview_list: t3Tool('正在列出预览标签页', '已列出预览标签页', 'browser'),
+  t3_preview_close: t3Tool('正在关闭预览标签页', '已关闭预览标签页', 'browser'),
+  device_list: t3Tool('正在列出模拟器与设备', '已列出模拟器与设备', 't3'),
+  device_open: t3Tool('正在打开设备面板', '已打开设备面板', 't3'),
+  device_screenshot: t3Tool('正在截取设备画面', '已截取设备画面', 't3'),
+  device_close: t3Tool('正在关闭设备', '已关闭设备', 't3'),
+  t3_queue: t3Tool('正在管理排队消息', '已管理排队消息'),
+  t3_pending_request: t3Tool('正在处理待答问题', '已处理待答问题'),
+  t3_workflow: t3Tool('正在操作工作流', '已操作工作流'),
+  t3_submit_output: t3Tool('正在提交结果', '已提交结果'),
+  t3_queue_list: t3Tool('正在列出排队消息', '已列出排队消息'),
+  t3_queue_read: t3Tool('正在读取排队消息', '已读取排队消息'),
+  t3_queue_edit: t3Tool('正在编辑排队消息', '已编辑排队消息'),
+  t3_queue_cancel: t3Tool('正在取消排队任务', '已请求取消排队任务'),
+  t3_queue_reorder: t3Tool('正在调整排队顺序', '已调整排队顺序'),
+  t3_queue_promote_to_steer: t3Tool('正在用排队消息引导运行', '已用排队消息引导运行'),
+  t3_pending_request_list: t3Tool('正在列出待答问题', '已列出待答问题'),
+  t3_pending_request_read: t3Tool('正在读取待答问题', '已读取待答问题'),
+  t3_pending_request_respond: t3Tool('正在回答待答问题', '已回答待答问题'),
+  t3_thread_configuration: t3Tool('正在读取会话配置', '已读取会话配置'),
+  t3_thread_configure: t3Tool('正在调整会话模型设置', '已调整会话模型设置'),
+  t3_thread_transfer: t3Tool('正在处理会话迁移', '已处理会话迁移'),
+  t3_thread_fork: t3Tool('正在分支当前会话', '已请求分支当前会话'),
+  t3_thread_merge_back: t3Tool('正在合并会话上下文', '已请求合并会话上下文'),
+  t3_thread_search: t3Tool('正在搜索会话内容', '已搜索会话内容'),
+  t3_thread_transfers: t3Tool('正在读取会话迁移记录', '已读取会话迁移记录'),
+  t3_thread_organize: t3Tool('正在整理会话', '已整理会话'),
+  t3_thread_update: t3Tool('正在更新会话信息', '已更新会话信息'),
+  t3_environment_read: t3Tool('正在读取环境偏好', '已读取环境偏好'),
+  t3_environment_links: t3Tool('正在列出关联的环境', '已列出关联的环境'),
+  t3_environment_link: t3Tool('正在请求关联环境', '已请求关联环境'),
+  t3_environment_unlink: t3Tool('正在移除关联环境', '已移除关联环境'),
+  t3_environment_preferences_update: t3Tool('正在更新环境偏好', '已更新环境偏好'),
+  t3_theme_read: t3Tool('正在读取主题', '已读取主题'),
+  t3_theme_set: t3Tool('正在设置主题', '已设置主题'),
+  t3_project_list: t3Tool('正在列出项目', '已列出项目'),
+  t3_project_read: t3Tool('正在读取项目', '已读取项目'),
+  t3_project_create: t3Tool('正在注册项目', '已注册项目'),
+  t3_project_update: t3Tool('正在更新项目', '已更新项目'),
+  t3_project_delete: t3Tool('正在删除项目', '已删除项目'),
+  t3_project_clone: t3Tool('正在克隆仓库', '已克隆仓库'),
+  t3_attachment_prepare_upload: t3Tool('正在准备上传附件', '已准备上传附件'),
+  t3_attachment_discard: t3Tool('正在丢弃待发附件', '已丢弃待发附件'),
+  t3_thread_send_attachments: t3Tool('正在发送附件', '已发送附件'),
+  html_preview: t3Tool('正在预览 HTML 页面', '已预览 HTML 页面'),
+  html_render: t3Tool('正在渲染 HTML 页面', '已渲染 HTML 页面'),
+  send_to_user: t3Tool('正在发送消息', '已发送消息')
+};
+
+const READ_TOOL_NAMES: string[] = [
+  'read', 'read_file', 'readfile', 'view_file', 'viewfile', 'view_file_outline',
+  'view_code_item', 'read_resource', 'list_resources', 'list_dir', 'cat', 'open_file'
+];
+
+function isReadToolName(value: string): boolean {
+  const normalized = (value || '').replace(/^default_api:/i, '').trim().toLowerCase();
+  if (!normalized) return false;
+  return READ_TOOL_NAMES.includes(normalized);
+}
+
+const T3_MCP_TOOL_KEYS: string[] = Object.keys(T3_MCP_TOOLS);
+
+export function resolveT3McpToolId(value: string): string {
+  const label = (value || '').replace(/^default_api:/i, '').replace(/\s+(?:complete|completed)\s*$/i, '').trim();
+  if (!label) return '';
+  const mcpMatch = /^mcp__(.+?)__(.+)$/i.exec(label);
+  if (mcpMatch) {
+    const server = mcpMatch[1].toLowerCase();
+    const tool = mcpMatch[2];
+    if (T3_MCP_SERVER_ALIASES.includes(server) && T3_MCP_TOOLS[tool] !== undefined) return tool;
+    return '';
+  }
+  const nsMatch = /^(t3[-_]code[-_]direct|t3-code|t3_code|t3code)(?:[.:/]|\s*·\s*)(.+)$/i.exec(label);
+  if (nsMatch) {
+    const tool = nsMatch[2].trim();
+    if (T3_MCP_TOOLS[tool] !== undefined) return tool;
+    return '';
+  }
+  const prefixed = /^(?:mcp[-_]{1,2})?t3[-_ ]?code(?:__|[-_.:/ ])(.+)$/i.exec(label);
+  const candidate = prefixed ? prefixed[1].trim() : label;
+  if (T3_MCP_TOOLS[candidate] !== undefined) return candidate;
+  if (/^t3-code-/i.test(label)) {
+    let longest = '';
+    for (const key of T3_MCP_TOOL_KEYS) {
+      if (label.endsWith('_' + key) && key.length > longest.length) longest = key;
+    }
+    if (longest) return longest;
+  }
+  return '';
+}
+
+function isRawT3ToolLabel(value: string): boolean {
+  const trimmed = (value || '').trim();
+  if (!trimmed) return true;
+  if (resolveT3McpToolId(trimmed) !== '') return true;
+  return /^(?:default_api:)?(?:mcp[-_]{1,2})?t3[-_ ]?code(?:__|[-_.:/ ]|\s*·\s*)/i.test(trimmed);
 }
 
 function firstLine(value: string): string {
@@ -166,6 +363,19 @@ function firstLine(value: string): string {
     if (trimmed) return trimmed;
   }
   return '';
+}
+
+function reasoningPreviewLine(value: string): string {
+  const line = firstLine(value);
+  if (!line) return '';
+  return line
+    .replace(/^#{1,6}\s+/, '')
+    .replace(/^>\s*/, '')
+    .replace(/^[-*+]\s+/, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .trim();
 }
 
 function statusBadge(label: string, inProgressText: string, explicitStatus?: string): { badge: string; tone: 'success' | 'danger' | 'neutral' } {
@@ -211,11 +421,12 @@ export function activitySummary(line: ActivityLine): ActivitySummary {
   if (line.kind === 'web_search') {
     const pattern = firstLine(line.text);
     const status = statusBadge(line.label, '进行中', line.status);
-    return { icon: 'info', title: pattern ? '搜索 ' + pattern : '网络搜索', badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
+    return { icon: 'browser', title: pattern ? '搜索 ' + pattern : '网络搜索', badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
   }
   if (line.kind === 'reasoning') {
     const status = statusBadge(line.label, '思考中', line.status);
-    return { icon: 'info', title: '思考过程', badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
+    const preview = reasoningPreviewLine(line.text);
+    return { icon: 'thinking', title: preview || '思考过程', badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
   }
   if (line.kind === 'compaction') {
     const status = statusBadge(line.label, '进行中', line.status);
@@ -227,24 +438,66 @@ export function activitySummary(line: ActivityLine): ActivitySummary {
   if (line.kind === 'error') {
     return { icon: 'info', title: line.label || '错误', badge: '失败', badgeTone: 'danger', additions: '', deletions: '' };
   }
-  if (line.kind === 'dynamic_tool') {
+  if (line.kind === 'dynamic_tool' || line.kind === 'tool_call') {
     const status = statusBadge(line.label, '进行中', line.status);
-    let title = line.label.replace(/^dynamic_tool(?:\s*·\s*)?/, '')
+    const rawTitle = line.label.replace(/^(?:dynamic_tool|tool_call)(?:\s*·\s*)?/, '')
       .replace(/(?:^|\s*·\s*)(completed|failed|inProgress|running|pending|waiting|cancelled|interrupted|idle)\s*$/i, '').trim();
-    if (title.startsWith('Read ')) {
-      const rawPath = title.slice(5).trim().replace(/\\/g, '/');
+    const t3Id = resolveT3McpToolId(line.toolName || '') || resolveT3McpToolId(rawTitle);
+    if (t3Id) {
+      const spec = T3_MCP_TOOLS[t3Id];
+      const useCustomTitle = !!rawTitle && !isRawT3ToolLabel(rawTitle);
+      const displayTitle = useCustomTitle ? rawTitle : (isActivityInProgress(line) ? spec.runningLabel : spec.completedLabel);
+      return { icon: spec.icon, title: displayTitle, badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
+    }
+    if (/^(?:default_api:)?(?:mcp[-_]{1,2})?t3[-_ ]?code(?:__|[-_.:/ ]|\s*·\s*)/i.test(line.toolName || '') ||
+      /^(?:default_api:)?(?:mcp[-_]{1,2})?t3[-_ ]?code(?:__|[-_.:/ ]|\s*·\s*)/i.test(rawTitle)) {
+      const cleaned = rawTitle.replace(/^(?:default_api:)?(?:mcp[-_]{1,2})?t3[-_ ]?code(?:__|[-_.:/ ]|\s*·\s*)/i, '').trim();
+      return { icon: 't3', title: cleaned || rawTitle || 'T3 工具', badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
+    }
+    if (rawTitle.startsWith('Read ') || rawTitle.startsWith('View ')) {
+      const rawPath = rawTitle.replace(/^(?:Read|View)\s+/, '').trim().replace(/\\/g, '/');
       const slash = rawPath.lastIndexOf('/');
       const base = slash >= 0 ? rawPath.slice(slash + 1) : rawPath;
-      return { icon: 'file', title: '读取 ' + (base || rawPath), badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
+      const prefix = isActivityInProgress(line) ? '正在读取 ' : '已读取 ';
+      return { icon: 'eye', title: prefix + (base || rawPath), badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
     }
-    if (title.startsWith('Run ')) {
-      return { icon: 'cmd', title: '执行 ' + title.slice(4).trim(), badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
+    if (rawTitle.startsWith('已读取 ') || rawTitle.startsWith('读取 ') || rawTitle.startsWith('查看 ') || isReadToolName(line.toolName || '') || isReadToolName(rawTitle)) {
+      const target = isReadToolName(rawTitle) ? firstLine(line.text) : rawTitle;
+      const prefix = isActivityInProgress(line) ? '正在读取' : '已读取';
+      const title = /^(?:已读取|正在读取|读取|查看)/.test(rawTitle) ? rawTitle : (target ? prefix + ' ' + target : prefix + '文件');
+      return { icon: 'eye', title, badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
     }
-    return { icon: 'info', title: title || '工具调用', badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
+    if (rawTitle.startsWith('Run ')) {
+      return { icon: 'cmd', title: '执行 ' + rawTitle.slice(4).trim(), badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
+    }
+    return { icon: 'info', title: rawTitle || '工具调用', badge: status.badge, badgeTone: status.tone, additions: '', deletions: '' };
   }
+  const fallbackT3Id = resolveT3McpToolId(line.toolName || '') || resolveT3McpToolId(line.label);
   const fallbackStatus = statusBadge(line.label, '进行中', line.status);
   const fallbackBadge = fallbackStatus.badge === '进行中' || fallbackStatus.tone === 'danger' ? fallbackStatus.badge : '';
   const fallbackTone = fallbackBadge ? fallbackStatus.tone : 'neutral';
+  if (fallbackT3Id) {
+    const spec = T3_MCP_TOOLS[fallbackT3Id];
+    return {
+      icon: spec.icon,
+      title: isActivityInProgress(line) ? spec.runningLabel : spec.completedLabel,
+      badge: fallbackBadge,
+      badgeTone: fallbackTone,
+      additions: '',
+      deletions: ''
+    };
+  }
+  if (line.kind === 'file_read' || isReadToolName(line.toolName || '')) {
+    const target = firstLine(line.text);
+    return {
+      icon: 'eye',
+      title: target ? ((isActivityInProgress(line) ? '正在读取 ' : '已读取 ') + target) : (line.label || '已读取文件'),
+      badge: fallbackBadge,
+      badgeTone: fallbackTone,
+      additions: '',
+      deletions: ''
+    };
+  }
   return { icon: 'info', title: line.label || line.kind, badge: fallbackBadge, badgeTone: fallbackTone, additions: '', deletions: '' };
 }
 
@@ -299,6 +552,7 @@ export interface WorkSummary {
   running: boolean;
   label: string;
   failureLabel: string;
+  summaryIcon: ActivityIcon;
 }
 
 export interface TurnWorkGroup {
@@ -544,8 +798,12 @@ function parseIntSafe(value: string): number {
 export function summarizeWork(lines: ActivityLine[]): WorkSummary {
   let commands = 0;
   let files = 0;
+  let reads = 0;
   let searches = 0;
   let reasoning = 0;
+  let t3Tools = 0;
+  let browserTools = 0;
+  let prTools = 0;
   let failures = 0;
   let additions = 0;
   let deletions = 0;
@@ -553,6 +811,10 @@ export function summarizeWork(lines: ActivityLine[]): WorkSummary {
 
   for (const line of lines) {
     const summary = activitySummary(line);
+    if (summary.icon === 't3') t3Tools += 1;
+    else if (summary.icon === 'browser') browserTools += 1;
+    else if (summary.icon === 'pr') prTools += 1;
+    else if (summary.icon === 'eye') reads += 1;
     if (line.kind === 'command_execution') {
       commands += 1;
       if (summary.badgeTone === 'danger') failures += 1;
@@ -579,8 +841,23 @@ export function summarizeWork(lines: ActivityLine[]): WorkSummary {
   if (commands > 0) parts.push('运行 ' + commands + ' 条命令');
   if (files > 0) parts.push('修改 ' + files + ' 个文件');
   if (searches > 0) parts.push('搜索 ' + searches + ' 次');
-  if (reasoning > 0 && parts.length === 0) parts.push('思考 ' + reasoning + ' 步');
+  if (reasoning > 0 && parts.length === 0 && t3Tools === 0 && browserTools === 0 && prTools === 0 && reads === 0) {
+    parts.push('思考 ' + reasoning + ' 步');
+  }
   if (parts.length === 0 && lines.length > 0) parts.push(lines.length + ' 项执行步骤');
+
+  let summaryIcon: ActivityIcon = 'cmd';
+  if (commands === 0 && files === 0) {
+    if (t3Tools > 0) summaryIcon = 't3';
+    else if (prTools > 0) summaryIcon = 'pr';
+    else if (browserTools > 0) summaryIcon = 'browser';
+    else if (reads > 0) summaryIcon = 'eye';
+    else if (searches > 0) summaryIcon = 'file';
+    else if (reasoning > 0) summaryIcon = 'thinking';
+    else summaryIcon = 'info';
+  } else if (commands === 0 && files > 0) {
+    summaryIcon = 'file';
+  }
 
   return {
     totalSteps: lines.length,
@@ -593,7 +870,8 @@ export function summarizeWork(lines: ActivityLine[]): WorkSummary {
     deletions,
     running,
     label: parts.join('，'),
-    failureLabel: failures > 0 ? failures + ' 失败' : ''
+    failureLabel: failures > 0 ? failures + ' 失败' : '',
+    summaryIcon
   };
 }
 
