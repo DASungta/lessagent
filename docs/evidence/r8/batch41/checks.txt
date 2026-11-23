@@ -1,0 +1,55 @@
+# batch41 Verification Log (2026-11-23)
+
+## 1. Clean HEAD Unit Tests (Temporary Git Worktree @ 798d373)
+Command:
+  git worktree add --detach /tmp/t3-b41-wt-final HEAD
+  cd /tmp/t3-b41-wt-final && node --test tests/*.test.mjs
+Result:
+  HEAD = 798d373 (fix(git): 修复 GitPanel statusCard 按值传参导致单仓库状态不刷新的问题)
+  tests: 698 (baseline 672 -> 698, +26 tests)
+  pass:  698
+  fail:  0
+
+## 2. Clean HEAD HAP Build & Install (Temporary Git Worktree @ 798d373)
+Command:
+  cd /tmp/t3-b41-wt-final && bash scripts/build.sh
+  shasum -a 256 entry/build/default/outputs/default/entry-default-signed.hap
+  hdc -t 23E0224122000135 install -r /tmp/t3-b41-final.hap
+Result:
+  > hvigor BUILD SUCCESSFUL in 37 s 133 ms
+  SHA-256 (final 798d373):  f51313e0026b92398be4bb870739ecf84ed0c7be4c38cdd718cba81edea146e3
+  SHA-256 (prev  46bea01):  31fe59097109007ebbbe452cd6ff66fe3867e9c2eb7bc22cf2bc96a930b7a654
+  SHA-256 (prev  abcd8b4):  1ef54fd609b2f3de11de231e04de6be598be40ecdf037f8bcc8ab897629c0708
+  hdc install -r: install bundle successfully.
+
+## 3. Isolated Server DPoP Pairing Evidence (SQLite auth_sessions)
+Server A (:14881, /tmp/t3-b41-a/userdata/statev2.sqlite):
+  dpop-access-token|one-time-token|2026-12-23T00:16:27.714Z|
+Server B (:14882, /tmp/t3-b41-b/userdata/statev2.sqlite — paired via L2 peerLinks.pairClient from read-only linked thread):
+  dpop-access-token|one-time-token|2026-12-23T00:43:11.999Z|
+Temp Single-Repo Recheck Server (:14884, /tmp/t3-b41-s1-home/userdata/statev2.sqlite):
+  dpop-access-token|one-time-token
+
+## 4. E1–E6 Key Runtime Checks
+- E1 Project Settings: auto-discovered repo-api, repo-docs, repo-web; added /tmp/t3-b41-extra (t3-b41-extra); removed via AlertDialog with DISK_INTACT=YES (/tmp/t3-b41-extra/.git intact).
+- E1 New Task: t3-b41-multi -> 新工作树 -> 选择关联仓库 (3 repos) -> toggled repo-docs -> summary updated to "关联仓库 · 2 个仓库".
+- E1 Multi-Repo Git & Review: GitPanel showed 3 repos (repo-api +1/-1, repo-docs clean, repo-web +1/-1), commit dialog confirmed "将在仓库「repo-web」（分支 main）执行「提交」。"; ReviewPanel showed 4 repos + pills + repo-api/server/api.ts & repo-web/src/index.ts.
+- E1 Single-Repo Control: fixed ArkUI @Builder value-passing bug in GitPanel.statusCard (798d373); recheck on /tmp/t3-b41-s1 showed "main · /tmp/t3-b41-s1", "1 个文件已改动", "+1 -1", enabled "提交", and "app.ts +1 -1"; ReviewPanel showed flat "app.ts" without multi-repo grouping.
+- E2 Read-Only Linked Thread: tapped inline t3-thread://v2/... link from Server A -> streamed "Server B 远端审阅会话" + "B41-REMOTE-MARKER" -> bottom bar showed "只读模式" / "此视图不可发送消息" / "连接此环境", no composer/send.
+- E3 Connect from Read-Only Thread: tapped "连接此环境" -> prefilled http://127.0.0.1:14882 + 12-char masked credential -> confirmed -> Server B issued dpop-access-token -> auto-opened interactive "Server B 远端审阅会话" with TextArea ("继续追问…") -> second tap from parent jumped directly to interactive session without re-pairing.
+- E4 Unified Opening & Scroll Restore:
+  - panel mode: linked thread, local subagent (B41-SUBAGENT-MARKER), side chat (B41-SIDECHAT-MARKER) all opened in overlay panel with parent scroll untouched at MARKER-2..MARKER-4.
+  - main mode: switched setting to "主视图打开"; all 3 opened full-screen; Back from subagent, side chat, and linked thread each restored parent to exact y coordinates (REPLY-MARKER-3 y=676, MARKER-4 y=1042, REPLY-MARKER-4 y=1583, MARKER-5 y=1949). Restored setting to "面板打开".
+- E5 Regression:
+  - D1: cold start after hdc install -r reconnected http://192.168.10.75:3773 ("已连接", "会话已同步").
+  - D5: stopped Server A (:14881) -> :14881 showed "连接失败" while :3773 stayed "已连接"; restarted Server A -> :14881 auto-recovered to "已连接" within 6s with no user action.
+- E6 Batch Link:
+  - Opened Server A -> "批量链接其他环境…" -> offline envs blocked ("不可选"), Server B blocked ("已链接"), unchecked :3773, kept only Server C (:14883) checked -> tapped "批量链接 (1)" -> minted credential on Server C, sent peerLinks.link to Server A -> Server A enforced plain-HTTP LAN rejection -> UI rendered exact structured failure ("目标不可达：... is plain http ... Use its https address, or its Tailscale address.") + "已链接 0 个，失败 1 个（可重试失败项）".
+
+## 5. Final Cleanup Verification
+- Background isolated daemons (14881, 14882, 14883, 14884): all killed; lsof -iTCP:14881-14884 -sTCP:LISTEN -> NONE_LISTENING.
+- Main server :3773: PID 96566 still listening, untouched.
+- hdc -t 23E0224122000135 fport ls -> [Empty].
+- Temp dirs /tmp/t3-b41-*, /tmp/b41-* and device /data/local/tmp/{ui.json,b41*} -> removed.
+- Phone environments removed: :14873 (batch40), :14881, :14882, :14883, :14884 (batch41).
+- Phone environments preserved: :47831, :47832, :47893, :47895, :47896, and :3773 (已连接).
