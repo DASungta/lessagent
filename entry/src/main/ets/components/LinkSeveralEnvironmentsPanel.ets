@@ -86,7 +86,7 @@ export struct LinkSeveralEnvironmentsPanel {
       const routeBases = entry.kind === 'bearer'
         ? environmentRoutes(entry).map((r: DirectRoute) => r.base)
         : [];
-      const urls = linkReachableAddresses(conn?.directAddresses || [], routeBases);
+      const urls = linkReachableAddresses((conn?.directAddresses || []).concat(routeBases));
       machines.push({
         localId: entry.localId,
         environmentId: entry.environmentId,
@@ -272,17 +272,17 @@ export struct LinkSeveralEnvironmentsPanel {
             }
 
             GroupCard({ title: '访问权限' }) {
-              ForEach(linkAccessChoices(), (choice: LinkAccessChoice, idx: number) => {
+              ForEach(linkAccessChoices, (choice: LinkAccessChoice, idx: number) => {
                 FormRow({
                   kind: 'choice',
                   label: choice.label,
                   subtitle: choice.description,
-                  checked: this.access === choice.id,
+                  checked: this.access === choice.value,
                   disabled: this.running,
                   isFirst: idx === 0,
-                  onTap: () => { this.access = choice.id; }
+                  onTap: () => { this.access = choice.value; }
                 })
-              }, (choice: LinkAccessChoice) => choice.id + ':' + String(this.access === choice.id))
+              }, (choice: LinkAccessChoice) => choice.value + ':' + String(this.access === choice.value))
             }
 
             if (this.summaryText) {

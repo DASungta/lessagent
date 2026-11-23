@@ -12,6 +12,7 @@ import {
   activityLines,
   ActivityLine,
   activitySummary,
+  emptyWorkMap,
   formatMessageTimestamp,
   groupWorkByMessage,
   MessageWorkMap,
@@ -40,7 +41,7 @@ export struct LinkedThreadPanel {
 
   @State private threadTitle: string = '';
   @State private messages: ChatMessage[] = [];
-  @State private workMap: MessageWorkMap = { byMessage: {}, trailing: undefined };
+  @State private workMap: MessageWorkMap = emptyWorkMap();
   @State private hasMoreHistory: boolean = false;
   @State private loadingOlder: boolean = false;
   @State private loading: boolean = true;
@@ -97,7 +98,7 @@ export struct LinkedThreadPanel {
       ? state.details.title.trim() : '';
     if (title) this.threadTitle = title;
     this.messages = state.messages.slice();
-    this.workMap = groupWorkByMessage(state.messages, state.items, state.runs, state.messageRecords);
+    this.workMap = groupWorkByMessage(state.items, state.runs, state.checkpoints, state.messages);
     this.hasMoreHistory = state.hasMoreHistory;
     this.working = isLinkedThreadWorking(state.runs);
   }
@@ -122,7 +123,7 @@ export struct LinkedThreadPanel {
     if (!preserveMessages) {
       this.threadTitle = '';
       this.messages = [];
-      this.workMap = { byMessage: {}, trailing: undefined };
+      this.workMap = emptyWorkMap();
       this.hasMoreHistory = false;
       this.expandedGroups = {};
       this.expandedItems = {};
@@ -241,7 +242,7 @@ export struct LinkedThreadPanel {
     const opening = !nextExpanded[key];
     nextExpanded[key] = opening;
     this.expandedItems = nextExpanded;
-    if (opening && line.itemId && line.truncated && this.itemBodies[line.itemId] === undefined && !this.itemLoading[line.itemId]) {
+    if (opening && line.itemId && this.itemBodies[line.itemId] === undefined && !this.itemLoading[line.itemId]) {
       void this.loadItemDetail(line);
     }
   }
@@ -260,7 +261,9 @@ export struct LinkedThreadPanel {
       const item = await owner.linkedThreadItem(target.environmentId, target.threadId, id);
       if (seq !== this.streamSeq) return;
       if (item) {
-        const body = resolveExpandedActivityBody(line, item);
+        const rawFetched = typeof item.output === 'string' ? item.output
+          : (typeof item.text === 'string' ? item.text : '');
+        const body = resolveExpandedActivityBody(line, rawFetched);
         const bodiesNext: Record<string, string> = {};
         for (const k of Object.keys(this.itemBodies)) bodiesNext[k] = this.itemBodies[k];
         bodiesNext[id] = body;
@@ -283,7 +286,7 @@ export struct LinkedThreadPanel {
     Column({ space: Space.xs }) {
       Button({ type: ButtonType.Normal }) {
         Row({ space: Space.xs }) {
-          Text((this.expandedGroups[groupKey] ? '▾ ' : '▸ ') + group.summary)
+          Text((this.expandedGroups[groupKey] ? '▾ ' : '▸ ') + group.summary.label)
             .fontSize(FontSize.caption)
             .lineHeight(LineHeight.caption)
             .fontColor($r('app.color.muted'))
@@ -458,15 +461,15 @@ export struct LinkedThreadPanel {
 
           ForEach(this.messages, (msg: ChatMessage) => {
             Column({ space: Space.xs }) {
-              if (this.workMap.byMessage[msg.id]) {
-                this.workGroupCard(msg.id, this.workMap.byMessage[msg.id])
+              if (this.workMap.before[msg.id]) {
+                this.workGroupCard('before:' + msg.id, this.workMap.before[msg.id])
               }
               Column({ space: Space.xxs }) {
                 Row({ space: Space.xs }) {
                   Text(msg.role === 'user' ? '用户' : msg.role === 'system' ? '系统' : '助手')
                     .fontSize(FontSize.caption)
                     .fontWeight(Weight.medium)
-                    .fontColor(msg.role === 'user' ? $r('app.color.primary_text') : $r('app.color.muted'))
+                    .fontColor(msg.role === 'user' ? $r('app.color.bubble_ink') : $r('app.color.muted'))
                   if (msg.timestamp) {
                     Text(formatMessageTimestamp(msg.timestamp))
                       .fontSize(FontSize.badge)
@@ -480,7 +483,7 @@ export struct LinkedThreadPanel {
                   Text(msg.text)
                     .fontSize(FontSize.body)
                     .lineHeight(LineHeight.body)
-                    .fontColor($r('app.color.ink'))
+                    .fontColor($r('app.color.bubble_ink'))
                     .width('100%')
                     .copyOption(CopyOptions.InApp)
                 } else {
@@ -494,14 +497,20 @@ export struct LinkedThreadPanel {
               .width('100%')
               .padding(Space.md)
               .alignItems(HorizontalAlign.Start)
-              .backgroundColor(msg.role === 'user' ? $r('app.color.user_bubble') : $r('app.color.card'))
+              .backgroundColor(msg.role === 'user' ? $r('app.color.bubble') : $r('app.color.card'))
               .borderRadius(Radius.card)
+              if (this.workMap.afterUser[msg.id]) {
+                this.workGroupCard('afterUser:' + msg.id, this.workMap.afterUser[msg.id])
+              }
+              if (this.workMap.afterAssistant[msg.id]) {
+                this.workGroupCard('afterAssistant:' + msg.id, this.workMap.afterAssistant[msg.id])
+              }
             }.width('100%').alignItems(HorizontalAlign.Start)
           }, (msg: ChatMessage) => msg.id + ':' + msg.text.length + ':' + String(msg.streaming) + ':' +
-            String(this.workMap.byMessage[msg.id]?.items.length || 0))
+            this.workMap.revision)
 
-          if (this.workMap.trailing) {
-            this.workGroupCard('__trailing__', this.workMap.trailing)
+          if (this.workMap.tail) {
+            this.workGroupCard('__trailing__', this.workMap.tail)
           }
         }
         .padding({ left: Space.page, right: Space.page, top: Space.xs, bottom: Space.lg })

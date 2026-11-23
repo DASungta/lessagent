@@ -95,6 +95,36 @@ class ServerConfigUpdateError extends Error {
   }
 }
 
+interface PeerLinkLinkRpcPayload {
+  url: string;
+  alternateUrls?: string[];
+  expectedEnvironmentId: string;
+  expectedLabel: string;
+  pairingCode: string;
+  access: string;
+}
+interface PeerLinkThreadRpcPayload {
+  environmentId: string;
+  threadId: string;
+}
+interface PeerLinkThreadHistoryRpcPayload {
+  environmentId: string;
+  threadId: string;
+  cursor: string;
+}
+interface PeerLinkThreadItemRpcPayload {
+  environmentId: string;
+  threadId: string;
+  itemId: string;
+}
+interface PeerLinkPairClientRpcPayload {
+  environmentId: string;
+}
+interface SideThreadSubscribePayload {
+  threadId: string;
+  initialTurnItemLimit: number;
+}
+
 function withDirectProxyPolicy(target: string, options: http.HttpRequestOptions): http.HttpRequestOptions {
   if (shouldBypassSystemProxy(target)) options.usingProxy = false;
   return options;
@@ -1340,7 +1370,7 @@ export class T3Client {
   async linkPeerEnvironment(input: PeerLinkCreateInput): Promise<void> {
     const rpc = this.requireRpc();
     if (!this.offersPeerLinks) throw new Error('当前环境未开启链接环境');
-    const payload: Record<string, Object> = {
+    const payload: PeerLinkLinkRpcPayload = {
       url: input.url,
       expectedEnvironmentId: input.expectedEnvironmentId,
       expectedLabel: input.expectedLabel,
@@ -1387,7 +1417,7 @@ export class T3Client {
       return () => {};
     }
     const rpc = this.requireRpc();
-    const payload: Record<string, Object> = { environmentId: envId, threadId: tid };
+    const payload: PeerLinkThreadRpcPayload = { environmentId: envId, threadId: tid };
     let active = true;
     const chunk = (value: Object): void => {
       if (!active || rpc !== this.rpc) return;
@@ -1414,7 +1444,7 @@ export class T3Client {
     const tid = threadId.trim();
     const cur = cursor.trim();
     if (!envId || !tid || !cur) throw new Error('历史翻页参数无效');
-    const payload: Record<string, Object> = { environmentId: envId, threadId: tid, cursor: cur };
+    const payload: PeerLinkThreadHistoryRpcPayload = { environmentId: envId, threadId: tid, cursor: cur };
     const value = await rpc.request('peerLinks.threadHistoryPage', payload, undefined, 15000, false);
     if (rpc !== this.rpc) throw new Error('连接已变更');
     return parseLinkedThreadHistoryPage(value);
@@ -1425,7 +1455,7 @@ export class T3Client {
     const tid = threadId.trim();
     const id = itemId.trim();
     if (!envId || !tid || !id || id.length > 256) throw new Error('会话条目标识无效');
-    const payload: Record<string, Object> = { environmentId: envId, threadId: tid, itemId: id };
+    const payload: PeerLinkThreadItemRpcPayload = { environmentId: envId, threadId: tid, itemId: id };
     const value = record(await rpc.request('peerLinks.threadItem', payload, undefined, 15000, false));
     if (rpc !== this.rpc) throw new Error('连接已变更');
     return value.item === undefined || value.item === null ? undefined : record(value.item);
@@ -1434,7 +1464,7 @@ export class T3Client {
     const envId = environmentId.trim();
     if (!envId || !this.ready || !this.rpc || !this.offersPeerLinks) return undefined;
     const rpc = this.rpc;
-    const payload: Record<string, Object> = { environmentId: envId };
+    const payload: PeerLinkPairClientRpcPayload = { environmentId: envId };
     try {
       const value = await rpc.request('peerLinks.pairClient', payload, undefined, 15000, false);
       if (rpc !== this.rpc) return undefined;
@@ -1455,7 +1485,7 @@ export class T3Client {
       return () => {};
     }
     const rpc = this.requireRpc();
-    const payload: Record<string, Object> = { threadId: tid, initialTurnItemLimit: 60 };
+    const payload: SideThreadSubscribePayload = { threadId: tid, initialTurnItemLimit: 60 };
     let active = true;
     const chunk = (value: Object): void => {
       if (!active || rpc !== this.rpc) return;

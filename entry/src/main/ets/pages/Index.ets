@@ -3053,7 +3053,7 @@ struct Index {
     if (this.linkedConnecting || this.busy) return;
     const existing = this.environmentEntries.find((candidate: EnvironmentEntry) =>
       !candidate.deleting && candidate.enabled && candidate.environmentId === target.environmentId);
-    const viaOwner = this.registry().connection(target.viaLocalId) || client;
+    const viaOwner = this.registry().clients.get(target.viaLocalId) || client;
     this.linkedConnecting = true;
     this.linkedConnectError = false;
     this.linkedConnectNotice = '正在获取「' + (target.label || target.environmentId) + '」的连接信息…';
@@ -3491,7 +3491,7 @@ struct Index {
     const result: Record<string, boolean> = {};
     for (const entry of this.environmentEntries) {
       if (entry.deleting || !entry.enabled) continue;
-      const conn = this.registry().connection(entry.localId);
+      const conn = this.registry().clients.get(entry.localId);
       if (conn && conn.ready && conn.linkedEnvironmentsEnabled()) {
         result[entry.localId] = true;
       }
@@ -3899,7 +3899,7 @@ struct Index {
     } else if (this.panel === 'side-thread' && this.sideThreadTarget) {
       SideThreadPanel({
         target: this.sideThreadTarget,
-        ownerClient: this.registry().connection(this.sideThreadTarget.localId) || client,
+        ownerClient: this.registry().clients.get(this.sideThreadTarget.localId) || client,
         ownerReady: this.environmentReady[this.sideThreadTarget.localId] === true ||
           (this.sideThreadTarget.localId === this.selectedLocalId && this.ready),
         onClose: () => {
@@ -3919,7 +3919,7 @@ struct Index {
     } else if (this.panel === 'linked-thread' && this.linkedThreadTarget) {
       LinkedThreadPanel({
         target: this.linkedThreadTarget,
-        viaClient: this.registry().connection(this.linkedThreadTarget.viaLocalId) || client,
+        viaClient: this.registry().clients.get(this.linkedThreadTarget.viaLocalId) || client,
         viaReady: this.environmentReady[this.linkedThreadTarget.viaLocalId] === true ||
           (this.linkedThreadTarget.viaLocalId === this.selectedLocalId && this.ready),
         showOpenInMain: true,
@@ -3955,7 +3955,7 @@ struct Index {
         sourceLocalId: this.linkBatchSourceLocalId,
         sourceLabel: this.environmentEntries.find((e: EnvironmentEntry) => e.localId === this.linkBatchSourceLocalId)?.label || '当前环境',
         entries: this.environmentEntries,
-        connectionFor: (localId: string) => this.registry().connection(localId),
+        connectionFor: (localId: string) => this.registry().clients.get(localId),
         onClose: () => { this.panel = 'server'; this.linkBatchSourceLocalId = ''; },
         onLinked: () => { void this.loadLinkedEnvironments(); }
       })
@@ -5372,7 +5372,7 @@ struct Index {
         } else if (this.page === 'linked-thread' && this.linkedThreadTarget) {
           LinkedThreadPanel({
             target: this.linkedThreadTarget,
-            viaClient: this.registry().connection(this.linkedThreadTarget.viaLocalId) || client,
+            viaClient: this.registry().clients.get(this.linkedThreadTarget.viaLocalId) || client,
             viaReady: this.environmentReady[this.linkedThreadTarget.viaLocalId] === true ||
               (this.linkedThreadTarget.viaLocalId === this.selectedLocalId && this.ready),
             showOpenInMain: false,
