@@ -16,6 +16,7 @@ export struct ConnectionsPanel {
   @Prop entries: EnvironmentEntry[] = [];
   @Prop statuses: Record<string, string> = {};
   @Prop readyMap: Record<string, boolean> = {};
+  @Prop canLinkBatchMap: Record<string, boolean> = {};
   @Prop linkedGroups: LinkedEnvironmentGroup[] = [];
   @Prop initialized: boolean = false;
   @Prop cloudConfigured: boolean = false;
@@ -45,6 +46,7 @@ export struct ConnectionsPanel {
   onApproveDevice: (id: string) => Promise<void> = async () => {};
   onDenyDevice: (id: string) => Promise<void> = async () => {};
   onRevokeDevice: (id: string) => Promise<void> = async () => {};
+  onLinkBatch: (localId: string) => void = () => {};
   private async perform(action: () => Promise<void>): Promise<void> {
     if (this.busy) return;
     this.busy = true; this.error = '';
@@ -257,6 +259,13 @@ export struct ConnectionsPanel {
                           AppButton({
                             label: '链接到 T3 Connect', kind: 'secondary', compact: true, disabled: this.busy,
                             onTap: () => { void this.perform(() => this.onLinkCloud(entry.localId)); }
+                          })
+                        }
+                        if (this.canLinkBatchMap[entry.localId] === true &&
+                          this.entries.filter((other: EnvironmentEntry) => !other.deleting && other.localId !== entry.localId).length >= 2) {
+                          AppButton({
+                            label: '批量链接其他环境…', kind: 'secondary', compact: true, disabled: this.busy,
+                            onTap: () => this.onLinkBatch(entry.localId)
                           })
                         }
                       }

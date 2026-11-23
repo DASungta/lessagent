@@ -119,6 +119,7 @@ import {
   SideThreadTarget
 } from '../protocol/SideThread';
 import { SideThreadPanel } from '../components/SideThreadPanel';
+import { LinkSeveralEnvironmentsPanel } from '../components/LinkSeveralEnvironmentsPanel';
 import { WorkspaceActions, WorkspaceUndo } from '../services/Workspace';
 import { rememberThreadProject, saveWorkspacePreferences, setWorkingShelfEnabled, workspacePrefs } from '../services/WorkspacePrefs';
 import { ThreadList } from '../components/ThreadList';
@@ -327,6 +328,7 @@ struct Index {
   @State linkedConnectTarget: LinkedThreadTarget | undefined = undefined;
   @State sideThreadTarget: SideThreadTarget | undefined = undefined;
   @State sideThreadReturnStack: SideThreadReturnPoint[] = [];
+  @State linkBatchSourceLocalId: string = '';
   private chatScrollIndex: number = 0;
   private pendingScrollRestore: SideThreadReturnPoint | undefined = undefined;
   @State commandPanel: string = '';
@@ -3485,6 +3487,17 @@ struct Index {
     if (signature === this.linkedSignature) return;
     this.linkedSignature = signature; void this.loadLinkedEnvironments();
   }
+  private canLinkBatchMap(): Record<string, boolean> {
+    const result: Record<string, boolean> = {};
+    for (const entry of this.environmentEntries) {
+      if (entry.deleting || !entry.enabled) continue;
+      const conn = this.registry().connection(entry.localId);
+      if (conn && conn.ready && conn.linkedEnvironmentsEnabled()) {
+        result[entry.localId] = true;
+      }
+    }
+    return result;
+  }
   private async loadLinkedEnvironments(): Promise<void> {
     const generation = ++this.linkedGeneration;
     const registry = this.registry();
@@ -3937,14 +3950,24 @@ struct Index {
       PeerLinkForm({ request: this.activeLink, machines: this.linkMachines, connection: this.linkOwner,
         onClose: () => { this.panelOpen = false; },
         onBusy: (busy: boolean) => { this.busy = busy; if (!busy) { this.peerCanAnswer = this.linkOwner === client && !!this.linkOwner?.canManagePeerAccess(); this.incomingPairing(); } } })
+    } else if (this.panel === 'link-batch' && this.linkBatchSourceLocalId) {
+      LinkSeveralEnvironmentsPanel({
+        sourceLocalId: this.linkBatchSourceLocalId,
+        sourceLabel: this.environmentEntries.find((e: EnvironmentEntry) => e.localId === this.linkBatchSourceLocalId)?.label || '当前环境',
+        entries: this.environmentEntries,
+        connectionFor: (localId: string) => this.registry().connection(localId),
+        onClose: () => { this.panel = 'server'; this.linkBatchSourceLocalId = ''; },
+        onLinked: () => { void this.loadLinkedEnvironments(); }
+      })
     } else if (this.panel === 'server') {
-          ConnectionsPanel({ entries: this.environmentEntries, linkedGroups: this.linkedGroups, statuses: this.environmentStatuses, readyMap: this.environmentReady, initialized: this.loaded,
+          ConnectionsPanel({ entries: this.environmentEntries, linkedGroups: this.linkedGroups, statuses: this.environmentStatuses, readyMap: this.environmentReady, canLinkBatchMap: this.canLinkBatchMap(), initialized: this.loaded,
             cloudConfigured: this.cloudConfigured, cloudSignedIn: this.cloudSignedIn, cloudStatus: this.cloudStatus,
             deviceEnvironmentLabel: this.deviceEnvironmentLabel, pendingDevices: this.pendingDevices,
             approvedDevices: this.approvedDevices,
             onClose: () => { this.panelOpen = false; this.credential = ''; },
             onAdd: () => { this.routeFor = ''; this.linkedConnectTarget = undefined; this.address = ''; this.credential = ''; this.pairingError = false; this.pairingStatus = '填写地址与配对码后确认'; this.panel = 'connection-new'; },
             onAddRoute: (id: string) => { this.routeFor = id; this.linkedConnectTarget = undefined; this.address = ''; this.credential = ''; this.pairingError = false; this.pairingStatus = '为当前环境添加连接路径'; this.panel = 'connection-new'; },
+            onLinkBatch: (localId: string) => { this.linkBatchSourceLocalId = localId; this.panel = 'link-batch'; },
             onInitialize: () => this.restoreAddress(),
             onRetry: (id: string) => this.registry().reconnect(id),
             onEnabled: (id: string, enabled: boolean) => this.registry().setEnabled(id, enabled),
@@ -5498,7 +5521,7 @@ struct Index {
         this.panel === 'composer-command' ? '78%' :
         this.panel === 'paste-context' ? '48%' : this.panel === 'markdown-image' ? '80%' :
         this.panel === 'rename' ? '36%' : this.panel === 'filter' ? '58%' :
-        this.panel === 'linked-thread' || this.panel === 'side-thread' ? '88%' :
+        this.panel === 'linked-thread' || this.panel === 'side-thread' || this.panel === 'link-batch' ? '88%' :
         this.panel === 'cloud' || this.panel === 'snooze' ? '85%' : '70%',
         showClose: false,
         onWillDismiss: (action: DismissSheetAction) => { if (this.panel !== 'peer-link' || !this.busy) action.dismiss(); },

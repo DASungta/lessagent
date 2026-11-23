@@ -60,6 +60,7 @@ import {
   PeerLinkClientPairingResult,
   PeerLinkName
 } from '../protocol/LinkedThread';
+import { PeerLinkCreateInput } from '../protocol/LinkBatch';
 
 class NativeSender implements RpcSender {
   private socket: webSocket.WebSocket;
@@ -1335,6 +1336,21 @@ export class T3Client {
     const value = await rpc.request('peerLinks.list', {}, undefined, 15000, false);
     if (rpc !== this.rpc) throw new Error('连接已变更');
     return peerLinkViews(value);
+  }
+  async linkPeerEnvironment(input: PeerLinkCreateInput): Promise<void> {
+    const rpc = this.requireRpc();
+    if (!this.offersPeerLinks) throw new Error('当前环境未开启链接环境');
+    const payload: Record<string, Object> = {
+      url: input.url,
+      expectedEnvironmentId: input.expectedEnvironmentId,
+      expectedLabel: input.expectedLabel,
+      pairingCode: input.pairingCode,
+      access: input.access
+    };
+    if (input.alternateUrls && input.alternateUrls.length > 0) {
+      payload.alternateUrls = input.alternateUrls;
+    }
+    await rpc.request('peerLinks.link', payload, undefined, 20000, false);
   }
   linkedEnvironmentsEnabled(): boolean {
     return this.offersPeerLinks;

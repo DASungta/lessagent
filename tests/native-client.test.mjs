@@ -1,5 +1,5 @@
 // Execute the actual NetworkKit adapter with a small fake kit; HAP build checks the SDK types.
-import { coreUrl, projectsUrl, composerUrl, r4Url, filesUrl, r5Url, floatingStatusUrl, markdownUrl, threadRepositoriesUrl, linkedThreadUrl } from './load-core.mjs';
+import { coreUrl, projectsUrl, composerUrl, r4Url, filesUrl, r5Url, floatingStatusUrl, markdownUrl, threadRepositoriesUrl, linkedThreadUrl, linkBatchUrl } from './load-core.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -210,6 +210,7 @@ async function setup(options = {}) {
     .replace("'../protocol/Projects'", JSON.stringify(projectsUrl))
     .replace("'../protocol/ThreadRepositories'", JSON.stringify(threadRepositoriesUrl))
     .replace("'../protocol/LinkedThread'", JSON.stringify(linkedThreadUrl))
+    .replace("'../protocol/LinkBatch'", JSON.stringify(linkBatchUrl))
     .replace("'../protocol/Composer'", JSON.stringify(composerUrl))
     .replace("'../protocol/FloatingStatus'", JSON.stringify(floatingStatusUrl))
     .replace("'../protocol/Files'", JSON.stringify(filesUrl))
@@ -2650,6 +2651,84 @@ test('L3: T3Client.subscribeSideThread, sideThreadItem, and sendToSideThread ope
     assert.equal(dispatched[0].text, 'follow up in side panel');
     cancel();
     assert.equal(s.client.thread.threadId, 'parent-thread');
+  } finally {
+    s.client.disconnect();
+  }
+});
+
+test('L4: T3Client.linkPeerEnvironment sends peerLinks.link payload and propagates structured PeerLinkError', async () => {
+  const { linkBatchFailureFromError } = await import(linkBatchUrl);
+  let failWrong = false;
+  const linkPayloads = [];
+  const s = await setup({
+    onRequest: (value, sock) => {
+      if (value.tag === 'subscribeServerConfig') {
+        sock.emit({
+          _tag: 'Chunk',
+          requestId: value.id,
+          values: [{
+            version: 1,
+            type: 'snapshot',
+            config: {
+              environment: { environmentId: 'env', capabilities: { peerLinks: true } },
+              settings: { linkedEnvironmentsEnabled: true },
+              providers: []
+            }
+          }]
+        });
+        return 'handled';
+      }
+      if (value.tag === 'peerLinks.link') {
+        linkPayloads.push(value.payload);
+        if (failWrong) {
+          sock.emit({
+            _tag: 'Exit',
+            requestId: value.id,
+            exit: {
+              _tag: 'Failure',
+              cause: {
+                _id: 'Cause',
+                reasons: [{ _tag: 'Fail', error: { _tag: 'PeerLinkError', reason: 'unreachable', message: 'other machine answered', answeredAs: 'OtherHost' } }]
+              }
+            }
+          });
+        } else {
+          sock.emit({ _tag: 'Exit', requestId: value.id, exit: { _tag: 'Success', value: { environmentId: value.payload.expectedEnvironmentId } } });
+        }
+        return 'handled';
+      }
+      return undefined;
+    }
+  });
+  try {
+    await s.client.connect('https://test', 'CODE');
+    await s.client.linkPeerEnvironment({
+      url: 'http://192.168.10.75:14882',
+      alternateUrls: ['http://100.64.0.2:14882'],
+      expectedEnvironmentId: 'env-b',
+      expectedLabel: 'Server B',
+      pairingCode: 'ONE-TIME',
+      access: 'full-access'
+    });
+    assert.equal(linkPayloads.length, 1);
+    assert.deepEqual(linkPayloads[0].alternateUrls, ['http://100.64.0.2:14882']);
+    assert.equal(linkPayloads[0].access, 'full-access');
+
+    failWrong = true;
+    let err;
+    try {
+      await s.client.linkPeerEnvironment({
+        url: 'http://192.168.10.75:14883',
+        expectedEnvironmentId: 'env-c',
+        expectedLabel: 'Server C',
+        pairingCode: 'ONE-TIME-2',
+        access: 'approval-required'
+      });
+    } catch (e) { err = e; }
+    const mapped = linkBatchFailureFromError(err);
+    assert.equal(mapped.kind, 'failed');
+    assert.equal(mapped.failure, 'wrong_environment');
+    assert.equal(mapped.detail, 'other machine answered');
   } finally {
     s.client.disconnect();
   }
