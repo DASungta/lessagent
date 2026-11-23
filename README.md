@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/HarmonyOS_NEXT-API_24%2B-0A59F7?style=flat-square" alt="HarmonyOS API 24+" />
   <img src="https://img.shields.io/badge/ArkTS_%2B_ArkUI-Native-18181B?style=flat-square" alt="ArkTS + ArkUI Native" />
   <a href="https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.6-preview"><img src="https://img.shields.io/badge/Preview-v0.1.6--preview-2563EB?style=flat-square" alt="Preview v0.1.6-preview" /></a>
-  <img src="https://img.shields.io/badge/Tests-708_passing-16A34A?style=flat-square" alt="708 Tests Passing" />
+  <img src="https://img.shields.io/badge/Tests-709_passing-16A34A?style=flat-square" alt="709 Tests Passing" />
   <img src="https://img.shields.io/badge/License-MIT-52525B?style=flat-square" alt="MIT License" />
 </p>
 
@@ -97,7 +97,7 @@
 git clone https://github.com/DASungta/t3code-harmony.git
 cd t3code-harmony
 
-# 运行全部宿主单元测试与主题对比度校验（708/708）
+# 运行全部宿主单元测试与主题对比度校验（709/709）
 node --experimental-strip-types --test tests/*.test.mjs
 
 # 构建 Debug HAP（可通过 DEVECO_HOME 指定 DevEco Studio 安装路径）

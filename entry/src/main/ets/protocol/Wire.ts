@@ -128,7 +128,7 @@ export function validateDescriptor(value: Object): Record<string, Object> {
   text(descriptor.serverVersion);
   text(descriptor.label);
   if (descriptor.orchestrationProtocolVersion !== 2) {
-    throw new Error('服务端协议不兼容：本原型仅支持 orchestrationProtocol=2');
+    throw new Error('服务端协议不兼容：当前客户端仅支持 orchestrationProtocol=2');
   }
   return descriptor;
 }
@@ -294,7 +294,7 @@ export class RpcClient {
       const batch: Object[] = Array.isArray(decoded) ? decoded as Object[] : [decoded];
       for (const value of batch) this.accept(record(value));
     } catch (_) {
-      this.fail('协议消息无效或超出原型能力，请检查服务端版本');
+      this.fail('协议消息无效或超出当前客户端支持范围，请检查服务端版本');
     }
   }
 

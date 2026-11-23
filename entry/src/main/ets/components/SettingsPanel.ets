@@ -27,6 +27,7 @@ import { bundleManager, common } from '@kit.AbilityKit';
 import { pasteboard } from '@kit.BasicServicesKit';
 import { util } from '@kit.ArkTS';
 import { currentAppearance, saveAppearance } from '../services/Appearance';
+import { PRIVACY_POLICY_DETAIL } from '../services/PrivacyConsent';
 import { diagnosticSummary, settingsMatch } from '../protocol/Settings';
 import { setUseLastProjectForNewThreads, workspacePrefs, setCodeFontSize, setCodeWordBreak, DEFAULT_CODE_FONT_SIZE,
   MIN_CODE_FONT_SIZE, MAX_CODE_FONT_SIZE } from '../services/WorkspacePrefs';
@@ -316,7 +317,7 @@ export struct SettingsPanel {
     Column({ space: 0 }) {
       if (!this.embedded || this.section.length > 0) {
         TopBar({
-          title: this.section === 'diagnostics' ? '诊断' : this.section === 'about' ? '关于' : this.section === 'license' ? '开源许可' : '设置',
+          title: this.section === 'diagnostics' ? '诊断' : this.section === 'about' ? '关于' : this.section === 'license' ? '开源许可' : this.section === 'privacy' ? '隐私政策' : '设置',
           showBack: true,
           backLabel: this.section ? '返回设置' : '返回会话',
           onBack: () => { if (this.section) { this.section = ''; this.notice = ''; } else this.onBack(); }
@@ -390,6 +391,17 @@ export struct SettingsPanel {
             .alignItems(HorizontalAlign.Start)
             GroupCard({ footnote: '此版本为独立鸿蒙客户端。客户端版本与所连接的服务端版本分别管理。' }) {
               this.row('T3 Code 开源许可', 'MIT · T3 Tools Inc.', '', true, () => { void this.openLicense(); })
+              this.row('隐私政策', '本地存储、权限说明与数据流向', '', false, () => { this.section = 'privacy'; })
+            }
+          } else if (this.section === 'privacy') {
+            GroupCard() {
+              Text(PRIVACY_POLICY_DETAIL)
+                .fontSize(FontSize.callout)
+                .lineHeight(LineHeight.callout)
+                .fontColor($r('app.color.ink'))
+                .padding({ left: 14, right: 14, top: Space.sm, bottom: Space.sm })
+                .width('100%')
+                .copyOption(CopyOptions.LocalDevice)
             }
           } else if (this.section === 'license') {
             GroupCard() {

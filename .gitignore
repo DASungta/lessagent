@@ -2,6 +2,7 @@
 .idea/
 oh_modules/
 **/build/
+**/.cxx/
 local.properties
 *.p12
 *.p7b

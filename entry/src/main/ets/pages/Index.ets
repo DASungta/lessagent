@@ -85,7 +85,9 @@ import { RequestCard } from '../components/RequestCard';
 import { pasteboard } from '@kit.BasicServicesKit';
 import { common } from '@kit.AbilityKit';
 import { util } from '@kit.ArkTS';
-import { cloud, CloudEnvironmentView, CloudManager } from '../services/CloudManager';
+import { cloud, CloudEnvironmentView, CloudManager, prepareCloud } from '../services/CloudManager';
+import { startNetworkMonitor } from '../services/NetworkMonitor';
+import { acceptPrivacyConsent, PRIVACY_POLICY_DETAIL, PRIVACY_POLICY_SUMMARY } from '../services/PrivacyConsent';
 import { CloudAccountPanel } from '../components/CloudAccountPanel';
 import { takeCloudCallback } from '../services/CloudCallbackInbox';
 import { CloudDevice, CloudPairingLink, deviceApprovalPrompts } from '../protocol/Cloud';
@@ -169,6 +171,8 @@ struct Index {
   @State searchFocused: boolean = false;
   private composingText: boolean = false;
 
+  @StorageLink('t3PrivacyAccepted') privacyAccepted: boolean = true;
+  @State privacyDetailExpanded: boolean = false;
   @StorageLink('t3ShortcutGeneration') @Watch('openShortcut') shortcutGeneration: number = 0;
   private shortcutOpening: boolean = false;
   private shortcutDraftsLoaded: boolean = false;
@@ -1550,8 +1554,30 @@ struct Index {
     saveWorkspacePreferences();
     this.rebuildWorkspace();
   }
+  private acceptPrivacy(): void {
+    acceptPrivacyConsent();
+    this.privacyAccepted = true;
+    startNetworkMonitor({
+      onOffline: () => { environments?.handleNetworkStatus(true); },
+      onOnline: () => { environments?.handleNetworkStatus(false); },
+      onPathChanged: () => { environments?.handleNetworkPathChange(); }
+    });
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      void prepareCloud(context, context.filesDir).catch((error: Error) => {
+        AppStorage.setOrCreate('t3CloudError', error.message || 'T3 Connect 初始化失败');
+      });
+    } catch (_) {}
+    void this.restoreAddress();
+  }
+  private declinePrivacy(): void {
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      void context.terminateSelf();
+    } catch (_) {}
+  }
   private async restoreAddress(): Promise<void> {
-    if (this.restoringEnvironments || !this.alive) return;
+    if (this.privacyAccepted === false || this.restoringEnvironments || !this.alive) return;
     this.restoringEnvironments = true;
     try {
       const registry = this.registry();
@@ -5776,6 +5802,80 @@ struct Index {
               onNewTask: () => { void this.startNewTask(); } })
           }
         }.width('100%').hitTestBehavior(HitTestMode.Transparent)
+      }
+      if (!this.privacyAccepted) {
+        Column() {
+          Column({ space: Space.sm }) {
+            Text('隐私政策与用户协议')
+              .fontSize(FontSize.headline)
+              .lineHeight(LineHeight.headline)
+              .fontWeight(Weight.semibold)
+              .fontColor($r('app.color.ink'))
+              .width('100%')
+            Text(PRIVACY_POLICY_SUMMARY)
+              .fontSize(FontSize.callout)
+              .lineHeight(LineHeight.callout)
+              .fontColor($r('app.color.muted'))
+              .width('100%')
+            Button({ type: ButtonType.Normal }) {
+              Text(this.privacyDetailExpanded ? '收起完整隐私声明' : '查看完整隐私声明')
+                .fontSize(FontSize.callout)
+                .lineHeight(LineHeight.callout)
+                .fontWeight(Weight.medium)
+                .fontColor($r('app.color.primary_text'))
+            }
+            .backgroundColor(Color.Transparent)
+            .padding({ top: 4, bottom: 4 })
+            .alignSelf(ItemAlign.Start)
+            .onClick(() => { this.privacyDetailExpanded = !this.privacyDetailExpanded; })
+            if (this.privacyDetailExpanded) {
+              Scroll() {
+                Text(PRIVACY_POLICY_DETAIL)
+                  .fontSize(FontSize.caption)
+                  .lineHeight(LineHeight.caption)
+                  .fontColor($r('app.color.ink'))
+                  .width('100%')
+              }
+              .width('100%')
+              .constraintSize({ maxHeight: 220 })
+              .padding(Space.sm)
+              .backgroundColor($r('app.color.group'))
+              .borderRadius(Radius.tool)
+            }
+            Row({ space: Space.sm }) {
+              Column() {
+                AppButton({
+                  label: '不同意并退出',
+                  kind: 'secondary',
+                  fill: true,
+                  onTap: () => { this.declinePrivacy(); }
+                })
+              }.layoutWeight(1)
+              Column() {
+                AppButton({
+                  label: '同意并继续',
+                  kind: 'primary',
+                  fill: true,
+                  onTap: () => { this.acceptPrivacy(); }
+                })
+              }.layoutWeight(1)
+            }.width('100%').padding({ top: Space.xs })
+          }
+          .width('100%')
+          .constraintSize({ maxWidth: 420 })
+          .padding(Space.lg)
+          .backgroundColor($r('app.color.card'))
+          .borderRadius(Radius.card)
+          .border({ width: Sizes.hairline, color: $r('app.color.border') })
+          .alignItems(HorizontalAlign.Start)
+        }
+        .width('100%')
+        .height('100%')
+        .padding(Space.md)
+        .backgroundColor($r('app.color.backdrop'))
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Center)
+        .onClick(() => {})
       }
     }.width('100%').height('100%')
       .focusable(true).onKeyEvent((event: KeyEvent) => { this.keyboardEvent(event, false); })

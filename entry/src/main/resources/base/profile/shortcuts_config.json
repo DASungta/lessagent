@@ -6,7 +6,7 @@
       "icon": "$media:ui_compose",
       "wants": [
         {
-          "bundleName": "com.dasungta.t3code.harmony",
+          "bundleName": "com.dasungta.t3codebridge",
           "moduleName": "entry",
           "abilityName": "EntryAbility",
           "parameters": { "t3ShortcutAction": "new-task" }
@@ -19,7 +19,7 @@
       "icon": "$media:ui_folder",
       "wants": [
         {
-          "bundleName": "com.dasungta.t3code.harmony",
+          "bundleName": "com.dasungta.t3codebridge",
           "moduleName": "entry",
           "abilityName": "EntryAbility",
           "parameters": { "t3ShortcutAction": "sessions" }

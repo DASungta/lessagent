@@ -10,6 +10,7 @@ import { Configuration, UIAbility, Want } from '@kit.AbilityKit';
 import { client } from '../services/T3Client';
 import { environments, prepareEnvironments } from '../services/EnvironmentRegistry';
 import { startNetworkMonitor, stopNetworkMonitor } from '../services/NetworkMonitor';
+import { preparePrivacyConsent, isPrivacyConsentAccepted } from '../services/PrivacyConsent';
 import { prepareWorkspacePreferences } from '../services/WorkspacePrefs';
 import { prepareDrafts } from '../storage/DraftStore';
 import { window, KeyboardAvoidMode } from '@kit.ArkUI';
@@ -33,19 +34,26 @@ export default class EntryAbility extends UIAbility {
     this.applyKeepAwake(); acceptPairingLink(want.uri || ''); acceptCloudCallback(want.uri || '');
   }
   onWindowStageCreate(stage: window.WindowStage): void {
+    preparePrivacyConsent(this.context.filesDir);
+    const privacyAccepted = isPrivacyConsentAccepted();
+    AppStorage.setOrCreate('t3PrivacyAccepted', privacyAccepted);
     prepareEnvironments(this.context.filesDir);
-    startNetworkMonitor({
-      onOffline: () => { environments?.handleNetworkStatus(true); },
-      onOnline: () => { environments?.handleNetworkStatus(false); },
-      onPathChanged: () => { environments?.handleNetworkPathChange(); }
-    });
+    if (privacyAccepted) {
+      startNetworkMonitor({
+        onOffline: () => { environments?.handleNetworkStatus(true); },
+        onOnline: () => { environments?.handleNetworkStatus(false); },
+        onPathChanged: () => { environments?.handleNetworkPathChange(); }
+      });
+    }
     void prepareLocalNotifications(this.context).catch(() => {
       AppStorage.setOrCreate('t3LocalNotificationError', '通知设置读取失败');
     });
     void prepareDrafts(this.context.filesDir);
-    void prepareCloud(this.context, this.context.filesDir).catch((error: Error) => {
-      AppStorage.setOrCreate('t3CloudError', error.message || 'T3 Connect 初始化失败');
-    });
+    if (privacyAccepted) {
+      void prepareCloud(this.context, this.context.filesDir).catch((error: Error) => {
+        AppStorage.setOrCreate('t3CloudError', error.message || 'T3 Connect 初始化失败');
+      });
+    }
     void prepareAppearance(this.context).catch(() => {
       hilog.warn(0x0000, 'Appearance', 'Unable to restore appearance');
     }).then(() => prepareWorkspacePreferences(this.context.filesDir)).catch(() => {}).then(() => {
@@ -68,6 +76,7 @@ export default class EntryAbility extends UIAbility {
   }
   onForeground(): void {
     AppStorage.setOrCreate('t3Foreground', true); this.applyKeepAwake();
+    if (!isPrivacyConsentAccepted()) return;
     void cloud?.onForeground().catch(() => {});
     void environments?.resume().catch(() => { client.status = '请解锁后安全重连'; client.onUpdate(); });
   }
