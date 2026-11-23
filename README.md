@@ -14,8 +14,8 @@
 <p>
   <img src="https://img.shields.io/badge/HarmonyOS_NEXT-API_24%2B-0A59F7?style=flat-square" alt="HarmonyOS API 24+" />
   <img src="https://img.shields.io/badge/ArkTS_%2B_ArkUI-Native-18181B?style=flat-square" alt="ArkTS + ArkUI Native" />
-  <a href="https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.5-preview"><img src="https://img.shields.io/badge/Preview-v0.1.5--preview-2563EB?style=flat-square" alt="Preview v0.1.5-preview" /></a>
-  <img src="https://img.shields.io/badge/Tests-637_passing-16A34A?style=flat-square" alt="637 Tests Passing" />
+  <a href="https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.6-preview"><img src="https://img.shields.io/badge/Preview-v0.1.6--preview-2563EB?style=flat-square" alt="Preview v0.1.6-preview" /></a>
+  <img src="https://img.shields.io/badge/Tests-708_passing-16A34A?style=flat-square" alt="708 Tests Passing" />
   <img src="https://img.shields.io/badge/License-MIT-52525B?style=flat-square" alt="MIT License" />
 </p>
 
@@ -81,7 +81,7 @@
 
 ### 下载预览侧载包
 
-当前项目处于 **Preview** 阶段，可在 [GitHub Releases (`v0.1.5-preview`)](https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.5-preview) 下载预编译的**未签名调试模式 HAP**（`t3code-harmony-v0.1.5-preview-unsigned.hap`，附 SHA-256 校验文件）。
+当前项目处于 **Preview** 阶段，可在 [GitHub Releases (`v0.1.6-preview`)](https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.6-preview) 下载预编译的**未签名调试模式 HAP**（`t3code-harmony-v0.1.6-preview-unsigned.hap`，附 SHA-256 校验文件）。
 
 > **HarmonyOS NEXT 侧载说明**：出于系统安全机制，鸿蒙真机拒绝直接安装未签名包，而调试签名又强绑定单台设备 UDID 与个人证书。下载 `unsigned.hap` 后，请使用你自己的华为开发者账号通过社区侧载签名工具（如 AutoInstaller / 鸿蒙侧载助手）或 `hap-sign-tool` + `hdc` 注入调试签名后安装，也可直接克隆源码在 DevEco Studio 中开启自动签名编译安装。
 
@@ -97,7 +97,7 @@
 git clone https://github.com/DASungta/t3code-harmony.git
 cd t3code-harmony
 
-# 运行全部宿主单元测试与主题对比度校验（637/637）
+# 运行全部宿主单元测试与主题对比度校验（708/708）
 node --experimental-strip-types --test tests/*.test.mjs
 
 # 构建 Debug HAP（可通过 DEVECO_HOME 指定 DevEco Studio 安装路径）
