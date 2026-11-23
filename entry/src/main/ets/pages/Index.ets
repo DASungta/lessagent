@@ -2909,11 +2909,13 @@ struct Index {
       const restore = this.pendingScrollRestore;
       this.pendingScrollRestore = undefined;
       if (restore) {
-        setTimeout(() => {
+        const applySameThreadRestore = (): void => {
           if (!this.alive || this.page !== 'chat' || this.threadId !== restore.threadId) return;
           if (restore.scrollY > 0) this.scroller.scrollTo({ xOffset: 0, yOffset: restore.scrollY });
           else if (restore.scrollIndex > 0) this.scroller.scrollToIndex(restore.scrollIndex);
-        }, 60);
+        };
+        setTimeout(applySameThreadRestore, 60);
+        setTimeout(applySameThreadRestore, 220);
       }
       return true;
     }
@@ -5189,6 +5191,7 @@ struct Index {
         ProjectOverviewPanel({ groups: this.projectGroups, groupKey: this.overviewGroupKey,
           onAddProject: () => this.openAddProject('project-overview'),
           canOrganize: this.canOrganize(this.selectedGroup()), busy: this.busy,
+          connectionFor: (localId: string) => this.registry().clients.get(localId),
           onBack: () => this.page = 'settings',
           onSelectGroup: (key: string) => this.overviewGroupKey = key,
           onRename: (group: ProjectGroup, title: string) => this.renameGroup(group, title),
@@ -5352,6 +5355,11 @@ struct Index {
           onStatus: (value: string) => this.status = value })
       } else if (this.page === 'review') {
         ReviewPanel({ connection: client, cwd: this.currentWorkspace(), threadId: this.threadId,
+          projectId: this.projectId,
+          worktreePath: this.draftMode ? this.draftWorkspace.worktreePath : client.threadWorktreePath(),
+          project: this.draftMode ? this.draftProject() : client.threadProject(),
+          checkpointScopes: this.draftMode ? [] : client.threadCheckpointScopes(),
+          checkpoints: this.draftMode ? [] : client.threadCheckpoints(),
           onBack: () => this.page = 'chat',
           onCompose: (value: Object, label: string) => this.addExternalContext(value, label),
           onCopy: (value: string) => { void this.copy(value); },
