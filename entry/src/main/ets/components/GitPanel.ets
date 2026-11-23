@@ -223,10 +223,17 @@ export struct GitPanel {
   }
 
   private targetStatus(): VcsView {
-    if (this.activeRepo) {
+    const _tick = this.repoStatusTick;
+    if (this.activeRepo && _tick >= 0) {
       return this.repoStatuses[this.activeRepo.cwd] || emptyVcs();
     }
     return this.status;
+  }
+
+  private statusCardTitle(): string {
+    if (this.activeRepo) return '工作区状态 · ' + this.activeRepo.name;
+    if (this.isMultiRepo()) return '主工作区状态';
+    return '工作区状态';
   }
 
   private async loadRefs(): Promise<void> {
@@ -452,38 +459,38 @@ export struct GitPanel {
   }
 
   @Builder
-  statusCard(vcs: VcsView, cardTitle: string) {
-    GroupCard({ title: cardTitle }) {
+  statusCard() {
+    GroupCard({ title: this.statusCardTitle() }) {
       Column({ space: Space.xs }) {
         if (this.isMultiRepo()) {
-          Text('目标仓库：' + this.targetName() + (vcs.refName ? (' · ' + vcs.refName) : ''))
+          Text('目标仓库：' + this.targetName() + (this.targetStatus().refName ? (' · ' + this.targetStatus().refName) : ''))
             .fontSize(FontSize.caption).fontColor($r('app.color.primary_text')).fontWeight(Weight.medium).width('100%')
         }
-        Text(this.summaryFor(vcs)).fontSize(FontSize.body).fontWeight(Weight.medium).fontColor($r('app.color.ink')).width('100%')
-        if (vcs.insertions > 0 || vcs.deletions > 0) {
+        Text(this.summaryFor(this.targetStatus())).fontSize(FontSize.body).fontWeight(Weight.medium).fontColor($r('app.color.ink')).width('100%')
+        if (this.targetStatus().insertions > 0 || this.targetStatus().deletions > 0) {
           Row({ space: Space.xs }) {
-            if (vcs.insertions > 0) {
-              Text('+' + vcs.insertions)
+            if (this.targetStatus().insertions > 0) {
+              Text('+' + this.targetStatus().insertions)
                 .fontSize(FontSize.badge).fontWeight(Weight.medium).fontColor($r('app.color.diff_add_ink'))
                 .backgroundColor($r('app.color.diff_add')).borderRadius(Radius.badge)
                 .padding({ left: 6, right: 6, top: 2, bottom: 2 })
             }
-            if (vcs.deletions > 0) {
-              Text('-' + vcs.deletions)
+            if (this.targetStatus().deletions > 0) {
+              Text('-' + this.targetStatus().deletions)
                 .fontSize(FontSize.badge).fontWeight(Weight.medium).fontColor($r('app.color.diff_del_ink'))
                 .backgroundColor($r('app.color.diff_del')).borderRadius(Radius.badge)
                 .padding({ left: 6, right: 6, top: 2, bottom: 2 })
             }
           }.width('100%')
         }
-        if (vcs.prNumber > 0 && vcs.prTitle) {
-          StatusBadge({ text: 'PR #' + vcs.prNumber + ' · ' + vcs.prTitle, tone: 'info' })
+        if (this.targetStatus().prNumber > 0 && this.targetStatus().prTitle) {
+          StatusBadge({ text: 'PR #' + this.targetStatus().prNumber + ' · ' + this.targetStatus().prTitle, tone: 'info' })
         }
         Row({ space: Space.xs }) {
           Column() {
             AppButton({
               label: '提交', kind: 'primary', compact: true, fill: true,
-              disabled: this.busy || !vcs.hasWorkingTreeChanges,
+              disabled: this.busy || !this.targetStatus().hasWorkingTreeChanges,
               onTap: () => { this.view = 'commit'; }
             })
           }.layoutWeight(1)
@@ -497,7 +504,7 @@ export struct GitPanel {
           Column() {
             AppButton({
               label: '拉取', kind: 'secondary', compact: true, fill: true,
-              disabled: this.busy || !vcs.hasPrimaryRemote,
+              disabled: this.busy || !this.targetStatus().hasPrimaryRemote,
               onTap: () => { void this.pull(); }
             })
           }.layoutWeight(1)
@@ -605,7 +612,7 @@ export struct GitPanel {
   overview() {
     Column({ space: Space.sm }) {
       if (this.activeRepo) {
-        this.statusCard(this.targetStatus(), '工作区状态 · ' + this.activeRepo.name)
+        this.statusCard()
         if (this.activeRepo.origin === 'pinned') {
           AppButton({
             label: '取消固定此仓库',
@@ -620,11 +627,11 @@ export struct GitPanel {
         }
       } else if (this.isMultiRepo()) {
         if (this.status.isRepo) {
-          this.statusCard(this.status, '主工作区状态')
+          this.statusCard()
         }
         this.repositoriesSection()
       } else {
-        this.statusCard(this.status, '工作区状态')
+        this.statusCard()
       }
 
       if (this.activeRepo || this.status.isRepo || !this.isMultiRepo()) {
