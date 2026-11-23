@@ -1,4 +1,5 @@
 import { ChatMessage, compactArray, compactObjects, record, text } from './Wire';
+import { HtmlRenderEntry, htmlRenderFromToolItem } from './HtmlRender';
 
 export interface ActivityLine { label: string; text: string; kind: string; itemId: string; status?: string; }
 
@@ -51,6 +52,7 @@ export function activityLines(items: Record<string, Object>[]): ActivityLine[] {
     if (!type || !id) continue;
     if (['assistant_message', 'user_message', 'link_request', 'secret_request',
       'user_input_request', 'approval_request'].includes(type)) continue;
+    if (type === 'dynamic_tool' && htmlRenderFromToolItem(item) !== undefined) continue;
     const status = optional(item.status);
     if (type === 'command_execution') {
       const exit = typeof item.exitCode === 'number' ? ' · exit ' + item.exitCode : '';
@@ -304,6 +306,7 @@ export interface TurnWorkGroup {
   runId: string;
   items: Record<string, Object>[];
   prominent: Record<string, Object>[];
+  htmlRenders: HtmlRenderEntry[];
   checkpoint?: CheckpointBadge;
   runMeta?: RunMeta;
   summary: WorkSummary;
@@ -354,6 +357,9 @@ export function isHiddenWorkItem(item: Record<string, Object>): boolean {
     return true;
   }
   if (type === 'error' && status === 'cancelled' && failureCode(item) === 'workspace_preparation_failed') {
+    return true;
+  }
+  if (type === 'dynamic_tool' && htmlRenderFromToolItem(item) !== undefined) {
     return true;
   }
   return false;
@@ -621,6 +627,7 @@ function buildWorkGroup(
   runId: string,
   workItems: Record<string, Object>[],
   prominentItems: Record<string, Object>[],
+  htmlRenders: HtmlRenderEntry[],
   checkpoint: CheckpointBadge | undefined,
   runRecord: Record<string, Object> | undefined,
   isTail: boolean,
@@ -641,13 +648,13 @@ function buildWorkGroup(
     });
   const groupRunning = summary.running;
   const groupInterrupted = runInterrupted && (isLastOfRun || hasInterruptItem);
-  const runMeta = buildRunMeta(runRecord, lines.length + prominentItems.length, {
+  const hasWorkChrome = lines.length > 0 || prominentItems.length > 0 || checkpoint !== undefined || groupInterrupted;
+  const runMeta = hasWorkChrome ? buildRunMeta(runRecord, lines.length + prominentItems.length, {
     groupRunning,
     groupInterrupted,
     includeRunDuration: isLastOfRun
-  });
-  const hasVisible = lines.length > 0 || prominentItems.length > 0 || checkpoint !== undefined ||
-    (runMeta !== undefined && runMeta.interrupted);
+  }) : undefined;
+  const hasVisible = hasWorkChrome || htmlRenders.length > 0;
   if (!hasVisible) return undefined;
 
   const defaultExpanded = groupRunning || groupInterrupted || (isTail && runActivelyWorking);
@@ -658,6 +665,9 @@ function buildWorkGroup(
   for (const item of prominentItems) {
     revParts.push(optional(item.id) + ':' + optional(item.status));
   }
+  for (const renderEntry of htmlRenders) {
+    revParts.push('html:' + renderEntry.id + ':' + renderEntry.render.attachmentId + ':' + renderEntry.render.height);
+  }
   if (checkpoint) revParts.push('cp:' + checkpoint.checkpointId + ':' + checkpoint.fileCount + ':' + checkpoint.diffLabel);
   if (runMeta) revParts.push('run:' + runMeta.status + ':' + (runMeta.running ? '1' : '0') + ':' + runMeta.headerLabel);
   const revision = revParts.join('|');
@@ -667,6 +677,7 @@ function buildWorkGroup(
     runId,
     items: normalizedWork,
     prominent: prominentItems.slice(),
+    htmlRenders: htmlRenders.slice(),
     checkpoint,
     runMeta,
     summary,
@@ -682,6 +693,7 @@ interface PendingWorkGroupSpec {
   runId: string;
   workItems: Record<string, Object>[];
   prominentItems: Record<string, Object>[];
+  htmlRenders: HtmlRenderEntry[];
   checkpoint?: CheckpointBadge;
   runRecord?: Record<string, Object>;
   intrinsicallyVisible: boolean;
@@ -706,6 +718,7 @@ export function groupWorkByMessage(items: Record<string, Object>[],
 
   let pendingWork: Record<string, Object>[] = [];
   let pendingProminent: Record<string, Object>[] = [];
+  let pendingHtmlRenders: HtmlRenderEntry[] = [];
   let pendingCheckpoint: CheckpointBadge | undefined = undefined;
   let pendingRunId: string = '';
   let lastUserMessageId: string = '';
@@ -718,7 +731,8 @@ export function groupWorkByMessage(items: Record<string, Object>[],
   const flushPending = (target: 'afterUser' | 'afterAssistant' | 'tail'): void => {
     const runRecord = pendingRunId ? runById[pendingRunId] : undefined;
     const firstItemId = pendingWork.length ? optional(pendingWork[0].id) :
-      pendingProminent.length ? optional(pendingProminent[0].id) : '';
+      pendingProminent.length ? optional(pendingProminent[0].id) :
+      pendingHtmlRenders.length ? pendingHtmlRenders[0].itemId : '';
     let gId = '';
     let slot: 'afterUser' | 'afterAssistant' | 'tail' = 'tail';
     let slotKey = '';
@@ -737,7 +751,8 @@ export function groupWorkByMessage(items: Record<string, Object>[],
     }
     let cp = pendingCheckpoint || (pendingRunId && !derived.byAssistantMessage[pendingRunId] ? derived.byRun[pendingRunId] : undefined);
     if (cp && attachedCheckpointIds[cp.checkpointId]) cp = undefined;
-    const intrinsicallyVisible = pendingWork.length > 0 || pendingProminent.length > 0 || cp !== undefined;
+    const intrinsicallyVisible = pendingWork.length > 0 || pendingProminent.length > 0 ||
+      pendingHtmlRenders.length > 0 || cp !== undefined;
     if (intrinsicallyVisible) {
       specs.push({
         slot,
@@ -746,6 +761,7 @@ export function groupWorkByMessage(items: Record<string, Object>[],
         runId: pendingRunId,
         workItems: pendingWork.slice(),
         prominentItems: pendingProminent.slice(),
+        htmlRenders: pendingHtmlRenders.slice(),
         checkpoint: cp,
         runRecord,
         intrinsicallyVisible: true
@@ -755,6 +771,7 @@ export function groupWorkByMessage(items: Record<string, Object>[],
     }
     pendingWork = [];
     pendingProminent = [];
+    pendingHtmlRenders = [];
     pendingCheckpoint = undefined;
     pendingRunId = '';
   };
@@ -764,7 +781,7 @@ export function groupWorkByMessage(items: Record<string, Object>[],
     if (!type) continue;
     const itemRunId = optional(item.runId);
     if (type === 'user_message') {
-      if (pendingWork.length > 0 || pendingProminent.length > 0 || pendingCheckpoint !== undefined) {
+      if (pendingWork.length > 0 || pendingProminent.length > 0 || pendingHtmlRenders.length > 0 || pendingCheckpoint !== undefined) {
         if (!seenAssistantSinceLastUser && lastUserMessageId) {
           flushPending('afterUser');
         } else if (seenAssistantSinceLastUser && lastAssistantMessageId) {
@@ -772,6 +789,7 @@ export function groupWorkByMessage(items: Record<string, Object>[],
         } else {
           pendingWork = [];
           pendingProminent = [];
+          pendingHtmlRenders = [];
           pendingCheckpoint = undefined;
           pendingRunId = '';
         }
@@ -792,7 +810,8 @@ export function groupWorkByMessage(items: Record<string, Object>[],
       if (!cp) cp = pendingCheckpoint;
       if (cp && attachedCheckpointIds[cp.checkpointId]) cp = undefined;
 
-      const intrinsicallyVisible = pendingWork.length > 0 || pendingProminent.length > 0 || cp !== undefined;
+      const intrinsicallyVisible = pendingWork.length > 0 || pendingProminent.length > 0 ||
+        pendingHtmlRenders.length > 0 || cp !== undefined;
       const runStatus = runRecord ? optional(runRecord.status) : '';
       const runInterrupted = runStatus === 'interrupted' || runStatus === 'cancelled';
       if (msgId && (intrinsicallyVisible || runInterrupted)) {
@@ -804,6 +823,7 @@ export function groupWorkByMessage(items: Record<string, Object>[],
           runId: effectiveRunId,
           workItems: pendingWork.slice(),
           prominentItems: pendingProminent.slice(),
+          htmlRenders: pendingHtmlRenders.slice(),
           checkpoint: cp,
           runRecord,
           intrinsicallyVisible
@@ -816,6 +836,7 @@ export function groupWorkByMessage(items: Record<string, Object>[],
       }
       pendingWork = [];
       pendingProminent = [];
+      pendingHtmlRenders = [];
       pendingCheckpoint = undefined;
       pendingRunId = '';
       lastAssistantMessageId = msgId;
@@ -829,13 +850,27 @@ export function groupWorkByMessage(items: Record<string, Object>[],
       }
       continue;
     }
+    if (type === 'dynamic_tool') {
+      const render = htmlRenderFromToolItem(item);
+      if (render !== undefined) {
+        const id = optional(item.id) || render.attachmentId;
+        if (itemRunId && !pendingRunId) pendingRunId = itemRunId;
+        pendingHtmlRenders.push({
+          id: 'html-render:' + id,
+          itemId: id,
+          runId: itemRunId || pendingRunId,
+          render
+        });
+        continue;
+      }
+    }
     if (isHiddenWorkItem(item)) continue;
     if (itemRunId && !pendingRunId) pendingRunId = itemRunId;
     if (isProminentWorkItem(item)) pendingProminent.push(item);
     else pendingWork.push(item);
   }
 
-  if (pendingWork.length > 0 || pendingProminent.length > 0 || pendingCheckpoint !== undefined) {
+  if (pendingWork.length > 0 || pendingProminent.length > 0 || pendingHtmlRenders.length > 0 || pendingCheckpoint !== undefined) {
     flushPending('tail');
   }
 
@@ -853,6 +888,7 @@ export function groupWorkByMessage(items: Record<string, Object>[],
       runId: effectiveRunId,
       workItems: [],
       prominentItems: [],
+      htmlRenders: [],
       checkpoint: cp,
       runRecord,
       intrinsicallyVisible: true
@@ -882,6 +918,7 @@ export function groupWorkByMessage(items: Record<string, Object>[],
       spec.runId,
       spec.workItems,
       spec.prominentItems,
+      spec.htmlRenders,
       spec.checkpoint,
       spec.runRecord,
       isTail,

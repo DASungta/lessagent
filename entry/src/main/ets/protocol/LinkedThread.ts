@@ -62,7 +62,7 @@ export function parseThreadLinkHref(href: string): ParsedThreadLink | undefined 
     const rawThread = web[2];
     const decoded = decodePathSegment(rawThread).trim();
     if (!envId || !rawThread.trim() || !decoded) return undefined;
-    return { environmentId: envId, threadId: rawThread, decodedThreadId: decoded };
+    return { environmentId: envId, threadId: decoded, decodedThreadId: decoded };
   }
   return undefined;
 }
@@ -72,7 +72,7 @@ export function threadLinkCandidates(threadId: string, decodedThreadId: string):
   const decoded = decodedThreadId.trim();
   if (!raw && !decoded) return [];
   if (!decoded || decoded === raw) return [raw];
-  return [decoded, raw];
+  return [raw, decoded];
 }
 
 export interface LinkedThreadTarget {

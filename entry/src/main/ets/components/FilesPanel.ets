@@ -6,8 +6,9 @@ import { StatusBadge } from './ui/StatusBadge';
 import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { registerSharedFile } from '../services/ShareCache';
 import { T3Client } from '../services/T3Client';
-import { ContentMatch, directEntries, fileLines, FileLine, isAudio, isImage, isMarkdown, matchesContentSearchLine,
+import { ContentMatch, directEntries, fileLines, FileLine, isAudio, isHtml, isImage, isMarkdown, matchesContentSearchLine,
   isPdf, isVideo, WorkspaceEntry, WorkspaceFile } from '../protocol/Files';
+import { HtmlRenderWebView } from './HtmlRenderView';
 import { MarkdownView } from './MarkdownView';
 import { ResolvedMarkdownMedia, resolveRelativeMarkdownPath } from '../protocol/Markdown';
 import { CodeLine } from './CodeLine';
@@ -25,10 +26,16 @@ export struct FilesPanel {
   @Prop @Watch('workspaceChanged') cwd: string = '';
   @Prop threadId: string = '';
   @Prop title: string = '文件';
+  @Prop initialPath: string = '';
+  @Prop initialDir: string = '';
+  @Prop initialLine: number = 0;
+  @Prop directFileOnly: boolean = false;
   onBack: () => void = () => {};
   onCompose: (record: Object, label: string) => void = () => {};
   onCopy: (value: string) => void = () => {};
   onStatus: (value: string) => void = () => {};
+  onOpenExternalLink: (url: string) => void = () => {};
+  onOpenLink: (url: string) => void = () => {};
 
   @State currentDir: string = '';
   @State entries: WorkspaceEntry[] = [];
@@ -46,6 +53,7 @@ export struct FilesPanel {
   @State linesTruncated: boolean = false;
   @State fileError: string = '';
   @State imageUrl: string = '';
+  @State htmlMode: 'preview' | 'source' = 'preview';
   @State selectionStart: number = -1;
   @State selectionEnd: number = -1;
   @State selectedMatch: ContentMatch | undefined = undefined;
@@ -61,6 +69,13 @@ export struct FilesPanel {
 
   aboutToAppear(): void {
     this.alive = true;
+    if (this.initialPath) {
+      void this.openFile(this.initialPath, undefined, this.initialLine > 0 ? 'source' : 'preview', this.initialLine);
+      return;
+    }
+    if (this.initialDir) {
+      this.currentDir = this.initialDir;
+    }
     void this.loadDirectory(this.currentDir);
   }
 
@@ -176,21 +191,24 @@ export struct FilesPanel {
     finally { if (current()) this.loading = false; }
   }
 
-  private async openFile(path: string, match?: ContentMatch): Promise<void> {
+  private async openFile(path: string, match?: ContentMatch, preferredHtmlMode?: 'preview' | 'source',
+    jumpLine: number = 0): Promise<void> {
     const connection = this.connection;
     if (!connection) return;
     const current = this.beginRead(connection);
     const query = this.matchQuery;
+    const useHtmlPreview = isHtml(path) && !match && (preferredHtmlMode || 'preview') === 'preview' && jumpLine <= 0;
     this.selectedPath = path; this.file = undefined; this.lines = []; this.linesTruncated = false;
     this.sourceLines = [];
     this.fileCommentOpen = false; this.fileComment = '';
     this.fileError = ''; this.imageUrl = '';
+    this.htmlMode = useHtmlPreview ? 'preview' : 'source';
     this.selectedMatch = match; this.matchNotice = ''; this.previewStartIndex = 0;
     this.selectionStart = -1; this.selectionEnd = -1;
     this.loading = true;
     try {
-      if (isImage(path) || isVideo(path) || isAudio(path) || isPdf(path)) {
-        const url = await connection.workspaceFileUrl(this.cwd, path, true);
+      if (isImage(path) || isVideo(path) || isAudio(path) || isPdf(path) || useHtmlPreview) {
+        const url = await connection.filePreviewUrl(this.cwd, path, true);
         if (current()) this.imageUrl = url;
       } else {
         const file = await connection.readWorkspaceFile(this.cwd, path);
@@ -215,6 +233,11 @@ export struct FilesPanel {
             this.previewStartIndex = line - 1;
             this.selectionStart = this.previewStartIndex; this.selectionEnd = this.previewStartIndex;
           }
+        } else if (jumpLine > 0 && this.lines.length > 0) {
+          const clamped = Math.max(0, Math.min(jumpLine - 1, this.lines.length - 1));
+          this.previewStartIndex = clamped;
+          this.selectionStart = clamped;
+          this.selectionEnd = clamped;
         }
       }
     } catch (reason) { if (current()) this.fileError = (reason as Error).message; }
@@ -310,10 +333,14 @@ export struct FilesPanel {
       title: this.selectedPath ? (this.selectedPath.split('/').pop() || this.selectedPath) : this.title,
       subtitle: this.selectedPath ? (this.selectedPath.includes('/') ? this.selectedPath.slice(0, this.selectedPath.lastIndexOf('/')) : this.cwd) : (this.currentDir ? '/' + this.currentDir : this.cwd),
       showBack: true,
-      closeStyle: !this.selectedPath && !this.currentDir,
-      backLabel: this.selectedPath || this.currentDir ? '返回' : '关闭文件',
+      closeStyle: (!this.selectedPath && !this.currentDir) || (this.directFileOnly && !!this.selectedPath),
+      backLabel: (this.directFileOnly && !!this.selectedPath) ? '返回会话' : (this.selectedPath || this.currentDir ? '返回' : '关闭文件'),
       onBack: () => {
-        if (this.selectedPath) { this.closeFile(); return; }
+        if (this.selectedPath) {
+          if (this.directFileOnly) { this.onBack(); return; }
+          this.closeFile();
+          return;
+        }
         if (this.currentDir) { void this.loadDirectory(this.parentDir()); return; }
         this.onBack();
       }
@@ -406,7 +433,7 @@ export struct FilesPanel {
                       Image($r('app.media.ui_folder')).width(18).height(18).accessibilityLevel('no')
                     } else {
                       StatusBadge({
-                        text: isImage(entry.path) ? '图片' : isVideo(entry.path) ? '视频' : isAudio(entry.path) ? '音频' : isPdf(entry.path) ? 'PDF' : isMarkdown(entry.path) ? 'MD' : '文件',
+                        text: isImage(entry.path) ? '图片' : isVideo(entry.path) ? '视频' : isAudio(entry.path) ? '音频' : isPdf(entry.path) ? 'PDF' : isHtml(entry.path) ? 'HTML' : isMarkdown(entry.path) ? 'MD' : '文件',
                         tone: 'neutral'
                       })
                     }
@@ -443,7 +470,7 @@ export struct FilesPanel {
                       Image($r('app.media.ui_folder')).width(18).height(18).accessibilityLevel('no')
                     } else {
                       StatusBadge({
-                        text: isImage(entry.path) ? '图片' : isVideo(entry.path) ? '视频' : isAudio(entry.path) ? '音频' : isPdf(entry.path) ? 'PDF' : isMarkdown(entry.path) ? 'MD' : '文件',
+                        text: isImage(entry.path) ? '图片' : isVideo(entry.path) ? '视频' : isAudio(entry.path) ? '音频' : isPdf(entry.path) ? 'PDF' : isHtml(entry.path) ? 'HTML' : isMarkdown(entry.path) ? 'MD' : '文件',
                         tone: 'neutral'
                       })
                     }
@@ -512,6 +539,33 @@ export struct FilesPanel {
           }.width('100%').padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
         }
       }
+      if (this.selectedPath && isHtml(this.selectedPath)) {
+        Row({ space: 2 }) {
+          Button('预览')
+            .fontSize(FontSize.callout)
+            .fontWeight(this.htmlMode === 'preview' ? Weight.medium : Weight.regular)
+            .fontColor(this.htmlMode === 'preview' ? $r('app.color.ink') : $r('app.color.muted'))
+            .backgroundColor(this.htmlMode === 'preview' ? $r('app.color.card') : Color.Transparent)
+            .borderRadius(7).layoutWeight(1).constraintSize({ minHeight: 34 })
+            .onClick(() => {
+              if (this.htmlMode !== 'preview') {
+                void this.openFile(this.selectedPath, undefined, 'preview');
+              }
+            })
+          Button('源码')
+            .fontSize(FontSize.callout)
+            .fontWeight(this.htmlMode === 'source' ? Weight.medium : Weight.regular)
+            .fontColor(this.htmlMode === 'source' ? $r('app.color.ink') : $r('app.color.muted'))
+            .backgroundColor(this.htmlMode === 'source' ? $r('app.color.card') : Color.Transparent)
+            .borderRadius(7).layoutWeight(1).constraintSize({ minHeight: 34 })
+            .onClick(() => {
+              if (this.htmlMode !== 'source') {
+                void this.openFile(this.selectedPath, undefined, 'source');
+              }
+            })
+        }.width('100%').padding(2).backgroundColor($r('app.color.group'))
+          .border({ width: Sizes.hairline, color: $r('app.color.border') }).borderRadius(9)
+      }
       if (this.loading) {
         Text('正在打开…').fontSize(FontSize.callout).fontColor($r('app.color.muted')).padding(Space.md)
       } else if (this.fileError) {
@@ -520,10 +574,26 @@ export struct FilesPanel {
             Text(this.fileError).fontSize(FontSize.callout).fontColor($r('app.color.danger')).width('100%')
             AppButton({
               label: '重试', kind: 'secondary', compact: true,
-              onTap: () => { void this.openFile(this.selectedPath, this.selectedMatch); }
+              onTap: () => { void this.openFile(this.selectedPath, this.selectedMatch, this.htmlMode); }
             })
           }.width('100%').padding(14).alignItems(HorizontalAlign.Start)
         }
+      } else if (this.imageUrl && isHtml(this.selectedPath) && this.htmlMode === 'preview') {
+        Column() {
+          HtmlRenderWebView({
+            uri: this.imageUrl,
+            title: this.selectedPath.split('/').pop() || 'HTML',
+            nested: false,
+            isHtmlRender: false,
+            onOpenExternalLink: this.onOpenExternalLink,
+            onLoadError: () => { this.fileError = 'HTML 预览加载失败，可点按重试或切换至源码视图'; }
+          })
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .backgroundColor($r('app.color.card'))
+        .borderRadius(Radius.card)
+        .clip(true)
       } else if (this.imageUrl && isImage(this.selectedPath)) {
         Scroll() {
           Image(this.imageUrl).width('100%').objectFit(ImageFit.Contain)
@@ -554,7 +624,7 @@ export struct FilesPanel {
                 mediaScopeKey: this.cacheScope + ':' + this.selectedPath + ':' + (this.connection ? this.connection.generationValue() : 0),
                 mediaReady: !!this.connection && this.connection.ready,
                 onCopy: this.onCopy,
-                onOpenLink: () => this.reportStatus('请从会话消息打开链接'),
+                onOpenLink: (url: string) => { this.onOpenLink(url); },
                 onOpenImage: (path: string) => { void this.openFile(resolveRelativeMarkdownPath(this.selectedPath, path)); },
                 resolveMedia: this.connection ? (source: string, refresh: boolean): Promise<ResolvedMarkdownMedia> =>
                   this.connection!.markdownMediaUrl(resolveRelativeMarkdownPath(this.selectedPath, source), this.cwd, refresh) : undefined })

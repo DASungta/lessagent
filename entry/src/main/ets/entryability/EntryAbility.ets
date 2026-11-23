@@ -6,7 +6,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { acceptPairingLink } from '../services/PairingInbox';
 import { acceptCloudCallback } from '../services/CloudCallbackInbox';
 import { cloud, prepareCloud } from '../services/CloudManager';
-import { UIAbility, Want } from '@kit.AbilityKit';
+import { Configuration, UIAbility, Want } from '@kit.AbilityKit';
 import { client } from '../services/T3Client';
 import { environments, prepareEnvironments } from '../services/EnvironmentRegistry';
 import { startNetworkMonitor, stopNetworkMonitor } from '../services/NetworkMonitor';
@@ -49,6 +49,7 @@ export default class EntryAbility extends UIAbility {
     void prepareAppearance(this.context).catch(() => {
       hilog.warn(0x0000, 'Appearance', 'Unable to restore appearance');
     }).then(() => prepareWorkspacePreferences(this.context.filesDir)).catch(() => {}).then(() => {
+      AppStorage.setOrCreate('t3SystemColorMode', this.context.config?.colorMode ?? -1);
       stage.loadContent('pages/Index').then(() => {
         this.mainWindow = stage.getMainWindowSync(); this.applyKeepAwake();
         this.mainWindow.getUIContext().setKeyboardAvoidMode(KeyboardAvoidMode.RESIZE);
@@ -73,6 +74,9 @@ export default class EntryAbility extends UIAbility {
   onBackground(): void {
     AppStorage.setOrCreate('t3Foreground', false); this.applyKeepAwake();
     environments?.suspend();
+  }
+  onConfigurationUpdate(newConfig: Configuration): void {
+    AppStorage.setOrCreate('t3SystemColorMode', newConfig.colorMode ?? -1);
   }
   onDestroy(): void {
     stopNetworkMonitor();

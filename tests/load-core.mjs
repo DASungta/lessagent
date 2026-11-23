@@ -22,9 +22,17 @@ const r4Source = (await readFile(new URL('../entry/src/main/ets/protocol/R4.ts',
   .replace("'./Composer'", JSON.stringify(composerUrl));
 export const r4Url = data(compile(r4Source));
 
-const threadItemsSource = (await readFile(new URL('../entry/src/main/ets/protocol/ThreadItems.ts', import.meta.url), 'utf8'))
+const htmlRenderSource = (await readFile(new URL('../entry/src/main/ets/protocol/HtmlRender.ts', import.meta.url), 'utf8'))
   .replace("'./Wire'", JSON.stringify(wireUrl));
+export const htmlRenderUrl = data(compile(htmlRenderSource));
+
+const threadItemsSource = (await readFile(new URL('../entry/src/main/ets/protocol/ThreadItems.ts', import.meta.url), 'utf8'))
+  .replace("'./Wire'", JSON.stringify(wireUrl))
+  .replace("'./HtmlRender'", JSON.stringify(htmlRenderUrl));
 export const threadItemsUrl = data(compile(threadItemsSource));
+
+const markdownLinksSource = (await readFile(new URL('../entry/src/main/ets/protocol/MarkdownLinks.ts', import.meta.url), 'utf8'));
+export const markdownLinksUrl = data(compile(markdownLinksSource));
 
 const markdownSource = (await readFile(new URL('../entry/src/main/ets/protocol/Markdown.ts', import.meta.url), 'utf8'));
 export const markdownUrl = data(compile(markdownSource));
@@ -50,7 +58,6 @@ const threadReposSource = (await readFile(new URL('../entry/src/main/ets/protoco
   .replace("'./Wire'", JSON.stringify(wireUrl))
   .replace("'./Projects'", JSON.stringify(projectsUrl));
 export const threadRepositoriesUrl = data(compile(threadReposSource));
-
 
 const linkedThreadSource = (await readFile(new URL('../entry/src/main/ets/protocol/LinkedThread.ts', import.meta.url), 'utf8'))
   .replace("'./Wire'", JSON.stringify(wireUrl));

@@ -1,11 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { compile, data } from './load-core.mjs';
+import { compile, data, htmlRenderUrl } from './load-core.mjs';
 
 const wireUrl = new URL('../entry/src/main/ets/protocol/Wire.ts', import.meta.url).href;
 const source = (await readFile(new URL('../entry/src/main/ets/protocol/ThreadItems.ts', import.meta.url), 'utf8'))
-  .replace("'./Wire'", JSON.stringify(wireUrl));
+  .replace("'./Wire'", JSON.stringify(wireUrl))
+  .replace("'./HtmlRender'", JSON.stringify(htmlRenderUrl));
 const {
   activityLines, activitySummary, isPlainUserText,
   USER_MESSAGE_FOLDED_HEIGHT, isTallEnoughToFold, toggleExpandedUserMessage,

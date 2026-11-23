@@ -28,8 +28,9 @@ import { CachedShellEntry, ShellState, ModelChoice, models, SavedSession, Sessio
   secretReferenceAnswer, dismissInputCommand, respondCommand, RecoveryState, RecoveryStorage,
   recoveryState, Attachment, PeerLinkView, peerAccessGranted, peerLinkViews,
   LinkAnswer, linkAnswerPayload, peerPairingScopes } from '../protocol/Core';
-import { contentMatches, ContentMatch, contentSearchInput, listEntriesInput, readFileInput,
+import { contentMatches, ContentMatch, contentSearchInput, hostOrWorkspaceAssetResource, listEntriesInput, readFileInput,
   WorkspaceEntry, workspaceAssetResource, workspaceEntries, workspaceFile, WorkspaceFile } from '../protocol/Files';
+import { htmlRenderFileName } from '../protocol/HtmlRender';
 import { classifyMarkdownMediaSource, markdownMediaAssetResource, ResolvedMarkdownMedia,
   safeAssetUrl } from '../protocol/Markdown';
 import { MarkdownMediaCache } from './MarkdownMediaCache';
@@ -2685,7 +2686,35 @@ export class T3Client {
     if (rpc !== this.rpc) throw new Error('连接已变更');
     const relative = text(value.relativeUrl);
     if (typeof value.expiresAt !== 'number' || value.expiresAt <= Date.now()) throw new Error('文件链接已过期');
-    return this.activeBase() + relative;
+    return safeAssetUrl(this.activeBase(), relative);
+  }
+  async filePreviewUrl(cwd: string, path: string, inline: boolean = true): Promise<string> {
+    const rpc = this.requireRpc();
+    const resource = hostOrWorkspaceAssetResource(!this.draftScope && this.thread ? this.thread.threadId : '', cwd, path, !inline);
+    const payload: Record<string, Object> = {};
+    payload.resource = resource;
+    const value = record(await rpc.request('assets.createUrl', payload, undefined, 15000, false));
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    const relative = text(value.relativeUrl);
+    if (typeof value.expiresAt !== 'number' || value.expiresAt <= Date.now()) throw new Error('文件链接已过期');
+    return safeAssetUrl(this.activeBase(), relative);
+  }
+  async fileMetadataKind(path: string): Promise<string> {
+    const trimmed = (path || '').trim();
+    if (!trimmed || trimmed.length > 512) return '';
+    try {
+      const rpc = this.requireRpc();
+      const payload: Record<string, Object> = {};
+      payload.paths = [trimmed];
+      const value = record(await rpc.request('filesystem.getMetadata', payload, undefined, 5000, false));
+      if (rpc !== this.rpc || !Array.isArray(value.entries) || (value.entries as Object[]).length === 0) return '';
+      const first = (value.entries as Object[])[0];
+      if (first === null || first === undefined || typeof first !== 'object' || Array.isArray(first)) return '';
+      const kind = (first as Record<string, Object>).kind;
+      return typeof kind === 'string' ? kind : '';
+    } catch (_) {
+      return '';
+    }
   }
   async markdownMediaUrl(source: string, cwd: string = '', refresh: boolean = false): Promise<ResolvedMarkdownMedia> {
     const effectiveCwd = cwd || this.threadCwd();
@@ -2735,7 +2764,7 @@ export class T3Client {
     }, refresh);
   }
   async downloadWorkspaceFile(cwd: string, path: string): Promise<ArrayBuffer> {
-    const url = await this.workspaceFileUrl(cwd, path, false);
+    const url = await this.filePreviewUrl(cwd, path, false);
     const request = http.createHttp();
     try {
       const options: http.HttpRequestOptions = withDirectProxyPolicy(url, {
@@ -3242,7 +3271,10 @@ export class T3Client {
     if (rpc !== this.rpc) throw new Error('连接已变更');
     const relative = text(value.relativeUrl);
     if (typeof value.expiresAt !== 'number' || value.expiresAt <= Date.now()) throw new Error('附件链接已过期');
-    return this.activeBase() + relative;
+    return safeAssetUrl(this.activeBase(), relative);
+  }
+  async htmlRenderUrl(attachmentId: string, title: string): Promise<string> {
+    return this.attachmentUrl(attachmentId, htmlRenderFileName(title), 'text/html', true);
   }
   async downloadAttachment(id: string, name: string, mimeType: string): Promise<ArrayBuffer> {
     const url = await this.attachmentUrl(id, name, mimeType, false);

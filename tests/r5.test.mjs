@@ -10,7 +10,7 @@ test('opening a search result positions the source list only at a verified, sele
   const source = await readFile(new URL('../entry/src/main/ets/components/FilesPanel.ets', import.meta.url), 'utf8');
   const methods = source.slice(source.indexOf('  private async openFile('), source.indexOf('  private addSelectionContext('));
   const { FilePreview } = await import(data(compile(`
-    import { fileLines, isImage, isVideo, isAudio, isPdf, matchesContentSearchLine } from ${JSON.stringify(filesUrl)};
+    import { fileLines, isImage, isVideo, isAudio, isPdf, isHtml, matchesContentSearchLine } from ${JSON.stringify(filesUrl)};
     export class FilePreview { ${methods} }
   `)));
   const firstPage = Array.from({ length: 5001 }, (_, index) => 'line ' + (index + 1));

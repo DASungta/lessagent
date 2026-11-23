@@ -31,13 +31,16 @@ test('parseThreadLinkHref handles v1, v2, app.t3.codes links and rejects invalid
   });
   assert.deepEqual(parseThreadLinkHref('https://app.t3.codes/threads/env%2Db/thr%2D99?foo=bar'), {
     environmentId: 'env-b',
-    threadId: 'thr%2D99',
+    threadId: 'thr-99',
     decodedThreadId: 'thr-99'
   });
   assert.equal(parseThreadLinkHref('https://example.com/threads/env-b/thr-99'), undefined);
   assert.equal(parseThreadLinkHref('t3-thread://v2/env-b/thr/extra'), undefined);
   assert.equal(parseThreadLinkHref('t3-thread://v1/'), undefined);
-  assert.deepEqual(threadLinkCandidates('thr%201', 'thr 1'), ['thr 1', 'thr%201']);
+  assert.deepEqual(threadLinkCandidates('thread:delegated-task:mcp%3A1', 'thread:delegated-task:mcp:1'), [
+    'thread:delegated-task:mcp%3A1',
+    'thread:delegated-task:mcp:1'
+  ]);
   assert.deepEqual(threadLinkCandidates('thr-1', 'thr-1'), ['thr-1']);
 });
 

@@ -114,7 +114,7 @@ const MIME: Record<string, string> = {
   pdf: 'application/pdf', zip: 'application/zip', gz: 'application/gzip',
   md: 'text/markdown', markdown: 'text/markdown', json: 'application/json', jsonc: 'application/json',
   ts: 'text/typescript', tsx: 'text/typescript', js: 'text/javascript', jsx: 'text/javascript',
-  css: 'text/css', html: 'text/html', xml: 'text/xml', yaml: 'text/yaml', yml: 'text/yaml',
+  css: 'text/css', html: 'text/html', htm: 'text/html', xml: 'text/xml', yaml: 'text/yaml', yml: 'text/yaml',
   toml: 'text/toml', sh: 'text/x-sh', py: 'text/x-python', go: 'text/x-go', rs: 'text/x-rust',
   java: 'text/x-java', kt: 'text/x-kotlin', swift: 'text/x-swift', c: 'text/x-c', h: 'text/x-c',
   cpp: 'text/x-c++', hpp: 'text/x-c++', sql: 'text/x-sql', ets: 'text/typescript'
@@ -131,7 +131,14 @@ export function isImage(path: string): boolean { return mimeType(path).startsWit
 export function isVideo(path: string): boolean { return mimeType(path).startsWith('video/'); }
 export function isAudio(path: string): boolean { return mimeType(path).startsWith('audio/'); }
 export function isPdf(path: string): boolean { return mimeType(path) === 'application/pdf'; }
+export function isHtml(path: string): boolean { return mimeType(path) === 'text/html'; }
 export function isMarkdown(path: string): boolean { return mimeType(path) === 'text/markdown'; }
+export function isAbsoluteFilePath(path: string): boolean {
+  return path.startsWith('/') || /^[A-Za-z]:[\\/]/.test(path);
+}
+export function isHomeFilePath(path: string): boolean {
+  return path.startsWith('~/') || path.startsWith('~\\');
+}
 export function isBinary(path: string): boolean {
   const mime = mimeType(path);
   return !(mime.startsWith('text/') || mime === 'application/json' || mime === 'application/xml' ||
@@ -171,6 +178,31 @@ export function workspaceAssetResource(threadId: string, cwd: string, path: stri
     return { _tag: 'workspace-file', threadId, path: absolute };
   }
   return { _tag: 'draft-workspace-file', cwd, path: relative };
+}
+
+/**
+ * Builds an upstream `assets.createUrl` resource payload for either a workspace-relative path
+ * or an explicit host absolute/`~/` path (such as an HTML report written outside the repo).
+ */
+export function hostOrWorkspaceAssetResource(threadId: string, cwd: string, path: string, download: boolean = false): Object {
+  const trimmed = (path || '').trim();
+  if (!trimmed || trimmed.length > 1024 || /[\x00-\x1f]/.test(trimmed)) {
+    throw new Error('文件路径无效');
+  }
+  if (trimmed.startsWith('//') || trimmed.startsWith('\\\\')) {
+    throw new Error('不支持网络路径');
+  }
+  if (isAbsoluteFilePath(trimmed) || isHomeFilePath(trimmed)) {
+    if (threadId.trim()) {
+      if (download) return { _tag: 'media-file', threadId: threadId.trim(), path: trimmed, disposition: 'attachment' };
+      return { _tag: 'media-file', threadId: threadId.trim(), path: trimmed };
+    }
+    if (cwd.trim()) {
+      return { _tag: 'draft-workspace-file', cwd: cwd.trim(), path: trimmed };
+    }
+    throw new Error('缺少会话或工作目录');
+  }
+  return workspaceAssetResource(threadId, cwd, trimmed, download);
 }
 
 export function pathAncestors(path: string): string[] {

@@ -3,6 +3,8 @@ import {
   activityLines, ActivityLine, activitySummary, ActivitySummary, appendOutput,
   ColoredDiffLine, isActivityInProgress, MessageWorkMap, parseDiffPreviewLines, resolveExpandedActivityBody, TurnWorkGroup
 } from '../protocol/ThreadItems';
+import { HtmlRenderEntry } from '../protocol/HtmlRender';
+import { ThreadHtmlRenderCard } from './HtmlRenderView';
 import { MarkdownView } from './MarkdownView';
 import { ResolvedMarkdownMedia } from '../protocol/Markdown';
 import { record, text } from '../protocol/Wire';
@@ -215,6 +217,8 @@ export struct ThreadActivity {
   @Prop groupId: string = '';
   @Prop items: Record<string, Object>[] = [];
   @Prop prominentItems: Record<string, Object>[] = [];
+  @Prop htmlRenders: HtmlRenderEntry[] = [];
+  @Prop htmlRenderScopeKey: string = '';
   @Prop headerLabel: string = '';
   @Prop summaryLabel: string = '';
   @Prop failureLabel: string = '';
@@ -238,6 +242,8 @@ export struct ThreadActivity {
   onCopy: (value: string) => void = () => {};
   onReference: (line: ActivityLine) => void = () => {};
   onOpenDiff: () => void = () => {};
+  onOpenHtmlFullscreen: (entry: HtmlRenderEntry, uri: string) => void = () => {};
+  onOpenExternalLink: (url: string) => void = () => {};
 
   aboutToDisappear(): void { this.stopStream(); }
 
@@ -611,6 +617,20 @@ export struct ThreadActivity {
           }, (line: ActivityLine) => 'p:' + line.itemId)
         }.width('100%')
       }
+
+      if (this.htmlRenders.length > 0) {
+        Column({ space: 8 }) {
+          ForEach(this.htmlRenders, (entry: HtmlRenderEntry) => {
+            ThreadHtmlRenderCard({
+              connection: this.connection,
+              entry,
+              scopeKey: this.htmlRenderScopeKey,
+              onOpenFullscreen: this.onOpenHtmlFullscreen,
+              onOpenExternalLink: this.onOpenExternalLink
+            })
+          }, (entry: HtmlRenderEntry) => entry.id + ':' + entry.render.attachmentId)
+        }.width('100%')
+      }
     }.width('100%').alignItems(HorizontalAlign.Start)
   }
 }
@@ -620,12 +640,15 @@ export struct MessageWorkSlot {
   connection: T3Client | undefined = undefined;
   @Prop messageId: string = '';
   @Prop slotKind: 'before' | 'afterUser' | 'afterAssistant' = 'before';
+  @Prop htmlRenderScopeKey: string = '';
   @Consume('t3WorkMap') workMap: MessageWorkMap;
   @Consume('t3CanOpenDiff') canOpenDiff: boolean;
   onToggleGroup: (group: TurnWorkGroup) => void = () => {};
   onCopy: (value: string) => void = () => {};
   onReference: (line: ActivityLine) => void = () => {};
   onOpenDiff: () => void = () => {};
+  onOpenHtmlFullscreen: (entry: HtmlRenderEntry, uri: string) => void = () => {};
+  onOpenExternalLink: (url: string) => void = () => {};
 
   private currentGroup(): TurnWorkGroup | undefined {
     if (!this.messageId || !this.workMap) return undefined;
@@ -643,6 +666,8 @@ export struct MessageWorkSlot {
             groupId: this.currentGroup()!.groupId,
             items: this.currentGroup()!.items,
             prominentItems: this.currentGroup()!.prominent,
+            htmlRenders: this.currentGroup()!.htmlRenders,
+            htmlRenderScopeKey: this.htmlRenderScopeKey,
             headerLabel: this.currentGroup()!.runMeta ? this.currentGroup()!.runMeta!.headerLabel : '',
             summaryLabel: this.currentGroup()!.summary.label,
             failureLabel: this.currentGroup()!.summary.failureLabel,
@@ -662,7 +687,9 @@ export struct MessageWorkSlot {
             },
             onCopy: this.onCopy,
             onReference: this.onReference,
-            onOpenDiff: this.onOpenDiff
+            onOpenDiff: this.onOpenDiff,
+            onOpenHtmlFullscreen: this.onOpenHtmlFullscreen,
+            onOpenExternalLink: this.onOpenExternalLink
           })
         }
         .width('100%')

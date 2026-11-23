@@ -52,6 +52,10 @@ import {
   formatMessageTimestamp, groupWorkByMessage, isPlainUserText, LiveThinkingRow,
   MessageFooterMeta, MessageWorkMap, toggleExpandedUserMessage, TurnWorkGroup, visibleWorkItems
 } from '../protocol/ThreadItems';
+import { HtmlRenderEntry, htmlRenderFileName } from '../protocol/HtmlRender';
+import { HtmlRenderWebView } from '../components/HtmlRenderView';
+import { classifyMarkdownLink, resolveFileLinkForWorkspace, ThreadLinkTarget } from '../protocol/MarkdownLinks';
+import { isHtml } from '../protocol/Files';
 import { TaskSettingsPanel } from '../components/TaskSettingsPanel';
 import { QueuePanel } from '../components/QueuePanel';
 import { PeerLinkForm } from '../components/PeerLinkForm';
@@ -352,6 +356,15 @@ struct Index {
   @State selectedAttachment: DraftAttachment | undefined = undefined;
   @State attachmentPreviewUrl: string = '';
   @State attachmentStatus: string = '';
+  @State htmlViewerEntry: HtmlRenderEntry | undefined = undefined;
+  @State htmlViewerUri: string = '';
+  @State htmlViewerError: string = '';
+  @State htmlViewerAttempt: number = 0;
+  @State filesOverrideCwd: string = '';
+  @State filesInitialPath: string = '';
+  @State filesInitialDir: string = '';
+  @State filesInitialLine: number = 0;
+  @State filesDirectFileOnly: boolean = false;
   @State markdownImageUrl: string = '';
   @State markdownImageKind: string = 'image';
   @State markdownImagePath: string = '';
@@ -520,7 +533,10 @@ struct Index {
         const matchedThread = this.threads.find((t: ThreadView) => t.id === this.threadId);
         const matchedScopedThread = this.scopedThreads.find((t: ScopedThread) =>
           t.localId === this.selectedLocalId && t.id === this.threadId);
-        const resolvedTitle = matchedThread?.label || matchedScopedThread?.label || '';
+        const snapshotTitle = client.thread && client.thread.threadId === this.threadId &&
+          typeof client.thread.details['title'] === 'string'
+          ? (client.thread.details['title'] as string).trim() : '';
+        const resolvedTitle = matchedThread?.label || matchedScopedThread?.label || snapshotTitle;
         if (resolvedTitle) this.cachedChatTitle = resolvedTitle;
         const resolvedProjId = matchedThread?.projectId || matchedScopedThread?.projectId || this.projectId;
         if (resolvedProjId) this.projectId = resolvedProjId;
@@ -2874,6 +2890,13 @@ struct Index {
       return false;
     }
   }
+  private async openExternalUrl(url: string): Promise<void> {
+    if (!/^(https?:\/\/|mailto:|tel:)/i.test(url)) { this.status = '不支持打开此链接'; return; }
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      await context.startAbility({ action: 'ohos.want.action.viewData', uri: url });
+    } catch (error) { this.status = '无法打开链接：' + (error as Error).message; }
+  }
   private captureCurrentChatPosition(): SideThreadReturnPoint | undefined {
     if (this.page !== 'chat' || this.draftMode || !this.selectedLocalId || !this.threadId) return undefined;
     let scrollY = 0;
@@ -3117,7 +3140,7 @@ struct Index {
       for (const id of candidates) {
         if (pool.some((t: ThreadView) => t.id === id)) return id;
       }
-      return parsed.decodedThreadId || parsed.threadId;
+      return parsed.threadId || parsed.decodedThreadId;
     };
     if (parsed.environmentId) {
       const ownEntry = this.environmentEntries.find((candidate: EnvironmentEntry) =>
@@ -3127,7 +3150,7 @@ struct Index {
         await this.openSideThread('linked', pickThreadId(pool), parsed.environmentId, ownEntry.label);
         return;
       }
-      await this.openSideThread('linked', parsed.decodedThreadId || parsed.threadId, parsed.environmentId, '');
+      await this.openSideThread('linked', parsed.threadId || parsed.decodedThreadId, parsed.environmentId, '');
       return;
     }
     for (const id of candidates) {
@@ -3143,20 +3166,156 @@ struct Index {
       await this.openSideThread('linked', match.id, match.environmentId, match.environmentLabel);
       return;
     }
-    await this.openSideThread('linked', parsed.decodedThreadId || parsed.threadId, '', '');
+    await this.openSideThread('linked', parsed.threadId || parsed.decodedThreadId, '', '');
+  }
+  private async openThreadLink(target: ThreadLinkTarget): Promise<void> {
+    await this.openParsedThreadLink({
+      environmentId: target.environmentId,
+      threadId: target.threadId,
+      decodedThreadId: target.decodedThreadId
+    });
   }
   private async openLink(url: string): Promise<void> {
-    const parsedThread = parseThreadLinkHref(url);
-    if (parsedThread) {
-      try { await this.openParsedThreadLink(parsedThread); }
-      catch (error) { this.status = '无法打开会话链接：' + (error as Error).message; }
+    const classified = classifyMarkdownLink(url);
+    if (classified.kind === 'external' || classified.kind === 'mailto') {
+      await this.openExternalUrl(classified.href);
       return;
     }
-    if (!/^(https?:\/\/|mailto:)/i.test(url)) { this.status = '已阻止非 HTTP(S)/mailto 链接'; return; }
+    if (classified.kind === 'thread' && classified.thread) {
+      try {
+        await this.openThreadLink(classified.thread);
+      } catch (error) {
+        this.status = '无法打开会话链接：' + (error as Error).message;
+      }
+      return;
+    }
+    if (classified.kind === 'file' && classified.file) {
+      const cwd = this.currentWorkspace();
+      const resolved = resolveFileLinkForWorkspace(cwd, classified.file);
+      if (!resolved) {
+        this.status = '缺少工作目录，无法解析相对路径';
+        return;
+      }
+      let metaKind = '';
+      if (client.ready && resolved.absolutePath) {
+        metaKind = await client.fileMetadataKind(resolved.absolutePath);
+      }
+      if (this.page === 'chat' && !this.draftMode && this.threadId) {
+        this.pendingScrollRestore = this.captureCurrentChatPosition();
+      }
+      this.panelOpen = false;
+      if (metaKind === 'directory' || resolved.isDirectoryHint) {
+        this.filesInitialPath = '';
+        this.filesInitialLine = 0;
+        this.filesDirectFileOnly = false;
+        if (resolved.isOutsideWorkspace) {
+          this.filesOverrideCwd = resolved.absolutePath;
+          this.filesInitialDir = '';
+        } else {
+          this.filesOverrideCwd = '';
+          this.filesInitialDir = resolved.path;
+        }
+        this.page = 'files';
+        return;
+      }
+      this.filesOverrideCwd = '';
+      this.filesInitialDir = '';
+      this.filesInitialPath = resolved.path;
+      this.filesInitialLine = resolved.line;
+      this.filesDirectFileOnly = true;
+      this.page = 'files';
+      return;
+    }
+    this.status = '暂不支持打开此链接';
+  }
+  private returnToChatWithScrollRestore(): void {
+    const restore = this.pendingScrollRestore;
+    this.page = 'chat';
+    if (restore && restore.localId === this.selectedLocalId && restore.threadId === this.threadId &&
+      !this.draftMode && this.messages.length > 0) {
+      this.pendingScrollRestore = undefined;
+      const apply = (): void => {
+        if (!this.alive || this.page !== 'chat' || this.draftMode || this.threadId !== restore.threadId) return;
+        if (restore.scrollY > 0) this.scroller.scrollTo({ xOffset: 0, yOffset: restore.scrollY });
+        else if (restore.scrollIndex > 0) this.scroller.scrollToIndex(restore.scrollIndex);
+      };
+      setTimeout(apply, 60);
+      setTimeout(apply, 220);
+    }
+  }
+  private openHtmlFullscreen(entry: HtmlRenderEntry, uri: string): void {
+    if (this.page === 'chat' && !this.draftMode && this.threadId) {
+      this.pendingScrollRestore = this.captureCurrentChatPosition();
+    }
+    this.htmlViewerEntry = entry;
+    this.htmlViewerUri = uri;
+    this.htmlViewerError = '';
+    this.htmlViewerAttempt = 0;
+    this.panelOpen = false;
+    this.page = 'html-viewer';
+    if (!uri) {
+      void this.reloadHtmlFullscreen();
+    }
+  }
+  private async reloadHtmlFullscreen(): Promise<void> {
+    const entry = this.htmlViewerEntry;
+    if (!entry) return;
+    this.htmlViewerError = '';
     try {
+      const next = await client.htmlRenderUrl(entry.render.attachmentId, entry.render.title);
+      if (this.htmlViewerEntry?.id !== entry.id) return;
+      this.htmlViewerUri = next;
+      this.htmlViewerAttempt += 1;
+    } catch (error) {
+      if (this.htmlViewerEntry?.id === entry.id) {
+        this.htmlViewerError = (error as Error).message || 'HTML 页面加载失败';
+      }
+    }
+  }
+  private async saveHtmlRender(): Promise<void> {
+    const entry = this.htmlViewerEntry;
+    if (!entry || this.busy) return;
+    const fileName = htmlRenderFileName(entry.render.title);
+    this.busy = true;
+    try {
+      const bytes = await client.downloadAttachment(entry.render.attachmentId, fileName, 'text/html');
+      const options = new picker.DocumentSaveOptions();
+      options.newFileNames = [fileName];
+      const target = await new picker.DocumentViewPicker().save(options);
+      if (!target.length) { this.status = '已取消保存'; return; }
+      const file = fileIo.openSync(target[0], fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC);
+      try { fileIo.writeSync(file.fd, bytes); fileIo.fsyncSync(file.fd); } finally { fileIo.closeSync(file); }
+      this.status = '已保存：' + fileName;
+    } catch (error) {
+      this.status = '保存失败：' + (error as Error).message;
+    } finally {
+      this.busy = false;
+    }
+  }
+  private async shareHtmlRender(): Promise<void> {
+    const entry = this.htmlViewerEntry;
+    if (!entry || this.busy) return;
+    const owner = client; const scope = this.selectedLocalId; const threadId = this.threadId;
+    const fileName = htmlRenderFileName(entry.render.title);
+    this.busy = true;
+    try {
+      const bytes = await owner.downloadAttachment(entry.render.attachmentId, fileName, 'text/html');
+      if (owner !== client || scope !== this.selectedLocalId || threadId !== this.threadId) throw new Error('分享目标已变化');
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-      await context.startAbility({ action: 'ohos.want.action.viewData', uri: url });
-    } catch (error) { this.status = '无法打开链接：' + (error as Error).message; }
+      const safeName = fileName.replace(/[\\/:*?"<>|\x00-\x1f]/g, '_').slice(-180) || 'page.html';
+      const path = context.cacheDir + '/share-' + Date.now() + '-' + safeName;
+      const file = fileIo.openSync(path, fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC);
+      try { fileIo.writeSync(file.fd, bytes); fileIo.fsyncSync(file.fd); } finally { fileIo.closeSync(file); }
+      registerSharedFile(context.cacheDir, path.substring(context.cacheDir.length + 1), scope);
+      const shared = new systemShare.SharedData({ utd: 'general.html',
+        uri: fileUri.getUriFromPath(path), title: entry.render.title || fileName });
+      await new systemShare.ShareController(shared).show(context, {});
+      this.status = '已打开系统分享';
+    } catch (error) {
+      this.status = '分享失败：' + (error as Error).message;
+    } finally {
+      this.busy = false;
+    }
   }
   private markdownMediaScopeKey(): string {
     return this.selectedLocalId + ':' + this.threadId + ':' + client.generationValue() + ':' + (this.ready ? '1' : '0');
@@ -3290,6 +3449,11 @@ struct Index {
   }
   private openFiles(): void {
     if (!this.currentWorkspace()) { this.status = '当前会话没有工作目录'; return; }
+    this.filesOverrideCwd = '';
+    this.filesInitialPath = '';
+    this.filesInitialDir = '';
+    this.filesInitialLine = 0;
+    this.filesDirectFileOnly = false;
     this.panelOpen = false; this.page = 'files';
   }
   private openReview(): void {
@@ -3372,7 +3536,7 @@ struct Index {
     if (this.page === 'device-picker') { this.page = 'chat'; return true; }
     if (this.page === 'preview') { this.page = 'chat'; return true; }
     if (this.page === 'terminal') { this.page = 'chat'; return true; }
-    if (this.page === 'files') { this.page = 'chat'; return true; }
+    if (this.page === 'files' || this.page === 'html-viewer') { this.returnToChatWithScrollRestore(); return true; }
     if (this.page === 'review') { this.page = 'chat'; return true; }
     if (this.page === 'git') { this.page = 'chat'; return true; }
     if (this.page === 'pull-requests') { this.page = 'chat'; return true; }
@@ -3615,6 +3779,21 @@ struct Index {
           if (this.selectedAttachment.type === 'image' && this.attachmentPreviewUrl) {
             Image(this.attachmentPreviewUrl).width('100%').constraintSize({ maxHeight: 420 })
               .objectFit(ImageFit.Contain).backgroundColor($r('app.color.card')).borderRadius(Radius.card)
+          } else if (this.attachmentPreviewUrl && (this.selectedAttachment.mimeType === 'text/html' || isHtml(this.selectedAttachment.name))) {
+            Column() {
+              HtmlRenderWebView({
+                uri: this.attachmentPreviewUrl,
+                title: this.selectedAttachment.name,
+                nested: false,
+                isHtmlRender: false,
+                onOpenExternalLink: (url: string) => { void this.openExternalUrl(url); }
+              })
+            }
+            .width('100%')
+            .layoutWeight(1)
+            .backgroundColor($r('app.color.card'))
+            .borderRadius(Radius.card)
+            .clip(true)
           }
           if (this.selectedAttachment.mimeType.startsWith('video/') && this.attachmentPreviewUrl) {
             Video({ src: this.attachmentPreviewUrl }).width('100%').height(320).controls(true)
@@ -4401,6 +4580,8 @@ struct Index {
       groupId: group.groupId,
       items: group.items,
       prominentItems: group.prominent,
+      htmlRenders: group.htmlRenders,
+      htmlRenderScopeKey: this.markdownMediaScopeKey(),
       headerLabel: group.runMeta ? group.runMeta.headerLabel : '',
       summaryLabel: group.summary.label,
       failureLabel: group.summary.failureLabel,
@@ -4417,7 +4598,9 @@ struct Index {
       onToggleGroup: () => this.toggleWorkGroup(group),
       onCopy: (value: string) => { void this.copy(value); },
       onReference: (line: ActivityLine) => this.addTerminalContext(line),
-      onOpenDiff: () => this.openReview()
+      onOpenDiff: () => this.openReview(),
+      onOpenHtmlFullscreen: (entry: HtmlRenderEntry, uri: string) => this.openHtmlFullscreen(entry, uri),
+      onOpenExternalLink: (url: string) => { void this.openExternalUrl(url); }
     })
   }
 
@@ -4524,10 +4707,13 @@ struct Index {
                 connection: client,
                 messageId: message.id,
                 slotKind: 'before',
+                htmlRenderScopeKey: this.markdownMediaScopeKey(),
                 onToggleGroup: (group: TurnWorkGroup) => this.toggleWorkGroup(group),
                 onCopy: (value: string) => { void this.copy(value); },
                 onReference: (line: ActivityLine) => this.addTerminalContext(line),
-                onOpenDiff: () => this.openReview()
+                onOpenDiff: () => this.openReview(),
+                onOpenHtmlFullscreen: (entry: HtmlRenderEntry, uri: string) => this.openHtmlFullscreen(entry, uri),
+                onOpenExternalLink: (url: string) => { void this.openExternalUrl(url); }
               })
             }
             Column({ space: 4 }) {
@@ -4553,20 +4739,26 @@ struct Index {
                 connection: client,
                 messageId: message.id,
                 slotKind: 'afterUser',
+                htmlRenderScopeKey: this.markdownMediaScopeKey(),
                 onToggleGroup: (group: TurnWorkGroup) => this.toggleWorkGroup(group),
                 onCopy: (value: string) => { void this.copy(value); },
                 onReference: (line: ActivityLine) => this.addTerminalContext(line),
-                onOpenDiff: () => this.openReview()
+                onOpenDiff: () => this.openReview(),
+                onOpenHtmlFullscreen: (entry: HtmlRenderEntry, uri: string) => this.openHtmlFullscreen(entry, uri),
+                onOpenExternalLink: (url: string) => { void this.openExternalUrl(url); }
               })
             } else if (message.role !== 'user' && !this.draftMode) {
               MessageWorkSlot({
                 connection: client,
                 messageId: message.id,
                 slotKind: 'afterAssistant',
+                htmlRenderScopeKey: this.markdownMediaScopeKey(),
                 onToggleGroup: (group: TurnWorkGroup) => this.toggleWorkGroup(group),
                 onCopy: (value: string) => { void this.copy(value); },
                 onReference: (line: ActivityLine) => this.addTerminalContext(line),
-                onOpenDiff: () => this.openReview()
+                onOpenDiff: () => this.openReview(),
+                onOpenHtmlFullscreen: (entry: HtmlRenderEntry, uri: string) => this.openHtmlFullscreen(entry, uri),
+                onOpenExternalLink: (url: string) => { void this.openExternalUrl(url); }
               })
             }
           }.width('100%')
@@ -5345,14 +5537,81 @@ struct Index {
             await owner.rpcRequest('terminal.close', { threadId: this.terminalThreadId, terminalId,
               deleteHistory: false } as TerminalClosePayload, 15000, false);
           }, onBack: () => this.page = 'chat' })
+      } else if (this.page === 'html-viewer' && this.htmlViewerEntry) {
+        Column({ space: 0 }) {
+          TopBar({
+            title: this.htmlViewerEntry.render.title || 'HTML 视图',
+            subtitle: htmlRenderFileName(this.htmlViewerEntry.render.title),
+            showBack: true,
+            closeStyle: true,
+            backLabel: '返回会话',
+            onBack: () => { this.returnToChatWithScrollRestore(); }
+          }) {
+            IconButton({
+              icon: $r('app.media.ui_more'),
+              label: '页面操作',
+              onTap: () => {}
+            })
+              .bindMenu([
+                { value: '重新加载', action: () => { void this.reloadHtmlFullscreen(); } },
+                { value: '保存到文件', action: () => { void this.saveHtmlRender(); } },
+                { value: '分享文件', action: () => { void this.shareHtmlRender(); } }
+              ])
+          }
+          if (this.htmlViewerError) {
+            Column({ space: Space.sm }) {
+              Text(this.htmlViewerError).fontSize(FontSize.callout).fontColor($r('app.color.danger'))
+              AppButton({
+                label: '重新加载',
+                kind: 'secondary',
+                compact: true,
+                onTap: () => { void this.reloadHtmlFullscreen(); }
+              })
+            }
+            .width('100%')
+            .layoutWeight(1)
+            .justifyContent(FlexAlign.Center)
+            .alignItems(HorizontalAlign.Center)
+            .padding(Space.lg)
+          } else if (this.htmlViewerUri) {
+            Column() {
+              ForEach([this.htmlViewerUri + ':' + this.htmlViewerAttempt], (_key: string) => {
+                HtmlRenderWebView({
+                  uri: this.htmlViewerUri,
+                  title: this.htmlViewerEntry!.render.title,
+                  nested: false,
+                  isHtmlRender: true,
+                  onOpenExternalLink: (url: string) => { void this.openExternalUrl(url); },
+                  onLoadError: () => { this.htmlViewerError = '页面加载失败，请重试'; }
+                })
+              }, (key: string) => key)
+            }
+            .width('100%')
+            .layoutWeight(1)
+          } else {
+            Column() {
+              LoadingProgress().width(24).height(24).color($r('app.color.muted'))
+            }
+            .width('100%')
+            .layoutWeight(1)
+            .justifyContent(FlexAlign.Center)
+            .alignItems(HorizontalAlign.Center)
+          }
+        }.width('100%').height('100%').backgroundColor($r('app.color.screen')).foregroundColor($r('app.color.ink'))
       } else if (this.page === 'files') {
-        FilesPanel({ cacheScope: this.selectedLocalId, connection: client, cwd: this.currentWorkspace(),
+        FilesPanel({ cacheScope: this.selectedLocalId, connection: client, cwd: this.filesOverrideCwd || this.currentWorkspace(),
           threadId: this.draftMode ? '' : this.threadId,
           title: this.draftMode ? '草稿文件' : '文件与源码',
-          onBack: () => this.page = 'chat',
+          initialPath: this.filesInitialPath,
+          initialDir: this.filesInitialDir,
+          initialLine: this.filesInitialLine,
+          directFileOnly: this.filesDirectFileOnly,
+          onBack: () => { this.returnToChatWithScrollRestore(); },
           onCompose: (value: Object, label: string) => this.addExternalContext(value, label),
           onCopy: (value: string) => { void this.copy(value); },
-          onStatus: (value: string) => this.status = value })
+          onStatus: (value: string) => this.status = value,
+          onOpenExternalLink: (url: string) => { void this.openExternalUrl(url); },
+          onOpenLink: (url: string) => { void this.openLink(url); } })
       } else if (this.page === 'review') {
         ReviewPanel({ connection: client, cwd: this.currentWorkspace(), threadId: this.threadId,
           projectId: this.projectId,

@@ -308,7 +308,7 @@ export struct MarkdownView {
           } else {
             Span(span.text)
           }
-        }, (span: InlineSpan, index: number) => index + ':' + span.kind + ':' + span.text)
+        }, (span: InlineSpan, index: number) => index + ':' + span.kind + ':' + span.text + ':' + (span.href || ''))
       }.width('100%').fontSize(size).lineHeight(lineHeight + 'fp').fontColor(color).fontWeight(weight)
         .copyOption(this.selectable ? CopyOptions.InApp : CopyOptions.None)
     }

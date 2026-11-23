@@ -1,5 +1,5 @@
 // Execute the actual NetworkKit adapter with a small fake kit; HAP build checks the SDK types.
-import { coreUrl, projectsUrl, composerUrl, r4Url, filesUrl, r5Url, floatingStatusUrl, markdownUrl, threadRepositoriesUrl, linkedThreadUrl, linkBatchUrl } from './load-core.mjs';
+import { coreUrl, projectsUrl, composerUrl, r4Url, filesUrl, r5Url, floatingStatusUrl, markdownUrl, htmlRenderUrl, threadRepositoriesUrl, linkedThreadUrl, linkBatchUrl } from './load-core.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -216,6 +216,7 @@ async function setup(options = {}) {
     .replace("'../protocol/Files'", JSON.stringify(filesUrl))
     .replace("'../protocol/Markdown'", JSON.stringify(markdownUrl))
     .replace("'./MarkdownMediaCache'", JSON.stringify(markdownMediaCacheUrl))
+    .replace("'../protocol/HtmlRender'", JSON.stringify(htmlRenderUrl))
     .replace("'../protocol/R5'", JSON.stringify(r5Url));
   const sourceWithR4 = source.replace("'../protocol/R4'", JSON.stringify(r4Url));
   const compiled = ts.transpileModule(sourceWithR4, { compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 } }).outputText;
@@ -2409,6 +2410,58 @@ test('M1: T3Client calls workspace.listFolders, workspace.scanFolders, workspace
       startFromOrigin: true,
       repositories: [{ path: '/work/hub/api' }]
     });
+  } finally {
+    s.client.disconnect();
+  }
+});
+
+test('htmlRenderUrl, filePreviewUrl, and fileMetadataKind use inline attachment, media-file/workspace-file, and filesystem.getMetadata', async () => {
+  const s = await setup({
+    onRequest: (frame, sock) => {
+      if (frame.tag === 'filesystem.getMetadata') {
+        const path = frame.payload.paths?.[0] || '';
+        const entry = path.endsWith('/repo') ? { kind: 'directory' } : path.endsWith('.html') ? { kind: 'file' } : null;
+        sock.emit({ _tag: 'Exit', requestId: frame.id, exit: { _tag: 'Success', value: { entries: [entry] } } });
+        return 'handled';
+      }
+      return undefined;
+    }
+  });
+  try {
+    await s.client.connect('https://test', 'synthetic');
+    await s.client.watch('thread-html');
+    await new Promise(setImmediate);
+
+    const renderUrl = await s.client.htmlRenderUrl('thread-html-abc-html', 'Upstream Report');
+    assert.equal(renderUrl, 'https://test/api/assets/synthetic');
+    const renderReq = s.frames.filter((f) => f.tag === 'assets.createUrl').at(-1);
+    assert.deepEqual(renderReq.payload.resource, {
+      _tag: 'attachment',
+      attachmentId: 'thread-html-abc-html',
+      fileName: 'Upstream Report.html',
+      mimeType: 'text/html',
+      disposition: 'inline'
+    });
+
+    await s.client.filePreviewUrl('/repo', '/Users/demo/report.html');
+    const hostReq = s.frames.filter((f) => f.tag === 'assets.createUrl').at(-1);
+    assert.deepEqual(hostReq.payload.resource, {
+      _tag: 'media-file',
+      threadId: 'thread-html',
+      path: '/Users/demo/report.html'
+    });
+
+    await s.client.filePreviewUrl('/repo', 'docs/page.html');
+    const wsReq = s.frames.filter((f) => f.tag === 'assets.createUrl').at(-1);
+    assert.deepEqual(wsReq.payload.resource, {
+      _tag: 'workspace-file',
+      threadId: 'thread-html',
+      path: '/repo/docs/page.html'
+    });
+
+    assert.equal(await s.client.fileMetadataKind('/Users/demo/repo'), 'directory');
+    assert.equal(await s.client.fileMetadataKind('/Users/demo/report.html'), 'file');
+    assert.equal(await s.client.fileMetadataKind('/Users/demo/missing'), '');
   } finally {
     s.client.disconnect();
   }
