@@ -7,8 +7,8 @@
 <h1>LessAgent (简码)</h1>
 
 <p>
-  A minimalist native remote workspace &amp; coding-agent client built with <strong>ArkTS + ArkUI</strong> —<br />
-  connect to your desktop or remote compatible server (T3 Code server protocol) to drive coding agents, inspect diffs, and operate dev tools from your phone.
+  An independent, unofficial third-party native mobile client for <strong>T3 Code</strong> built with <strong>ArkTS + ArkUI</strong> —<br />
+  connect to your desktop or remote T3 Code server to drive coding agents, inspect diffs, and operate dev tools from your phone.
 </p>
 
 <p>
@@ -42,7 +42,7 @@
 > - LessAgent implements compatibility with the [T3 Code](https://github.com/pingdotgg/t3code) server protocol (`orchestrationProtocol=2`). The bundled [MIT license copy](entry/src/main/resources/rawfile/t3code-license.txt) is included for upstream protocol/code attribution.
 > - Optional compatibility with the upstream hosted **T3 Connect** relay is supported on a best-effort basis with **no upstream long-term stability guarantees**. You can switch to a **self-hosted relay** or use **direct LAN / Tailnet / HTTPS pairing** at any time.
 
-**LessAgent (简码)** is a minimalist native mobile client for controlling remote development workspaces and coding agents. Designed as a thin client, all coding agent execution and repository operations run on your desktop or remote server while the phone delivers a responsive native ArkUI experience verified on real hardware.
+**LessAgent (简码)** is an independent, unofficial third-party native mobile client for [T3 Code](https://github.com/pingdotgg/t3code) designed for controlling remote development workspaces and coding agents. Running as a thin client, all coding agent execution and repository operations stay on your desktop or remote server while the phone delivers a responsive native ArkUI experience verified on real hardware.
 
 ## Screenshots
 
