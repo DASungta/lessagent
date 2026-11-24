@@ -14,8 +14,8 @@
 <p>
   <img src="https://img.shields.io/badge/HarmonyOS_NEXT-API_24%2B-0A59F7?style=flat-square" alt="HarmonyOS API 24+" />
   <img src="https://img.shields.io/badge/ArkTS_%2B_ArkUI-Native-18181B?style=flat-square" alt="ArkTS + ArkUI Native" />
-  <a href="https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.9-preview"><img src="https://img.shields.io/badge/Preview-v0.1.9--preview-2563EB?style=flat-square" alt="Preview v0.1.9-preview" /></a>
-  <img src="https://img.shields.io/badge/Tests-718_passing-16A34A?style=flat-square" alt="718 Tests Passing" />
+  <a href="https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.10-preview"><img src="https://img.shields.io/badge/Preview-v0.1.10--preview-2563EB?style=flat-square" alt="Preview v0.1.10-preview" /></a>
+  <img src="https://img.shields.io/badge/Tests-749_passing-16A34A?style=flat-square" alt="749 Tests Passing" />
   <img src="https://img.shields.io/badge/License-MIT-52525B?style=flat-square" alt="MIT License" />
 </p>
 
@@ -81,7 +81,7 @@
 
 ### Download Preview Sideload Package
 
-This project is currently in **Preview**. You can download the prebuilt **unsigned debug-mode HAP** (`t3code-harmony-v0.1.9-preview-unsigned.hap`, with its `.sha256` checksum) from [GitHub Releases (`v0.1.9-preview`)](https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.9-preview).
+This project is currently in **Preview**. You can download the prebuilt **unsigned debug-mode HAP** (`t3code-harmony-v0.1.10-preview-unsigned.hap`, with its `.sha256` checksum) from [GitHub Releases (`v0.1.10-preview`)](https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.10-preview).
 
 > **HarmonyOS NEXT Sideloading Note**: HarmonyOS NEXT rejects unsigned HAPs as well as debug packages signed for another device's UDID. After downloading the `unsigned.hap`, sign it using your own HUAWEI Developer account via a HarmonyOS sideloading/signing helper (such as AutoInstaller) or `hap-sign-tool` + `hdc`, or clone the repo and build with DevEco Studio automatic signing.
 
@@ -97,7 +97,7 @@ This project is currently in **Preview**. You can download the prebuilt **unsign
 git clone https://github.com/DASungta/t3code-harmony.git
 cd t3code-harmony
 
-# Run all host unit tests and theme contrast checks (718/718)
+# Run all host unit tests and theme contrast checks (749/749)
 node --experimental-strip-types --test tests/*.test.mjs
 
 # Build the Debug HAP (override DevEco Studio path via DEVECO_HOME if needed)
