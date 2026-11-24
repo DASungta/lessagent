@@ -122,7 +122,7 @@ export function bootstrapForm(credential: string): string {
     '&subject_token=' + encodeURIComponent(credential.trim()) +
     '&subject_token_type=urn%3At3%3Aparams%3Aoauth%3Atoken-type%3Aenvironment-bootstrap' +
     '&requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token' +
-    '&client_label=T3%20Harmony&client_device_type=mobile&client_os=HarmonyOS';
+    '&client_label=LessAgent&client_device_type=mobile&client_os=HarmonyOS';
 }
 
 export function tokenRenewalForm(accessToken: string): string {
@@ -346,7 +346,7 @@ export class RpcClient {
     else {
       const code = extractFailureCode(exit.cause);
       pending.reject(new RpcFailure(
-        '服务端拒绝请求或任务失败，请在现有 T3 客户端核对详情',
+        '服务端拒绝请求或任务失败，请在远端服务端核对详情',
         true,
         code.tag,
         code.reason,
@@ -886,7 +886,7 @@ export function createThread(commandId: string, threadId: string, projectId: str
   if (!projectId.trim() || !instanceId.trim() || !model.trim()) throw new Error('请填写项目、Provider 实例和模型');
   return {
     type: 'thread.create', commandId, threadId, projectId: projectId.trim(),
-    title: 'Harmony 新会话', modelSelection: { instanceId: instanceId.trim(), model: model.trim() },
+    title: '新会话', modelSelection: { instanceId: instanceId.trim(), model: model.trim() },
     runtimeMode: 'approval-required', interactionMode: 'default', branch: null, worktreePath: null,
     createdBy: 'user', creationSource: 'mobile'
   };

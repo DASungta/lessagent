@@ -12,9 +12,11 @@ test('cold/warm links only stage an in-memory target and are consumed once',()=>
  assert.deepEqual(takePairingLink(),{base:'https://synthetic.invalid',code:'SYNTHETIC'});assert.equal(takePairingLink(),undefined);
  assert.equal(storage.get('t3PairingRevision'),1);assert.ok(!JSON.stringify([...storage.values()]).includes('SYNTHETIC'));
  acceptPairingLink(link);assert.ok(takePairingLink());
+ const ownLink='lessagent://pair?pairingUrl='+encodeURIComponent('https://synthetic.invalid/#OWN');acceptPairingLink(ownLink);
+ assert.deepEqual(takePairingLink(),{base:'https://synthetic.invalid',code:'OWN'});assert.equal(takePairingLink(),undefined);
 });
 test('malicious and unrelated links clear pending content with a generic error',()=>{
- for(const link of ['javascript:alert(1)','t3code://else?pairingUrl=https://x','t3code://pair?pairingUrl=file:///tmp/secret']){
+ for(const link of ['javascript:alert(1)','t3code://else?pairingUrl=https://x','t3code://pair?pairingUrl=file:///tmp/secret','lessagent://else?pairingUrl=https://x','lessagent://pair?pairingUrl=file:///tmp/secret']){
   acceptPairingLink(link);assert.equal(takePairingLink(),undefined);assert.equal(storage.get('t3PairingError'),'配对链接无效，请检查后重新打开');
  }
 });

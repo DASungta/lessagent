@@ -78,7 +78,7 @@ export class CloudEnvironmentTransport {
       '&subject_token=' + encodeURIComponent(bootstrap.credential) +
       '&subject_token_type=urn%3At3%3Aparams%3Aoauth%3Atoken-type%3Aenvironment-bootstrap' +
       '&requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token' +
-      '&client_label=T3%20Code%20Harmony&client_device_type=mobile&client_os=HarmonyOS';
+      '&client_label=LessAgent&client_device_type=mobile&client_os=HarmonyOS';
     let result: CloudHttpResult;
     try {
       const headers: Record<string, string> = { 'dpop': proof };

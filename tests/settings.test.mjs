@@ -12,7 +12,10 @@ test('settings search handles blank, case and multiple terms', () => {
   assert.equal(settings.settingsMatch('秘密', '诊断'), false);
 });
 test('diagnostic export accepts only bounded version and non-negative counts', () => {
-  assert.match(settings.diagnosticSummary('0.1.1', 2, 4, 1), /环境数: 2/);
+  const exported = settings.diagnosticSummary('0.1.1', 2, 4, 1);
+  assert.match(exported, /^简码 \(LessAgent\)\n/);
+  assert.match(exported, /环境数: 2/);
+  assert.doesNotMatch(exported, /T3 Harmony/);
   assert.throws(() => settings.diagnosticSummary('0.1\ntoken=secret', 0, 0, 0));
   assert.throws(() => settings.diagnosticSummary('0.1', -1, 0, 0));
   assert.throws(() => settings.diagnosticSummary('0.1', 1.5, 0, 0));

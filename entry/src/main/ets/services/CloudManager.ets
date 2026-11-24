@@ -438,7 +438,7 @@ export class CloudManager {
       this.config = this.baseConfig;
       this.auth = new CloudAuth(this.config);
       this.environmentInfo = defaultClerkEnvironment();
-      this.status = '已恢复官方默认 T3 Connect 配置';
+      this.status = '已恢复上游默认 T3 Connect 配置';
       if (this.configured) {
         void this.auth.fetchEnvironment().then((info: ClerkEnvironmentInfo) => {
           this.environmentInfo = info;

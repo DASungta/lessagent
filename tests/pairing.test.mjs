@@ -15,13 +15,14 @@ test('upstream IP, IPv6, hostname, tailnet, token and wrapper vectors', () => {
  ['https://desktop.tailnet.ts.net/path?token=query#token=hash','https://desktop.tailnet.ts.net','hash'],
  ['https://app.t3.codes/pair?host=https%3A%2F%2Fdesktop.tailnet.ts.net%2F#token=pairing-token','https://desktop.tailnet.ts.net','pairing-token'],
  ['t3code://pair?pairingUrl=https%3A%2F%2Fremote.example.com%2Fpair%23token%3Dpairing-token','https://remote.example.com','pairing-token'],
+ ['lessagent://pair?pairingUrl=https%3A%2F%2Fremote.example.com%2Fpair%23token%3Dpairing-token','https://remote.example.com','pairing-token'],
  ['wss://remote.example.com/path','https://remote.example.com',''],
  ['http://10.0.0.1:3773/#token=a%2Bb%26%E4%B8%AD','http://10.0.0.1:3773','a+b&中']
  ]) assert.deepEqual(pairingTarget(input), {base,code});
  assert.deepEqual(pairingTarget('remote.example.com',' code '),{base:'https://remote.example.com',code:'code'});
 });
 test('bad inputs and conflicting codes fail without exposing input', () => {
- for (const input of ['', 'javascript:alert(1)', 'ftp://test', 'https://user:secret@test', 'https://test:65536', 'http://[::zzz]', 't3code://else?pairingUrl=https://test', 't3code://pair?pairingUrl=t3code://pair', 'https://test/\\evil', 'https://test/#token=%00secret', 'https://app.t3.codes/?host=file:///tmp#token=secret']) {
+ for (const input of ['', 'javascript:alert(1)', 'ftp://test', 'https://user:secret@test', 'https://test:65536', 'http://[::zzz]', 't3code://else?pairingUrl=https://test', 't3code://pair?pairingUrl=t3code://pair', 'lessagent://else?pairingUrl=https://test', 'lessagent://pair?pairingUrl=lessagent://pair', 'https://test/\\evil', 'https://test/#token=%00secret', 'https://app.t3.codes/?host=file:///tmp#token=secret']) {
   assert.throws(()=>pairingTarget(input), e=>!e.message.includes('secret'));
  }
  assert.throws(()=>pairingTarget('https://test/#token=a','b'));

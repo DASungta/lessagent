@@ -3,7 +3,7 @@ import { FontSize, LineHeight, Sizes, Space, Weight } from '../../common/Theme';
 /**
  * 首页分栏标题：caption 字号 + 右侧细线，可选折叠箭头（整行可点）。
  * SectionHeader({ title: '置顶' })
- * SectionHeader({ title: 't3code-harmony', collapsible: true, collapsed: this.folded, onToggle: () => this.folded = !this.folded })
+ * SectionHeader({ title: 'lessagent', collapsible: true, collapsed: this.folded, onToggle: () => this.folded = !this.folded })
  */
 @Component
 export struct SectionHeader {

@@ -95,7 +95,7 @@ export async function observeRunNotification(target: NotificationTarget, run: No
     stage = '提交系统通知';
     await notificationManager.publish({ id, notificationSlotType: notificationManager.SlotType.SERVICE_INFORMATION,
       content: { notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT,
-        normal: { title: 'T3 Code', text: run.status === 'completed' ? '一个任务已完成，点击查看会话。' : '一个任务已结束，请打开会话查看状态。' } },
+        normal: { title: '简码', text: run.status === 'completed' ? '一个任务已完成，点击查看会话。' : '一个任务已结束，请打开会话查看状态。' } },
       wantAgent: agent, tapDismissed: true, autoDeletedTime: Date.now() + 24 * 60 * 60 * 1000 });
     if (!enabled || version !== generation || !validTarget(target)) {
       await notificationManager.cancel(id); notificationStatus('发布后目标或设置变化，已撤销通知');

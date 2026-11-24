@@ -1,7 +1,7 @@
 {
   "name": "entry",
   "version": "0.1.0",
-  "description": "Native T3 client",
+  "description": "LessAgent (简码) entry module",
   "dependencies": {
     "libt3device.so": "file:./src/main/cpp/types/libt3device"
   }

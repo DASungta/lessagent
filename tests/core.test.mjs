@@ -280,7 +280,7 @@ test('secret cards parse multi-value fields, drop malformed entries, forbid refe
   assert.throws(() => secretValuesAnswer('t', 's2', { email: '   ', password: 'pw' }, multi.secretFields));
   assert.throws(() => secretValuesAnswer('t', 's2', { email: 'a@b.dev', password: 'pw', extra: 'x' }, multi.secretFields));
 
-  const mismatch = new RpcFailure('服务端拒绝请求或任务失败，请在现有 T3 客户端核对详情', true, 'SecretRequestError', 'fields_mismatch');
+  const mismatch = new RpcFailure('服务端拒绝请求或任务失败，请在远端服务端核对详情', true, 'SecretRequestError', 'fields_mismatch');
   assert.equal(secretRequestErrorMessage(mismatch), '此请求需要的字段与当前版本不一致，请更新应用后重试');
 });
 

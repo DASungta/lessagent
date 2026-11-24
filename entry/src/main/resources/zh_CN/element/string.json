@@ -1,0 +1,28 @@
+{
+  "string": [
+    {
+      "name": "shortcut_form_name",
+      "value": "简码 快捷入口"
+    },
+    {
+      "name": "shortcut_form_desc",
+      "value": "打开新任务或会话列表"
+    },
+    {
+      "name": "shortcut_new_task",
+      "value": "新任务"
+    },
+    {
+      "name": "shortcut_sessions",
+      "value": "会话列表"
+    },
+    {
+      "name": "camera_reason",
+      "value": "用于扫描远端服务端配对二维码"
+    },
+    {
+      "name": "microphone_reason",
+      "value": "用于将语音在设备端转换为可编辑草稿，仅在点击开始后录音"
+    }
+  ]
+}

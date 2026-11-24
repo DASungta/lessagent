@@ -699,7 +699,7 @@ test('automatic peer code creation sends only the selected access scopes as JSON
  const s=await setup({peerLinks:true,sessionState:{authenticated:true,permissions:['access:write']}});try{
   await s.client.connect('https://test','synthetic');assert.equal(await s.client.mintPeerPairingCode('read-only'),'SYNTHETIC_PEER_CODE');
   const request=s.requests.find(r=>r.url.endsWith('/api/auth/pairing-token'));assert.equal(request.args.header['Content-Type'],'application/json');assert.equal(request.args.maxRedirects,0);
-  assert.deepEqual(JSON.parse(request.args.extraData),{label:'T3 Code link',scopes:['orchestration:read']});assert.equal(s.client.recovery,undefined);
+  assert.deepEqual(JSON.parse(request.args.extraData),{label:'LessAgent link',scopes:['orchestration:read']});assert.equal(s.client.recovery,undefined);
  }finally{s.client.disconnect()}
 });
 

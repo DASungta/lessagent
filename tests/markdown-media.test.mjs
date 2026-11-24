@@ -321,5 +321,5 @@ test('MediaTransfer infers filenames, sanitized titles, UTDs, gallery eligibilit
   assert.equal(mediaTransfer.mediaCopyValue('', 'https://example.com/a.png'), 'https://example.com/a.png');
   assert.equal(mediaTransfer.mediaCopyLabel('', 'https://example.com/a.png'), '复制链接');
   assert.equal(mediaTransfer.mediaCopyValue('data:image/png;base64,AAAA', 'data:image/png;base64,AAAA'), '');
-  assert.equal(mediaTransfer.mediaCopyValue('file://com.dasungta.t3codebridge/data/storage/el2/base/haps/entry/cache/a.mp4', ''), '');
+  assert.equal(mediaTransfer.mediaCopyValue('file://com.dasungta.lessagent/data/storage/el2/base/haps/entry/cache/a.mp4', ''), '');
 });

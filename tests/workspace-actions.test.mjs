@@ -73,7 +73,7 @@ test('project updates, deletion and thread-to-project use the R3 command contrac
 });
 
 test('failed modifying requests are not retried and report the unknown outcome', async () => {
-  const { actions, calls } = setup({ failDispatch: '服务端拒绝请求或任务失败，请在现有 T3 客户端核对详情' });
+  const { actions, calls } = setup({ failDispatch: '服务端拒绝请求或任务失败，请在远端服务端核对详情' });
   await assert.rejects(actions.archive(thread()), /结果未确认.*不会自动重试/);
   assert.equal(calls.length, 1);
   await new Promise(resolve => setTimeout(resolve, 30));

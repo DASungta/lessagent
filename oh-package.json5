@@ -1,6 +1,6 @@
 {
   "modelVersion": "6.0.0",
-  "description": "T3 Code native client for HarmonyOS",
+  "description": "LessAgent (简码) — minimalist native remote coding-agent workspace client",
   "dependencies": {},
   "devDependencies": {}
 }

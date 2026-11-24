@@ -2,7 +2,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 DEVECO_HOME="${DEVECO_HOME:-/Applications/DevEco-Studio.app/Contents}"
-RELEASE_ENV="${T3_RELEASE_ENV:-${HOME}/.ohos/release/com.dasungta.t3codebridge/release.env}"
+RELEASE_ENV="${LESSAGENT_RELEASE_ENV:-${T3_RELEASE_ENV:-${HOME}/.ohos/release/com.dasungta.lessagent/release.env}}"
 if [ -f "$RELEASE_ENV" ]; then
   set -a
   # shellcheck disable=SC1090

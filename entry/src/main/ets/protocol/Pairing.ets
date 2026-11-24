@@ -11,7 +11,7 @@ export function pairingTarget(input: string, code: string = ''): PairingTarget {
   try {
     let parsed = new url.URL(raw.includes('://') ? raw :
       (/^(\d{1,3}\.){3}\d{1,3}(:\d+)?(\/|$)/.test(raw) || raw.startsWith('[') ? 'http://' : 'https://') + raw);
-    if (parsed.protocol === 't3code:') {
+    if (parsed.protocol === 'lessagent:' || parsed.protocol === 't3code:') {
       if (parsed.hostname !== 'pair' || (parsed.pathname !== '' && parsed.pathname !== '/')) throw new Error('link');
       raw = parsed.params.get('pairingUrl') || '';
       if (!raw || !/^https?:\/\/|^wss?:\/\//i.test(raw)) throw new Error('link');

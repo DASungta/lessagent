@@ -98,3 +98,13 @@ test('privacy consent defaults to false, persists atomically on accept, and reje
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('privacy consent text uses independent LessAgent / 简码 branding and explicit non-affiliation notice', () => {
+  assert.match(Privacy.PRIVACY_POLICY_SUMMARY, /简码（LessAgent）/);
+  assert.match(Privacy.PRIVACY_POLICY_DETAIL, /简码（LessAgent）/);
+  assert.match(Privacy.PRIVACY_POLICY_DETAIL, /T3 Tools Inc\./);
+  assert.match(Privacy.PRIVACY_POLICY_DETAIL, /华为技术有限公司/);
+  assert.match(Privacy.PRIVACY_POLICY_DETAIL, /非官方第三方/);
+  assert.doesNotMatch(Privacy.PRIVACY_POLICY_SUMMARY, /T3 Harmony|T3 Code Harmony/);
+  assert.doesNotMatch(Privacy.PRIVACY_POLICY_DETAIL, /T3 Harmony|T3 Code Harmony/);
+});

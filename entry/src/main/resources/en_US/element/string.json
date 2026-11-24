@@ -1,0 +1,28 @@
+{
+  "string": [
+    {
+      "name": "shortcut_form_name",
+      "value": "LessAgent Shortcuts"
+    },
+    {
+      "name": "shortcut_form_desc",
+      "value": "Open a new task or session list"
+    },
+    {
+      "name": "shortcut_new_task",
+      "value": "New Task"
+    },
+    {
+      "name": "shortcut_sessions",
+      "value": "Sessions"
+    },
+    {
+      "name": "camera_reason",
+      "value": "Used to scan remote server pairing QR codes"
+    },
+    {
+      "name": "microphone_reason",
+      "value": "Used to transcribe speech on-device into an editable draft only after tapping start"
+    }
+  ]
+}

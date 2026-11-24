@@ -217,7 +217,7 @@ export struct ConnectionsPanel {
                           Row({ space: Space.xs }) {
                             Column({ space: 2 }) {
                               Text('等待主机批准此设备').fontSize(FontSize.callout).fontWeight(Weight.medium).fontColor($r('app.color.ink')).width('100%')
-                              Text('请在电脑端 T3 Code 核对验证码 ' + this.approvalCodes[entry.localId] + ' 并点击批准，批准后会自动连接。')
+                              Text('请在电脑端兼容服务端（如 T3 Code）核对验证码 ' + this.approvalCodes[entry.localId] + ' 并点击批准，批准后会自动连接。')
                                 .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted')).width('100%')
                             }.layoutWeight(1).alignItems(HorizontalAlign.Start)
                             AppButton({

@@ -136,7 +136,7 @@ async function attachmentService(files) {
 
 test('rejects app sandbox authorities, paths with traversal or escaped separators, and remote URLs before open', async () => {
   const forbidden = [
-    'file://com.dasungta.t3code.harmony/data/storage/el2/base/haps/entry/files/private.txt',
+    'file://com.dasungta.lessagent/data/storage/el2/base/haps/entry/files/private.txt',
     'file:///data/storage/el2/base/haps/entry/files/private.txt',
     'file://another.app/data/storage/el2/base/private.txt',
     'https://example.test/share.txt',
@@ -222,7 +222,7 @@ test('staged queue total is applied before reading, and cancel restores the capa
 
 test('empty plain-text URI stays inline; a nonempty URI must pass the file route and permissions', async () => {
   const allowed = docs + 'granted.txt';
-  const privateUri = 'file://com.dasungta.t3code.harmony/data/storage/el2/base/private.txt';
+  const privateUri = 'file://com.dasungta.lessagent/data/storage/el2/base/private.txt';
   const { service, opened } = await attachmentService(new Map([[allowed, { bytes: textBytes }]]));
   await service.acceptIncomingShare(share([{ ...plain('inline'), uri: '' }, fileRecord(allowed, 'general.plain-text')]));
   const entry = service.peekIncomingShare();

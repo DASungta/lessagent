@@ -26,6 +26,8 @@ export interface CloudConfigOverride {
 
 export const CLOUD_SSO_CALLBACK = 't3code://app/';
 export const CLOUD_CALLBACK = 't3code://auth/callback';
+export const LESSAGENT_SSO_CALLBACK = 'lessagent://app/';
+export const LESSAGENT_CALLBACK = 'lessagent://auth/callback';
 
 export const OFFICIAL_CLOUD_CONFIG: CloudConfig = {
   clerk: {
@@ -90,14 +92,17 @@ function normalizeCallbackUri(value: string): string {
   const raw = value.trim();
   if (raw === 't3code://app' || raw === CLOUD_SSO_CALLBACK) return CLOUD_SSO_CALLBACK;
   if (raw === CLOUD_CALLBACK) return CLOUD_CALLBACK;
-  throw new Error('T3 Connect 回调地址必须为 ' + CLOUD_SSO_CALLBACK + ' 或 ' + CLOUD_CALLBACK);
+  if (raw === 'lessagent://app' || raw === LESSAGENT_SSO_CALLBACK) return LESSAGENT_SSO_CALLBACK;
+  if (raw === LESSAGENT_CALLBACK) return LESSAGENT_CALLBACK;
+  throw new Error('T3 Connect 回调地址必须为 ' + CLOUD_SSO_CALLBACK + '、' + CLOUD_CALLBACK + '、' +
+    LESSAGENT_SSO_CALLBACK + ' 或 ' + LESSAGENT_CALLBACK);
 }
 
 export function isCloudCallbackUri(uri: string): boolean {
   const raw = uri.trim();
   if (!raw || raw.length > 8192 || /[\u0000-\u001f\u007f]/.test(raw)) return false;
-  return /^t3code:\/\/app(?:\/)?(?:\?[^#]*)?(?:#.*)?$/i.test(raw) ||
-    /^t3code:\/\/auth\/callback(?:\/)?(?:\?[^#]*)?(?:#.*)?$/i.test(raw);
+  return /^(?:lessagent|t3code):\/\/app(?:\/)?(?:\?[^#]*)?(?:#.*)?$/i.test(raw) ||
+    /^(?:lessagent|t3code):\/\/auth\/callback(?:\/)?(?:\?[^#]*)?(?:#.*)?$/i.test(raw);
 }
 
 export function cloudConfig(value: Object): CloudConfig {
@@ -249,7 +254,7 @@ const SSO_ORDER: string[] = ['oauth_github', 'oauth_google', 'oauth_apple', 'oau
 
 export function defaultClerkEnvironment(): ClerkEnvironmentInfo {
   return {
-    applicationName: 'T3 Code',
+    applicationName: 'T3 Connect',
     nativeApiEnabled: true,
     emailCodeEnabled: true,
     passwordEnabled: true,
@@ -296,7 +301,7 @@ export function parseClerkEnvironment(value: Object): ClerkEnvironmentInfo {
   }
 
   return {
-    applicationName: safeOptionalText(displayConfig.application_name, 128) || 'T3 Code',
+    applicationName: safeOptionalText(displayConfig.application_name, 128) || 'T3 Connect',
     nativeApiEnabled,
     emailCodeEnabled: firstFactors.length === 0 ? true : firstFactors.includes('email_code'),
     passwordEnabled: firstFactors.length === 0 ? true : firstFactors.includes('password'),

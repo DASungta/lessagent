@@ -15,8 +15,20 @@ const want = action => ({ parameters: { t3ShortcutAction: action } });
 test('the manifest advertises both static shortcuts and the real launches use their string action', async () => {
   const module = JSON.parse(await read('entry/src/main/module.json5')).module;
   const app = JSON.parse(await read('AppScope/app.json5')).app;
+  assert.equal(app.bundleName, 'com.dasungta.lessagent');
+  const appBaseStrings = JSON.parse(await read('AppScope/resources/base/element/string.json')).string;
+  const appZhStrings = JSON.parse(await read('AppScope/resources/zh_CN/element/string.json')).string;
+  const appEnStrings = JSON.parse(await read('AppScope/resources/en_US/element/string.json')).string;
+  assert.equal(appBaseStrings.find(item => item.name === 'app_name')?.value, '简码');
+  assert.equal(appZhStrings.find(item => item.name === 'app_name')?.value, '简码');
+  assert.equal(appEnStrings.find(item => item.name === 'app_name')?.value, 'LessAgent');
   const profile = JSON.parse(await read('entry/src/main/resources/base/profile/shortcuts_config.json'));
   const strings = JSON.parse(await read('entry/src/main/resources/base/element/string.json')).string;
+  const zhStrings = JSON.parse(await read('entry/src/main/resources/zh_CN/element/string.json')).string;
+  const enStrings = JSON.parse(await read('entry/src/main/resources/en_US/element/string.json')).string;
+  assert.equal(strings.find(item => item.name === 'shortcut_form_name')?.value, '简码 快捷入口');
+  assert.equal(zhStrings.find(item => item.name === 'shortcut_form_name')?.value, '简码 快捷入口');
+  assert.equal(enStrings.find(item => item.name === 'shortcut_form_name')?.value, 'LessAgent Shortcuts');
   const entry = module.abilities.find(ability => ability.name === module.mainElement);
   assert.deepEqual(entry.metadata.find(item => item.name === 'ohos.ability.shortcuts'),
     { name: 'ohos.ability.shortcuts', resource: '$profile:shortcuts_config' });

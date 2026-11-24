@@ -2332,7 +2332,7 @@ struct Index {
       const plain = await data.getPrimaryText();
       if (!plain || plain.length > 2000000) throw new Error('剪贴板没有可用上下文');
       const value = record(JSON.parse(plain) as Object);
-      if (value.version !== 1 || !Array.isArray(value.records)) throw new Error('剪贴板不是 T3 上下文片段');
+      if (value.version !== 1 || !Array.isArray(value.records)) throw new Error('剪贴板不是受支持的结构化上下文片段');
       const rows: ComposerContextRecord[] = [];
       for (const item of value.records as Object[]) {
         const parsed = contextRecord(item);
@@ -4848,7 +4848,7 @@ struct Index {
         })
         Column({ space: Space.sm }) {
           Column({ space: Space.sm }) {
-            Text('使用系统粘贴按钮读取剪贴板中的 T3 上下文片段；不会读取密码或任意页面。')
+            Text('使用系统粘贴按钮读取剪贴板中的结构化上下文片段；不会读取密码或任意页面。')
               .fontSize(FontSize.callout).lineHeight(LineHeight.callout).fontColor($r('app.color.muted')).width('100%')
             PasteButton({ icon: PasteIconStyle.LINES, text: PasteDescription.PASTE, buttonType: ButtonType.Capsule })
               .height(44).onClick((event: ClickEvent, result: PasteButtonOnClickResult) => {
@@ -5296,7 +5296,7 @@ struct Index {
                 FormRow({
                   kind: 'value',
                   label: this.cloudSignedIn ? 'T3 Connect 已登录' : '使用 T3 Connect',
-                  subtitle: this.cloudSignedIn ? (this.cloudAccountSummary() || this.cloudStatus || '使用托管中继') : '通过中继访问已链接的机器',
+                  subtitle: this.cloudSignedIn ? (this.cloudAccountSummary() || this.cloudStatus || '使用托管中继') : '通过上游托管中继访问已链接的机器（可切换自建中继）',
                   value: '',
                   disabled: this.busy,
                   isFirst: true,
@@ -5494,7 +5494,7 @@ struct Index {
           if (this.restoringEnvironments) { LoadingProgress().width(28).height(28) }
           else { AppButton({ label: '重试恢复', kind: 'primary', onTap: () => { void this.restoreAddress(); } }) }
         } else if (this.environmentEntries.length === 0) {
-          this.emptyState('添加你的工作环境', '连接 T3 Code，在手机上继续工作。')
+          this.emptyState('添加你的工作环境', '连接你的远程工作环境（兼容 T3 Code 服务端），在手机上继续工作。')
           AppButton({ label: '＋ 添加环境', kind: 'primary', onTap: () => this.openPanel('server') })
         } else if (!this.hasEnabledEnvironment()) {
           this.emptyState('工作环境已停用', '启用已保存的环境后继续工作。')
@@ -7199,15 +7199,15 @@ struct Index {
                     .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
                 }.alignItems(VerticalAlign.Center)
               } else {
-                Row({ space: 5 }) {
-                  Text('T3').fontSize(FontSize.title).fontWeight(Weight.bold).fontColor($r('app.color.ink'))
-                  Text('Code').fontSize(FontSize.title).fontWeight(Weight.regular).fontColor($r('app.color.muted'))
+                Row({ space: 0 }) {
+                  Text('Less').fontSize(FontSize.title).fontWeight(Weight.bold).fontColor($r('app.color.ink'))
+                  Text('Agent').fontSize(FontSize.title).fontWeight(Weight.regular).fontColor($r('app.color.muted'))
                 }.alignItems(VerticalAlign.Center)
               }
             }.constraintSize({ minHeight: Sizes.iconHit }).padding({ left: Space.xxs, right: Space.xs })
               .backgroundColor(Color.Transparent)
               .accessibilityText((this.homeShowReconnectingHeader() || this.homeShowOfflineHeader())
-                ? (this.homeConnectionLabel() + '，管理环境') : 'T3 Code，管理环境')
+                ? (this.homeConnectionLabel() + '，管理环境') : 'LessAgent，管理环境')
               .onClick(() => this.openPanel('server'))
             Blank()
             IconButton({ icon: $r('app.media.ui_search'), label: '搜索会话', onTap: () => this.toggleHomeSearch() })

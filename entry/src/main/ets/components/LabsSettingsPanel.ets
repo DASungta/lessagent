@@ -220,7 +220,7 @@ export struct LabsSettingsPanel {
                   FormRow({
                     kind: 'choice',
                     label: '关闭',
-                    subtitle: 'Agent 不会向 T3 团队发送任何问题反馈。',
+                    subtitle: 'Agent 不会向上游服务端团队发送任何问题反馈。',
                     checked: this.snapshot.agentFeedback.value === 'off',
                     disabled: !this.canEditFeedback(),
                     isFirst: true,
@@ -238,7 +238,7 @@ export struct LabsSettingsPanel {
                   FormRow({
                     kind: 'choice',
                     label: '自动上报',
-                    subtitle: 'Agent 遇到 T3 Code 问题时也会自动发起上报。',
+                    subtitle: 'Agent 遇到服务端异常问题时也会自动发起上报。',
                     checked: this.snapshot.agentFeedback.value === 'auto',
                     disabled: !this.canEditFeedback(),
                     isFirst: false,

@@ -2,7 +2,7 @@
   "string": [
     {
       "name": "shortcut_form_name",
-      "value": "T3 Harmony 快捷入口"
+      "value": "简码 快捷入口"
     },
     {
       "name": "shortcut_form_desc",
@@ -18,7 +18,7 @@
     },
     {
       "name": "camera_reason",
-      "value": "用于扫描 T3 Code 配对二维码"
+      "value": "用于扫描远端服务端配对二维码"
     },
     {
       "name": "microphone_reason",

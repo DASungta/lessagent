@@ -160,7 +160,7 @@ function formatHttpNetworkError(path: string, base: string, code: number | undef
       : 'HTTP ' + path + ' 连接超时（系统错误码 2300028）：请检查网络连接与服务端状态';
   }
   if (code === 2300007) {
-    return 'HTTP ' + path + ' 无法连接服务器（系统错误码 2300007）：请确认 T3 服务已运行且地址、端口与防火墙正确';
+    return 'HTTP ' + path + ' 无法连接服务器（系统错误码 2300007）：请确认远端服务端已运行且地址、端口与防火墙正确';
   }
   if (code === 2300006) {
     return 'HTTP ' + path + ' 无法解析域名（系统错误码 2300006）：请检查地址拼写与网络连接';
@@ -1363,7 +1363,7 @@ export class T3Client {
   async mintPeerPairingCode(access: string): Promise<string> {
     const rpc = this.requireRpc(); await this.refreshPeerAccess();
     if (rpc !== this.rpc || !this.canManagePeerAccess() || !this.activeEnvironmentId()) throw new Error('此连接不能创建配对码，请粘贴该环境提供的配对码');
-    const payload: PeerPairingPayload = { label: 'T3 Code link', scopes: peerPairingScopes(access) };
+    const payload: PeerPairingPayload = { label: 'LessAgent link', scopes: peerPairingScopes(access) };
     const result = record(await this.httpJson(this.activeBase(), '/api/auth/pairing-token', http.RequestMethod.POST,
       JSON.stringify(payload), this.saved?.token || '', true, !!this.cloud));
     if (rpc !== this.rpc) throw new Error('连接已变更，请重新获取配对码');

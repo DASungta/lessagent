@@ -69,7 +69,7 @@ export struct PairingScanCard {
             if (width !== this.viewWidth || height !== this.viewHeight) { this.viewWidth = width; this.viewHeight = height; void this.start(); }
           })
       } else {
-        Text(this.complete && !this.error ? '已识别配对地址' : '扫描 T3 Code 配对二维码')
+        Text(this.complete && !this.error ? '已识别配对地址' : '扫描远端服务端配对二维码')
           .fontSize(FontSize.body).lineHeight(LineHeight.body).fontColor($r('app.color.muted'))
           .width('100%').height(88).textAlign(TextAlign.Center)
       }

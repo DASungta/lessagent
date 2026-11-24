@@ -58,7 +58,9 @@ test('opt-in, generation baseline, visible thread suppression and tap parsing us
   await service.observeThreadNotifications(target,3,identity,[{id:'r3',status:'failed'}]);assert.equal(publications.length,1);
   assert.match(values.get('t3LocalNotificationStatus'),/系统已接受/);
   assert.ok(values.get('t3LocalNotificationPublishedAt'));
+  assert.equal(api.NOTIFICATION_ACTION, 'com.dasungta.lessagent.OPEN_THREAD_NOTIFICATION');
   assert.deepEqual(publications[0].wantAgent.wants[0].parameters,target);
+  assert.equal(publications[0].content.normal.title,'简码');
   assert.equal(publications[0].content.normal.text,'一个任务已结束，请打开会话查看状态。');
   await service.observeThreadNotifications(target,3,identity,[{id:'r3',status:'failed'}]);assert.equal(publications.length,1);
   service.acceptNotificationWant({action:api.NOTIFICATION_ACTION,parameters:target});assert.deepEqual(service.peekNotificationTarget(),target);

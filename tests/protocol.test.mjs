@@ -22,6 +22,7 @@ test('HTTP direct URLs validated; credentials encoded as OAuth form data', () =>
   const params = new URLSearchParams(bootstrapForm('test +&中文'));
   assert.equal(params.get('subject_token'), 'test +&中文');
   assert.equal(params.get('grant_type'), 'urn:ietf:params:oauth:grant-type:token-exchange');
+  assert.equal(params.get('client_label'), 'LessAgent');
   assert.equal(new URL(socketUrl('https://test', 'test+/=')).searchParams.get('wsTicket'), 'test+/=');
   assert.equal(new URL(socketUrl('https://test', 'test+/=')).searchParams.get('dpop'), null);
   const dpopWs = new URL(socketUrl('https://test', 'ticket-1', 'proof.jwt+/='));
@@ -144,6 +145,7 @@ test('command subset preserves IDs and uses approval-required mode', () => {
   assert.equal(command.runtimeMode, 'approval-required');
   assert.equal(command.creationSource, 'mobile');
   assert.equal(command.commandId, 'cmd');
+  assert.equal(command.title, '新会话');
   const message = sendMessage('cmd2', 'thread', 'message', 'hello');
   assert.equal(message.type, 'message.dispatch');
   assert.deepEqual(message.dispatchMode, { type: 'start_immediately' });

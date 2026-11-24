@@ -1,21 +1,21 @@
 <div align="center">
 
 <p>
-  <img src="docs/assets/logo.png" width="112" alt="T3 Code Harmony Logo" />
+  <img src="docs/assets/logo.png" width="112" alt="LessAgent (简码) Logo" />
 </p>
 
-<h1>T3 Code Harmony</h1>
+<h1>LessAgent (简码)</h1>
 
 <p>
-  A native HarmonyOS client for <strong>T3 Code</strong> built with <strong>ArkTS + ArkUI</strong> —<br />
-  connect directly to your desktop or remote T3 Code server to drive coding agents, inspect diffs, and operate dev tools from your phone.
+  A minimalist native remote workspace &amp; coding-agent client built with <strong>ArkTS + ArkUI</strong> —<br />
+  connect to your desktop or remote compatible server (T3 Code server protocol) to drive coding agents, inspect diffs, and operate dev tools from your phone.
 </p>
 
 <p>
-  <img src="https://img.shields.io/badge/HarmonyOS_NEXT-API_24%2B-0A59F7?style=flat-square" alt="HarmonyOS API 24+" />
-  <img src="https://img.shields.io/badge/ArkTS_%2B_ArkUI-Native-18181B?style=flat-square" alt="ArkTS + ArkUI Native" />
-  <a href="https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.10-preview"><img src="https://img.shields.io/badge/Preview-v0.1.10--preview-2563EB?style=flat-square" alt="Preview v0.1.10-preview" /></a>
-  <img src="https://img.shields.io/badge/Tests-749_passing-16A34A?style=flat-square" alt="749 Tests Passing" />
+  <img src="https://img.shields.io/badge/API-24%2B-0C4146?style=flat-square" alt="API 24+" />
+  <img src="https://img.shields.io/badge/ArkTS_%2B_ArkUI-Native-166B64?style=flat-square" alt="ArkTS + ArkUI Native" />
+  <a href="https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.10-preview"><img src="https://img.shields.io/badge/Preview-v0.1.10--preview-22C9A8?style=flat-square" alt="Preview v0.1.10-preview" /></a>
+  <img src="https://img.shields.io/badge/Tests-passing-16A34A?style=flat-square" alt="Tests Passing" />
   <img src="https://img.shields.io/badge/License-MIT-52525B?style=flat-square" alt="MIT License" />
 </p>
 
@@ -24,10 +24,11 @@
 </p>
 
 <p>
+  <a href="#independent--unofficial-notice">Disclaimer</a> ·
   <a href="#screenshots">Screenshots</a> ·
   <a href="#features">Features</a> ·
   <a href="#quick-guide">Quick Guide</a> ·
-  <a href="#development--build">Development & Build</a> ·
+  <a href="#development--build">Development &amp; Build</a> ·
   <a href="#project-structure">Project Structure</a> ·
   <a href="#documentation">Documentation</a>
 </p>
@@ -36,7 +37,12 @@
 
 ---
 
-**T3 Code Harmony** is an independent native HarmonyOS client for [T3 Code](https://github.com/pingdotgg/t3code). Designed as a thin client, all coding agent execution and repository operations run on your desktop or remote server while the phone delivers a responsive native ArkUI experience verified on real HUAWEI Mate 60 Pro / Mate 70 Pro hardware.
+> ### Independent & Unofficial Notice
+> **LessAgent (简码)** is an **independent, unofficial third-party open-source client** (`com.dasungta.lessagent`). It is **not affiliated with, endorsed by, or sponsored by T3 Tools Inc. (Ping Labs) or Huawei Technologies Co., Ltd.**
+> - LessAgent implements compatibility with the [T3 Code](https://github.com/pingdotgg/t3code) server protocol (`orchestrationProtocol=2`). The bundled [MIT license copy](entry/src/main/resources/rawfile/t3code-license.txt) is included for upstream protocol/code attribution.
+> - Optional compatibility with the upstream hosted **T3 Connect** relay is supported on a best-effort basis with **no upstream long-term stability guarantees**. You can switch to a **self-hosted relay** or use **direct LAN / Tailnet / HTTPS pairing** at any time.
+
+**LessAgent (简码)** is a minimalist native mobile client for controlling remote development workspaces and coding agents. Designed as a thin client, all coding agent execution and repository operations run on your desktop or remote server while the phone delivers a responsive native ArkUI experience verified on real hardware.
 
 ## Screenshots
 
@@ -44,16 +50,16 @@
 | :---: | :---: | :---: | :---: |
 | <img src="docs/screenshots/promo-v0.1.1/01-home-light.jpeg" width="200" alt="Home Workbench (Light)" /> | <img src="docs/screenshots/promo-v0.1.1/02-chat-light.jpeg" width="200" alt="Chat and Code Highlighting (Light)" /> | <img src="docs/screenshots/promo-v0.1.1/03-files-mermaid-light.jpeg" width="200" alt="File Browser and Native Mermaid (Light)" /> | <img src="docs/screenshots/promo-v0.1.1/04-git-light.jpeg" width="200" alt="Git Status and Commit (Light)" /> |
 
-| Grouped Settings | About & Version v0.1.1 | Home Workbench (Dark) | Chat Detail (Dark) |
+| Grouped Settings | About & Version | Home Workbench (Dark) | Chat Detail (Dark) |
 | :---: | :---: | :---: | :---: |
-| <img src="docs/screenshots/promo-v0.1.1/05-settings-light.jpeg" width="200" alt="Grouped Settings (Light)" /> | <img src="docs/screenshots/promo-v0.1.1/06-about-version-light.jpeg" width="200" alt="About and Version v0.1.1" /> | <img src="docs/screenshots/promo-v0.1.1/07-home-dark.jpeg" width="200" alt="Home Workbench (Dark)" /> | <img src="docs/screenshots/promo-v0.1.1/08-chat-dark.jpeg" width="200" alt="Chat Detail (Dark)" /> |
+| <img src="docs/screenshots/promo-v0.1.1/05-settings-light.jpeg" width="200" alt="Grouped Settings (Light)" /> | <img src="docs/screenshots/promo-v0.1.1/06-about-version-light.jpeg" width="200" alt="About and Version" /> | <img src="docs/screenshots/promo-v0.1.1/07-home-dark.jpeg" width="200" alt="Home Workbench (Dark)" /> | <img src="docs/screenshots/promo-v0.1.1/08-chat-dark.jpeg" width="200" alt="Chat Detail (Dark)" /> |
 
-> Captured on a real HUAWEI Mate 60 Pro running a demo repository fixture.
+> Historical screenshots captured on real hardware using a demo repository fixture prior to the LessAgent (简码) rebrand; refreshed screenshots will accompany the next release.
 
 ## Features
 
 - **Multi-Environment Workbench & Thread Management**
-  - Direct pairing over LAN, SSH, or loopback (manual entry, QR code scan, or deep link) plus T3 Connect / Cloud Relay support (`OAuth + PKCE + DPoP`).
+  - Direct pairing over LAN, SSH, Tailnet, or loopback (manual entry, QR code scan, `lessagent://` and compatible `t3code://` deep links), plus optional T3 Connect / custom self-hosted Cloud Relay compatibility (`OAuth + PKCE + DPoP`).
   - Floating bottom bar (`Chats / Pull Requests / Usage / Settings`) paired with a quick **New Task** action; repository/path/flat thread grouping, search, environment & project filters, pin, snooze, settle, archive, and multi-draft restoration.
 - **Native Chat & Rich Media Rendering**
   - Pure ArkUI message timeline with turn-grouped collapsible work logs & checkpoints, subagent thread inspection, and approval / secret request cards.
@@ -61,19 +67,19 @@
 - **Mobile Developer Toolbox**
   - Workspace file browser and full-text search, line-selectable Diff viewer with inline review comments, and full Git workflows (status, stage, commit, branches, push/pull).
   - GitHub Pull Requests reader / review / guide tour, one-tap remote ANSI terminal in the chat top bar (with scrollback & copy), remote browser preview, and iOS Simulator / Android Emulator device preview.
-- **Design System & HarmonyOS Integration**
-  - 111 symmetric Light/Dark semantic color tokens (`base/element/color.json` & `dark/element/color.json`) guarded by automated WCAG AA (`>= 4.5:1`) contrast tests.
-  - System share sheet integration (**T3 Harmony**) to import images and files into task drafts, plus a `2×2` home-screen shortcut widget and launcher quick actions.
+- **Design System & Native System Integration**
+  - 112 symmetric Light/Dark semantic color tokens (`base/element/color.json` & `dark/element/color.json`) guarded by automated WCAG AA (`>= 4.5:1`) contrast tests.
+  - Localized app identity (`简码` in Simplified Chinese, `LessAgent` in English), system share sheet integration to import images and files into task drafts, plus a `2×2` home-screen shortcut widget and launcher quick actions.
 
 ## Quick Guide
 
 | Action | Where to Start |
 |---|---|
 | **Start a task or resume a chat** | Tap the **New Task** button at the bottom-right of the floating bar, or select an existing thread. Switch environment, project, model, and mode beneath the composer. |
-| **Manage connected environments** | Tap the `T3 Code` wordmark in the top-left of the home screen to pair manually, scan a QR code, import a deep link, or manage multiple routes. |
+| **Manage connected environments** | Tap the `LessAgent` wordmark in the top-left of the home screen to pair manually, scan a QR code, import a deep link, or manage multiple routes. |
 | **Search & filter threads** | Use the search or filter icon in the home top-right bar to search across threads or scope by environment and project. |
 | **Files, Diff, Git, PRs, Terminal & Preview** | Inside a chat, tap the terminal icon in the top bar for direct shell access, or open **More** (`···`) for Files, Diff, Git, Pull Requests, Browser Preview, and Device Preview. |
-| **Import via system share sheet** | Pick an image or file in Gallery / Files → Share → **T3 Harmony**, verify the preview and target project, and save it as a draft. |
+| **Import via system share sheet** | Pick an image or file in Gallery / Files → Share → **LessAgent** (`简码` in Chinese), verify the preview and target project, and save it as a draft. |
 | **Dictate drafts in Chinese** | Open **Tools → Voice Input** in the chat composer to transcribe spoken Chinese directly into the input box. |
 | **Code typography, projects, worktrees & schedules** | Switch to the **Settings** tab at the bottom to configure code font size (`8–18`) / word wrap, add projects, manage source control, override per-project worktree settings, create scheduled tasks, and switch themes. |
 
@@ -81,51 +87,54 @@
 
 ### Download Preview Sideload Package
 
-This project is currently in **Preview**. You can download the prebuilt **unsigned debug-mode HAP** (`t3code-harmony-v0.1.10-preview-unsigned.hap`, with its `.sha256` checksum) from [GitHub Releases (`v0.1.10-preview`)](https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.10-preview).
+This project is currently in **Preview**. Earlier preview builds are hosted at [GitHub Releases (`v0.1.10-preview`)](https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.10-preview) (release URLs and packages for `com.dasungta.lessagent` will be updated after renaming the GitHub repository).
 
-> **HarmonyOS NEXT Sideloading Note**: HarmonyOS NEXT rejects unsigned HAPs as well as debug packages signed for another device's UDID. After downloading the `unsigned.hap`, sign it using your own HUAWEI Developer account via a HarmonyOS sideloading/signing helper (such as AutoInstaller) or `hap-sign-tool` + `hdc`, or clone the repo and build with DevEco Studio automatic signing.
+> **Sideloading Note**: Devices reject unsigned HAPs as well as debug packages signed for another device's UDID. Sign unsigned packages with your own developer certificate/profile, or clone the repo and build with automatic signing for `com.dasungta.lessagent` in DevEco Studio.
 
 ### Prerequisites
 
-- **DevEco Studio 6.1.1+** with HarmonyOS SDK `6.1.1(24)` (`API 24+`)
+- **DevEco Studio 6.1.1+** with SDK `6.1.1(24)` (`API 24+`)
 - **Node.js 22+** (required for `--experimental-strip-types` host unit tests)
-- A running [T3 Code](https://github.com/pingdotgg/t3code) server on your desktop or remote machine
+- A running compatible server (such as a [T3 Code](https://github.com/pingdotgg/t3code) server) on your desktop or remote machine
 
 ### Testing & Building
 
 ```bash
+# Current repository URL (GitHub will automatically redirect once renamed to lessagent)
 git clone https://github.com/DASungta/t3code-harmony.git
 cd t3code-harmony
 
-# Run all host unit tests and theme contrast checks (749/749)
+# Run all host unit tests and theme contrast checks
 node --experimental-strip-types --test tests/*.test.mjs
 
 # Build the Debug HAP (override DevEco Studio path via DEVECO_HOME if needed)
 ./scripts/build.sh
 ```
 
-> **Signing Note**: Before installing onto a physical device, configure your own HarmonyOS debug signing profile in DevEco Studio / `build-profile.json5`. Never commit personal certificates or keys to public repositories.
+> **Signing Note**: The bundle name is now `com.dasungta.lessagent`. Before installing onto a physical device or building a release package, generate and configure your own debug/release signing certificate and profile for `com.dasungta.lessagent` in DevEco Studio / AGC. Never commit personal certificates or keys to public repositories.
 
 ## Project Structure
 
 ```text
-t3code-harmony/
-├── AppScope/                         # App metadata (app.json5), layered icon & app name
+lessagent/ (current repo folder: t3code-harmony/)
+├── AppScope/                         # App metadata (com.dasungta.lessagent), layered icon & localized names
+│   └── resources/{base,zh_CN,en_US}/ # Localized app_name ("简码" / "LessAgent")
 ├── entry/src/main/
 │   ├── ets/
 │   │   ├── common/                   # Theme.ets (typography, spacing, radius & size tokens)
 │   │   ├── components/               # Feature panels and ui/ shared design-system components
 │   │   ├── pages/                    # Main entry page Index.ets
-│   │   ├── protocol/                 # Server protocol, state reducers, Markdown/Diff/Mermaid parsers
+│   │   ├── protocol/                 # Server protocol compatibility, reducers, Markdown/Diff/Mermaid parsers
 │   │   ├── services/                 # Networking, pairing/auth, remote terminal & OS bridges
 │   │   ├── storage/                  # Local preferences, profiles & draft persistence
-│   │   ├── entryability/             # Main Ability, share sheet & deep-link handlers
+│   │   ├── entryability/             # Main Ability, share sheet & deep-link handlers (lessagent:// & t3code://)
 │   │   └── formextension/            # 2×2 home-screen widget extension
 │   └── resources/
-│       ├── base/element/color.json   # Light theme: 58 semantic color tokens
-│       ├── dark/element/color.json   # Dark theme: 58 semantic color tokens
-│       └── rawfile/                  # Bundled license text & connection presets
-├── scripts/                          # Build script, replay helpers & device keep-awake tool
+│       ├── base/element/color.json   # Light theme: 112 semantic color tokens
+│       ├── dark/element/color.json   # Dark theme: 112 semantic color tokens
+│       ├── {base,zh_CN,en_US}/       # Localized permission reasons & shortcut labels
+│       └── rawfile/                  # Bundled attribution license & relay compatibility defaults
+├── scripts/                          # Build/release scripts, replay helpers & device keep-awake tool
 ├── tests/                            # Host unit tests & Light/Dark WCAG AA contrast checks
 └── docs/                             # Brand logo (assets/), design system, plans, shots & evidence
 ```
@@ -139,9 +148,9 @@ t3code-harmony/
 
 ## Scope & Status
 
-`v0.1.1` delivers the core end-to-end mobile workflow and completed visual refresh on real HUAWEI Mate 60 Pro and Mate 70 Pro devices. External-dependency edge cases (such as an external iOS Simulator host, full physical Bluetooth keyboard coverage, production cloud-relay deployment, and tablet/foldable multi-form-factor matrices) remain tracked in the documentation; host unit tests do not replace real-device verification.
+Core end-to-end mobile workflows and the visual refresh have been verified on real hardware. External-dependency edge cases (such as an external iOS Simulator host, full physical Bluetooth keyboard coverage, self-hosted production cloud-relay deployment, and tablet/foldable multi-form-factor matrices) remain tracked in the documentation; host unit tests do not replace real-device verification.
 
-## Upstream & License
+## Protocol Compatibility & License
 
-- Upstream repositories: [pingdotgg/t3code](https://github.com/pingdotgg/t3code) · [DASungta/t3code](https://github.com/DASungta/t3code)
+- Compatible upstream protocol reference: [pingdotgg/t3code](https://github.com/pingdotgg/t3code) · [DASungta/t3code](https://github.com/DASungta/t3code) (independent, unofficial third-party client)
 - License: [MIT License](entry/src/main/resources/rawfile/t3code-license.txt) (bundled license copy).

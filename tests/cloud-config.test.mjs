@@ -38,6 +38,8 @@ test('public config stays hidden until all three upstream fields exist and relay
   assert.equal(cloud.cloudConfig(config({ clerk: { redirectUri: '' } })).clerk.redirectUri, 't3code://app/');
   assert.equal(cloud.cloudConfig(config({ clerk: { redirectUri: 't3code://app' } })).clerk.redirectUri, 't3code://app/');
   assert.equal(cloud.cloudConfig(config({ clerk: { redirectUri: 't3code://auth/callback' } })).clerk.redirectUri, 't3code://auth/callback');
+  assert.equal(cloud.cloudConfig(config({ clerk: { redirectUri: 'lessagent://app' } })).clerk.redirectUri, 'lessagent://app/');
+  assert.equal(cloud.cloudConfig(config({ clerk: { redirectUri: 'lessagent://auth/callback' } })).clerk.redirectUri, 'lessagent://auth/callback');
   assert.throws(() => cloud.cloudConfig(config({ clerk: { redirectUri: 'https://evil.test/cb' } })), /回调/);
   for (const relayUrl of ['http://relay.example.test', 'https://user:secret@relay.example.test',
     'https://relay.example.test/path', 'https://relay.example.test?token=secret',
@@ -82,6 +84,10 @@ test('SSO callback URI matching and validation reject foreign schemes, hosts, pa
   assert.equal(cloud.isCloudCallbackUri('t3code://app/?rotating_token_nonce=abc'), true);
   assert.equal(cloud.isCloudCallbackUri('t3code://app?rotating_token_nonce=abc'), true);
   assert.equal(cloud.isCloudCallbackUri('t3code://auth/callback?code=1'), true);
+  assert.equal(cloud.isCloudCallbackUri('lessagent://app/?rotating_token_nonce=abc'), true);
+  assert.equal(cloud.isCloudCallbackUri('lessagent://app?rotating_token_nonce=abc'), true);
+  assert.equal(cloud.isCloudCallbackUri('lessagent://auth/callback?code=1'), true);
+  assert.equal(cloud.isCloudCallbackUri('lessagent://pair?code=1'), false);
   assert.equal(cloud.isCloudCallbackUri('t3code://pair?code=1'), false);
   assert.equal(cloud.isCloudCallbackUri('https://app.t3.codes/'), false);
 

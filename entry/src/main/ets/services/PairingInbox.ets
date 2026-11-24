@@ -5,7 +5,7 @@ let pending: PairingTarget | undefined = undefined;
 export function acceptPairingLink(uri: string): void {
   if (!uri) return;
   try {
-    if (!/^t3code:\/\/pair(?:[/?]|$)/i.test(uri)) throw new Error('link');
+    if (!/^(?:lessagent|t3code):\/\/pair(?:[/?]|$)/i.test(uri)) throw new Error('link');
     pending = pairingTarget(uri);
     AppStorage.setOrCreate('t3PairingError', '');
   } catch (_) {

@@ -160,7 +160,7 @@ export struct McpAppView {
 
     if (method === 'ui/initialize' && hasId) {
       const hostInfo: Record<string, Object> = {};
-      hostInfo['name'] = 'T3 Code Harmony';
+      hostInfo['name'] = 'LessAgent';
       hostInfo['version'] = '1.0.0';
       const emptyCap1: Record<string, Object> = {};
       const emptyCap2: Record<string, Object> = {};

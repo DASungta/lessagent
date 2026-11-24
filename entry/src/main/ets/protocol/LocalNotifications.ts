@@ -1,6 +1,6 @@
 export interface NotificationTarget { localId: string; environmentId: string; threadId: string; }
 export interface NotificationRun { id: string; status: string; }
-export const NOTIFICATION_ACTION = 'com.dasungta.t3code.OPEN_THREAD_NOTIFICATION';
+export const NOTIFICATION_ACTION = 'com.dasungta.lessagent.OPEN_THREAD_NOTIFICATION';
 
 export function notificationTarget(value: Object): NotificationTarget {
   const row = value as Record<string, Object>;

@@ -135,7 +135,7 @@ export struct CloudAccountPanel {
 
   private deploymentSummary(): string {
     const host = this.relayUrl ? this.relayUrl.replace(/^https?:\/\//, '') : '未配置';
-    return (this.isCustomConfig ? '自定义部署' : '官方生产环境') + ' · ' + host;
+    return (this.isCustomConfig ? '自定义中继' : '上游默认中继') + ' · ' + host;
   }
 
   private saveCustom(): void {
@@ -163,7 +163,7 @@ export struct CloudAccountPanel {
     };
     if (this.signedIn) {
       AlertDialog.show({
-        title: '恢复官方默认配置？',
+        title: '恢复上游默认配置？',
         message: '恢复配置前会先退出当前账号并清理本机云环境。',
         primaryButton: { value: '取消', action: () => {} },
         secondaryButton: { value: '退出并恢复', action: () => { void this.act(run); } }
@@ -177,11 +177,11 @@ export struct CloudAccountPanel {
   deploymentConfigSection() {
     GroupCard({
       title: '部署配置',
-      footnote: '默认使用官方 T3 Connect（relay.t3.codes）。如自建中继，可在此覆盖公开配置（不含任何服务端密钥）。'
+      footnote: 'T3 Connect（relay.t3.codes）为上游托管中继服务，本客户端仅做兼容接入，上游不承诺长期接口稳定性，亦支持在此切换自建中继或使用直连模式（不含任何服务端密钥）。'
     }) {
       FormRow({
         kind: 'value',
-        label: this.isCustomConfig ? '自定义部署' : '官方生产环境',
+        label: this.isCustomConfig ? '自定义中继' : '上游默认中继',
         subtitle: this.relayUrl || '未配置',
         value: this.configExpanded ? '收起' : '自定义',
         valueMuted: true,
@@ -224,7 +224,7 @@ export struct CloudAccountPanel {
             })
             if (this.isCustomConfig) {
               AppButton({
-                label: '恢复官方默认',
+                label: '恢复上游默认',
                 kind: 'secondary',
                 compact: true,
                 disabled: this.busy,
@@ -251,6 +251,14 @@ export struct CloudAccountPanel {
       }
       Scroll() {
         Column({ space: 0 }) {
+          GroupCard({ title: '兼容接入说明' }) {
+            Text('T3 Connect 为上游托管中继服务，简码（LessAgent）仅做兼容接入，上游不承诺长期接口稳定性，亦支持切换自建中继或使用直连。')
+              .fontSize(FontSize.caption)
+              .lineHeight(LineHeight.caption)
+              .fontColor($r('app.color.muted'))
+              .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+              .width('100%')
+          }
           if (!this.configured) {
             GroupCard() {
               FormRow({
@@ -492,7 +500,7 @@ export struct CloudAccountPanel {
               if (this.ssoProviders.length > 0) {
                 GroupCard({
                   title: '第三方快捷登录',
-                  footnote: '在系统浏览器完成授权后将通过 t3code://app/ 自动返回本应用。'
+                  footnote: '在系统浏览器完成授权后将通过兼容回调链接自动返回本应用。'
                 }) {
                   Column({ space: Space.xs }) {
                     ForEach(this.ssoProviders, (provider: ClerkSsoProvider) => {
@@ -602,7 +610,7 @@ export struct CloudAccountPanel {
                 FormRow({
                   kind: 'value',
                   label: this.refreshing ? '正在加载…' : '暂无已链接的服务器',
-                  subtitle: this.refreshing ? '' : '请先在电脑端 T3 Code 设置中开启 T3 Connect，或将下方本机直连环境链接到账号。',
+                  subtitle: this.refreshing ? '' : '请先在电脑端 T3 Code 服务端设置中开启 T3 Connect，或将下方本机直连环境链接到账号。',
                   value: '',
                   valueMuted: true,
                   chevron: false,

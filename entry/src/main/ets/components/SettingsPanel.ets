@@ -376,16 +376,16 @@ export struct SettingsPanel {
             }.width('100%').padding({ top: Space.md })
           } else if (this.section === 'about') {
             Column({ space: 6 }) {
-              Text('T3 Harmony')
+              Text('简码（LessAgent）')
                 .fontSize(FontSize.title)
                 .lineHeight(LineHeight.title)
                 .fontWeight(Weight.bold)
                 .fontColor($r('app.color.ink'))
-              Text('鸿蒙原生客户端 · ' + this.version)
+              Text('独立远程研发工作区客户端 · ' + this.version)
                 .fontSize(FontSize.callout)
                 .lineHeight(LineHeight.callout)
                 .fontColor($r('app.color.muted'))
-              Text('在手机上连接你的工作环境，继续项目与会话。')
+              Text('极简原生远程研发工作区与 Coding Agent 操控客户端，兼容 T3 Code 服务端协议。')
                 .fontSize(FontSize.body)
                 .lineHeight(LineHeight.body)
                 .fontColor($r('app.color.ink'))
@@ -394,8 +394,16 @@ export struct SettingsPanel {
             .width('100%')
             .padding({ left: Space.xxs, right: Space.xxs, top: Space.sm, bottom: Space.xs })
             .alignItems(HorizontalAlign.Start)
-            GroupCard({ footnote: '此版本为独立鸿蒙客户端。客户端版本与所连接的服务端版本分别管理。' }) {
-              this.row('T3 Code 开源许可', 'MIT · T3 Tools Inc.', '', true, () => { void this.openLicense(); })
+            GroupCard({ title: '独立与非官方声明' }) {
+              Text('简码（LessAgent）是由独立开发者维护的非官方第三方客户端，与 T3 Tools Inc.（Ping Labs）及华为技术有限公司无任何隶属、授权或背书关系。本应用仅作为兼容 T3 Code 服务端协议的第三方客户端运行，内置开源许可副本（MIT · T3 Tools Inc.）仅用于说明协议与代码参考来源。')
+                .fontSize(FontSize.callout)
+                .lineHeight(LineHeight.callout)
+                .fontColor($r('app.color.muted'))
+                .padding({ left: 14, right: 14, top: Space.sm, bottom: Space.sm })
+                .width('100%')
+            }
+            GroupCard({ footnote: '此版本为独立第三方客户端，客户端版本与所连接的远端服务端版本分别管理。' }) {
+              this.row('上游参考协议与开源许可', 'MIT · T3 Tools Inc.', '', true, () => { void this.openLicense(); })
               this.row('隐私政策', '本地存储、权限说明与数据流向', '', false, () => { this.section = 'privacy'; })
             }
           } else if (this.section === 'privacy') {
@@ -662,18 +670,18 @@ export struct SettingsPanel {
               .margin({ top: Space.sm })
             }
 
-            if (settingsMatch(this.query, '帮助 诊断 复制 版本 关于 许可 开源')) {
+            if (settingsMatch(this.query, '帮助 诊断 复制 版本 关于 许可 开源 隐私 声明 简码 LessAgent')) {
               this.sectionLabel('帮助与信息')
               Column() {
                 this.row('诊断', '查看并复制安全摘要', '', true, () => this.section = 'diagnostics')
-                this.row('关于', '版本与开源许可', this.version, false, () => this.section = 'about')
+                this.row('关于', '简码（LessAgent）版本与声明', this.version, false, () => this.section = 'about')
               }.width('100%').backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
             }
 
             if (this.query.trim() && !settingsMatch(this.query, '连接与项目 环境 连接 路径 T3 Connect 云 中继 账号 登录 远程 项目 归档 恢复 删除') &&
               !settingsMatch(this.query, '项目分组 仓库 路径 独立') && !settingsMatch(this.query, '外观 主题 浅色 深色 系统') &&
               !settingsMatch(this.query, CODE_APPEARANCE_SEARCH) &&
-              !settingsMatch(this.query, '帮助 诊断 复制 版本 关于 许可 开源') &&
+              !settingsMatch(this.query, '帮助 诊断 复制 版本 关于 许可 开源 隐私 声明 简码 LessAgent') &&
               !settingsMatch(this.query, '工作中 Working 会话 分组 排序') &&
               !settingsMatch(this.query, WORKTREE_STORAGE_SEARCH) &&
               !settingsMatch(this.query, SOURCE_CONTROL_SEARCH) &&

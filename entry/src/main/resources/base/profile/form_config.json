@@ -1,7 +1,7 @@
 {
   "forms": [
     {
-      "name": "T3Shortcuts",
+      "name": "LessAgentShortcuts",
       "displayName": "$string:shortcut_form_name",
       "description": "$string:shortcut_form_desc",
       "src": "./ets/formextension/ShortcutCard.ets",
