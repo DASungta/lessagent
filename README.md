@@ -14,8 +14,8 @@
 <p>
   <img src="https://img.shields.io/badge/API-24%2B-0C4146?style=flat-square" alt="API 24+" />
   <img src="https://img.shields.io/badge/ArkTS_%2B_ArkUI-Native-166B64?style=flat-square" alt="ArkTS + ArkUI Native" />
-  <a href="https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.10-preview"><img src="https://img.shields.io/badge/Preview-v0.1.10--preview-22C9A8?style=flat-square" alt="Preview v0.1.10-preview" /></a>
-  <img src="https://img.shields.io/badge/Tests-passing-16A34A?style=flat-square" alt="Tests Passing" />
+  <a href="https://github.com/DASungta/lessagent/releases/tag/v0.1.10-preview"><img src="https://img.shields.io/badge/Preview-v0.1.10--preview-22C9A8?style=flat-square" alt="Preview v0.1.10-preview" /></a>
+  <img src="https://img.shields.io/badge/Tests-750_passing-16A34A?style=flat-square" alt="750 Tests Passing" />
   <img src="https://img.shields.io/badge/License-MIT-52525B?style=flat-square" alt="MIT License" />
 </p>
 
@@ -87,7 +87,7 @@
 
 ### 下载预览侧载包
 
-当前项目处于 **Preview** 阶段，历史预览包位于 [GitHub Releases (`v0.1.10-preview`)](https://github.com/DASungta/t3code-harmony/releases/tag/v0.1.10-preview)（注意：仓库在 GitHub 完成改名后将同步更新发布链接与新包名 `com.dasungta.lessagent` 构建产物）。
+当前项目处于 **Preview** 阶段，可在 [GitHub Releases (`v0.1.10-preview`)](https://github.com/DASungta/lessagent/releases/tag/v0.1.10-preview) 查看历史预览包（后续将随新包名 `com.dasungta.lessagent` 发布新版构建产物）。
 
 > **侧载说明**：出于系统安全机制，真机拒绝直接安装未签名包，而调试签名强绑定单台设备 UDID 与个人证书。下载未签名包后，请使用您自己的开发者账号注入调试签名后安装，或直接克隆源码在 DevEco Studio 中为 `com.dasungta.lessagent` 开启自动签名编译安装。
 
@@ -100,11 +100,10 @@
 ### 运行测试与构建 HAP
 
 ```bash
-# 当前仓库地址（GitHub 仓库改名为 lessagent 前沿用原地址，改名后 GitHub 会自动重定向）
-git clone https://github.com/DASungta/t3code-harmony.git
-cd t3code-harmony
+git clone https://github.com/DASungta/lessagent.git
+cd lessagent
 
-# 运行全部宿主单元测试与主题对比度校验
+# 运行全部宿主单元测试与主题对比度校验（750/750）
 node --experimental-strip-types --test tests/*.test.mjs
 
 # 构建 Debug HAP（可通过 DEVECO_HOME 指定 DevEco Studio 安装路径）
@@ -116,7 +115,7 @@ node --experimental-strip-types --test tests/*.test.mjs
 ## 项目结构
 
 ```text
-lessagent/ (当前仓库目录: t3code-harmony/)
+lessagent/
 ├── AppScope/                         # 应用元信息 (com.dasungta.lessagent)、分层图标与中英文名称
 │   └── resources/{base,zh_CN,en_US}/ # 简体中文「简码」与英文「LessAgent」多语言资源
 ├── entry/src/main/
