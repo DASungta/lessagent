@@ -22,6 +22,7 @@ import { TerminalPanel } from '../components/TerminalPanel';
 import { TerminalSize, terminalInput, terminalAccess } from '../protocol/Terminal';
 import {
   TaskSettings, ModelSelection, OptionSelection, QueuedRun, queuedRuns, validateTaskSettings, modelOptionsSummary,
+  ModelFavoriteEntry,
   CompactEditorGeometry, ExpandedModelLayout, shouldExpandComposer, resolveCompactEditorGeometry, layoutExpandedModelControl
 } from '../protocol/Composer';
 import { BranchView, branches, ComposerContextRecord, ComposerDraft, composerDraftLabel, composerDraft, contextRecord,
@@ -101,7 +102,7 @@ import { startNetworkMonitor } from '../services/NetworkMonitor';
 import { acceptPrivacyConsent, PRIVACY_POLICY_DETAIL, PRIVACY_POLICY_SUMMARY } from '../services/PrivacyConsent';
 import { CloudAccountPanel } from '../components/CloudAccountPanel';
 import { takeCloudCallback } from '../services/CloudCallbackInbox';
-import { CloudDevice, CloudPairingLink, deviceApprovalPrompts } from '../protocol/Cloud';
+import { ClerkSsoProvider, CloudDevice, CloudPairingLink, DEFAULT_SSO_PROVIDERS, deviceApprovalPrompts } from '../protocol/Cloud';
 import {
   ArchiveEnvironmentEntry, ArchiveProjectGroup, ProjectGroup, ProjectView, ScopedProject, ScopedThread, ThreadCapabilities,
   ThreadProjectRef, ThreadShelfState, ThreadView, attachPendingSubagentRequests, buildArchiveGroups, buildProjectGroups, buildThreadShelves,
@@ -118,10 +119,26 @@ import {
   LinkedThreadTarget,
   ParsedThreadLink,
   parseThreadLinkHref,
+  peerLinkRemoveMessage,
   prepareLinkedEnvironmentConnection,
   resolveLinkedThreadOpen,
   threadLinkCandidates
 } from '../protocol/LinkedThread';
+import {
+  AgentFeedbackAnswer,
+  AgentFeedbackRequestView,
+  agentFeedbackErrorMessage,
+  parseAgentFeedbackRequests
+} from '../protocol/AgentFeedback';
+import { FeedbackRequestCard } from '../components/FeedbackRequestCard';
+import {
+  extractMcpAppEntries,
+  McpAppEntry,
+  McpSignInNoticeView,
+  parseMcpSignInNotices
+} from '../protocol/McpApp';
+import { McpSignInPanel } from '../components/McpSignInPanel';
+import { McpAppView } from '../components/McpAppView';
 import { LinkedThreadPanel } from '../components/LinkedThreadPanel';
 import {
   parseSideThreadOpenTarget,
@@ -138,7 +155,14 @@ import {
 import { SideThreadPanel } from '../components/SideThreadPanel';
 import { LinkSeveralEnvironmentsPanel } from '../components/LinkSeveralEnvironmentsPanel';
 import { WorkspaceActions, WorkspaceUndo } from '../services/Workspace';
-import { rememberThreadProject, saveWorkspacePreferences, setWorkingShelfEnabled, workspacePrefs } from '../services/WorkspacePrefs';
+import {
+  localModelFavorites,
+  rememberThreadProject,
+  saveWorkspacePreferences,
+  setLocalModelFavorite,
+  setWorkingShelfEnabled,
+  workspacePrefs
+} from '../services/WorkspacePrefs';
 import { ThreadList } from '../components/ThreadList';
 import { ProjectPicker } from '../components/ProjectPicker';
 import { AddProjectPanel } from '../components/AddProjectPanel';
@@ -277,10 +301,19 @@ struct Index {
   @State environmentEntries: EnvironmentEntry[] = [];
   @State environmentStatuses: Record<string, string> = {};
   @State environmentReady: Record<string, boolean> = {};
+  @State environmentApprovalCodes: Record<string, string> = {};
   @State loaded: boolean = false;
   @State canResumeLatestRun: boolean = false;
   private pickers: Map<string, AttachmentPicker> = new Map();
   @State linkItems: LinkRequestView[] = [];
+  @State feedbackItems: AgentFeedbackRequestView[] = [];
+  @State mcpSignInNotices: McpSignInNoticeView[] = [];
+  @State activeMcpSignIn: McpSignInNoticeView | undefined = undefined;
+  @State mcpAppEntries: McpAppEntry[] = [];
+  @State fullscreenMcpApp: McpAppEntry | undefined = undefined;
+  @State localFavorites: ModelFavoriteEntry[] = [];
+  @State gitBannerThreadKey: string = '';
+  @State gitBannerText: string = '';
   @State linkMachines: LinkMachine[] = [];
   @State activeLink: LinkRequestView | undefined = undefined;
   @State peerCanAnswer: boolean = false;
@@ -442,11 +475,28 @@ struct Index {
   @State cloudSignInReady: boolean = false;
   @State cloudSignedIn: boolean = false;
   @State cloudAccountId: string = '';
+  @State cloudAccountEmail: string = '';
+  @State cloudAccountDisplayName: string = '';
+  @State cloudDeviceCode: string = '';
+  @State cloudRelayUrl: string = '';
+  @State cloudPublishableKey: string = '';
+  @State cloudJwtTemplate: string = '';
+  @State cloudCustomConfig: boolean = false;
+  @State cloudShowOnboarding: boolean = false;
   @State cloudStatus: string = '';
   @State cloudError: string = '';
   @State cloudBusy: boolean = false;
   @State cloudRefreshing: boolean = false;
   @State cloudEnvironments: CloudEnvironmentView[] = [];
+  @State cloudSsoProviders: ClerkSsoProvider[] = DEFAULT_SSO_PROVIDERS.slice();
+  @State cloudEmailCodeEnabled: boolean = true;
+  @State cloudPasswordEnabled: boolean = true;
+  @State cloudPendingSsoStrategy: string = '';
+  @State cloudSignInStep: string = '';
+  @State cloudSignInEmail: string = '';
+  @State cloudCanUseEmailCode: boolean = false;
+  @State cloudCanUsePassword: boolean = false;
+  @State cloudSecondFactors: string[] = [];
   @State pendingDevices: CloudPairingLink[] = [];
   @State approvedDevices: CloudDevice[] = [];
   @State deviceEnvironmentLabel: string = '';
@@ -476,6 +526,7 @@ struct Index {
     this.workingExpanded = workspacePrefs.workingShelfExpanded;
     this.snoozedExpanded = workspacePrefs.snoozedShelfExpanded;
     this.settledExpanded = workspacePrefs.settledShelfExpanded;
+    this.localFavorites = localModelFavorites();
     const update = (): void => {
       if (!this.alive) return;
       this.bindEnvironment();
@@ -523,6 +574,12 @@ struct Index {
       this.threads = client.shell.threads.slice();
       this.models = client.models.slice();
       this.actions = !this.draftMode && client.thread ? cards(client.thread.requests, client.thread.items) : [];
+      this.feedbackItems = !this.draftMode && client.thread
+        ? parseAgentFeedbackRequests(client.thread.items, client.thread.threadId) : [];
+      this.mcpSignInNotices = !this.draftMode && client.thread
+        ? parseMcpSignInNotices(client.thread.items, client.thread.threadId, client.thread.details, client.thread.providerThreads) : [];
+      this.mcpAppEntries = !this.draftMode && client.thread
+        ? extractMcpAppEntries(client.thread.items) : [];
       this.refreshExtras();
       this.worktreeSetup = client.worktreeSetup;
       if (!this.busy) this.refreshAttachments();
@@ -678,6 +735,14 @@ struct Index {
     this.cloudSignInReady = manager.signInReady;
     this.cloudSignedIn = manager.signedIn;
     this.cloudAccountId = manager.session?.accountId || '';
+    this.cloudAccountEmail = manager.session?.email || '';
+    this.cloudAccountDisplayName = manager.session?.displayName || '';
+    this.cloudDeviceCode = manager.deviceCode;
+    this.cloudRelayUrl = manager.config.relay.url;
+    this.cloudPublishableKey = manager.config.clerk.publishableKey;
+    this.cloudJwtTemplate = manager.config.clerk.jwtTemplate;
+    this.cloudCustomConfig = manager.isCustomConfig;
+    this.cloudShowOnboarding = manager.showOnboarding;
     this.cloudStatus = manager.status;
     const storedError = AppStorage.get<string>('t3CloudError') || '';
     this.cloudError = manager.error || storedError;
@@ -685,25 +750,130 @@ struct Index {
     this.cloudBusy = manager.busy;
     this.cloudRefreshing = manager.refreshing;
     this.cloudEnvironments = manager.environments.slice();
+    this.cloudSsoProviders = manager.environmentInfo.socialProviders.slice();
+    this.cloudEmailCodeEnabled = manager.environmentInfo.emailCodeEnabled;
+    this.cloudPasswordEnabled = manager.environmentInfo.passwordEnabled;
+    this.cloudPendingSsoStrategy = manager.pendingSsoStrategy;
+    const attempt = manager.signInAttempt;
+    if (attempt) {
+      this.cloudSignInStep = attempt.status === 'needs_second_factor' ? 'needs_second_factor' : 'needs_first_factor';
+      this.cloudSignInEmail = attempt.identifier;
+      this.cloudCanUseEmailCode = attempt.supportedFirstFactors.some((item) => item.strategy === 'email_code');
+      this.cloudCanUsePassword = attempt.supportedFirstFactors.some((item) => item.strategy === 'password');
+      this.cloudSecondFactors = attempt.supportedSecondFactors.map((item) => item.strategy);
+    } else {
+      this.cloudSignInStep = '';
+      this.cloudSignInEmail = '';
+      this.cloudCanUseEmailCode = false;
+      this.cloudCanUsePassword = false;
+      this.cloudSecondFactors = [];
+    }
+  }
+  private cloudAccountSummary(): string {
+    if (this.cloudAccountEmail) return this.cloudAccountEmail;
+    if (this.cloudAccountDisplayName) return this.cloudAccountDisplayName;
+    return this.cloudAccountId;
+  }
+  private closeCloudPanel(): void {
+    if (this.cloudReturnPanel) this.panel = this.cloudReturnPanel;
+    else this.panelOpen = false;
   }
   private incomingCloudCallback(): void {
     if (!this.alive || this.busy || !cloud) return;
     const uri = takeCloudCallback();
     if (!uri) return;
     this.busy = true; this.cloudBusy = true;
-    void this.cloudManager().completeCallback(uri).catch((error: Error) => {
+    void this.cloudManager().completeCallback(uri).then(() => {
+      this.bindEnvironment();
+      if (!this.panelOpen || this.panel !== 'cloud') {
+        this.openCloudPanel(this.panelOpen ? this.panel : '');
+      }
+    }).catch((error: Error) => {
       this.cloudError = error.message;
+      if (!this.panelOpen || this.panel !== 'cloud') {
+        this.openCloudPanel(this.panelOpen ? this.panel : '');
+      }
     }).finally(() => {
       this.busy = false; this.cloudBusy = cloud?.busy || false;
       this.syncCloudState();
     });
   }
-  private async cloudSignIn(): Promise<void> {
+  private async cloudBeginSso(strategy: string): Promise<void> {
     if (this.cloudBusy) return;
     this.cloudBusy = true;
     try {
-      await this.cloudManager().beginSignIn(this.getUIContext().getHostContext() as common.UIAbilityContext);
+      await this.cloudManager().beginSsoSignIn(strategy, this.getUIContext().getHostContext() as common.UIAbilityContext);
     } catch (error) { this.cloudError = (error as Error).message; }
+    finally { this.cloudBusy = false; this.syncCloudState(); }
+  }
+  private async cloudStartEmail(email: string): Promise<void> {
+    if (this.cloudBusy) return;
+    this.cloudBusy = true;
+    try { await this.cloudManager().startEmailSignIn(email); this.bindEnvironment(); }
+    catch (error) { this.cloudError = (error as Error).message; }
+    finally { this.cloudBusy = false; this.syncCloudState(); }
+  }
+  private async cloudSendEmailCode(): Promise<void> {
+    if (this.cloudBusy) return;
+    this.cloudBusy = true;
+    try { await this.cloudManager().sendEmailCode(); }
+    catch (error) { this.cloudError = (error as Error).message; }
+    finally { this.cloudBusy = false; this.syncCloudState(); }
+  }
+  private async cloudVerifyEmailCode(code: string): Promise<void> {
+    if (this.cloudBusy) return;
+    this.cloudBusy = true;
+    try { await this.cloudManager().verifyEmailCode(code); this.bindEnvironment(); }
+    catch (error) { this.cloudError = (error as Error).message; }
+    finally { this.cloudBusy = false; this.syncCloudState(); }
+  }
+  private async cloudVerifyPassword(password: string): Promise<void> {
+    if (this.cloudBusy) return;
+    this.cloudBusy = true;
+    try { await this.cloudManager().verifyPassword(password); this.bindEnvironment(); }
+    catch (error) { this.cloudError = (error as Error).message; }
+    finally { this.cloudBusy = false; this.syncCloudState(); }
+  }
+  private async cloudPrepareSecondFactor(strategy: string): Promise<void> {
+    if (this.cloudBusy) return;
+    this.cloudBusy = true;
+    try { await this.cloudManager().prepareSecondFactor(strategy); }
+    catch (error) { this.cloudError = (error as Error).message; }
+    finally { this.cloudBusy = false; this.syncCloudState(); }
+  }
+  private async cloudVerifySecondFactor(strategy: string, code: string): Promise<void> {
+    if (this.cloudBusy) return;
+    this.cloudBusy = true;
+    try { await this.cloudManager().verifySecondFactor(strategy, code); this.bindEnvironment(); }
+    catch (error) { this.cloudError = (error as Error).message; }
+    finally { this.cloudBusy = false; this.syncCloudState(); }
+  }
+  private async cloudCancelSignIn(): Promise<void> {
+    if (this.cloudBusy) return;
+    this.cloudBusy = true;
+    try { await this.cloudManager().cancelPendingSignIn(); }
+    catch (error) { this.cloudError = (error as Error).message; }
+    finally { this.cloudBusy = false; this.syncCloudState(); }
+  }
+  private async cloudResetDeviceKey(): Promise<void> {
+    if (this.cloudBusy) return;
+    this.cloudBusy = true;
+    try { await this.cloudManager().resetDeviceKey(); this.bindEnvironment(); }
+    catch (error) { this.cloudError = (error as Error).message; }
+    finally { this.cloudBusy = false; this.syncCloudState(); }
+  }
+  private async cloudSaveCustomConfig(publishableKey: string, jwtTemplate: string, relayUrl: string): Promise<void> {
+    if (this.cloudBusy) return;
+    this.cloudBusy = true;
+    try { await this.cloudManager().saveConfigOverride(publishableKey, jwtTemplate, relayUrl); this.bindEnvironment(); }
+    catch (error) { this.cloudError = (error as Error).message; throw error as Error; }
+    finally { this.cloudBusy = false; this.syncCloudState(); }
+  }
+  private async cloudResetCustomConfig(): Promise<void> {
+    if (this.cloudBusy) return;
+    this.cloudBusy = true;
+    try { await this.cloudManager().resetConfigOverride(); this.bindEnvironment(); }
+    catch (error) { this.cloudError = (error as Error).message; throw error as Error; }
     finally { this.cloudBusy = false; this.syncCloudState(); }
   }
   private async cloudSignOut(): Promise<void> {
@@ -820,12 +990,15 @@ struct Index {
     this.environmentEntries = registry.directory.entries.filter((entry: EnvironmentEntry) => registry.entryVisible(entry));
     const statuses: Record<string, string> = {};
     const readyMap: Record<string, boolean> = {};
+    const approvalCodes: Record<string, string> = {};
     registry.clients.forEach((value: T3Client, id: string) => {
       statuses[id] = value.status;
       readyMap[id] = Boolean(value.ready);
+      if (value.approvalPendingCode) approvalCodes[id] = value.approvalPendingCode;
     });
     this.environmentStatuses = statuses;
     this.environmentReady = readyMap;
+    this.environmentApprovalCodes = approvalCodes;
     const threads: ScopedThread[] = [];
     const projects: ScopedProject[] = [];
     const capabilities: Record<string, ThreadCapabilities> = {};
@@ -887,7 +1060,8 @@ struct Index {
       this.draftMode = false;
       this.draftModelCustomized = false;
       if (next) next.draftScope = '';
-      this.messages = []; this.source.update([]); this.actions = []; this.tools = [];
+      this.messages = []; this.source.update([]); this.actions = []; this.feedbackItems = [];
+      this.mcpSignInNotices = []; this.mcpAppEntries = []; this.tools = [];
       this.workMap = emptyWorkMap();
       this.liveThinking = { visible: false, kind: 'thinking', label: '', runId: '' };
       this.messageFooterMap = {};
@@ -1869,7 +2043,8 @@ struct Index {
     client.attachments = this.attachments.slice();
     client.bindDraftAttachments(client.draftScope);
     this.branches = []; this.branchesLoading = false; this.commandPanel = '';
-    this.messages = []; this.source.update([]); this.actions = []; this.tools = []; this.linkItems = [];
+    this.messages = []; this.source.update([]); this.actions = []; this.feedbackItems = [];
+    this.mcpSignInNotices = []; this.mcpAppEntries = []; this.tools = []; this.linkItems = [];
     this.workMap = emptyWorkMap();
     this.messageFooterMap = {};
     this.forkingMessageId = '';
@@ -3901,7 +4076,7 @@ struct Index {
     }
     if (this.panelOpen && ['peer-link', 'task-settings', 'queue'].includes(this.panel) && this.busy) return true;
     if (this.panelOpen) {
-      if (this.panel === 'cloud') { this.panel = this.cloudReturnPanel; return true; }
+      if (this.panel === 'cloud') { this.closeCloudPanel(); return true; }
       if (this.panel === 'connection-new') {
         const backToLinked = this.linkedConnectTarget !== undefined && this.linkedThreadTarget !== undefined;
         this.panel = backToLinked ? 'linked-thread' : 'server';
@@ -4098,7 +4273,92 @@ struct Index {
     if (generation !== this.linkedGeneration || !this.appForeground || !this.panelOpen || this.panel !== 'server') return;
     const visible: LinkedEnvironmentGroup[] = [];
     for (const group of groups) if (group) visible.push(group);
-    this.linkedGroups = visible;
+    if (visible.length >= 0) this.linkedGroups = visible;
+  }
+
+  private async removePeerLinkFromConnections(
+    sourceLocalId: string,
+    targetEnvironmentId: string,
+    targetLabel: string
+  ): Promise<void> {
+    const owner = this.registry().clients.get(sourceLocalId);
+    if (!owner || !owner.ready) throw new Error('源环境未连接，无法解除互链');
+    const result = await owner.removePeerLink(targetEnvironmentId);
+    this.status = peerLinkRemoveMessage(targetLabel, result);
+    await this.loadLinkedEnvironments();
+  }
+
+  private async answerAgentFeedbackItem(
+    turnItemId: string,
+    answer: AgentFeedbackAnswer,
+    includeConversation: boolean
+  ): Promise<void> {
+    if (this.draftMode || !this.threadId) throw new Error('当前会话不可答复反馈');
+    try {
+      await client.answerAgentFeedback(this.threadId, turnItemId, answer, includeConversation);
+      this.status = answer === 'send' ? '反馈报告已发送' : '已拒绝发送该反馈报告';
+    } catch (reason) {
+      const msg = agentFeedbackErrorMessage(reason as Object);
+      this.status = msg;
+      throw new Error(msg);
+    }
+  }
+
+  private async toggleModelFavorite(provider: string, model: string, favorite: boolean): Promise<void> {
+    const previousLocal = this.localFavorites.slice();
+    const updatedLocal = await setLocalModelFavorite(provider, model, favorite);
+    this.localFavorites = updatedLocal;
+    if (client.ready && client.canScope('settings:write') !== false) {
+      try {
+        await client.setModelFavorite(provider, model, favorite, previousLocal);
+      } catch (reason) {
+        this.status = (reason as Error).message || '模型收藏同步失败（已保存在本机）';
+      }
+    }
+  }
+
+  private reportScopedGitStatus(originLocalId: string, originThreadId: string, message: string): void {
+    const key = originLocalId + ':' + originThreadId;
+    if (this.selectedLocalId + ':' + this.threadId !== key) return;
+    this.gitBannerThreadKey = key;
+    this.gitBannerText = message;
+    this.status = message;
+  }
+
+  private async sendMcpAppMessage(textValue: string): Promise<void> {
+    const body = textValue.trim();
+    if (!body || this.draftMode || !client.ready || this.busy || this.unknown) {
+      throw new Error('当前无法发送消息');
+    }
+    const running = !!client.thread?.runs.some((run: Record<string, Object>) =>
+      ['preparing', 'starting', 'running', 'waiting'].includes(String(run.status)));
+    await client.send(body, followUpDelivery('auto', running, workspacePrefs.followUpBehavior), []);
+  }
+
+  private async startPrAgentTask(localId: string, projectId: string, prompt: string): Promise<void> {
+    if (this.busy || this.unknown) {
+      this.status = '请先等待当前操作完成';
+      return;
+    }
+    const registry = this.registry();
+    const targetLocal = localId || this.selectedLocalId;
+    try {
+      if (targetLocal && targetLocal !== this.selectedLocalId && registry.clients.has(targetLocal)) {
+        await registry.select(targetLocal);
+      }
+      const targetProject = projectId || this.projectId || (this.projects.length > 0 ? this.projects[0].id : '');
+      if (!targetProject) {
+        this.status = '未找到关联项目，请先选择一个项目';
+        this.openProjectPicker();
+        return;
+      }
+      this.homeTabDetailOpen = false;
+      await this.beginDraft(targetProject);
+      this.prompt = prompt;
+      this.page = 'chat';
+    } catch (reason) {
+      this.status = (reason as Error).message || '无法发起 PR Agent 任务';
+    }
   }
 
   private hasEnabledEnvironment(): boolean {
@@ -4697,11 +4957,14 @@ struct Index {
         onStopAll: () => { this.stopBackgroundWork(); }
       })
     } else if (this.panelOpen && this.panel === 'task-settings') {
-      TaskSettingsPanel({ models: this.models, config: client.config, settings: this.taskSettings, busy: this.busy || this.unknown, status: this.status,
+      TaskSettingsPanel({ models: this.models, config: client.config, localFavorites: this.localFavorites,
+        settings: this.taskSettings, busy: this.busy || this.unknown, status: this.status,
         onSave: (settings: TaskSettings) => { void this.saveTaskSettings(settings); }, onClose: () => this.panelOpen = false,
         onInstall: (id: string) => { void this.installProvider(id); },
         onAuth: (id: string) => { void this.startProviderAuth(id); },
-        onRefreshProviders: (id: string) => { void this.refreshProvider(id); } })
+        onRefreshProviders: (id: string) => { void this.refreshProvider(id); },
+        onToggleFavorite: (provider: string, model: string, favorite: boolean) =>
+          this.toggleModelFavorite(provider, model, favorite) })
     } else if (this.panel === 'queue') {
       QueuePanel({ runs: this.queued, busy: this.busy || this.unknown,
         active: !!client.thread && client.thread.runs.some((run: Record<string, Object>) =>
@@ -4786,14 +5049,56 @@ struct Index {
         }.width('100%').layoutWeight(1).align(Alignment.TopStart).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
       }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
     } else if (this.panel === 'cloud') {
-      CloudAccountPanel({ configured: this.cloudConfigured, signInReady: this.cloudSignInReady,
-        signedIn: this.cloudSignedIn, accountId: this.cloudAccountId, status: this.cloudStatus,
-        error: this.cloudError, busy: this.cloudBusy, refreshing: this.cloudRefreshing,
-        environments: this.cloudEnvironments, entries: this.environmentEntries,
-        onClose: () => { this.panel = this.cloudReturnPanel; },
-        onSignIn: () => this.cloudSignIn(), onSignOut: () => this.cloudSignOut(),
-        onRefresh: () => this.cloudRefresh(), onConnect: (id: string) => this.cloudConnect(id),
-        onLink: (id: string) => this.cloudLink(id), onUnlink: (id: string) => this.cloudUnlink(id) })
+      CloudAccountPanel({
+        configured: this.cloudConfigured,
+        signInReady: this.cloudSignInReady,
+        signedIn: this.cloudSignedIn,
+        accountId: this.cloudAccountId,
+        accountEmail: this.cloudAccountEmail,
+        accountDisplayName: this.cloudAccountDisplayName,
+        deviceCode: this.cloudDeviceCode,
+        relayUrl: this.cloudRelayUrl,
+        publishableKey: this.cloudPublishableKey,
+        jwtTemplate: this.cloudJwtTemplate,
+        isCustomConfig: this.cloudCustomConfig,
+        showOnboarding: this.cloudShowOnboarding,
+        status: this.cloudStatus,
+        error: this.cloudError,
+        busy: this.cloudBusy,
+        refreshing: this.cloudRefreshing,
+        environments: this.cloudEnvironments,
+        entries: this.environmentEntries,
+        approvalCodes: this.environmentApprovalCodes,
+        ssoProviders: this.cloudSsoProviders,
+        emailCodeEnabled: this.cloudEmailCodeEnabled,
+        passwordEnabled: this.cloudPasswordEnabled,
+        pendingSsoStrategy: this.cloudPendingSsoStrategy,
+        signInStep: this.cloudSignInStep,
+        signInEmail: this.cloudSignInEmail,
+        canUseEmailCode: this.cloudCanUseEmailCode,
+        canUsePassword: this.cloudCanUsePassword,
+        secondFactors: this.cloudSecondFactors,
+        backLabel: this.cloudReturnPanel ? '返回' : '关闭',
+        onClose: () => this.closeCloudPanel(),
+        onCopy: (value: string) => { void this.copy(value); },
+        onBeginSso: (strategy: string) => this.cloudBeginSso(strategy),
+        onStartEmail: (email: string) => this.cloudStartEmail(email),
+        onSendEmailCode: () => this.cloudSendEmailCode(),
+        onVerifyEmailCode: (code: string) => this.cloudVerifyEmailCode(code),
+        onVerifyPassword: (password: string) => this.cloudVerifyPassword(password),
+        onPrepareSecondFactor: (strategy: string) => this.cloudPrepareSecondFactor(strategy),
+        onVerifySecondFactor: (strategy: string, code: string) => this.cloudVerifySecondFactor(strategy, code),
+        onCancelSignIn: () => this.cloudCancelSignIn(),
+        onSignOut: () => this.cloudSignOut(),
+        onRefresh: () => this.cloudRefresh(),
+        onConnect: (id: string) => this.cloudConnect(id),
+        onLink: (id: string) => this.cloudLink(id),
+        onUnlink: (id: string) => this.cloudUnlink(id),
+        onResetDeviceKey: () => this.cloudResetDeviceKey(),
+        onDismissOnboarding: (dontShowAgain: boolean) => { this.cloudManager().dismissOnboarding(dontShowAgain); this.syncCloudState(); },
+        onSaveCustomConfig: (pk: string, tpl: string, relayUrl: string) => this.cloudSaveCustomConfig(pk, tpl, relayUrl),
+        onResetCustomConfig: () => this.cloudResetCustomConfig()
+      })
     } else if (this.panel === 'side-thread' && this.sideThreadTarget) {
       SideThreadPanel({
         target: this.sideThreadTarget,
@@ -4898,14 +5203,16 @@ struct Index {
         onLinked: () => { void this.loadLinkedEnvironments(); }
       })
     } else if (this.panel === 'server') {
-          ConnectionsPanel({ entries: this.environmentEntries, linkedGroups: this.linkedGroups, statuses: this.environmentStatuses, readyMap: this.environmentReady, canLinkBatchMap: this.canLinkBatchMap(), initialized: this.loaded,
-            cloudConfigured: this.cloudConfigured, cloudSignedIn: this.cloudSignedIn, cloudStatus: this.cloudStatus,
+          ConnectionsPanel({ entries: this.environmentEntries, linkedGroups: this.linkedGroups, statuses: this.environmentStatuses, readyMap: this.environmentReady, approvalCodes: this.environmentApprovalCodes, canLinkBatchMap: this.canLinkBatchMap(), initialized: this.loaded,
+            cloudConfigured: this.cloudConfigured, cloudSignedIn: this.cloudSignedIn, cloudAccountLabel: this.cloudAccountSummary(), cloudStatus: this.cloudStatus, cloudEnvironments: this.cloudEnvironments,
             deviceEnvironmentLabel: this.deviceEnvironmentLabel, pendingDevices: this.pendingDevices,
             approvedDevices: this.approvedDevices,
             onClose: () => { this.panelOpen = false; this.credential = ''; },
             onAdd: () => { this.routeFor = ''; this.linkedConnectTarget = undefined; this.address = ''; this.credential = ''; this.pairingError = false; this.pairingStatus = '填写地址与配对码后确认'; this.panel = 'connection-new'; },
             onAddRoute: (id: string) => { this.routeFor = id; this.linkedConnectTarget = undefined; this.address = ''; this.credential = ''; this.pairingError = false; this.pairingStatus = '为当前环境添加连接路径'; this.panel = 'connection-new'; },
             onLinkBatch: (localId: string) => { this.linkBatchSourceLocalId = localId; this.panel = 'link-batch'; },
+            onRemoveLink: (sourceLocalId: string, targetEnvironmentId: string, targetLabel: string) =>
+              this.removePeerLinkFromConnections(sourceLocalId, targetEnvironmentId, targetLabel),
             onInitialize: () => this.restoreAddress(),
             onRetry: (id: string) => this.registry().reconnect(id),
             onEnabled: (id: string, enabled: boolean) => this.registry().setEnabled(id, enabled),
@@ -4915,10 +5222,12 @@ struct Index {
             onRemoveRoute: (id: string, reference: string) => this.registry().removeRoute(id, reference),
             onRouting: (id: string, permission: string) => this.registry().setPullRequestRouting(id, permission),
             onCloudAccount: () => this.openCloudPanel('server'),
+            onConnectCloud: (id: string) => this.cloudConnect(id),
             onLinkCloud: (id: string) => this.cloudLink(id),
             onApproveDevice: (id: string) => this.approveDevice(id),
             onDenyDevice: (id: string) => this.denyDevice(id),
-            onRevokeDevice: (id: string) => this.revokeDevice(id) })
+            onRevokeDevice: (id: string) => this.revokeDevice(id),
+            onCopy: (value: string) => { void this.copy(value); } })
     } else if (this.panel === 'connection-new') {
       Column({ space: 0 }) {
         TopBar({
@@ -4987,7 +5296,7 @@ struct Index {
                 FormRow({
                   kind: 'value',
                   label: this.cloudSignedIn ? 'T3 Connect 已登录' : '使用 T3 Connect',
-                  subtitle: this.cloudSignedIn ? (this.cloudStatus || '使用托管中继') : '通过中继访问已链接的机器',
+                  subtitle: this.cloudSignedIn ? (this.cloudAccountSummary() || this.cloudStatus || '使用托管中继') : '通过中继访问已链接的机器',
                   value: '',
                   disabled: this.busy,
                   isFirst: true,
@@ -4997,6 +5306,47 @@ struct Index {
             }
           }.width('100%').padding({ left: Space.sm, right: Space.sm, top: Space.xs, bottom: Space.lg }).alignItems(HorizontalAlign.Start)
         }.width('100%').layoutWeight(1).align(Alignment.TopStart).edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+      }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
+    } else if (this.panel === 'mcp-sign-in' && this.activeMcpSignIn) {
+      McpSignInPanel({
+        connection: client,
+        target: this.activeMcpSignIn,
+        onOpenExternalUrl: (url: string) => this.openExternalUrl(url),
+        onSignedIn: (server: string) => {
+          this.panelOpen = false;
+          this.activeMcpSignIn = undefined;
+          this.status = '已完成 MCP 服务「' + server + '」登录';
+        },
+        onClose: () => {
+          this.panelOpen = false;
+          this.activeMcpSignIn = undefined;
+        }
+      })
+    } else if (this.panel === 'mcp-app' && this.fullscreenMcpApp) {
+      Column({ space: 0 }) {
+        TopBar({
+          title: this.fullscreenMcpApp.app.title,
+          subtitle: this.fullscreenMcpApp.app.server + ' · ' + this.fullscreenMcpApp.app.tool,
+          showBack: true,
+          closeStyle: true,
+          backLabel: '关闭应用',
+          onBack: () => {
+            this.panelOpen = false;
+            this.fullscreenMcpApp = undefined;
+          }
+        })
+        McpAppView({
+          connection: client,
+          entry: this.fullscreenMcpApp,
+          threadId: this.threadId,
+          fullscreen: true,
+          onExitFullscreen: () => {
+            this.panelOpen = false;
+            this.fullscreenMcpApp = undefined;
+          },
+          onOpenExternalLink: (url: string) => { void this.openExternalUrl(url); },
+          onSendMessage: (body: string) => this.sendMcpAppMessage(body)
+        }).layoutWeight(1)
       }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
     } else {
       Column() {
@@ -5606,7 +5956,86 @@ struct Index {
           })
         }
       }
+      if (!this.draftMode && this.gitBannerText && this.gitBannerThreadKey === this.selectedLocalId + ':' + this.threadId) {
+        ListItem() {
+          Row({ space: Space.xs }) {
+            Text(this.gitBannerText)
+              .fontSize(FontSize.caption)
+              .lineHeight(LineHeight.caption)
+              .fontColor($r('app.color.ink'))
+              .layoutWeight(1)
+            Button('关闭', { type: ButtonType.Normal })
+              .height(28)
+              .fontSize(FontSize.badge)
+              .fontColor($r('app.color.muted'))
+              .backgroundColor(Color.Transparent)
+              .onClick(() => { this.gitBannerText = ''; this.gitBannerThreadKey = ''; })
+          }
+          .width('100%')
+          .padding({ left: Space.sm, right: Space.xs, top: Space.xs, bottom: Space.xs })
+          .backgroundColor($r('app.color.card'))
+          .borderRadius(Radius.tool)
+          .alignItems(VerticalAlign.Center)
+        }
+      }
       ForEach(this.actions, (card: ActionCard) => { ListItem() { RequestCard({ card, connection: client }) } }, (card: ActionCard) => this.selectedLocalId + ':' + card.id)
+      ForEach(this.feedbackItems, (item: AgentFeedbackRequestView) => {
+        ListItem() {
+          FeedbackRequestCard({
+            item,
+            canOperate: this.canOperateChat,
+            busy: this.busy || this.unknown,
+            onAnswer: (turnItemId: string, answer: AgentFeedbackAnswer, includeConversation: boolean) =>
+              this.answerAgentFeedbackItem(turnItemId, answer, includeConversation)
+          })
+        }
+      }, (item: AgentFeedbackRequestView) => this.selectedLocalId + ':' + item.id + ':' + item.status)
+      ForEach(this.mcpSignInNotices, (notice: McpSignInNoticeView) => {
+        ListItem() {
+          Column({ space: Space.xs }) {
+            Text('MCP 服务需要登录：' + notice.server)
+              .fontSize(FontSize.body).fontWeight(Weight.semibold).fontColor($r('app.color.ink')).width('100%')
+            if (notice.message) {
+              Text(notice.message).fontSize(FontSize.callout).lineHeight(LineHeight.callout)
+                .fontColor($r('app.color.muted')).width('100%')
+            }
+            AppButton({
+              label: '登录到 ' + notice.server + '…',
+              kind: 'primary',
+              compact: true,
+              fill: true,
+              disabled: !this.ready || this.busy || this.unknown || client.canScope('providers:manage') === false,
+              onTap: () => {
+                this.activeMcpSignIn = notice;
+                this.panel = 'mcp-sign-in';
+                this.panelOpen = true;
+              }
+            })
+          }
+          .padding(Space.md).width('100%')
+          .backgroundColor($r('app.color.card'))
+          .border({ width: 1, color: $r('app.color.border') })
+          .borderRadius(Radius.card)
+          .alignItems(HorizontalAlign.Start)
+        }
+      }, (notice: McpSignInNoticeView) => this.selectedLocalId + ':mcpsignin:' + notice.id + ':' + notice.server)
+      ForEach(this.mcpAppEntries, (entry: McpAppEntry) => {
+        ListItem() {
+          McpAppView({
+            connection: client,
+            entry,
+            threadId: this.threadId,
+            fullscreen: false,
+            onExpand: (target: McpAppEntry) => {
+              this.fullscreenMcpApp = target;
+              this.panel = 'mcp-app';
+              this.panelOpen = true;
+            },
+            onOpenExternalLink: (url: string) => { void this.openExternalUrl(url); },
+            onSendMessage: (body: string) => this.sendMcpAppMessage(body)
+          })
+        }
+      }, (entry: McpAppEntry) => this.selectedLocalId + ':mcpapp:' + entry.id + ':' + entry.revision)
       ForEach(this.linkItems, (item: LinkRequestView) => {
         ListItem() {
           if (item.status === 'pending' && item.visibility === 'local') {
@@ -6352,7 +6781,10 @@ struct Index {
             embedded: true, bottomInset: 88,
             connectionFor: (localId: string): T3Client | undefined => this.registry().clients.get(localId), section: $settingsSection, groupingMode: workspacePrefs.projectGroupingMode, projectCount: this.projectGroups.length,
             archivedCount: this.archivedThreadCount(), environmentCount: this.environmentEntries.filter((entry: EnvironmentEntry) => !entry.deleting).length,
+            cloudConfigured: this.cloudConfigured, cloudSignedIn: this.cloudSignedIn,
+            cloudAccountLabel: this.cloudAccountSummary(), cloudCustomConfig: this.cloudCustomConfig,
             onBack: () => this.page = 'sessions', onEnvironments: () => this.openPanel('server'),
+            onCloudAccount: () => this.openCloudPanel(''),
             onProjects: () => this.openProjectOverview(), onArchive: () => this.openArchive(),
             onGrouping: (mode: string) => this.chooseGrouping(mode),
             workingShelfEnabled: this.shelves.workingShelfEnabled,
@@ -6371,7 +6803,10 @@ struct Index {
             onDetailChange: (open: boolean) => { this.homeTabDetailOpen = open; },
             onBack: () => { this.homeTabDetailOpen = false; this.page = 'sessions'; },
             onStatus: (value: string) => this.status = value,
-            onCopy: (value: string) => { void this.copy(value); } })
+            onCopy: (value: string) => { void this.copy(value); },
+            onStartAgentTask: (localId: string, projectId: string, prompt: string) => {
+              void this.startPrAgentTask(localId, projectId, prompt);
+            } })
         } else if (this.page === 'usage') {
           UsagePanel({ connection: client, environments: this.environmentEntries,
             connectionFor: (localId: string): T3Client | undefined => this.registry().clients.get(localId),
@@ -6654,12 +7089,16 @@ struct Index {
           project: this.draftMode ? this.draftProject() : client.threadProject(),
           checkpointScopes: this.draftMode ? [] : client.threadCheckpointScopes(),
           checkpoints: this.draftMode ? [] : client.threadCheckpoints(),
-          onBack: () => this.page = 'chat', onStatus: (value: string) => this.status = value })
+          onBack: () => this.page = 'chat',
+          onStatus: (value: string) => this.reportScopedGitStatus(this.selectedLocalId, this.threadId, value) })
       } else if (this.page === 'pull-requests') {
         PullRequestsPanel({ connection: client, projectId: this.projectId,
           projectLabel: this.projects.find((project: ProjectView) => project.id === this.projectId)?.label || '',
           onBack: () => this.page = 'chat', onStatus: (value: string) => this.status = value,
-          onCopy: (value: string) => { void this.copy(value); } })
+          onCopy: (value: string) => { void this.copy(value); },
+          onStartAgentTask: (localId: string, projectId: string, prompt: string) => {
+            void this.startPrAgentTask(localId, projectId, prompt);
+          } })
         } else if (this.page === 'linked-thread' && this.linkedThreadTarget) {
           LinkedThreadPanel({
             target: this.linkedThreadTarget,
@@ -6902,7 +7341,8 @@ struct Index {
         this.panel === 'composer-command' ? '78%' :
         this.panel === 'paste-context' ? '48%' : this.panel === 'markdown-image' ? '80%' :
         this.panel === 'rename' ? '36%' : this.panel === 'filter' ? '58%' :
-        this.panel === 'linked-thread' || this.panel === 'side-thread' || this.panel === 'link-batch' ? '88%' :
+        this.panel === 'linked-thread' || this.panel === 'side-thread' || this.panel === 'link-batch' || this.panel === 'mcp-app' ? '88%' :
+        this.panel === 'mcp-sign-in' ? '72%' :
         this.panel === 'cloud' || this.panel === 'snooze' ? '85%' : '70%',
         showClose: false,
         onWillDismiss: (action: DismissSheetAction) => { if (this.panel !== 'peer-link' || !this.busy) action.dismiss(); },

@@ -400,3 +400,79 @@ export function layoutExpandedModelControl(
     maxButtonWidthVp: safeSlot
   };
 }
+
+const EXTERNAL_LINK_SCHEME = /^(?:https?:|mailto:|tel:|t3-thread:)/i;
+
+/** Replaces inline Markdown file-mention links `[name](path)` with concise readable names in previews. */
+export function formatMentionPreviewText(raw: string): string {
+  if (!raw || !raw.includes('](')) return raw;
+  return raw.replace(/\[([^\[\]\r\n]+)\]\(([^)\s]+)\)/g, (full: string, label: string, dest: string): string => {
+    const cleanDest = dest.startsWith('<') && dest.endsWith('>') ? dest.slice(1, -1) : dest;
+    if (!cleanDest || EXTERNAL_LINK_SCHEME.test(cleanDest)) return full;
+    const cleanLabel = label.replace(/\\([\\\[\]])/g, '$1').trim();
+    if (!cleanLabel) return full;
+    return cleanLabel.startsWith('@') ? cleanLabel : '@' + cleanLabel;
+  });
+}
+
+export interface ModelFavoriteEntry {
+  provider: string;
+  model: string;
+}
+
+export function modelFavoriteKey(provider: string, model: string): string {
+  return provider.trim() + '\u0000' + model.trim();
+}
+
+export function parseModelFavorites(config: Object): ModelFavoriteEntry[] {
+  const root = record(config);
+  const settings = root.settings !== undefined && root.settings !== null ? record(root.settings) : {} as Record<string, Object>;
+  const raw = settings.favorites;
+  if (!Array.isArray(raw)) return [];
+  const seen: Set<string> = new Set();
+  const result: ModelFavoriteEntry[] = [];
+  for (const item of compactObjects(raw)) {
+    const provider = typeof item.provider === 'string' ? item.provider.trim() : '';
+    const model = typeof item.model === 'string' ? item.model.trim() : '';
+    if (!provider || !model) continue;
+    const key = modelFavoriteKey(provider, model);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push({ provider, model });
+  }
+  return result;
+}
+
+export function serverHasModelFavorites(config: Object): boolean {
+  const root = record(config);
+  if (root.settings === undefined || root.settings === null) return false;
+  const settings = record(root.settings);
+  return Array.isArray(settings.favorites);
+}
+
+export interface SetModelFavoritePatchEntry {
+  provider: string;
+  model: string;
+  favorite: boolean;
+}
+
+export function modelFavoriteUpdatePatch(
+  provider: string,
+  model: string,
+  favorite: boolean,
+  localFallbackFavorites: ModelFavoriteEntry[],
+  config: Object
+): Record<string, Object> {
+  const p = provider.trim();
+  const m = model.trim();
+  if (!p || !m) throw new Error('模型标识无效');
+  const entry: SetModelFavoritePatchEntry = { provider: p, model: m, favorite };
+  const patch: Record<string, Object> = {
+    setModelFavorites: [entry]
+  };
+  if (!serverHasModelFavorites(config) && localFallbackFavorites.length > 0) {
+    const migrate: Record<string, Object> = { favorites: localFallbackFavorites };
+    patch.migrateModelPreferences = migrate;
+  }
+  return patch;
+}

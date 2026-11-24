@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { compile, data } from './load-core.mjs';
+import { agentFeedbackUrl, compile, data } from './load-core.mjs';
 
 const source = (await readFile(new URL('../entry/src/main/ets/protocol/LabsSettings.ts', import.meta.url), 'utf8'))
-  .replace("'./Wire'", JSON.stringify(new URL('../entry/src/main/ets/protocol/Wire.ts', import.meta.url).href));
+  .replace("'./Wire'", JSON.stringify(new URL('../entry/src/main/ets/protocol/Wire.ts', import.meta.url).href))
+  .replace("'./AgentFeedback'", JSON.stringify(agentFeedbackUrl));
 const api = await import(data(compile(source)));
 const linked = 'linkedEnvironmentsEnabled';
 const fast = 'fastWorktreeCheckout';

@@ -2,7 +2,14 @@ import { compactArray, compactObjects, parseModelSelection, record, RpcFailure, 
 import { ProjectView, ThreadView, RepositoryIdentityView, projectView, threadView, parseProjectIcon, parseProjectTrackedFolders, samePath } from './Projects';
 
 export interface Choice { id: string; label: string; projectId: string; }
-export interface ModelChoice { instanceId: string; model: string; label: string; }
+export interface ModelChoice {
+  instanceId: string;
+  model: string;
+  label: string;
+  name?: string;
+  legacy?: boolean;
+  hidden?: boolean;
+}
 export function models(config: Object): ModelChoice[] {
   const result: ModelChoice[] = [];
   for (const provider of compactObjects(record(config).providers)) {
@@ -11,8 +18,14 @@ export function models(config: Object): ModelChoice[] {
     for (const model of compactObjects(provider.models)) {
       if (typeof model.slug !== 'string' || !model.slug) continue;
       const name = typeof model.name === 'string' && model.name ? model.name : model.slug;
-      result.push({ instanceId: provider.instanceId, model: model.slug,
-        label: provider.instanceId + ' / ' + name });
+      const choice: ModelChoice = {
+        instanceId: provider.instanceId,
+        model: model.slug,
+        label: provider.instanceId + ' / ' + name
+      };
+      if (model.legacy === true) choice.legacy = true;
+      if (model.hidden === true) choice.hidden = true;
+      result.push(choice);
     }
   }
   return result;

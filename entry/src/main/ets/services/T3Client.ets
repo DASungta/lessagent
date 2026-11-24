@@ -1,5 +1,7 @@
 import { DeviceStreamAccess, safeDeviceHubBase } from '../protocol/DevicePreview';
-import { ModelSelection, TaskSettings, launchTask, validateTaskSettings, queueCommand } from '../protocol/Composer';
+import { ModelFavoriteEntry, modelFavoriteUpdatePatch, ModelSelection, TaskSettings, launchTask, validateTaskSettings, queueCommand } from '../protocol/Composer';
+import { AgentFeedbackAnswer, agentFeedbackAnswerPayload } from '../protocol/AgentFeedback';
+import { clearServerClock, observeServerIsoTime, recordServerClock } from '../protocol/ServerClock';
 import { BranchView, branches, branchListInput, ComposerContextRecord, ComposerDraft, contextPayload,
   DraftAttachment, DraftWorkspace, draftSettings, emptyWorkspace, forceStopCommand, forkThreadCommand,
   guestShare, GuestShareView, launchWorkspace, promoteCommand, refreshStatusInput, switchBranchInput,
@@ -28,20 +30,37 @@ import { CachedShellEntry, ShellState, ModelChoice, models, SavedSession, Sessio
   secretReferenceAnswer, dismissInputCommand, respondCommand, RecoveryState, RecoveryStorage,
   recoveryState, Attachment, PeerLinkView, peerAccessGranted, peerLinkViews,
   LinkAnswer, linkAnswerPayload, peerPairingScopes } from '../protocol/Core';
-import { contentMatches, ContentMatch, contentSearchInput, hostOrWorkspaceAssetResource, listEntriesInput, readFileInput,
+import { contentMatches, ContentMatch, contentSearchInput, fullFileTextAssetResource, hostOrWorkspaceAssetResource, listEntriesInput, readFileInput,
   WorkspaceEntry, workspaceAssetResource, workspaceEntries, workspaceFile, WorkspaceFile } from '../protocol/Files';
+import { MOBILE_FULL_FILE_MAX_BYTES } from '../protocol/FilePreview';
+import {
+  McpAppCallToolResult,
+  McpAppReference,
+  McpAppToolInfoResult,
+  McpSignInCompleteResult,
+  McpSignInStartResult,
+  mcpAppAssetResource,
+  mcpSignInCompletePayload,
+  mcpSignInStartPayload,
+  parseMcpAppCallToolResult,
+  parseMcpAppToolInfo,
+  parseMcpSignInCompleteResult,
+  parseMcpSignInStartResult
+} from '../protocol/McpApp';
 import { htmlRenderFileName } from '../protocol/HtmlRender';
 import { classifyMarkdownMediaSource, markdownMediaAssetResource, ResolvedMarkdownMedia,
   safeAssetUrl } from '../protocol/Markdown';
 import { MarkdownMediaCache } from './MarkdownMediaCache';
 import { actionInput, applyVcsStatus, commentInput, emptyVcs, firstPullRequestCursor, gitActionInput, listRefs,
-  parsePullRequestCursors, pullInput, pullRequestActivity, PullRequestActivityView, pullRequestDetail, PullRequestDetailView,
+  parsePullRequestCursors, parsePullRequestFilesViewed, parsePullRequestStackLayers, pullInput, pullRequestActivity, PullRequestActivityView,
+  PullRequestActionExtra, pullRequestDetail, PullRequestDetailView, PullRequestFilesViewedResult, PullRequestFileViewedWrite,
+  PullRequestListFilterOptions, PullRequestStackLayer,
   pullRequestChecks, PullRequestChecksView, pullRequestGuide, PullRequestGuideView,
   pullRequestListInput, pullRequestRef, pullRequestRows, PullRequestPage, PullRequestRow, refs, RefView,
   ReviewerSelection, LinkedPullRequestView, linkedPullRequests, linkedPullRequestCommand,
-  reviewPreview, reviewPreviewInput, ReviewPreview, reviewSubmitInput, switchRefInput, VcsView,
+  reviewPreview, reviewPreviewInput, ReviewPreview, reviewSubmitInput, setPullRequestFilesViewedInput, switchRefInput, VcsView,
   vcsWatchInput } from '../protocol/R5';
-import { applyAuthAccessEvent, AuthAccess } from '../protocol/Cloud';
+import { applyAuthAccessEvent, AuthAccess, CloudSessionExpiredError, ConnectApprovalPendingError } from '../protocol/Cloud';
 import { capability, objectBool, objectText, offeredProvidersFrom, ProjectView, sessionAllows,
   snoozeSettingsFrom, SnoozePresetSetting } from '../protocol/Projects';
 import {
@@ -58,8 +77,10 @@ import {
   parseLinkedThreadHistoryPage,
   parsePeerLinkClientPairingResult,
   parsePeerLinkNames,
+  parsePeerLinkRemoveResult,
   PeerLinkClientPairingResult,
-  PeerLinkName
+  PeerLinkName,
+  PeerLinkRemoveResult
 } from '../protocol/LinkedThread';
 import { PeerLinkCreateInput } from '../protocol/LinkBatch';
 
@@ -307,6 +328,8 @@ export class T3Client {
   private directDpopRenewal: number = 0;
   private directDpopLocks: Map<string, Promise<void>> = new Map();
   requireDeviceApproval: boolean = false;
+  approvalPendingCode: string = '';
+  approvalPendingHost: string = '';
   authAccess: AuthAccess = { pairingLinks: [], devices: [] };
   authAccessLoaded: boolean = false;
   private accessChunk: ((value: Object) => void) | undefined = undefined;
@@ -708,7 +731,15 @@ export class T3Client {
       }
 
       const empty: EmptyPayload = {};
-      void rpc.request('server.probe', empty, undefined, timeoutMs, false).then(() => {
+      const probeSentAt = Date.now();
+      void rpc.request('server.probe', empty, undefined, timeoutMs, false).then((result: Object) => {
+        if (isCurrent() && result !== null && result !== undefined && typeof result === 'object' && !Array.isArray(result)) {
+          const probeRow = result as Record<string, Object>;
+          const envId = this.activeEnvironmentId();
+          if (typeof probeRow.serverTime === 'string' && envId) {
+            recordServerClock(envId, probeRow.serverTime, probeSentAt, Date.now());
+          }
+        }
         finish(isCurrent());
       }).catch((error: Error) => {
         // A known RPC exit (e.g. an older host without server.probe) still proves the socket is alive.
@@ -739,6 +770,8 @@ export class T3Client {
   }
 
   private isNonRecoverableError(error: Object | undefined): boolean {
+    if (error instanceof ConnectApprovalPendingError) return false;
+    if (error instanceof CloudSessionExpiredError) return true;
     if (error instanceof ServerConfigIncompatibleError) return true;
     if (error instanceof HttpFailure) {
       return error.status === 400 || error.status === 401 || error.status === 403 ||
@@ -748,6 +781,7 @@ export class T3Client {
     return errMsg.includes('没有此服务器的有效会话') ||
       errMsg.includes('服务器身份') || errMsg.includes('身份不一致') || errMsg.includes('不兼容') ||
       errMsg.includes('DPoP') || errMsg.includes('配对') || errMsg.includes('账号已切换') ||
+      errMsg.includes('登录已过期') || errMsg.includes('登录已失效') || errMsg.includes('拒绝了此设备') ||
       errMsg.includes('鉴权失败') || errMsg.includes('权限不足') ||
       errMsg.includes('HTTP 400') || errMsg.includes('HTTP 401') || errMsg.includes('HTTP 403') ||
       errMsg.includes('HTTP 404') || errMsg.includes('HTTP 426') ||
@@ -902,6 +936,9 @@ export class T3Client {
   }
 
   private computeRetryDelay(fastDropRetry: boolean): number {
+    if (this.approvalPendingCode) {
+      return 4000;
+    }
     if (fastDropRetry) {
       return Math.max(100, Math.round(SESSION_LOSS_RETRY_DELAY_MS * (0.5 + Math.random() * 0.5)));
     }
@@ -1368,6 +1405,50 @@ export class T3Client {
     if (rpc !== this.rpc) throw new Error('连接已变更');
     return peerLinkViews(value);
   }
+  async removePeerLink(environmentId: string): Promise<PeerLinkRemoveResult> {
+    const rpc = this.requireRpc();
+    const envId = environmentId.trim();
+    if (!envId) throw new Error('目标环境标识无效');
+    if (!this.offersPeerLinks) throw new Error('当前环境未开启链接环境');
+    const payload: PeerLinkPairClientRpcPayload = { environmentId: envId };
+    const value = await rpc.request('peerLinks.remove', payload, undefined, 20000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    return parsePeerLinkRemoveResult(value);
+  }
+  async answerAgentFeedback(
+    threadId: string,
+    turnItemId: string,
+    answer: AgentFeedbackAnswer,
+    includeConversation: boolean = false
+  ): Promise<void> {
+    const rpc = this.requireRpc();
+    if (this.canScope('orchestration:operate') === false) throw new Error('此连接没有提交反馈答复的权限');
+    const payload = agentFeedbackAnswerPayload(threadId, turnItemId, answer, includeConversation);
+    await rpc.request('agentFeedback.answerRequest', payload, undefined, 20000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+  }
+  async setModelFavorite(
+    provider: string,
+    model: string,
+    favorite: boolean,
+    localFallbackFavorites: ModelFavoriteEntry[] = []
+  ): Promise<void> {
+    const rpc = this.requireRpc();
+    if (this.canScope('settings:write') === false) throw new Error('此连接没有修改模型收藏的权限');
+    const patch = modelFavoriteUpdatePatch(provider, model, favorite, localFallbackFavorites, this.config);
+    const body: Record<string, Object> = {};
+    body['patch'] = patch;
+    await rpc.request('server.updateSettings', body, undefined, 15000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    try {
+      const empty: EmptyPayload = {};
+      const next = await rpc.request('server.getConfig', empty, undefined, 15000, false);
+      if (rpc === this.rpc) {
+        this.config = record(next);
+        this.emitUpdate();
+      }
+    } catch (_) {}
+  }
   async linkPeerEnvironment(input: PeerLinkCreateInput): Promise<void> {
     const rpc = this.requireRpc();
     if (!this.offersPeerLinks) throw new Error('当前环境未开启链接环境');
@@ -1785,9 +1866,17 @@ export class T3Client {
       await this.finishConnection(target, environmentId, base, undefined, generation, false);
     } catch (error) {
       if (generation === this.generation) {
-        const errMsg = (error as Error).message || '中继连接意外失败，正在重试';
-        const nonRecoverable = this.isNonRecoverableError(error as Object);
-        this.disconnect(errMsg, !nonRecoverable, false);
+        if (error instanceof ConnectApprovalPendingError) {
+          this.approvalPendingCode = error.verificationCode;
+          this.approvalPendingHost = error.hostLabel || this.environmentLabel || transport.label;
+          this.disconnect(error.message, true, false);
+        } else {
+          this.approvalPendingCode = '';
+          this.approvalPendingHost = '';
+          const errMsg = (error as Error).message || '中继连接意外失败，正在重试';
+          const nonRecoverable = this.isNonRecoverableError(error as Object);
+          this.disconnect(errMsg, !nonRecoverable, false);
+        }
       }
     } finally {
       this.connectionsPending--;
@@ -2133,6 +2222,8 @@ export class T3Client {
     this.ready = true;
     this.connectedAt = Date.now();
     this.lastConnectionError = '';
+    this.approvalPendingCode = '';
+    this.approvalPendingHost = '';
     this.shellRetryDelay = 250;
     this.threadRetryDelay = 250;
     this.subscribeShell();
@@ -2260,6 +2351,8 @@ export class T3Client {
     } else if (!keepBackoff) {
       this.retryFailureCount = 0;
       this.lastConnectionError = '';
+      this.approvalPendingCode = '';
+      this.approvalPendingHost = '';
     }
     if (!clearShell && this.thread && (this.thread.cursor >= 0 || this.thread.resumeCursor >= 0)) {
       this.preservedThread = this.thread;
@@ -2812,6 +2905,35 @@ export class T3Client {
       throw new Error('文件响应不是二进制数据');
     } finally { request.destroy(); }
   }
+  async downloadFullWorkspaceText(
+    cwd: string,
+    path: string,
+    maxBytes: number = MOBILE_FULL_FILE_MAX_BYTES
+  ): Promise<string | undefined> {
+    const rpc = this.requireRpc();
+    const tid = this.thread ? this.thread.threadId : '';
+    const resource = fullFileTextAssetResource(tid, cwd, path);
+    const body: Record<string, Object> = {};
+    body['resource'] = resource;
+    const result = record(await rpc.request('assets.createUrl', body, undefined, 15000, false));
+    if (rpc !== this.rpc) return undefined;
+    const url = safeAssetUrl(this.activeBase(), text(result.url));
+    const request = http.createHttp();
+    try {
+      const options: http.HttpRequestOptions = withDirectProxyPolicy(url, {
+        method: http.RequestMethod.GET, usingCache: false,
+        maxRedirects: 0, connectTimeout: 10000, readTimeout: 60000, maxLimit: maxBytes + 1024,
+        expectDataType: http.HttpDataType.ARRAY_BUFFER
+      });
+      const response = await request.request(url, options);
+      if (response.responseCode !== 200 || !(response.result instanceof ArrayBuffer)) return undefined;
+      if (response.result.byteLength > maxBytes) return undefined;
+      const decoder = util.TextDecoder.create('utf-8', { ignoreBOM: true });
+      return decoder.decodeToString(new Uint8Array(response.result));
+    } catch (_) {
+      return undefined;
+    } finally { request.destroy(); }
+  }
   async reviewDiffPreview(cwd: string, baseRef: string = '', sourceKind: string = '',
     trackedOnly: boolean = false, ignoreWhitespace: boolean = false): Promise<ReviewPreview> {
     const rpc = this.requireRpc();
@@ -2872,15 +2994,27 @@ export class T3Client {
     await this.rpcRequest('vcs.switchRef', switchRefInput(cwd, refName), 60000, false);
   }
   async listPullRequests(state: string, query: string, cursor: string = '',
-    projectId: string = '', cursors?: Record<string, string>): Promise<PullRequestPage> {
+    projectId: string = '', cursors?: Record<string, string>,
+    filterOptions?: PullRequestListFilterOptions): Promise<PullRequestPage> {
     const rpc = this.requireRpc();
     const value = record(await rpc.request('pullRequests.list',
-      pullRequestListInput(state, query, cursor, projectId, cursors), undefined, 30000, false));
+      pullRequestListInput(state, query, cursor, projectId, cursors, filterOptions), undefined, 30000, false));
     if (rpc !== this.rpc) throw new Error('连接已变更，请重新加载拉取请求');
     const parsed = pullRequestRows(value);
     const nextCursors = parsePullRequestCursors(value.nextCursors);
     const next = firstPullRequestCursor(nextCursors);
     return { rows: parsed.rows, errors: parsed.errors, truncated: parsed.truncated, nextCursor: next, nextCursors };
+  }
+  async pullRequestFilesViewed(ref: Object): Promise<PullRequestFilesViewedResult> {
+    const rpc = this.requireRpc();
+    const value = await rpc.request('pullRequests.filesViewed', ref, undefined, 20000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    return parsePullRequestFilesViewed(value);
+  }
+  async setPullRequestFilesViewed(ref: Object, files: PullRequestFileViewedWrite[]): Promise<void> {
+    const rpc = this.requireRpc();
+    await rpc.request('pullRequests.setFilesViewed', setPullRequestFilesViewedInput(ref, files), undefined, 20000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更');
   }
   async pullRequestDetail(ref: Object): Promise<PullRequestDetailView> {
     const rpc = this.requireRpc();
@@ -2946,11 +3080,97 @@ export class T3Client {
     return this.rpcRequest('pullRequests.submitReview', reviewSubmitInput(ref, verdict, body, comments), 60000, false);
   }
   async pullRequestAction(ref: Object, action: string, mergeMethod: string = '',
-    updateMethod: string = ''): Promise<Object> {
-    return this.rpcRequest('pullRequests.runAction', actionInput(ref, action, mergeMethod, updateMethod), 120000, false);
+    updateMethod: string = '', extra?: PullRequestActionExtra): Promise<Object> {
+    return this.rpcRequest('pullRequests.runAction', actionInput(ref, action, mergeMethod, updateMethod, extra), 120000, false);
   }
   async pullRequestStack(ref: Object): Promise<Object> {
     return this.rpcRequest('pullRequests.stack', ref, 30000, false);
+  }
+  async pullRequestStackLayers(ref: Object): Promise<PullRequestStackLayer[]> {
+    const value = await this.pullRequestStack(ref);
+    return parsePullRequestStackLayers(value);
+  }
+  async mcpSignInStart(threadId: string, providerThreadId: string, server: string): Promise<McpSignInStartResult> {
+    const rpc = this.requireRpc();
+    if (this.canScope('providers:manage') === false) throw new Error('此连接没有管理 Provider/MCP 登录的权限');
+    const value = await rpc.request('provider.mcpSignIn.start',
+      mcpSignInStartPayload(threadId, providerThreadId, server), undefined, 20000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    return parseMcpSignInStartResult(value);
+  }
+  async mcpSignInComplete(
+    threadId: string,
+    providerThreadId: string,
+    server: string,
+    callbackUrl: string
+  ): Promise<McpSignInCompleteResult> {
+    const rpc = this.requireRpc();
+    if (this.canScope('providers:manage') === false) throw new Error('此连接没有管理 Provider/MCP 登录的权限');
+    const value = await rpc.request('provider.mcpSignIn.complete',
+      mcpSignInCompletePayload(threadId, providerThreadId, server, callbackUrl), undefined, 30000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    return parseMcpSignInCompleteResult(value);
+  }
+  async mcpAppAssetUrl(app: McpAppReference): Promise<string> {
+    const rpc = this.requireRpc();
+    const body: Record<string, Object> = {};
+    body['resource'] = mcpAppAssetResource(app);
+    const result = record(await rpc.request('assets.createUrl', body, undefined, 15000, false));
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    return safeAssetUrl(this.activeBase(), text(result.url));
+  }
+  async mcpAppToolInfo(threadId: string, itemId: string, name: string): Promise<McpAppToolInfoResult> {
+    const rpc = this.requireRpc();
+    const payload: Record<string, Object> = {};
+    payload['threadId'] = threadId;
+    payload['itemId'] = itemId;
+    payload['name'] = name;
+    const value = await rpc.request('mcpApps.toolInfo', payload, undefined, 15000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    return parseMcpAppToolInfo(value);
+  }
+  async mcpAppCallTool(
+    threadId: string,
+    itemId: string,
+    name: string,
+    args: Record<string, Object>
+  ): Promise<McpAppCallToolResult> {
+    const rpc = this.requireRpc();
+    const payload: Record<string, Object> = {};
+    payload['threadId'] = threadId;
+    payload['itemId'] = itemId;
+    payload['name'] = name;
+    payload['arguments'] = args;
+    const value = await rpc.request('mcpApps.callTool', payload, undefined, 60000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    return parseMcpAppCallToolResult(value);
+  }
+  async mcpAppReadResource(threadId: string, itemId: string, uri: string): Promise<Object> {
+    const rpc = this.requireRpc();
+    const payload: Record<string, Object> = {};
+    payload['threadId'] = threadId;
+    payload['itemId'] = itemId;
+    payload['uri'] = uri;
+    const value = await rpc.request('mcpApps.readResource', payload, undefined, 20000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    return value;
+  }
+  async mcpAppUpdateModelContext(
+    threadId: string,
+    itemId: string,
+    conversationThreadId: string,
+    content?: Object[],
+    structuredContent?: Record<string, Object>
+  ): Promise<void> {
+    const rpc = this.requireRpc();
+    const payload: Record<string, Object> = {};
+    payload['threadId'] = threadId;
+    payload['itemId'] = itemId;
+    payload['conversationThreadId'] = conversationThreadId;
+    if (content !== undefined) payload['content'] = content;
+    if (structuredContent !== undefined) payload['structuredContent'] = structuredContent;
+    await rpc.request('mcpApps.updateModelContext', payload, undefined, 20000, false);
+    if (rpc !== this.rpc) throw new Error('连接已变更');
   }
   async pullRequestLinkedThreads(ref: Object): Promise<Object> {
     return this.rpcRequest('pullRequests.linkedThreads', ref, 30000, false);
@@ -3379,6 +3599,16 @@ export class T3Client {
       if (rpc !== this.rpc || generation !== this.generation || this.shellChunk !== chunk) return;
       try {
         this.shell.apply(value);
+        const envId = this.activeEnvironmentId();
+        if (envId && value !== null && value !== undefined && typeof value === 'object' && !Array.isArray(value)) {
+          const frameRow = value as Record<string, Object>;
+          if (typeof frameRow.serverTime === 'string') {
+            observeServerIsoTime(envId, frameRow.serverTime);
+          } else if (frameRow.event !== undefined && frameRow.event !== null && typeof frameRow.event === 'object' && !Array.isArray(frameRow.event)) {
+            const ev = frameRow.event as Record<string, Object>;
+            if (typeof ev.occurredAt === 'string') observeServerIsoTime(envId, ev.occurredAt);
+          }
+        }
       } catch (_) {
         this.shellChunk = undefined;
         rpc.cancelStream(chunk);
@@ -3416,6 +3646,7 @@ export class T3Client {
   }
 
   async forget(): Promise<void> {
+    clearServerClock(this.activeEnvironmentId());
     this.disconnect('已断开；提交中的请求结果未知，请重连并同步会话', false, true);
     this.lastWatchedThreadId = '';
     this.resumingWatchThreadId = '';

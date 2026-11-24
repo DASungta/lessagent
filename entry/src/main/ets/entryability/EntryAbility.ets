@@ -23,15 +23,17 @@ export default class EntryAbility extends UIAbility {
     this.keepAwake = want.parameters?.['r1KeepAwake'] === true;
     acceptNotificationWant(want);
     void acceptIncomingShare(want);
-    acceptPairingLink(want.uri || '');
-    acceptCloudCallback(want.uri || '');
+    const incomingUri = want.uri || '';
+    if (!acceptCloudCallback(incomingUri)) acceptPairingLink(incomingUri);
   }
   onNewWant(want: Want): void {
     if (acceptShortcutWant(want)) return;
     if (want.parameters?.['r1KeepAwake'] !== undefined) this.keepAwake = want.parameters['r1KeepAwake'] === true;
     acceptNotificationWant(want);
     void acceptIncomingShare(want);
-    this.applyKeepAwake(); acceptPairingLink(want.uri || ''); acceptCloudCallback(want.uri || '');
+    this.applyKeepAwake();
+    const incomingUri = want.uri || '';
+    if (!acceptCloudCallback(incomingUri)) acceptPairingLink(incomingUri);
   }
   onWindowStageCreate(stage: window.WindowStage): void {
     preparePrivacyConsent(this.context.filesDir);

@@ -100,6 +100,20 @@
             "uris": [
               {
                 "scheme": "t3code",
+                "host": "app"
+              }
+            ]
+          },
+          {
+            "entities": [
+              "entity.system.browsable"
+            ],
+            "actions": [
+              "ohos.want.action.viewData"
+            ],
+            "uris": [
+              {
+                "scheme": "t3code",
                 "host": "auth",
                 "path": "callback"
               }

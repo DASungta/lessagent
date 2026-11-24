@@ -1,4 +1,5 @@
 import { compactArray, compactObjects, objects, record, text } from './Wire';
+import { computeWordDiff, WordDiffSegment } from './FilePreview';
 
 function textList(value: Object | undefined): string[] {
   if (value === undefined || !Array.isArray(value)) return [];
@@ -1039,11 +1040,99 @@ export function pullRequestRows(value: Object): { rows: PullRequestRow[]; errors
   return { rows, errors, truncated: result.truncated === true, providers };
 }
 
+export interface PullRequestListFilterOptions {
+  involvement?: string;
+  draft?: string;
+  review?: string;
+  checks?: string;
+  author?: string;
+}
+
+export interface PullRequestSavedView {
+  id: string;
+  name: string;
+  state: string;
+  query: string;
+  involvement: string;
+  draft: string;
+  review: string;
+  checks: string;
+  author: string;
+  environmentLocalId: string;
+  projectKey: string;
+}
+
+export function pullRequestSavedViewSignature(view: PullRequestSavedView): string {
+  return [
+    view.state,
+    view.query.trim().toLowerCase(),
+    view.involvement || 'all',
+    view.draft || '',
+    view.review || '',
+    view.checks || '',
+    view.author.trim().toLowerCase(),
+    view.environmentLocalId || '',
+    view.projectKey || ''
+  ].join('|');
+}
+
+export function parsePullRequestSavedViews(value: Object | undefined): PullRequestSavedView[] {
+  if (!Array.isArray(value)) return [];
+  const result: PullRequestSavedView[] = [];
+  const seen: Set<string> = new Set();
+  for (const item of value as Object[]) {
+    if (item === null || item === undefined || typeof item !== 'object' || Array.isArray(item)) continue;
+    const row = item as Record<string, Object>;
+    const id = typeof row.id === 'string' ? row.id.trim() : '';
+    const name = typeof row.name === 'string' ? row.name.trim() : '';
+    const state = typeof row.state === 'string' && ['all', 'open', 'closed', 'merged'].includes(row.state) ? row.state : 'open';
+    if (!id || !name || seen.has(id)) continue;
+    seen.add(id);
+    result.push({
+      id,
+      name: name.slice(0, 80),
+      state,
+      query: typeof row.query === 'string' ? row.query.slice(0, 200) : '',
+      involvement: typeof row.involvement === 'string' && ['all', 'authored', 'reviewing'].includes(row.involvement) ? row.involvement : 'all',
+      draft: typeof row.draft === 'string' && ['only', 'hide'].includes(row.draft) ? row.draft : '',
+      review: typeof row.review === 'string' && ['approved', 'changes-requested', 'review-required', 'none'].includes(row.review) ? row.review : '',
+      checks: typeof row.checks === 'string' && ['passing', 'failing'].includes(row.checks) ? row.checks : '',
+      author: typeof row.author === 'string' ? row.author.trim().slice(0, 120) : '',
+      environmentLocalId: typeof row.environmentLocalId === 'string' ? row.environmentLocalId : '',
+      projectKey: typeof row.projectKey === 'string' ? row.projectKey : ''
+    });
+  }
+  return result.slice(0, 32);
+}
+
 export function pullRequestListInput(state: string, query: string, cursor: string = '', projectId: string = '',
-  cursors?: Record<string, string>): Object {
+  cursors?: Record<string, string>, filterOptions?: PullRequestListFilterOptions): Object {
   if (!['all', 'open', 'closed', 'merged'].includes(state)) throw new Error('PR 状态无效');
-  const input: Record<string, Object> = { state, involvement: 'all', limit: 30 };
+  const involvement = filterOptions && filterOptions.involvement && ['all', 'authored', 'reviewing'].includes(filterOptions.involvement)
+    ? filterOptions.involvement : 'all';
+  const input: Record<string, Object> = { state, involvement, limit: 30 };
   if (query.trim()) input.query = query.trim().slice(0, 200);
+  if (filterOptions) {
+    const filters: Record<string, Object> = {};
+    let hasFilter = false;
+    if (filterOptions.draft === 'only' || filterOptions.draft === 'hide') {
+      filters.draft = filterOptions.draft;
+      hasFilter = true;
+    }
+    if (filterOptions.review && ['approved', 'changes-requested', 'review-required', 'none'].includes(filterOptions.review)) {
+      filters.review = filterOptions.review;
+      hasFilter = true;
+    }
+    if (filterOptions.checks === 'passing' || filterOptions.checks === 'failing') {
+      filters.checks = filterOptions.checks;
+      hasFilter = true;
+    }
+    if (filterOptions.author && filterOptions.author.trim()) {
+      filters.author = filterOptions.author.trim().slice(0, 200);
+      hasFilter = true;
+    }
+    if (hasFilter) input.filters = filters;
+  }
   const normalizedCursors = normalizePullRequestCursors(cursors);
   if (hasPullRequestCursors(normalizedCursors)) {
     input.cursors = normalizedCursors;
@@ -1086,6 +1175,9 @@ export interface PullRequestDetailView {
   reviewers: string[];
   labels: string[];
   viewer: string;
+  headSha?: string;
+  autoMergeEnabled?: boolean;
+  viewedFilesSupported?: boolean;
   activity: PullRequestActivityView;
 }
 
@@ -1227,6 +1319,9 @@ export function pullRequestDetail(value: Object): PullRequestDetailView {
     reviewers: compactArray(row.reviewers, (reviewer: Object) => actor(reviewer)),
     labels: compactArray(row.labels, (label: Object) => text(record(label).name)),
     viewer: typeof row.viewer === 'string' ? row.viewer : '',
+    headSha: typeof row.headSha === 'string' ? row.headSha : '',
+    autoMergeEnabled: row.autoMerge !== undefined && row.autoMerge !== null && row.autoMerge !== false,
+    viewedFilesSupported: typeof caps.viewedFiles === 'string' && (caps.viewedFiles === 'host' || caps.viewedFiles === 'environment'),
     activity: pullRequestActivity(row)
   };
 }
@@ -1312,15 +1407,203 @@ export function commentInput(ref: Object, body: string): Object {
   return Object.assign({}, ref, { body });
 }
 
+export interface PullRequestStackHead {
+  number: number;
+  headSha: string;
+}
+
+export interface PullRequestActionExtra {
+  expectedHeadSha?: string;
+  stackNumber?: number;
+  expectedStackHeads?: PullRequestStackHead[];
+}
+
 export function actionInput(ref: Object, action: string, mergeMethod: string = '',
-  updateMethod: string = ''): Object {
+  updateMethod: string = '', extra?: PullRequestActionExtra): Object {
   const source = record(ref);
   const input: Record<string, Object> = {};
   for (const key of Object.keys(source)) input[key] = source[key];
   input.action = action;
   if (mergeMethod) input.mergeMethod = mergeMethod;
   if (updateMethod) input.updateMethod = updateMethod;
+  if (extra) {
+    if (extra.expectedHeadSha && extra.expectedHeadSha.trim()) {
+      input.expectedHeadSha = extra.expectedHeadSha.trim();
+    }
+    if (extra.stackNumber !== undefined && Number.isSafeInteger(extra.stackNumber) && extra.stackNumber > 0) {
+      input.stackNumber = extra.stackNumber;
+    }
+    if (extra.expectedStackHeads && extra.expectedStackHeads.length > 0) {
+      input.expectedStackHeads = extra.expectedStackHeads;
+    }
+  }
   return input;
+}
+
+export interface PullRequestFileViewedEntry {
+  path: string;
+  state: 'unviewed' | 'viewed' | 'dismissed';
+}
+
+export interface PullRequestFilesViewedResult {
+  files: PullRequestFileViewedEntry[];
+  truncated: boolean;
+}
+
+export function parsePullRequestFilesViewed(value: Object): PullRequestFilesViewedResult {
+  const row = record(value);
+  const files = compactArray(row.files, (entry: Object): PullRequestFileViewedEntry => {
+    const item = record(entry);
+    const path = text(item.path);
+    const rawState = text(item.state);
+    const state: 'unviewed' | 'viewed' | 'dismissed' =
+      rawState === 'viewed' || rawState === 'dismissed' ? rawState : 'unviewed';
+    return { path, state };
+  });
+  return { files, truncated: row.truncated === true };
+}
+
+export interface PullRequestFileViewedWrite {
+  path: string;
+  viewed: boolean;
+}
+
+export function setPullRequestFilesViewedInput(ref: Object, files: PullRequestFileViewedWrite[]): Object {
+  if (files.length === 0) throw new Error('缺少需要更新审阅状态的文件');
+  const source = record(ref);
+  const input: Record<string, Object> = {};
+  for (const key of Object.keys(source)) input[key] = source[key];
+  input.files = files.map((item: PullRequestFileViewedWrite): Record<string, Object> => ({
+    path: item.path,
+    viewed: item.viewed
+  }));
+  return input;
+}
+
+export function isPullRequestFileViewed(
+  path: string,
+  serverStates: Record<string, string>,
+  optimistic: Record<string, boolean>
+): boolean {
+  if (optimistic[path] !== undefined) return optimistic[path] === true;
+  return serverStates[path] === 'viewed';
+}
+
+export interface PullRequestStackLayer {
+  number: number;
+  title: string;
+  state: string;
+  headSha: string;
+  mergeable: string;
+  position: number;
+}
+
+export function parsePullRequestStackLayers(value: Object): PullRequestStackLayer[] {
+  const row = record(value);
+  const stackObj = row.stack !== undefined && row.stack !== null ? record(row.stack) : row;
+  const rawLayers = stackObj.layers !== undefined ? stackObj.layers : stackObj.entries;
+  return compactArray(rawLayers, (entry: Object): PullRequestStackLayer => {
+    const item = record(entry);
+    return {
+      number: Number(item.number),
+      title: typeof item.title === 'string' ? item.title : ('#' + String(item.number)),
+      state: typeof item.state === 'string' ? item.state : '',
+      headSha: typeof item.headSha === 'string' ? item.headSha : '',
+      mergeable: typeof item.mergeability === 'string' ? item.mergeability : (typeof item.mergeable === 'string' ? item.mergeable : 'unknown'),
+      position: typeof item.position === 'number' ? item.position : 0
+    };
+  });
+}
+
+export type PullRequestAgentTask = 'ask' | 'explain' | 'feedback' | 'conflicts' | 'watch';
+
+export interface PullRequestAgentTaskOption {
+  task: PullRequestAgentTask;
+  title: string;
+  subtitle: string;
+  disabled: boolean;
+}
+
+export function pullRequestAgentTaskOptions(detail: PullRequestDetailView): PullRequestAgentTaskOption[] {
+  const isOpen = detail.state === 'open';
+  const hasConflicts = detail.mergeable === 'conflicting';
+  return [
+    {
+      task: 'explain',
+      title: '解释此 PR 变更',
+      subtitle: '梳理改动范围、关键设计与潜在风险',
+      disabled: false
+    },
+    {
+      task: 'feedback',
+      title: '处理审阅意见与检查',
+      subtitle: '检查未解决评论与失败 CI 并提出修复',
+      disabled: !isOpen
+    },
+    {
+      task: 'conflicts',
+      title: '解决合并冲突',
+      subtitle: hasConflicts ? '当前存在冲突，让 Agent 协助解决' : '当前无合并冲突',
+      disabled: !isOpen || !hasConflicts
+    },
+    {
+      task: 'watch',
+      title: '持续跟进此 PR',
+      subtitle: '监控检查状态、评论并协助推进合并',
+      disabled: !isOpen
+    },
+    {
+      task: 'ask',
+      title: '在新会话中自由提问',
+      subtitle: '带入此 PR 上下文开启新任务',
+      disabled: false
+    }
+  ];
+}
+
+export function pullRequestAgentPrompt(task: PullRequestAgentTask, detail: PullRequestDetailView): string {
+  const ref = detail.repository + '#' + detail.number + (detail.title ? '（' + detail.title + '）' : '');
+  const urlLine = detail.url ? '\nPR 链接：' + detail.url : '';
+  if (task === 'explain') {
+    return '请帮我解读 PR ' + ref + ' 的改动内容、核心架构变更以及需要重点审阅的风险点。' + urlLine;
+  }
+  if (task === 'feedback') {
+    return '请查看 PR ' + ref + ' 的未解决审阅评论和失败的 CI 检查，逐项分析并给出修改方案。' + urlLine;
+  }
+  if (task === 'conflicts') {
+    return '请检查并协助解决 PR ' + ref + '（分支 ' + detail.headBranch + ' -> ' + detail.baseBranch + '）的合并冲突。' + urlLine;
+  }
+  if (task === 'watch') {
+    return '请帮我持续关注 PR ' + ref + ' 的 CI 检查与评审意见，并在出现问题时及时处理。' + urlLine;
+  }
+  return '关于 PR ' + ref + '：' + urlLine + '\n';
+}
+
+export function computeHunkWordDiffs(hunk: DiffHunk): Map<number, WordDiffSegment[]> {
+  const result: Map<number, WordDiffSegment[]> = new Map();
+  const rows = hunk.rows;
+  let i = 0;
+  while (i < rows.length) {
+    if (rows[i].kind !== 'del') {
+      i += 1;
+      continue;
+    }
+    const delStart = i;
+    while (i < rows.length && rows[i].kind === 'del') i += 1;
+    const delEnd = i;
+    const addStart = i;
+    while (i < rows.length && rows[i].kind === 'add') i += 1;
+    const addEnd = i;
+    const pairs = Math.min(delEnd - delStart, addEnd - addStart);
+    for (let k = 0; k < pairs; k += 1) {
+      const oldIdx = delStart + k;
+      const newIdx = addStart + k;
+      const diff = computeWordDiff(rows[oldIdx].text, rows[newIdx].text);
+      result.set(oldIdx, diff.oldSegments);
+      result.set(newIdx, diff.newSegments);
+    }
+  }
+  return result;
 }
 
 export function pullRequestStateLabel(state: string, draft: boolean): string {

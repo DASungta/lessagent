@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createRequire} from 'node:module';
+import {r4Url} from './load-core.mjs';
 const ts=createRequire(import.meta.url)((process.env.DEVECO_HOME || '/Applications/DevEco-Studio.app/Contents')+'/sdk/default/openharmony/ets/build-tools/ets-loader/node_modules/typescript');
 const original=await readFile(new URL('../entry/src/main/ets/services/AttachmentPicker.ets',import.meta.url),'utf8');
 async function setup(size=5, opts={}){
@@ -56,7 +57,8 @@ async function setup(size=5, opts={}){
   .replace("import { picker, fileIo, fileUri } from '@kit.CoreFileKit';",'const {picker,fileIo,fileUri}=globalThis.__pickerKit;')
   .replace("import { photoAccessHelper } from '@kit.MediaLibraryKit';",'const {photoAccessHelper}=globalThis.__pickerKit;')
   .replace("import { image } from '@kit.ImageKit';",'const {image}=globalThis.__pickerKit;')
-  .replace("import { client, T3Client } from './T3Client';",'const {client}=globalThis.__pickerKit;');
+  .replace("import { client, T3Client } from './T3Client';",'const {client}=globalThis.__pickerKit;')
+  .replace("'../protocol/R4'", JSON.stringify(r4Url));
  const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2022}}).outputText;
  const {AttachmentPicker}=await import('data:text/javascript;base64,'+Buffer.from(compiled+'\n//'+Math.random()).toString('base64'));
  return {

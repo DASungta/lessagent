@@ -1,4 +1,5 @@
 import { record } from './Wire';
+import { AgentFeedbackMode, parseAgentFeedbackMode } from './AgentFeedback';
 import { WorktreeSettingsConnection } from './WorktreeSettings';
 
 export type LabsSettingKey = 'linkedEnvironmentsEnabled' | 'fastWorktreeCheckout';
@@ -8,11 +9,17 @@ export interface LabsField {
   locked: boolean;
 }
 
+export interface LabsAgentFeedbackField {
+  value: AgentFeedbackMode | undefined;
+  locked: boolean;
+}
+
 export interface LabsSettings {
   environmentId: string;
   managedBy: string;
   linkedEnvironmentsEnabled: LabsField;
   fastWorktreeCheckout: LabsField;
+  agentFeedback: LabsAgentFeedbackField;
 }
 
 export function labsSettings(config: Object, expectedEnvironment: string): LabsSettings {
@@ -23,19 +30,26 @@ export function labsSettings(config: Object, expectedEnvironment: string): LabsS
   const settings = record(root.settings);
   const policy = root.managedPolicy === undefined ? {} as Record<string, Object> : record(root.managedPolicy);
   const locks = Array.isArray(policy.lockedSettings) ? policy.lockedSettings : [];
+  const isLocked = (key: string): boolean => locks.some((path: Object) => typeof path === 'string' &&
+    (key === path || path.startsWith(key + '.') || key.startsWith(path + '.')));
   const field = (key: LabsSettingKey, eligible: boolean): LabsField => {
     const current = settings[key];
     return {
       value: eligible && typeof current === 'boolean' ? current : undefined,
-      locked: locks.some(path => typeof path === 'string' &&
-        (key === path || path.startsWith(key + '.') || key.startsWith(path + '.')))
+      locked: isLocked(key)
     };
   };
+  const feedbackEligible = capabilities.agentFeedback === true;
+  const feedbackMode = feedbackEligible ? parseAgentFeedbackMode(settings.agentFeedback) : undefined;
   return {
     environmentId: expectedEnvironment,
     managedBy: typeof policy.organization === 'string' ? policy.organization : '组织',
     linkedEnvironmentsEnabled: field('linkedEnvironmentsEnabled', capabilities.peerLinks === true),
-    fastWorktreeCheckout: field('fastWorktreeCheckout', capabilities.fastWorktreeCheckout === true)
+    fastWorktreeCheckout: field('fastWorktreeCheckout', capabilities.fastWorktreeCheckout === true),
+    agentFeedback: {
+      value: feedbackMode,
+      locked: isLocked('agentFeedback')
+    }
   };
 }
 
@@ -60,5 +74,28 @@ export async function writeLabsSetting(connection: WorktreeSettingsConnection,
   await connection.rpcRequest('server.updateSettings', { patch }, 15000, false);
   const result = await readLabsSettings(connection, environmentId);
   if (result[key].value !== value) throw new Error('回读结果与修改不一致，请刷新核对');
+  return result;
+}
+
+export async function writeAgentFeedbackMode(
+  connection: WorktreeSettingsConnection,
+  environmentId: string,
+  mode: AgentFeedbackMode
+): Promise<LabsSettings> {
+  if (mode !== 'off' && mode !== 'on-request' && mode !== 'auto') {
+    throw new Error('不支持此反馈模式');
+  }
+  if (connection.canScope('settings:write') === false) throw new Error('此连接没有修改设置的权限');
+  const current = await readLabsSettings(connection, environmentId);
+  if (connection.canScope('settings:write') === false) throw new Error('修改设置的权限已变化');
+  if (current.agentFeedback.value === undefined || current.agentFeedback.locked) {
+    throw new Error('设置不受支持或受组织策略限制');
+  }
+  if (current.agentFeedback.value === mode) return current;
+  const feedbackPatch: Record<string, Object> = { mode };
+  const patch: Record<string, Object> = { agentFeedback: feedbackPatch };
+  await connection.rpcRequest('server.updateSettings', { patch }, 15000, false);
+  const result = await readLabsSettings(connection, environmentId);
+  if (result.agentFeedback.value !== mode) throw new Error('回读结果与修改不一致，请刷新核对');
   return result;
 }

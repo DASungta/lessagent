@@ -1,5 +1,6 @@
 import { ChatMessage, compactArray, compactObjects, record, text } from './Wire';
 import { HtmlRenderEntry, htmlRenderFromToolItem } from './HtmlRender';
+import { mcpAppFromToolItem } from './McpApp';
 
 export interface ActivityLine { label: string; text: string; kind: string; itemId: string; status?: string; toolName?: string; }
 
@@ -598,7 +599,7 @@ function failureCode(item: Record<string, Object>): string {
 export function isHiddenWorkItem(item: Record<string, Object>): boolean {
   const type = optional(item.type);
   if (!type || [
-    'assistant_message', 'user_message', 'link_request', 'secret_request',
+    'assistant_message', 'user_message', 'link_request', 'secret_request', 'feedback_request',
     'user_input_request', 'approval_request', 'todo_list', 'run_interrupt_request', 'checkpoint'
   ].includes(type)) {
     return true;
@@ -613,7 +614,7 @@ export function isHiddenWorkItem(item: Record<string, Object>): boolean {
   if (type === 'error' && status === 'cancelled' && failureCode(item) === 'workspace_preparation_failed') {
     return true;
   }
-  if (type === 'dynamic_tool' && htmlRenderFromToolItem(item) !== undefined) {
+  if (type === 'dynamic_tool' && (htmlRenderFromToolItem(item) !== undefined || mcpAppFromToolItem(item) !== undefined)) {
     return true;
   }
   return false;
@@ -1587,6 +1588,30 @@ function runHasObservedProviderWork(items: Record<string, Object>[], runId: stri
   return false;
 }
 
+export function providerStartingPhaseLabel(phase: string, providerName: string): string {
+  const name = providerName.trim();
+  if (!name) return '正在启动…';
+  if (phase === 'plugins') return '正在加载 ' + name + ' 插件…';
+  if (phase === 'mcp') return '正在启动 ' + name + ' MCP 服务…';
+  if (phase === 'hooks') return '正在加载 ' + name + ' 钩子…';
+  if (phase === 'skills') return '正在加载 ' + name + ' 规则与技能…';
+  if (phase === 'connecting') return '正在连接 ' + name + '…';
+  return '正在启动 ' + name + '…';
+}
+
+function resolveRunStartupPhase(
+  providerInstanceId: string,
+  providerSessions: Record<string, Object>[]
+): string {
+  if (!providerInstanceId) return '';
+  for (let i = providerSessions.length - 1; i >= 0; i -= 1) {
+    const session = providerSessions[i];
+    if (optional(session.providerInstanceId) !== providerInstanceId) continue;
+    return optional(session.startupPhase).trim();
+  }
+  return '';
+}
+
 /**
  * 推导消息流尾部的实时占位思考行（对齐上游 ThreadThinkingRow）：
  * - 在 run 已创建、但尚未产生任何进行中的 turn_item 或流式 assistant_message 时立即提示；
@@ -1657,16 +1682,18 @@ export function deriveLiveThinkingRow(input: LiveThinkingInput): LiveThinkingRow
   const providerStarting = turnStatus === '' &&
     (runStatus === 'starting' || (runStatus === 'running' && !runHasObservedProviderWork(input.items, runId)));
   if (providerStarting) {
+    const instanceId = optional(activeRun.providerInstanceId);
     const providerName = resolveRunProviderName(
-      optional(activeRun.providerInstanceId),
+      instanceId,
       input.providerSessions,
       input.configProviders,
       input.fallbackProviderDriver
     );
+    const phase = resolveRunStartupPhase(instanceId, input.providerSessions);
     return {
       visible: true,
       kind: 'starting',
-      label: providerName ? '正在启动 ' + providerName + '…' : '正在启动…',
+      label: providerStartingPhaseLabel(phase, providerName),
       runId
     };
   }

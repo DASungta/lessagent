@@ -389,11 +389,15 @@ export async function prepareLinkedEnvironmentConnection(
     };
   }
   const urls = pairing.urls;
-  const checks = await Promise.all(urls.map((url: string) => input.reaches(url).catch(() => false)));
+  // Probe in parallel, accept the first reachable URL in preference order without waiting for lower-priority timeouts.
+  const probes: Promise<string>[] = urls.map((url: string) =>
+    input.reaches(url).then((reached: boolean): string => reached ? url : '', (): string => '')
+  );
   let reachableHost = '';
-  for (let i = 0; i < urls.length; i += 1) {
-    if (checks[i]) {
-      reachableHost = urls[i];
+  for (const probe of probes) {
+    const hit = await probe;
+    if (hit) {
+      reachableHost = hit;
       break;
     }
   }
@@ -430,4 +434,26 @@ export async function prepareLinkedEnvironmentConnection(
       manualReason: ''
     }
   };
+}
+
+export interface PeerLinkRemoveResult {
+  removed: boolean;
+  endedThere?: boolean;
+}
+
+export function parsePeerLinkRemoveResult(value: Object): PeerLinkRemoveResult {
+  const row = record(value);
+  const result: PeerLinkRemoveResult = { removed: row.removed === true };
+  if (typeof row.endedThere === 'boolean') {
+    result.endedThere = row.endedThere as boolean;
+  }
+  return result;
+}
+
+export function peerLinkRemoveMessage(label: string, result: PeerLinkRemoveResult): string {
+  const name = label.trim() || '目标环境';
+  if (!result.removed) return '未找到与「' + name + '」的链接';
+  if (result.endedThere === true) return '已解除与「' + name + '」的互链，并已结束对端会话';
+  if (result.endedThere === false) return '已解除本地与「' + name + '」的互链（对端暂不可达，未确认远程会话注销）';
+  return '已解除与「' + name + '」的互链';
 }

@@ -50,6 +50,7 @@ export struct LinkedThreadPanel {
   @State private workMap: MessageWorkMap = emptyWorkMap();
   @State private hasMoreHistory: boolean = false;
   @State private loadingOlder: boolean = false;
+  @State private historyError: string = '';
   @State private loading: boolean = true;
   @State private working: boolean = false;
   @State private failure: LinkedThreadFailure | undefined = undefined;
@@ -131,6 +132,7 @@ export struct LinkedThreadPanel {
       this.messages = [];
       this.workMap = emptyWorkMap();
       this.hasMoreHistory = false;
+      this.historyError = '';
       this.expandedGroups = {};
       this.expandedItems = {};
       this.itemBodies = {};
@@ -217,6 +219,7 @@ export struct LinkedThreadPanel {
     const state = this.state;
     if (!target || !owner || !state || !state.historyCursor || !state.hasMoreHistory || this.loadingOlder) return;
     this.loadingOlder = true;
+    this.historyError = '';
     const seq = this.streamSeq;
     try {
       const page = await owner.linkedThreadHistoryPage(target.environmentId, target.threadId, state.historyCursor);
@@ -228,7 +231,7 @@ export struct LinkedThreadPanel {
     } catch (error) {
       if (seq !== this.streamSeq) return;
       const parsed = linkedThreadFailure(error as Object, this.displayEnvLabel());
-      this.failure = parsed;
+      this.historyError = parsed.detail || parsed.title || '无法加载更早的消息记录';
     } finally {
       if (seq === this.streamSeq) this.loadingOlder = false;
     }
@@ -446,15 +449,38 @@ export struct LinkedThreadPanel {
           }
 
           if (this.hasMoreHistory) {
-            Row() {
-              AppButton({
-                label: this.loadingOlder ? '正在加载更早记录…' : '加载更早的记录',
-                kind: 'secondary',
-                compact: true,
-                fill: true,
-                disabled: this.loadingOlder,
-                onTap: () => { void this.loadOlder(); }
-              })
+            Column({ space: Space.xs }) {
+              if (this.historyError) {
+                Row({ space: Space.xs }) {
+                  Text(this.historyError)
+                    .fontSize(FontSize.caption)
+                    .lineHeight(LineHeight.caption)
+                    .fontColor($r('app.color.danger'))
+                    .layoutWeight(1)
+                  AppButton({
+                    label: '重试',
+                    kind: 'secondary',
+                    compact: true,
+                    disabled: this.loadingOlder,
+                    onTap: () => { void this.loadOlder(); }
+                  })
+                }
+                .width('100%')
+                .padding(Space.sm)
+                .backgroundColor($r('app.color.card'))
+                .borderRadius(Radius.card)
+                .alignItems(VerticalAlign.Center)
+              }
+              Row() {
+                AppButton({
+                  label: this.loadingOlder ? '正在加载更早记录…' : '加载更早的记录',
+                  kind: 'secondary',
+                  compact: true,
+                  fill: true,
+                  disabled: this.loadingOlder,
+                  onTap: () => { void this.loadOlder(); }
+                })
+              }.width('100%')
             }.width('100%')
           }
 

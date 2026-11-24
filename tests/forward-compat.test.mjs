@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import {
   compile, data, coreUrl, projectsUrl, composerUrl, r4Url, r5Url,
-  threadItemsUrl, filesUrl, floatingStatusUrl
+  threadItemsUrl, filesUrl, floatingStatusUrl, agentFeedbackUrl
 } from './load-core.mjs';
 import { ThreadState, validateDescriptor } from '../entry/src/main/ets/protocol/Wire.ts';
 
@@ -38,7 +38,10 @@ const worktreeSettingsUrl = data(compile(
 ));
 const worktreeSettings = await import(worktreeSettingsUrl);
 const sourceControlSettings = await loadProtocol('SourceControlSettings.ts', { "'./WorktreeSettings'": worktreeSettingsUrl });
-const labsSettings = await loadProtocol('LabsSettings.ts', { "'./WorktreeSettings'": worktreeSettingsUrl });
+const labsSettings = await loadProtocol('LabsSettings.ts', {
+  "'./WorktreeSettings'": worktreeSettingsUrl,
+  "'./AgentFeedback'": agentFeedbackUrl
+});
 const projectWorktreeSettings = await loadProtocol('ProjectWorktreeSettings.ts', { "'./WorktreeSettings'": worktreeSettingsUrl });
 const worktreeStorage = await loadProtocol('WorktreeStorage.ts', { "'./WorktreeSettings'": worktreeSettingsUrl });
 const autoSettle = await loadProtocol('AutoSettle.ts', { "'./WorktreeSettings'": worktreeSettingsUrl });

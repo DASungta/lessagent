@@ -183,6 +183,9 @@ export function parseMarkdownFileLink(rawHref: string): FileLinkTarget | undefin
     rawPath = parsed.path;
     hash = parsed.hash;
   } else {
+    // Split literal URL `#` and `?` BEFORE percent-decoding so encoded filename characters
+    // (`%23` '#', `%3F` '?', `%26` '&', `%27` "'", `%2C` ',', `%25` '%', `%21` '!', `%7E` '~')
+    // survive intact.
     const hashIdx = href.indexOf('#');
     const withoutHash = hashIdx >= 0 ? href.slice(0, hashIdx) : href;
     hash = hashIdx >= 0 ? safeDecode(href.slice(hashIdx)) : '';
@@ -303,4 +306,93 @@ export function resolveFileLinkForWorkspace(cwd: string, target: FileLinkTarget)
     isOutsideWorkspace: false,
     isDirectoryHint: target.isDirectoryHint
   };
+}
+
+export interface ProjectFileCandidate {
+  path: string;
+  kind: string;
+}
+
+export interface ProjectSearchRoot {
+  root: string;
+  entries: ProjectFileCandidate[];
+}
+
+function basenameOf(path: string): string {
+  const normalized = path.replace(/\\/g, '/');
+  const idx = normalized.lastIndexOf('/');
+  return idx >= 0 ? normalized.slice(idx + 1) : normalized;
+}
+
+function joinRootPath(root: string, rel: string): string {
+  const cleanRoot = root.replace(/[\\/]+$/, '');
+  const cleanRel = rel.replace(/^[\\/]+/, '');
+  const sep = isWindowsDrivePath(cleanRoot) ? '\\' : '/';
+  return cleanRoot + sep + cleanRel.replace(/\//g, sep);
+}
+
+/**
+ * Resolves a bare basename across candidate project roots, returning `undefined` when
+ * multiple distinct files (including case-insensitive collisions across roots) make it ambiguous.
+ */
+export function pickProjectLinkMatch(relativePath: string, searches: ProjectSearchRoot[]): string | undefined {
+  const target = (relativePath || '').trim();
+  if (!target) return undefined;
+  const isBasename = !target.includes('/') && !target.includes('\\');
+  const folded = target.toLowerCase();
+  const matches: Map<string, string> = new Map();
+  let rootHits = 0;
+
+  const addMatch = (resolved: string): void => {
+    const key = resolved.replace(/\\/g, '/').toLowerCase();
+    if (!matches.has(key)) matches.set(key, resolved);
+  };
+
+  for (const search of searches) {
+    if (isBasename) {
+      let hasAnyFolded = false;
+      const exact: string[] = [];
+      const ci: string[] = [];
+      for (const entry of search.entries) {
+        if (entry.kind !== 'file') continue;
+        const base = basenameOf(entry.path);
+        if (base.toLowerCase() !== folded) continue;
+        hasAnyFolded = true;
+        if (base === target) exact.push(entry.path);
+        ci.push(entry.path);
+      }
+      if (!hasAnyFolded) continue;
+      rootHits += 1;
+      if (exact.length === 1) {
+        addMatch(joinRootPath(search.root, exact[0]));
+      } else if (exact.length === 0 && ci.length === 1) {
+        addMatch(joinRootPath(search.root, ci[0]));
+      } else {
+        for (const p of ci) addMatch(joinRootPath(search.root, p));
+      }
+    } else {
+      const normalizedTarget = target.replace(/\\/g, '/').replace(/^\.\//, '');
+      for (const entry of search.entries) {
+        if (entry.kind !== 'file') continue;
+        const normalizedEntry = entry.path.replace(/\\/g, '/').replace(/^\.\//, '');
+        if (normalizedEntry === normalizedTarget || normalizedEntry.toLowerCase() === normalizedTarget.toLowerCase()) {
+          addMatch(joinRootPath(search.root, entry.path));
+        }
+      }
+    }
+  }
+
+  if (isBasename && rootHits > 1) {
+    for (const search of searches) {
+      for (const entry of search.entries) {
+        if (entry.kind === 'file' && basenameOf(entry.path).toLowerCase() === folded) {
+          addMatch(joinRootPath(search.root, entry.path));
+        }
+      }
+    }
+  }
+
+  if (matches.size !== 1) return undefined;
+  const first = matches.values().next();
+  return first.done ? undefined : first.value;
 }

@@ -1,6 +1,8 @@
 import { fileIo } from '@kit.CoreFileKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import type { ThreadProjectRef } from '../protocol/Projects';
+import { ModelFavoriteEntry, modelFavoriteKey } from '../protocol/Composer';
+import { parsePullRequestSavedViews, PullRequestSavedView } from '../protocol/R5';
 import { DEFAULT_TERMINAL_FONT_SIZE, validTerminalFontSize } from '../protocol/Terminal';
 
 export const DEFAULT_CODE_FONT_SIZE = 13;
@@ -27,6 +29,8 @@ export interface WorkspacePreferences {
   codeWordBreak: boolean;
   pullRequestHideTestFiles: boolean;
   sideThreadOpenTarget: string;
+  modelFavorites?: ModelFavoriteEntry[];
+  pullRequestSavedViews?: PullRequestSavedView[];
 }
 
 export function defaultWorkspacePreferences(): WorkspacePreferences {
@@ -34,8 +38,26 @@ export function defaultWorkspacePreferences(): WorkspacePreferences {
     schemaVersion: 1, projectGroupingMode: 'repository', environmentFilter: '', projectFilterKey: '',
     threadSortOrder: 'updated_at', archivedSortOrder: 'newest', workingShelfEnabled: true,
     useLastProjectForNewThreads: true,
-    workingShelfExpanded: false, snoozedShelfExpanded: false, settledShelfExpanded: true, followUpBehavior: 'steer', terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE, codeFontSize: null, codeWordBreak: false, pullRequestHideTestFiles: false, sideThreadOpenTarget: 'panel'
+    workingShelfExpanded: false, snoozedShelfExpanded: false, settledShelfExpanded: true, followUpBehavior: 'steer', terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE, codeFontSize: null, codeWordBreak: false, pullRequestHideTestFiles: false, sideThreadOpenTarget: 'panel', modelFavorites: [], pullRequestSavedViews: []
   };
+}
+
+function parseLocalModelFavorites(value: Object | undefined): ModelFavoriteEntry[] {
+  if (!Array.isArray(value)) return [];
+  const seen: Set<string> = new Set();
+  const result: ModelFavoriteEntry[] = [];
+  for (const item of value as Object[]) {
+    if (item === null || item === undefined || typeof item !== 'object' || Array.isArray(item)) continue;
+    const row = item as Record<string, Object>;
+    const provider = typeof row.provider === 'string' ? row.provider.trim() : '';
+    const model = typeof row.model === 'string' ? row.model.trim() : '';
+    if (!provider || !model) continue;
+    const key = modelFavoriteKey(provider, model);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push({ provider, model });
+  }
+  return result;
 }
 
 function threadProjectRef(value: Object | undefined): ThreadProjectRef | undefined {
@@ -84,7 +106,9 @@ export function workspacePreferences(value: Object): WorkspacePreferences {
       ? Math.min(MAX_CODE_FONT_SIZE, Math.max(MIN_CODE_FONT_SIZE, Math.round(row.codeFontSize))) : null,
     codeWordBreak: row.codeWordBreak === true,
     pullRequestHideTestFiles: row.pullRequestHideTestFiles === true,
-    sideThreadOpenTarget: sideTarget as string
+    sideThreadOpenTarget: sideTarget as string,
+    modelFavorites: parseLocalModelFavorites(row.modelFavorites),
+    pullRequestSavedViews: parsePullRequestSavedViews(row.pullRequestSavedViews)
   };
 }
 
@@ -218,4 +242,57 @@ export async function setSideThreadOpenTarget(value: string): Promise<void> {
   snapshot.sideThreadOpenTarget = value;
   await workspacePrefsStore.save(snapshot);
   workspacePrefs.sideThreadOpenTarget = value;
+}
+
+export function localModelFavorites(): ModelFavoriteEntry[] {
+  return workspacePrefs.modelFavorites ? workspacePrefs.modelFavorites.slice() : [];
+}
+
+export async function setLocalModelFavorite(provider: string, model: string, favorite: boolean): Promise<ModelFavoriteEntry[]> {
+  const p = provider.trim();
+  const m = model.trim();
+  const key = modelFavoriteKey(p, m);
+  const current = localModelFavorites();
+  const next = current.filter((item: ModelFavoriteEntry) => modelFavoriteKey(item.provider, item.model) !== key);
+  if (favorite && p && m) next.push({ provider: p, model: m });
+  if (!workspacePrefsStore) {
+    workspacePrefs.modelFavorites = next;
+    return next;
+  }
+  const snapshot = workspacePreferences(JSON.parse(JSON.stringify(workspacePrefs)) as Object);
+  snapshot.modelFavorites = next;
+  await workspacePrefsStore.save(snapshot);
+  workspacePrefs.modelFavorites = next;
+  return next;
+}
+
+export function localPullRequestSavedViews(): PullRequestSavedView[] {
+  return workspacePrefs.pullRequestSavedViews ? workspacePrefs.pullRequestSavedViews.slice() : [];
+}
+
+export async function savePullRequestSavedView(view: PullRequestSavedView): Promise<PullRequestSavedView[]> {
+  const current = localPullRequestSavedViews().filter((item: PullRequestSavedView) => item.id !== view.id);
+  const next = parsePullRequestSavedViews(current.concat([view]) as Object);
+  if (!workspacePrefsStore) {
+    workspacePrefs.pullRequestSavedViews = next;
+    return next;
+  }
+  const snapshot = workspacePreferences(JSON.parse(JSON.stringify(workspacePrefs)) as Object);
+  snapshot.pullRequestSavedViews = next;
+  await workspacePrefsStore.save(snapshot);
+  workspacePrefs.pullRequestSavedViews = next;
+  return next;
+}
+
+export async function deletePullRequestSavedView(id: string): Promise<PullRequestSavedView[]> {
+  const next = localPullRequestSavedViews().filter((item: PullRequestSavedView) => item.id !== id);
+  if (!workspacePrefsStore) {
+    workspacePrefs.pullRequestSavedViews = next;
+    return next;
+  }
+  const snapshot = workspacePreferences(JSON.parse(JSON.stringify(workspacePrefs)) as Object);
+  snapshot.pullRequestSavedViews = next;
+  await workspacePrefsStore.save(snapshot);
+  workspacePrefs.pullRequestSavedViews = next;
+  return next;
 }

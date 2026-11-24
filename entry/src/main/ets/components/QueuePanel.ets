@@ -1,5 +1,5 @@
 import { FontSize, LineHeight, Radius, Space } from '../common/Theme';
-import { QueuedRun } from '../protocol/Composer';
+import { formatMentionPreviewText, QueuedRun } from '../protocol/Composer';
 import { AppButton } from './ui/AppButton';
 import { StatusBadge } from './ui/StatusBadge';
 import { TopBar } from './ui/TopBar';
@@ -71,7 +71,7 @@ export struct QueuePanel {
                     })
                   }.width('100%').justifyContent(FlexAlign.End)
                 } else {
-                  Text(run.text || '消息内容未随当前快照提供')
+                  Text(run.text ? formatMentionPreviewText(run.text) : '消息内容未随当前快照提供')
                     .fontSize(FontSize.body).lineHeight(LineHeight.body).fontColor($r('app.color.ink')).width('100%')
                   ForEach(run.attachmentNames, (name: string) => {
                     Text('附件 · ' + name).fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')

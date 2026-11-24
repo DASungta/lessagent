@@ -1,16 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { compile, data, markdownUrl, filesUrl, r5Url } from './load-core.mjs';
+import { compile, data, markdownUrl, filesUrl, filePreviewUrl, r5Url } from './load-core.mjs';
 const md = await import(markdownUrl);
 const files = await import(filesUrl);
 const r5 = await import(r5Url);
 
 test('opening a search result positions the source list only at a verified, selectable line', async () => {
   const source = await readFile(new URL('../entry/src/main/ets/components/FilesPanel.ets', import.meta.url), 'utf8');
-  const methods = source.slice(source.indexOf('  private async openFile('), source.indexOf('  private addSelectionContext('));
+  const methods = source.slice(source.indexOf('  private applyTextContents('), source.indexOf('  private addSelectionContext('));
   const { FilePreview } = await import(data(compile(`
-    import { fileLines, isImage, isVideo, isAudio, isPdf, isHtml, matchesContentSearchLine } from ${JSON.stringify(filesUrl)};
+    import { fileLines, isImage, isVideo, isAudio, isPdf, isHtml, isMarkdown, isDelimited, isRtf, isZip, matchesContentSearchLine } from ${JSON.stringify(filesUrl)};
+    import { MOBILE_FULL_FILE_MAX_BYTES, hasOversizedMarkdownChunk, parseDelimitedPreview, parseRtfToText, parseZipEntries, splitMarkdown } from ${JSON.stringify(filePreviewUrl)};
     export class FilePreview { ${methods} }
   `)));
   const firstPage = Array.from({ length: 5001 }, (_, index) => 'line ' + (index + 1));
@@ -18,7 +19,7 @@ test('opening a search result positions the source list only at a verified, sele
   let truncated = false;
   let epoch = 0;
   const panel = Object.assign(new FilePreview(), {
-    connection: { readWorkspaceFile: async () => ({ contents, truncated }) },
+    connection: { readWorkspaceFile: async () => ({ contents, truncated, byteLength: contents.length }) },
     beginRead: () => { const request = ++epoch; return () => request === epoch; },
     invalidateReads: () => { epoch++; },
     reportStatus: value => { panel.reported = value; },
@@ -28,12 +29,14 @@ test('opening a search result positions the source list only at a verified, sele
   assert.equal(panel.previewStartIndex, 69);
   assert.equal(panel.selectionStart, 69);
   assert.equal(panel.selectionEnd, 69);
-  assert.match(source, /isMarkdown\(this\.selectedPath\) && !this\.selectedMatch/);
+  assert.match(source, /isMarkdown\(this\.selectedPath\)[\s\S]*?!this\.selectedMatch/);
   assert.match(source, /List\(\{ space: 0, initialIndex: this\.previewStartIndex \}\)/);
+  truncated = true;
   await panel.openFile('test.md', hit(5001, 'line 5001'));
   assert.equal(panel.selectionStart, -1);
   assert.equal(panel.previewStartIndex, 0);
   assert.match(panel.matchNotice, /不在当前预览/);
+  truncated = false;
   contents = 'before\r\nreplaced';
   await panel.openFile('test.md', hit(2, 'previous'));
   assert.equal(panel.selectionStart, -1);
@@ -97,11 +100,11 @@ test('source and both diffs opt into code appearance without changing chat Markd
     ['CodeLine', 'FilesPanel', 'ReviewPanel', 'PullRequestsPanel', 'MarkdownView'].map(component));
   assert.match(line, /@StorageProp\('t3CodeFontSize'\)/);
   assert.match(line, /@StorageProp\('t3CodeWordBreak'\)/);
-  assert.match(line, /this\.codeWordBreak[\s\S]*?Text\(this\.text \|\| ' '\)[\s\S]*?WordBreak\.BREAK_ALL/);
-  assert.match(line, /else \{[\s\S]*?Text\(this\.text \|\| ' '\)[\s\S]*?ScrollDirection\.Horizontal\)\.align\(Alignment\.TopStart\)/);
-  assert.match(source, /CodeLine\(\{ text: line\.text \}\)/);
+  assert.match(line, /Text\(this\.text \|\| ' '\)[\s\S]*?WordBreak\.BREAK_ALL/);
+  assert.match(line, /this\.codeWordBreak[\s\S]*?else \{[\s\S]*?ScrollDirection\.Horizontal\)\.align\(Alignment\.TopStart\)/);
+  assert.match(source, /CodeLine\(\{ text: line\.text/);
   for (const panel of [review, pullRequest]) {
-    assert.match(panel, /CodeLine\(\{ text: row\.text,/);
+    assert.match(panel, /CodeLine\(\{\s*text: row\.text,/);
     assert.match(panel, /this\.codeFontSize \+ 9\) \+ 'fp'/);
   }
   assert.doesNotMatch(markdown, /t3CodeFontSize|t3CodeWordBreak/);

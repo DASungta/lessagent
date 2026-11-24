@@ -1,7 +1,7 @@
 import { http } from '@kit.NetworkKit';
 import { record, text } from '../protocol/Wire';
 import {
-  CloudConfig, RelayChallenge, relayChallenge, RelayConnect, relayConnect, RelayEndpoint,
+  CloudConfig, RelayChallenge, relayChallenge, RelayConnect, relayConnect,
   RelayEnvironmentRecord, relayEnvironments, RelayLink, relayLink, relayToken, RelayTokenCache,
   relayTokenMatches, relayStatus, RelayStatus, relayErrorMessage, RELAY_CONNECT_SCOPE,
   RELAY_MOBILE_SCOPE, RELAY_STATUS_SCOPE
@@ -37,19 +37,21 @@ function invalidBearer(error: RelayFailure): boolean {
   return error.status === 401 && error.code === 'auth_invalid' && error.reason === 'invalid_bearer';
 }
 
+export type ClerkTokenReader = (forceRefresh?: boolean) => Promise<string>;
+
 export class CloudRelay {
   readonly relayUrl: string;
   private config: CloudConfig;
   private accountId: string;
-  private clerkToken: string;
+  private readClerkToken: ClerkTokenReader;
   private active: () => boolean;
   private signer: DpopSigner;
   private tokens: RelayTokenStore;
 
-  constructor(config: CloudConfig, accountId: string, clerkToken: string,
+  constructor(config: CloudConfig, accountId: string, readClerkToken: ClerkTokenReader,
     active: () => boolean, signer: DpopSigner, tokens: RelayTokenStore = new RelayTokenStore()) {
     this.config = config; this.relayUrl = config.relay.url;
-    this.accountId = accountId; this.clerkToken = clerkToken; this.active = active;
+    this.accountId = accountId; this.readClerkToken = readClerkToken; this.active = active;
     this.signer = signer; this.tokens = tokens;
   }
 
@@ -61,7 +63,9 @@ export class CloudRelay {
     return this.relayUrl + path;
   }
 
-  private async exchange(scopes: string[]): Promise<RelayTokenCache> {
+  private async exchange(scopes: string[], forceClerkRefresh: boolean = false, retryClerk: boolean = true): Promise<RelayTokenCache> {
+    this.assertActive();
+    const subjectToken = await this.readClerkToken(forceClerkRefresh);
     this.assertActive();
     const target = this.target('/v1/client/dpop-token');
     const proof = await this.signer.prove('POST', target);
@@ -70,7 +74,7 @@ export class CloudRelay {
       const headers: Record<string, string> = {};
       headers['dpop'] = proof;
       const body = 'grant_type=' + encodeURIComponent('urn:ietf:params:oauth:grant-type:token-exchange') +
-        '&subject_token=' + encodeURIComponent(this.clerkToken) +
+        '&subject_token=' + encodeURIComponent(subjectToken) +
         '&subject_token_type=' + encodeURIComponent('urn:ietf:params:oauth:token-type:jwt') +
         '&requested_token_type=' + encodeURIComponent('urn:ietf:params:oauth:token-type:access_token') +
         '&resource=' + encodeURIComponent(this.relayUrl) +
@@ -79,7 +83,13 @@ export class CloudRelay {
       result = await cloudHttp(target, http.RequestMethod.POST, headers, body,
         'application/x-www-form-urlencoded');
     } catch (error) {
-      if (error instanceof CloudHttpFailure) throw failure(error);
+      if (error instanceof CloudHttpFailure) {
+        const parsed = failure(error);
+        if (retryClerk && invalidBearer(parsed)) {
+          return this.exchange(scopes, true, false);
+        }
+        throw parsed;
+      }
       throw error as Error;
     }
     this.assertActive();
@@ -106,7 +116,7 @@ export class CloudRelay {
       return cached;
     }
     if (rejected) { try { await this.tokens.clear(); } catch (_) {} }
-    return this.exchange(scopes);
+    return this.exchange(scopes, !!rejected, true);
   }
 
   private async request(method: http.RequestMethod, path: string, scopes: string[],
@@ -138,15 +148,23 @@ export class CloudRelay {
   }
 
   private async bearer(method: http.RequestMethod, path: string,
-    body: string = '', contentType: string = ''): Promise<Object> {
+    body: string = '', contentType: string = '', forceClerkRefresh: boolean = false, retry: boolean = true): Promise<Object> {
+    this.assertActive();
+    const clerkToken = await this.readClerkToken(forceClerkRefresh);
     this.assertActive();
     try {
-      const headers: Record<string, string> = { 'Authorization': 'Bearer ' + this.clerkToken };
+      const headers: Record<string, string> = { 'Authorization': 'Bearer ' + clerkToken };
       const result = await cloudHttp(this.target(path), method, headers, body, contentType);
       this.assertActive();
       return result.value;
     } catch (error) {
-      if (error instanceof CloudHttpFailure) throw failure(error);
+      if (error instanceof CloudHttpFailure) {
+        const parsed = failure(error);
+        if (retry && invalidBearer(parsed)) {
+          return this.bearer(method, path, body, contentType, true, false);
+        }
+        throw parsed;
+      }
       throw error as Error;
     }
   }

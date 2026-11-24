@@ -26,9 +26,17 @@ const htmlRenderSource = (await readFile(new URL('../entry/src/main/ets/protocol
   .replace("'./Wire'", JSON.stringify(wireUrl));
 export const htmlRenderUrl = data(compile(htmlRenderSource));
 
+const mcpAppSource = (await readFile(new URL('../entry/src/main/ets/protocol/McpApp.ts', import.meta.url), 'utf8'))
+  .replace("'./Wire'", JSON.stringify(wireUrl));
+export const mcpAppUrl = data(compile(mcpAppSource));
+
+const filePreviewSource = (await readFile(new URL('../entry/src/main/ets/protocol/FilePreview.ts', import.meta.url), 'utf8'));
+export const filePreviewUrl = data(compile(filePreviewSource));
+
 const threadItemsSource = (await readFile(new URL('../entry/src/main/ets/protocol/ThreadItems.ts', import.meta.url), 'utf8'))
   .replace("'./Wire'", JSON.stringify(wireUrl))
-  .replace("'./HtmlRender'", JSON.stringify(htmlRenderUrl));
+  .replace("'./HtmlRender'", JSON.stringify(htmlRenderUrl))
+  .replace("'./McpApp'", JSON.stringify(mcpAppUrl));
 export const threadItemsUrl = data(compile(threadItemsSource));
 
 const markdownLinksSource = (await readFile(new URL('../entry/src/main/ets/protocol/MarkdownLinks.ts', import.meta.url), 'utf8'));
@@ -48,7 +56,8 @@ const filesSource = (await readFile(new URL('../entry/src/main/ets/protocol/File
 export const filesUrl = data(compile(filesSource));
 
 const r5Source = (await readFile(new URL('../entry/src/main/ets/protocol/R5.ts', import.meta.url), 'utf8'))
-  .replace("'./Wire'", JSON.stringify(wireUrl));
+  .replace("'./Wire'", JSON.stringify(wireUrl))
+  .replace("'./FilePreview'", JSON.stringify(filePreviewUrl));
 export const r5Url = data(compile(r5Source));
 
 const floatingStatusSource = (await readFile(new URL('../entry/src/main/ets/protocol/FloatingStatus.ts', import.meta.url), 'utf8'))
@@ -73,3 +82,10 @@ export const sideThreadUrl = data(compile(sideThreadSource));
 const linkBatchSource = (await readFile(new URL('../entry/src/main/ets/protocol/LinkBatch.ts', import.meta.url), 'utf8'))
   .replace("'./Wire'", JSON.stringify(wireUrl));
 export const linkBatchUrl = data(compile(linkBatchSource));
+
+const serverClockSource = (await readFile(new URL('../entry/src/main/ets/protocol/ServerClock.ts', import.meta.url), 'utf8'));
+export const serverClockUrl = data(compile(serverClockSource));
+
+const agentFeedbackSource = (await readFile(new URL('../entry/src/main/ets/protocol/AgentFeedback.ts', import.meta.url), 'utf8'))
+  .replace("'./Wire'", JSON.stringify(wireUrl));
+export const agentFeedbackUrl = data(compile(agentFeedbackSource));

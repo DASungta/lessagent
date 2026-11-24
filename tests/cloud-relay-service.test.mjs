@@ -8,11 +8,12 @@ const endpoint = { httpBaseUrl: 'https://env.example.test', wsBaseUrl: 'wss://en
   providerKind: 'cloudflare_tunnel' };
 const environment = { environmentId: 'env-1', label: 'Studio', endpoint,
   linkedAt: '2026-01-01T00:00:00.000Z' };
-const config = { clerk: { publishableKey: '', jwtTemplate: '', oauthClientId: '', redirectUri: '' },
+const config = { clerk: { publishableKey: '', jwtTemplate: 't3-relay', oauthClientId: '', redirectUri: 't3code://app/' },
   relay: { url: 'https://relay.example.test' } };
 
-async function load(handler) {
+async function load(handler, tokenReader) {
   const calls = [];
+  const tokenCalls = [];
   class Failure extends Error {
     constructor(status, value) { super('http ' + status); this.status = status; this.value = value; }
   }
@@ -23,7 +24,7 @@ async function load(handler) {
       calls.push({ url, method, headers: { ...headers }, body, contentType });
       const response = await handler(url, method, headers, body, calls);
       if (response.error) throw new Failure(response.error.status, response.error.value);
-      return { status: 200, value: response.value };
+      return { status: 200, value: response.value, headers: {} };
     }
   };
   const source = (await readFile(new URL('../entry/src/main/ets/services/CloudRelay.ets', import.meta.url), 'utf8'))
@@ -39,11 +40,17 @@ async function load(handler) {
     prove: async (method, url, token) => `proof:${method}:${url}:${token || ''}` };
   const store = { value: undefined, async load() { return this.value; },
     async save(value) { this.value = structuredClone(value); }, async clear() { this.value = undefined; } };
-  return { relay: new module.CloudRelay(config, 'user-a', 'SYNTHETIC_CLERK', () => true, signer, store),
-    calls, store };
+  const readClerkToken = async (force) => {
+    tokenCalls.push(Boolean(force));
+    return tokenReader ? tokenReader(Boolean(force)) : 'SYNTHETIC_CLERK';
+  };
+  return {
+    relay: new module.CloudRelay(config, 'user-a', readClerkToken, () => true, signer, store),
+    calls, tokenCalls, store
+  };
 }
 
-test('relay exchanges a DPoP token, reuses its scoped cache, lists, reads status and connects', async () => {
+test('relay exchanges a DPoP token using dynamic Clerk JWT, reuses scoped cache, lists, reads status and connects', async () => {
   let exchanges = 0;
   const { relay, store } = await load(async (url, method, headers, body) => {
     if (url.endsWith('/v1/client/dpop-token')) {
@@ -79,6 +86,43 @@ test('relay exchanges a DPoP token, reuses its scoped cache, lists, reads status
   assert.equal(store.value.accountId, 'user-a');
 });
 
+test('relay refreshes short-lived Clerk template JWT once on 401 invalid_bearer for bearer and token-exchange calls', async () => {
+  let listAttempts = 0;
+  let exchangeAttempts = 0;
+  const { relay, tokenCalls } = await load(async (url, method, headers, body) => {
+    if (url.endsWith('/v1/environments')) {
+      listAttempts++;
+      if (listAttempts === 1) {
+        assert.equal(headers.Authorization, 'Bearer STALE_JWT');
+        return { error: { status: 401, value: { code: 'auth_invalid', reason: 'invalid_bearer' } } };
+      }
+      assert.equal(headers.Authorization, 'Bearer FRESH_JWT');
+      return { value: { environments: [environment] } };
+    }
+    if (url.endsWith('/v1/client/dpop-token')) {
+      exchangeAttempts++;
+      if (exchangeAttempts === 1) {
+        assert.match(body, /subject_token=STALE_JWT/);
+        return { error: { status: 401, value: { code: 'auth_invalid', reason: 'invalid_bearer' } } };
+      }
+      assert.match(body, /subject_token=FRESH_JWT/);
+      return { value: { access_token: 'DPOP_FRESH', token_type: 'DPoP',
+        issued_token_type: 'urn:ietf:params:oauth:token-type:access_token', expires_in: 300,
+        scope: 'environment:status environment:connect' } };
+    }
+    if (url.endsWith('/status')) {
+      return { value: { ...environment, status: 'online', checkedAt: '2026-01-01T00:00:01.000Z' } };
+    }
+    throw Error('unexpected ' + url);
+  }, (force) => force ? 'FRESH_JWT' : 'STALE_JWT');
+
+  assert.equal((await relay.listEnvironments()).length, 1);
+  assert.equal((await relay.status(environment)).status, 'online');
+  assert.equal(listAttempts, 2);
+  assert.equal(exchangeAttempts, 2);
+  assert.deepEqual(tokenCalls, [false, true, false, true]);
+});
+
 test('relay link challenge/link/unlink use bearer endpoints and preserve the exact proof', async () => {
   const { relay, calls } = await load(async (url, method, headers, body) => {
     assert.equal(headers.Authorization, 'Bearer SYNTHETIC_CLERK');
@@ -101,7 +145,7 @@ test('relay link challenge/link/unlink use bearer endpoints and preserve the exa
   assert.equal(calls.length, 3);
 });
 
-test('relay invalid_bearer invalidates old token and retries once without a second loop', async () => {
+test('relay invalid_bearer on DPoP request invalidates old token and retries once without a second loop', async () => {
   let exchanges = 0, statusCalls = 0;
   const { relay } = await load(async (url, method, headers) => {
     if (url.endsWith('/v1/client/dpop-token')) {

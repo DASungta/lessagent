@@ -10,18 +10,22 @@ import { PullRequestRoutingSettings } from './PullRequestRoutingSettings';
 import { DirectRoute, EnvironmentEntry, environmentRouteKey, environmentRoutes } from '../protocol/Environment';
 import { ConnectDevicesSection } from './ConnectDevicesSection';
 import { CloudDevice, CloudPairingLink } from '../protocol/Cloud';
+import { CloudEnvironmentView } from '../services/CloudManager';
 
 @Component
 export struct ConnectionsPanel {
   @Prop entries: EnvironmentEntry[] = [];
   @Prop statuses: Record<string, string> = {};
   @Prop readyMap: Record<string, boolean> = {};
+  @Prop approvalCodes: Record<string, string> = {};
   @Prop canLinkBatchMap: Record<string, boolean> = {};
   @Prop linkedGroups: LinkedEnvironmentGroup[] = [];
   @Prop initialized: boolean = false;
   @Prop cloudConfigured: boolean = false;
   @Prop cloudSignedIn: boolean = false;
+  @Prop cloudAccountLabel: string = '';
   @Prop cloudStatus: string = '';
+  @Prop cloudEnvironments: CloudEnvironmentView[] = [];
   @Prop deviceEnvironmentLabel: string = '';
   @Prop pendingDevices: CloudPairingLink[] = [];
   @Prop approvedDevices: CloudDevice[] = [];
@@ -42,11 +46,14 @@ export struct ConnectionsPanel {
   onReorderRoutes: (id: string, references: string[]) => Promise<void> = async () => {};
   onRemoveRoute: (id: string, reference: string) => Promise<void> = async () => {};
   onCloudAccount: () => void = () => {};
+  onConnectCloud: (environmentId: string) => Promise<void> = async () => {};
   onLinkCloud: (id: string) => Promise<void> = async () => {};
   onApproveDevice: (id: string) => Promise<void> = async () => {};
   onDenyDevice: (id: string) => Promise<void> = async () => {};
   onRevokeDevice: (id: string) => Promise<void> = async () => {};
   onLinkBatch: (localId: string) => void = () => {};
+  onRemoveLink: (sourceLocalId: string, targetEnvironmentId: string, targetLabel: string) => Promise<void> = async () => {};
+  onCopy: (value: string) => void = () => {};
   private async perform(action: () => Promise<void>): Promise<void> {
     if (this.busy) return;
     this.busy = true; this.error = '';
@@ -59,21 +66,28 @@ export struct ConnectionsPanel {
   }
   private statusBadgeText(entry: EnvironmentEntry): string {
     if (!entry.enabled) return '已停用';
+    if (this.approvalCodes[entry.localId]) return '待主机批准';
     const status = this.statuses[entry.localId] || '';
     if (this.isConnected(status, entry)) return '已连接';
-    if (status.includes('正在连接') || status.includes('连接中')) return '连接中';
+    if (status.includes('正在连接') || status.includes('连接中') || status.includes('正在通过 T3 Connect 授权')) return '连接中';
     if (status.includes('解锁')) return '需解锁';
     if (status.includes('不兼容')) return '版本不兼容';
-    if (status.includes('失败') || status.includes('错误')) return '连接失败';
+    if (status.includes('失败') || status.includes('错误') || status.includes('过期') || status.includes('拒绝')) return '连接失败';
     return '未连接';
   }
   private statusBadgeTone(entry: EnvironmentEntry): BadgeTone {
     if (!entry.enabled) return 'neutral';
+    if (this.approvalCodes[entry.localId]) return 'warning';
     const status = this.statuses[entry.localId] || '';
     if (this.isConnected(status, entry)) return 'success';
-    if (status.includes('正在连接') || status.includes('连接中')) return 'info';
-    if (status.includes('不兼容') || status.includes('失败') || status.includes('错误')) return 'danger';
+    if (status.includes('正在连接') || status.includes('连接中') || status.includes('正在通过 T3 Connect 授权')) return 'info';
+    if (status.includes('不兼容') || status.includes('失败') || status.includes('错误') || status.includes('过期') || status.includes('拒绝')) return 'danger';
     return 'warning';
+  }
+  private availableCloudEnvironments(): CloudEnvironmentView[] {
+    return this.cloudEnvironments.filter((env: CloudEnvironmentView) =>
+      !this.entries.some((entry: EnvironmentEntry) =>
+        entry.kind === 'cloud' && entry.environmentId === env.environmentId && !entry.deleting));
   }
   private expand(entry: EnvironmentEntry): void {
     this.expanded = this.expanded === entry.localId ? '' : entry.localId;
@@ -102,8 +116,10 @@ export struct ConnectionsPanel {
               FormRow({
                 kind: 'value',
                 label: 'T3 Connect',
-                subtitle: this.cloudSignedIn ? (this.cloudStatus || '已登录') : '登录以使用托管中继',
-                value: '',
+                subtitle: this.cloudSignedIn ?
+                  (this.cloudAccountLabel || this.cloudStatus || '已登录') : '登录以使用托管中继',
+                value: this.cloudSignedIn ? '管理' : '登录',
+                valueMuted: true,
                 disabled: this.busy,
                 isFirst: true,
                 onTap: () => this.onCloudAccount()
@@ -167,8 +183,13 @@ export struct ConnectionsPanel {
                         }.width('100%').alignItems(VerticalAlign.Center)
                         Text(entry.base + (entry.kind === 'cloud' ? ' · T3 Connect' : ''))
                           .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted'))
-                          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%')
-                        if (entry.enabled && this.statuses[entry.localId] && this.statuses[entry.localId] !== '已连接') {
+                          .maxLines(1).wordBreak(WordBreak.BREAK_ALL).textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%')
+                        if (entry.enabled && this.approvalCodes[entry.localId]) {
+                          Text('等待主机批准 · 本机验证码 ' + this.approvalCodes[entry.localId])
+                            .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontWeight(Weight.medium)
+                            .fontColor($r('app.color.primary_text'))
+                            .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%')
+                        } else if (entry.enabled && this.statuses[entry.localId] && this.statuses[entry.localId] !== '已连接') {
                           Text(this.statuses[entry.localId])
                             .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted'))
                             .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%')
@@ -192,6 +213,22 @@ export struct ConnectionsPanel {
                     Column({ space: Space.xs }) {
                       Divider().strokeWidth(Sizes.hairline).color($r('app.color.separator'))
                       if (entry.kind === 'cloud') {
+                        if (this.approvalCodes[entry.localId]) {
+                          Row({ space: Space.xs }) {
+                            Column({ space: 2 }) {
+                              Text('等待主机批准此设备').fontSize(FontSize.callout).fontWeight(Weight.medium).fontColor($r('app.color.ink')).width('100%')
+                              Text('请在电脑端 T3 Code 核对验证码 ' + this.approvalCodes[entry.localId] + ' 并点击批准，批准后会自动连接。')
+                                .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted')).width('100%')
+                            }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+                            AppButton({
+                              label: '复制',
+                              kind: 'secondary',
+                              compact: true,
+                              onTap: () => this.onCopy(this.approvalCodes[entry.localId])
+                            })
+                          }.width('100%').padding(Space.xs).backgroundColor($r('app.color.group')).borderRadius(Radius.tool)
+                            .alignItems(VerticalAlign.Center)
+                        }
                         Text('此地址由 T3 Connect 管理；凭据按账号与设备隔离，不在目录中保存。')
                           .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted')).width('100%')
                         AppButton({
@@ -297,15 +334,48 @@ export struct ConnectionsPanel {
                   }
                 }.width('100%').backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
               }, (entry: EnvironmentEntry) => environmentRouteKey(entry) + ':' + (entry.enabled ? '1' : '0') + ':' +
-                (this.readyMap[entry.localId] ? '1' : '0') + ':' + (this.statuses[entry.localId] || '') + ':' +
+                (this.readyMap[entry.localId] ? '1' : '0') + ':' + (this.approvalCodes[entry.localId] || '') + ':' +
+                (this.statuses[entry.localId] || '') + ':' +
                 entry.label + ':' + entry.base + ':' + (entry.prRouting || ''))
             }.width('100%')
+          }
+
+          if (this.cloudSignedIn && this.availableCloudEnvironments().length > 0) {
+            GroupCard({ title: 'T3 Connect 可用服务器' }) {
+              ForEach(this.availableCloudEnvironments(), (env: CloudEnvironmentView, index: number) => {
+                Row({ space: Space.xs }) {
+                  Column({ space: 2 }) {
+                    Text(env.label).fontSize(FontSize.body).fontWeight(Weight.medium).fontColor($r('app.color.ink')).width('100%')
+                    Text(env.statusText).fontSize(FontSize.caption).lineHeight(LineHeight.caption).width('100%')
+                      .fontColor(env.availability === 'online' ? $r('app.color.muted') : $r('app.color.danger'))
+                  }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+                  AppButton({
+                    label: '连接',
+                    kind: 'secondary',
+                    compact: true,
+                    disabled: this.busy || env.availability === 'offline',
+                    onTap: () => { void this.perform(() => this.onConnectCloud(env.environmentId)); }
+                  })
+                }
+                .width('100%')
+                .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                .constraintSize({ minHeight: Sizes.formRowMin })
+                .alignItems(VerticalAlign.Center)
+                .border({ width: { top: index === 0 ? 0 : Sizes.hairline }, color: { top: $r('app.color.separator') } })
+              }, (env: CloudEnvironmentView) => env.environmentId + ':' + env.availability + ':' + env.statusText)
+            }
           }
 
           ConnectDevicesSection({ environmentLabel: this.deviceEnvironmentLabel, pending: this.pendingDevices,
             devices: this.approvedDevices, busy: this.busy, onApprove: this.onApproveDevice,
             onDeny: this.onDenyDevice, onRevoke: this.onRevokeDevice })
-          LinkedEnvironmentsSection({ groups: this.linkedGroups })
+          LinkedEnvironmentsSection({
+            groups: this.linkedGroups,
+            busy: this.busy,
+            onRemoveLink: (sourceLocalId: string, targetEnvironmentId: string, targetLabel: string) => {
+              void this.perform(() => this.onRemoveLink(sourceLocalId, targetEnvironmentId, targetLabel));
+            }
+          })
           PullRequestRoutingSettings({ entries: this.entries.filter((entry: EnvironmentEntry) => entry.kind === 'bearer'),
             initialized: this.initialized, onChange: this.onRouting })
           if (this.error) {

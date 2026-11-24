@@ -24,12 +24,14 @@ import {
   DiffRow,
   DiffSelection,
   ReviewSource,
+  computeHunkWordDiffs,
   filterDiffTestFiles,
   orderParsedDiffFilesForReview,
   parseDiff,
   reviewCommentContext,
   selectedDiff
 } from '../protocol/R5';
+import { detectCodeLanguage, WordDiffSegment } from '../protocol/FilePreview';
 
 interface RepoReviewGroup {
   key: string;
@@ -83,8 +85,19 @@ export struct ReviewPanel {
   @State comment: string = '';
   @State commenting: boolean = false;
   private loadGeneration: number = 0;
+  private wordDiffCache: Map<string, Map<number, WordDiffSegment[]>> = new Map();
 
   aboutToAppear(): void { void this.load(); }
+
+  private rowWordSegments(hunk: DiffHunk, index: number): WordDiffSegment[] {
+    const key = this.selectedFileRepoKey + ':' + this.selectedPath + ':' + hunk.header;
+    let map = this.wordDiffCache.get(key);
+    if (!map) {
+      map = computeHunkWordDiffs(hunk);
+      this.wordDiffCache.set(key, map);
+    }
+    return map.get(index) || [];
+  }
 
   private isMultiRepo(): boolean {
     return this.repoGroups.length > 0;
@@ -114,6 +127,7 @@ export struct ReviewPanel {
     if (this.mode === 'branch-range' && !this.baseRef.trim()) { this.error = '请输入对比分支'; return; }
     this.loading = true; this.error = ''; this.selectedPath = ''; this.selectedFileRepoKey = '';
     this.start = -1; this.end = -1;
+    this.wordDiffCache.clear();
     try {
       const extraRepos = await this.discoverMultiRepos();
       if (gen !== this.loadGeneration) return;
@@ -194,6 +208,7 @@ export struct ReviewPanel {
   private selectSource(index: number): void {
     this.sourceIndex = index; this.selectedPath = ''; this.selectedFileRepoKey = '';
     this.start = -1; this.end = -1;
+    this.wordDiffCache.clear();
     this.files = orderParsedDiffFilesForReview(parseDiff(this.sources[index].diff));
   }
 
@@ -598,7 +613,13 @@ export struct ReviewPanel {
       Text(row.kind === 'add' ? '+' : row.kind === 'del' ? '-' : ' ')
         .fontSize(this.codeFontSize).fontFamily('monospace').fontColor(this.rowColor(row)).width((this.codeFontSize + 2) + 'fp')
         .lineHeight((this.codeFontSize + 9) + 'fp')
-      CodeLine({ text: row.text, color: this.rowColor(row) }).layoutWeight(1).onClick(() => this.pickRow(hunk, index))
+      CodeLine({
+        text: row.text,
+        language: detectCodeLanguage(this.selectedPath),
+        wordSegments: this.rowWordSegments(hunk, index),
+        diffKind: row.kind,
+        color: this.rowColor(row)
+      }).layoutWeight(1).onClick(() => this.pickRow(hunk, index))
     }.width('100%').constraintSize({ minHeight: (this.codeFontSize + 15) + 'fp' }).alignItems(VerticalAlign.Top).backgroundColor(
       this.start >= 0 && this.end >= 0 && index >= Math.min(this.start, this.end) &&
         index <= Math.max(this.start, this.end) ? $r('app.color.info_bg') : this.rowBackground(row))

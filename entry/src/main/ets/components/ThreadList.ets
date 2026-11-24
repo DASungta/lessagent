@@ -319,7 +319,9 @@ export struct ThreadList {
         MenuItem({ content: '转为项目' }).enabled(threadCanArchive(thread))
           .onClick(() => this.onAction(thread, 'turn-into-project'))
       }
-      MenuItem({ content: '标记未读' }).onClick(() => this.onAction(thread, 'unread'))
+      if (!!thread.latestRunCompletedAt && threadCanArchive(thread)) {
+        MenuItem({ content: '标记未读' }).onClick(() => this.onAction(thread, 'unread'))
+      }
       if (this.caps(thread).autoSettleOptOut) {
         MenuItem({ content: thread.autoSettleDisabledAt ? '自动 Settle：跟随设置' : '自动 Settle：从不' })
           .onClick(() => this.onAction(thread, thread.autoSettleDisabledAt ? 'auto-settle-on' : 'auto-settle-off'))

@@ -1,5 +1,5 @@
 // Execute the actual NetworkKit adapter with a small fake kit; HAP build checks the SDK types.
-import { coreUrl, projectsUrl, composerUrl, r4Url, filesUrl, r5Url, floatingStatusUrl, markdownUrl, htmlRenderUrl, threadRepositoriesUrl, linkedThreadUrl, linkBatchUrl } from './load-core.mjs';
+import { coreUrl, projectsUrl, composerUrl, r4Url, filesUrl, r5Url, floatingStatusUrl, markdownUrl, htmlRenderUrl, threadRepositoriesUrl, linkedThreadUrl, linkBatchUrl, serverClockUrl, agentFeedbackUrl, filePreviewUrl, mcpAppUrl } from './load-core.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -217,6 +217,10 @@ async function setup(options = {}) {
     .replace("'../protocol/Markdown'", JSON.stringify(markdownUrl))
     .replace("'./MarkdownMediaCache'", JSON.stringify(markdownMediaCacheUrl))
     .replace("'../protocol/HtmlRender'", JSON.stringify(htmlRenderUrl))
+    .replace("'../protocol/ServerClock'", JSON.stringify(serverClockUrl))
+    .replace("'../protocol/AgentFeedback'", JSON.stringify(agentFeedbackUrl))
+    .replace("'../protocol/FilePreview'", JSON.stringify(filePreviewUrl))
+    .replace("'../protocol/McpApp'", JSON.stringify(mcpAppUrl))
     .replace("'../protocol/R5'", JSON.stringify(r5Url));
   const sourceWithR4 = source.replace("'../protocol/R4'", JSON.stringify(r4Url));
   const compiled = ts.transpileModule(sourceWithR4, { compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 } }).outputText;
@@ -338,6 +342,66 @@ test('cloud transport bypasses bearer exchange and keeps HTTP/RPC authorization 
     await client.watch(threadId);
     await new Promise(setImmediate);
     assert.ok(frames.some(frame => frame.payload?.type === 'thread.create'));
+  } finally { client.disconnect(); }
+});
+
+test('cloud connect approval pending preserves verification code, keeps retrying, and clears once approved', async () => {
+  const cloudMod = await import(cloud);
+  const { client } = await setup();
+  let attempts = 0;
+  const transport = {
+    environmentId: 'env', label: 'Studio Mac',
+    async endpoint() {
+      return { httpBaseUrl: 'https://managed.example.test', wsBaseUrl: 'wss://managed.example.test/',
+        providerKind: 'cloudflare_tunnel' };
+    },
+    async socketUrl() {
+      attempts++;
+      if (attempts === 1) {
+        throw new cloudMod.ConnectApprovalPendingError('Studio Mac', 'K7QM-2XFD', 'trace-1');
+      }
+      return 'wss://managed.example.test/ws?wsTicket=APPROVED&dpop=SYNTHETIC';
+    },
+    async requestJson() { return { authenticated: true, permissions: ['access:read'] }; },
+    async renew() { return Date.now() + 600000; },
+    async reset() {}
+  };
+  client.expectedEnvironmentId = 'env';
+  client.cloud = transport;
+  try {
+    await client.connect('https://ignored.example.test');
+    assert.equal(client.ready, false);
+    assert.equal(client.approvalPendingCode, 'K7QM-2XFD');
+    assert.equal(client.reconnectPending, true);
+    assert.match(client.status, /K7QM-2XFD/);
+
+    await client.connect('https://ignored.example.test');
+    assert.equal(client.ready, true);
+    assert.equal(client.approvalPendingCode, '');
+    assert.equal(client.approvalPendingHost, '');
+  } finally { client.disconnect(); }
+});
+
+test('cloud session expired stops automatic reconnect storm cleanly', async () => {
+  const cloudMod = await import(cloud);
+  const { client } = await setup();
+  const transport = {
+    environmentId: 'env', label: 'Studio Mac',
+    async endpoint() {
+      throw new cloudMod.CloudSessionExpiredError('T3 Connect 登录已过期，请重新登录');
+    },
+    async socketUrl() { throw new Error('unreachable'); },
+    async requestJson() { return {}; },
+    async renew() { return 0; },
+    async reset() {}
+  };
+  client.expectedEnvironmentId = 'env';
+  client.cloud = transport;
+  try {
+    await client.connect('https://ignored.example.test');
+    assert.equal(client.ready, false);
+    assert.equal(client.reconnectPending, false);
+    assert.match(client.status, /登录已过期/);
   } finally { client.disconnect(); }
 });
 

@@ -112,6 +112,7 @@ const MIME: Record<string, string> = {
   mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime', m4v: 'video/x-m4v',
   mp3: 'audio/mpeg', wav: 'audio/wav', m4a: 'audio/mp4', ogg: 'audio/ogg',
   pdf: 'application/pdf', zip: 'application/zip', gz: 'application/gzip',
+  csv: 'text/csv', tsv: 'text/tab-separated-values', rtf: 'application/rtf',
   md: 'text/markdown', markdown: 'text/markdown', json: 'application/json', jsonc: 'application/json',
   ts: 'text/typescript', tsx: 'text/typescript', js: 'text/javascript', jsx: 'text/javascript',
   css: 'text/css', html: 'text/html', htm: 'text/html', xml: 'text/xml', yaml: 'text/yaml', yml: 'text/yaml',
@@ -131,6 +132,12 @@ export function isImage(path: string): boolean { return mimeType(path).startsWit
 export function isVideo(path: string): boolean { return mimeType(path).startsWith('video/'); }
 export function isAudio(path: string): boolean { return mimeType(path).startsWith('audio/'); }
 export function isPdf(path: string): boolean { return mimeType(path) === 'application/pdf'; }
+export function isZip(path: string): boolean { return mimeType(path) === 'application/zip'; }
+export function isDelimited(path: string): boolean {
+  const mime = mimeType(path);
+  return mime === 'text/csv' || mime === 'text/tab-separated-values';
+}
+export function isRtf(path: string): boolean { return mimeType(path) === 'application/rtf'; }
 export function isHtml(path: string): boolean { return mimeType(path) === 'text/html'; }
 export function isMarkdown(path: string): boolean { return mimeType(path) === 'text/markdown'; }
 export function isAbsoluteFilePath(path: string): boolean {
@@ -217,5 +224,30 @@ export function fileIcon(kind: string, path: string): string {
   if (isImage(path)) return '▣';
   if (isVideo(path) || isAudio(path)) return '▶';
   if (isMarkdown(path)) return '¶';
+  if (isZip(path)) return '▤';
   return '·';
+}
+
+/**
+ * Builds an upstream `assets.createUrl` resource payload to download a text file in full
+ * past the 1 MB RPC preview limit (matches `useFullFileText.ts`).
+ */
+export function fullFileTextAssetResource(threadId: string, cwd: string, path: string): Object {
+  const trimmed = (path || '').trim();
+  if (!trimmed || trimmed.length > 1024 || /[\x00-\x1f]/.test(trimmed)) {
+    throw new Error('文件路径无效');
+  }
+  if (isAbsoluteFilePath(trimmed) || isHomeFilePath(trimmed)) {
+    if (!threadId.trim()) throw new Error('缺少会话标识');
+    return { _tag: 'media-file', threadId: threadId.trim(), path: trimmed, disposition: 'attachment' };
+  }
+  const relative = trimmed.replace(/\\/g, '/');
+  if (!cwd.trim() || relative.split('/').some((part: string) => part === '..' || part === '.')) {
+    throw new Error('工作区路径无效');
+  }
+  const absolute = joinPath(cwd, relative);
+  if (threadId.trim()) {
+    return { _tag: 'media-file', threadId: threadId.trim(), path: absolute, disposition: 'attachment' };
+  }
+  return { _tag: 'draft-workspace-file', cwd: cwd.trim(), path: relative };
 }

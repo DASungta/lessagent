@@ -5,8 +5,24 @@ import { AppButton } from './ui/AppButton';
 import { StatusBadge } from './ui/StatusBadge';
 import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { T3Client } from '../services/T3Client';
-import { ContentMatch, directEntries, fileLines, FileLine, isAudio, isHtml, isImage, isMarkdown, matchesContentSearchLine,
-  isPdf, isVideo, WorkspaceEntry, WorkspaceFile } from '../protocol/Files';
+import { ContentMatch, directEntries, fileLines, FileLine, isAudio, isDelimited, isHtml, isImage, isMarkdown,
+  matchesContentSearchLine, isPdf, isRtf, isVideo, isZip, WorkspaceEntry, WorkspaceFile } from '../protocol/Files';
+import {
+  DelimitedTable,
+  detectCodeLanguage,
+  hasOversizedMarkdownChunk,
+  listZipDirectory,
+  MarkdownChunk,
+  MOBILE_FULL_FILE_MAX_BYTES,
+  parseDelimitedPreview,
+  parseRtfToText,
+  parseZipEntries,
+  splitMarkdown,
+  withMarkdownDefinitions,
+  ZipBrowserItem,
+  ZipEntry
+} from '../protocol/FilePreview';
+import { AudioPlayerView } from './AudioPlayerView';
 import { canSaveToPhotoGallery, mediaFileName } from '../protocol/MediaTransfer';
 import { saveBytesToDocumentPicker, saveBytesToPhotoGallery, shareBytesWithSystemSheet } from '../services/MediaActions';
 import { HtmlRenderWebView } from './HtmlRenderView';
@@ -53,6 +69,16 @@ export struct FilesPanel {
   @State fileError: string = '';
   @State imageUrl: string = '';
   @State htmlMode: 'preview' | 'source' = 'preview';
+  @State richMode: 'preview' | 'source' = 'preview';
+  @State fullTextLoading: boolean = false;
+  @State markdownChunks: MarkdownChunk[] = [];
+  @State markdownDefinitions: string = '';
+  @State markdownFallbackSource: boolean = false;
+  @State delimitedTable: DelimitedTable | undefined = undefined;
+  @State rtfText: string = '';
+  @State zipEntries: ZipEntry[] = [];
+  @State zipDir: string = '';
+  @State zipError: string = '';
   @State selectionStart: number = -1;
   @State selectionEnd: number = -1;
   @State selectedMatch: ContentMatch | undefined = undefined;
@@ -191,6 +217,121 @@ export struct FilesPanel {
     finally { if (current()) this.loading = false; }
   }
 
+  private applyTextContents(
+    path: string,
+    contents: string,
+    truncated: boolean,
+    match: ContentMatch | undefined,
+    jumpLine: number,
+    query: string
+  ): void {
+    const lineCap = truncated ? 5000 : 50000;
+    this.lines = fileLines(contents, lineCap);
+    this.linesTruncated = truncated || this.lines.length >= lineCap;
+    const original = contents.replace(/\r\n?/g, '\n').split('\n', lineCap + 1);
+    if (truncated && original.length <= lineCap) original.pop();
+    this.sourceLines = original.slice(0, lineCap);
+    this.markdownChunks = [];
+    this.markdownDefinitions = '';
+    this.markdownFallbackSource = false;
+    this.delimitedTable = undefined;
+    this.rtfText = '';
+    if (isMarkdown(path)) {
+      if (contents.length > 8192) {
+        const split = splitMarkdown(contents);
+        this.markdownChunks = split.chunks;
+        this.markdownDefinitions = split.definitions;
+        this.markdownFallbackSource = hasOversizedMarkdownChunk(split);
+      } else {
+        this.markdownChunks = [{ text: contents, lines: this.lines.length }];
+      }
+    } else if (isDelimited(path)) {
+      this.delimitedTable = parseDelimitedPreview(contents, path);
+    } else if (isRtf(path)) {
+      this.rtfText = parseRtfToText(contents);
+    }
+    this.matchNotice = '';
+    if (match) {
+      const line = match.lineNumber;
+      if (!Number.isInteger(line) || line < 1 || line > this.sourceLines.length) {
+        this.matchNotice = '搜索命中行不在当前预览中。';
+      } else if (!matchesContentSearchLine(this.sourceLines[line - 1], match.lineContent, query)) {
+        this.matchNotice = '当前预览与搜索命中行不一致，请重新搜索。';
+      } else {
+        if (this.lines[line - 1].text !== this.sourceLines[line - 1].replace(/\t/g, '    ')) {
+          this.matchNotice = '预览只显示这行的开头；复制选区可保留整行原文。';
+        }
+        this.previewStartIndex = line - 1;
+        this.selectionStart = this.previewStartIndex;
+        this.selectionEnd = this.previewStartIndex;
+      }
+    } else if (jumpLine > 0 && this.lines.length > 0) {
+      const clamped = Math.max(0, Math.min(jumpLine - 1, this.lines.length - 1));
+      this.previewStartIndex = clamped;
+      this.selectionStart = clamped;
+      this.selectionEnd = clamped;
+    }
+  }
+
+  private async loadFullTextInBackground(
+    connection: T3Client,
+    path: string,
+    current: () => boolean,
+    match: ContentMatch | undefined,
+    jumpLine: number,
+    query: string
+  ): Promise<void> {
+    this.fullTextLoading = true;
+    try {
+      const fullContents = await connection.downloadFullWorkspaceText(this.cwd, path, MOBILE_FULL_FILE_MAX_BYTES);
+      if (!current() || fullContents === undefined) return;
+      const prev = this.file;
+      this.file = {
+        relativePath: prev ? prev.relativePath : path,
+        contents: fullContents,
+        truncated: false,
+        byteLength: prev ? prev.byteLength : fullContents.length,
+        exists: true
+      };
+      this.applyTextContents(path, fullContents, false, match, jumpLine, query);
+    } catch (_) {
+      // Keep the already loaded RPC preview slice on failure.
+    } finally {
+      if (current()) this.fullTextLoading = false;
+    }
+  }
+
+  private fileBadgeLabel(path: string): string {
+    if (isImage(path)) return '图片';
+    if (isVideo(path)) return '视频';
+    if (isAudio(path)) return '音频';
+    if (isPdf(path)) return 'PDF';
+    if (isHtml(path)) return 'HTML';
+    if (isMarkdown(path)) return 'MD';
+    if (isZip(path)) return 'ZIP';
+    if (isDelimited(path)) return path.toLowerCase().endsWith('.tsv') ? 'TSV' : 'CSV';
+    if (isRtf(path)) return 'RTF';
+    return '文件';
+  }
+
+  private formatZipBytes(size: number): string {
+    if (!Number.isFinite(size) || size <= 0) return '0 B';
+    if (size < 1024) return size + ' B';
+    if (size < 1024 * 1024) return (size / 1024).toFixed(1) + ' KB';
+    return (size / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  private parentZipDir(): string {
+    const parts = this.zipDir.split('/').filter((part: string) => part);
+    parts.pop();
+    return parts.join('/');
+  }
+
+  private hasRichToggle(): boolean {
+    if (!this.selectedPath || !this.file || !!this.selectedMatch) return false;
+    return isMarkdown(this.selectedPath) || isDelimited(this.selectedPath) || isRtf(this.selectedPath);
+  }
+
   private async openFile(path: string, match?: ContentMatch, preferredHtmlMode?: 'preview' | 'source',
     jumpLine: number = 0): Promise<void> {
     const connection = this.connection;
@@ -203,41 +344,33 @@ export struct FilesPanel {
     this.fileCommentOpen = false; this.fileComment = '';
     this.fileError = ''; this.imageUrl = '';
     this.htmlMode = useHtmlPreview ? 'preview' : 'source';
+    this.richMode = jumpLine > 0 || !!match ? 'source' : 'preview';
+    this.fullTextLoading = false;
+    this.markdownChunks = []; this.markdownDefinitions = ''; this.markdownFallbackSource = false;
+    this.delimitedTable = undefined; this.rtfText = '';
+    this.zipEntries = []; this.zipDir = ''; this.zipError = '';
     this.selectedMatch = match; this.matchNotice = ''; this.previewStartIndex = 0;
     this.selectionStart = -1; this.selectionEnd = -1;
     this.loading = true;
     try {
-      if (isImage(path) || isVideo(path) || isAudio(path) || isPdf(path) || useHtmlPreview) {
+      if (isZip(path)) {
+        const bytes = await connection.downloadWorkspaceFile(this.cwd, path);
+        if (!current()) return;
+        if (bytes.byteLength > 50 * 1024 * 1024) {
+          this.zipError = 'ZIP 压缩包超过 50 MB，暂不支持直接展开预览，可保存到文件查看。';
+        } else {
+          this.zipEntries = parseZipEntries(bytes);
+        }
+      } else if (isImage(path) || isVideo(path) || isAudio(path) || isPdf(path) || useHtmlPreview) {
         const url = await connection.filePreviewUrl(this.cwd, path, true);
         if (current()) this.imageUrl = url;
       } else {
         const file = await connection.readWorkspaceFile(this.cwd, path);
         if (!current()) return;
         this.file = file;
-        this.lines = fileLines(file.contents, 5000);
-        this.linesTruncated = file.truncated || this.lines.length >= 5000;
-        const original = file.contents.replace(/\r\n?/g, '\n').split('\n', 5001);
-        // The last segment of a server-truncated preview may end mid-line.
-        if (file.truncated && original.length <= 5000) original.pop();
-        this.sourceLines = original.slice(0, 5000);
-        if (match) {
-          const line = match.lineNumber;
-          if (!Number.isInteger(line) || line < 1 || line > this.sourceLines.length) {
-            this.matchNotice = '搜索命中行不在当前预览中。';
-          } else if (!matchesContentSearchLine(this.sourceLines[line - 1], match.lineContent, query)) {
-            this.matchNotice = '当前预览与搜索命中行不一致，请重新搜索。';
-          } else {
-            if (this.lines[line - 1].text !== this.sourceLines[line - 1].replace(/\t/g, '    ')) {
-              this.matchNotice = '预览只显示这行的开头；复制选区可保留整行原文。';
-            }
-            this.previewStartIndex = line - 1;
-            this.selectionStart = this.previewStartIndex; this.selectionEnd = this.previewStartIndex;
-          }
-        } else if (jumpLine > 0 && this.lines.length > 0) {
-          const clamped = Math.max(0, Math.min(jumpLine - 1, this.lines.length - 1));
-          this.previewStartIndex = clamped;
-          this.selectionStart = clamped;
-          this.selectionEnd = clamped;
+        this.applyTextContents(path, file.contents, file.truncated, match, jumpLine, query);
+        if (file.truncated && file.byteLength > 0 && file.byteLength <= MOBILE_FULL_FILE_MAX_BYTES) {
+          void this.loadFullTextInBackground(connection, path, current, match, jumpLine, query);
         }
       }
     } catch (reason) { if (current()) this.fileError = (reason as Error).message; }
@@ -249,6 +382,10 @@ export struct FilesPanel {
     this.selectedPath = ''; this.file = undefined; this.lines = []; this.linesTruncated = false;
     this.sourceLines = [];
     this.imageUrl = ''; this.fileError = ''; this.fileCommentOpen = false; this.fileComment = '';
+    this.fullTextLoading = false;
+    this.markdownChunks = []; this.markdownDefinitions = ''; this.markdownFallbackSource = false;
+    this.delimitedTable = undefined; this.rtfText = '';
+    this.zipEntries = []; this.zipDir = ''; this.zipError = '';
     this.selectionStart = -1; this.selectionEnd = -1; this.selectedMatch = undefined;
     this.matchNotice = ''; this.previewStartIndex = 0;
   }
@@ -544,7 +681,7 @@ export struct FilesPanel {
                       Image($r('app.media.ui_folder')).width(18).height(18).accessibilityLevel('no')
                     } else {
                       StatusBadge({
-                        text: isImage(entry.path) ? '图片' : isVideo(entry.path) ? '视频' : isAudio(entry.path) ? '音频' : isPdf(entry.path) ? 'PDF' : isHtml(entry.path) ? 'HTML' : isMarkdown(entry.path) ? 'MD' : '文件',
+                        text: this.fileBadgeLabel(entry.path),
                         tone: 'neutral'
                       })
                     }
@@ -581,7 +718,7 @@ export struct FilesPanel {
                       Image($r('app.media.ui_folder')).width(18).height(18).accessibilityLevel('no')
                     } else {
                       StatusBadge({
-                        text: isImage(entry.path) ? '图片' : isVideo(entry.path) ? '视频' : isAudio(entry.path) ? '音频' : isPdf(entry.path) ? 'PDF' : isHtml(entry.path) ? 'HTML' : isMarkdown(entry.path) ? 'MD' : '文件',
+                        text: this.fileBadgeLabel(entry.path),
                         tone: 'neutral'
                       })
                     }
@@ -689,6 +826,87 @@ export struct FilesPanel {
             })
           }.width('100%').padding(14).alignItems(HorizontalAlign.Start)
         }
+      } else if (isZip(this.selectedPath)) {
+        Column({ space: Space.xs }) {
+          if (this.zipError) {
+            GroupCard() {
+              Text(this.zipError).fontSize(FontSize.callout).fontColor($r('app.color.danger')).width('100%').padding(14)
+            }
+          } else {
+            Row({ space: Space.xs }) {
+              Text(this.zipDir ? '/' + this.zipDir : '压缩包根目录')
+                .fontSize(FontSize.caption).fontColor($r('app.color.muted')).layoutWeight(1)
+                .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+              Text('共 ' + this.zipEntries.length + ' 项')
+                .fontSize(FontSize.caption).fontColor($r('app.color.muted'))
+            }.width('100%').padding({ left: Space.xxs, right: Space.xxs })
+            List({ space: 0 }) {
+              if (this.zipDir) {
+                ListItem() {
+                  Row({ space: Space.xs }) {
+                    Image($r('app.media.ui_down')).width(18).height(18).rotate({ angle: 180 }).opacity(0.75).accessibilityLevel('no')
+                    Text('上一级').fontSize(FontSize.body).fontWeight(Weight.medium).fontColor($r('app.color.ink')).layoutWeight(1)
+                  }.constraintSize({ minHeight: Sizes.formRowMin }).width('100%').padding({ left: 14, right: 14 })
+                    .onClick(() => { this.zipDir = this.parentZipDir(); })
+                }
+              }
+              ForEach(listZipDirectory(this.zipEntries, this.zipDir), (item: ZipBrowserItem) => {
+                ListItem() {
+                  Row({ space: Space.xs }) {
+                    Row() {
+                      if (item.isDirectory) {
+                        Image($r('app.media.ui_folder')).width(18).height(18).accessibilityLevel('no')
+                      } else {
+                        StatusBadge({ text: this.fileBadgeLabel(item.path), tone: 'neutral' })
+                      }
+                    }.width(42).justifyContent(FlexAlign.Center).flexShrink(0)
+                    Text(item.name).fontSize(FontSize.body).fontColor($r('app.color.ink')).layoutWeight(1)
+                      .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+                    Text(item.isDirectory ? (item.childCount + ' 项') : this.formatZipBytes(item.sizeBytes))
+                      .fontSize(FontSize.caption).fontColor($r('app.color.muted'))
+                    if (item.isDirectory) {
+                      Image($r('app.media.ui_chevron_right')).width(Sizes.chevron).height(Sizes.chevron).opacity(0.6).accessibilityLevel('no')
+                    }
+                  }.constraintSize({ minHeight: Sizes.formRowMin }).width('100%')
+                    .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                    .onClick(() => {
+                      if (item.isDirectory) this.zipDir = item.path;
+                      else this.onCopy(item.path);
+                    })
+                }
+              }, (item: ZipBrowserItem) => (item.isDirectory ? 'd:' : 'f:') + item.path)
+            }
+            .width('100%').layoutWeight(1)
+            .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
+            .divider({ strokeWidth: Sizes.hairline, color: $r('app.color.separator') })
+          }
+          this.mediaActionBar()
+        }.width('100%').layoutWeight(1)
+      } else if (this.imageUrl && isAudio(this.selectedPath)) {
+        Column({ space: Space.sm }) {
+          AudioPlayerView({
+            uri: this.imageUrl,
+            title: this.selectedPath.split('/').pop() || this.selectedPath
+          })
+          Blank().layoutWeight(1)
+          this.mediaActionBar()
+        }.width('100%').layoutWeight(1)
+      } else if (this.imageUrl && isPdf(this.selectedPath)) {
+        Column({ space: Space.sm }) {
+          Column() {
+            HtmlRenderWebView({
+              uri: this.imageUrl,
+              title: this.selectedPath.split('/').pop() || 'PDF',
+              nested: false,
+              isHtmlRender: false,
+              onOpenExternalLink: this.onOpenExternalLink,
+              onLoadError: () => { this.fileError = 'PDF 在线预览不可用，请点击下方保存到文件或系统分享查看'; }
+            })
+          }
+          .width('100%').layoutWeight(1)
+          .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
+          this.mediaActionBar()
+        }.width('100%').layoutWeight(1)
       } else if (this.imageUrl && isHtml(this.selectedPath) && this.htmlMode === 'preview') {
         Column() {
           HtmlRenderWebView({
@@ -719,37 +937,132 @@ export struct FilesPanel {
           this.mediaActionBar()
         }.width('100%').layoutWeight(1)
       } else if (this.imageUrl) {
-        GroupCard() {
-          Column({ space: Space.xs }) {
-            Text('此文件类型使用系统打开/分享').fontSize(FontSize.body).fontColor($r('app.color.ink'))
-            Text(this.selectedPath).fontSize(FontSize.caption).fontColor($r('app.color.muted'))
-          }.padding(14).width('100%').alignItems(HorizontalAlign.Start)
-        }
+        Column({ space: Space.sm }) {
+          GroupCard() {
+            Column({ space: Space.xs }) {
+              Text('此文件类型使用系统打开/分享').fontSize(FontSize.body).fontColor($r('app.color.ink'))
+              Text(this.selectedPath).fontSize(FontSize.caption).fontColor($r('app.color.muted'))
+            }.padding(14).width('100%').alignItems(HorizontalAlign.Start)
+          }
+          Blank().layoutWeight(1)
+          this.mediaActionBar()
+        }.width('100%').layoutWeight(1)
       } else if (this.file) {
-        if (this.linesTruncated) {
-          Text('文件较大，仅显示前 5000 行或服务端预览片段').fontSize(FontSize.caption).fontColor($r('app.color.danger'))
+        if (this.hasRichToggle()) {
+          Row({ space: 2 }) {
+            Button('预览')
+              .fontSize(FontSize.callout)
+              .fontWeight(this.richMode === 'preview' ? Weight.medium : Weight.regular)
+              .fontColor(this.richMode === 'preview' ? $r('app.color.ink') : $r('app.color.muted'))
+              .backgroundColor(this.richMode === 'preview' ? $r('app.color.card') : Color.Transparent)
+              .borderRadius(7).layoutWeight(1).constraintSize({ minHeight: 34 })
+              .onClick(() => { this.richMode = 'preview'; })
+            Button('源码')
+              .fontSize(FontSize.callout)
+              .fontWeight(this.richMode === 'source' ? Weight.medium : Weight.regular)
+              .fontColor(this.richMode === 'source' ? $r('app.color.ink') : $r('app.color.muted'))
+              .backgroundColor(this.richMode === 'source' ? $r('app.color.card') : Color.Transparent)
+              .borderRadius(7).layoutWeight(1).constraintSize({ minHeight: 34 })
+              .onClick(() => { this.richMode = 'source'; })
+          }.width('100%').padding(2).backgroundColor($r('app.color.group'))
+            .border({ width: Sizes.hairline, color: $r('app.color.border') }).borderRadius(9)
+        }
+        if (this.fullTextLoading) {
+          Row({ space: Space.xs }) {
+            LoadingProgress().width(14).height(14).color($r('app.color.primary'))
+            Text('正在加载完整文件内容…').fontSize(FontSize.caption).fontColor($r('app.color.muted'))
+          }.width('100%').padding({ left: Space.xxs, right: Space.xxs }).alignItems(VerticalAlign.Center)
+        } else if (this.linesTruncated) {
+          Text('文件较大，仅显示前 ' + this.lines.length + ' 行或服务端预览片段').fontSize(FontSize.caption).fontColor($r('app.color.danger'))
             .width('100%').padding({ left: Space.xxs, right: Space.xxs })
         }
         if (this.matchNotice) {
           Text(this.matchNotice).fontSize(FontSize.callout).fontColor($r('app.color.muted')).width('100%')
             .padding({ left: Space.xxs, right: Space.xxs })
         }
-        if (isMarkdown(this.selectedPath) && !this.selectedMatch) {
-          if (this.selectionStart >= 0) { this.selectionBar() }
+        if (isDelimited(this.selectedPath) && this.richMode === 'preview' && !this.selectedMatch && this.delimitedTable) {
+          Column({ space: Space.xs }) {
+            Text('共 ' + this.delimitedTable.totalRows + ' 行 · ' + this.delimitedTable.headers.length + ' 列' +
+              (this.delimitedTable.truncated ? '（仅预览前 ' + this.delimitedTable.rows.length + ' 行）' : ''))
+              .fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%').padding({ left: Space.xxs, right: Space.xxs })
+            Scroll() {
+              Scroll() {
+                Column({ space: 0 }) {
+                  Row({ space: 0 }) {
+                    ForEach(this.delimitedTable.headers, (header: string, colIdx: number) => {
+                      Text(header || ('列 ' + (colIdx + 1)))
+                        .fontSize(FontSize.caption).fontWeight(Weight.semibold).fontColor($r('app.color.ink'))
+                        .width(140).padding({ left: 10, right: 10, top: 8, bottom: 8 })
+                        .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
+                        .border({ width: { right: Sizes.hairline, bottom: Sizes.hairline }, color: $r('app.color.border') })
+                    }, (header: string, colIdx: number) => colIdx + ':' + header)
+                  }.backgroundColor($r('app.color.group'))
+                  ForEach(this.delimitedTable.rows, (row: string[], rowIdx: number) => {
+                    Row({ space: 0 }) {
+                      ForEach(row, (cell: string, colIdx: number) => {
+                        Text(cell)
+                          .fontSize(FontSize.caption).fontColor($r('app.color.ink')).copyOption(CopyOptions.InApp)
+                          .width(140).padding({ left: 10, right: 10, top: 7, bottom: 7 })
+                          .maxLines(3).textOverflow({ overflow: TextOverflow.Ellipsis })
+                          .border({ width: { right: Sizes.hairline, bottom: Sizes.hairline }, color: $r('app.color.separator') })
+                      }, (_cell: string, colIdx: number) => rowIdx + ':' + colIdx)
+                    }.backgroundColor(rowIdx % 2 === 0 ? $r('app.color.card') : $r('app.color.group'))
+                  }, (_row: string[], rowIdx: number) => String(rowIdx))
+                }.alignItems(HorizontalAlign.Start)
+              }.scrollable(ScrollDirection.Horizontal).align(Alignment.TopStart)
+            }.scrollable(ScrollDirection.Vertical).align(Alignment.TopStart).width('100%').layoutWeight(1)
+              .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
+          }.width('100%').layoutWeight(1)
+        } else if (isRtf(this.selectedPath) && this.richMode === 'preview' && !this.selectedMatch) {
           Scroll() {
-            Column() {
-              MarkdownView({ markdown: this.file.contents, selectable: true,
-                mediaScopeKey: this.cacheScope + ':' + this.selectedPath + ':' + (this.connection ? this.connection.generationValue() : 0),
-                mediaReady: !!this.connection && this.connection.ready,
-                onCopy: this.onCopy,
-                onOpenLink: (url: string) => { this.onOpenLink(url); },
-                onOpenImage: (path: string) => { void this.openFile(resolveRelativeMarkdownPath(this.selectedPath, path)); },
-                resolveMedia: this.connection ? (source: string, refresh: boolean): Promise<ResolvedMarkdownMedia> =>
-                  this.connection!.markdownMediaUrl(resolveRelativeMarkdownPath(this.selectedPath, source), this.cwd, refresh) : undefined })
-            }.padding(14)
+            Text(this.rtfText || '（空 RTF 文档）')
+              .fontSize(FontSize.body).lineHeight(LineHeight.body).fontColor($r('app.color.ink'))
+              .copyOption(CopyOptions.InApp).width('100%').padding(14)
           }.width('100%').layoutWeight(1).align(Alignment.TopStart)
             .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
+        } else if (isMarkdown(this.selectedPath) && this.richMode === 'preview' && !this.selectedMatch && !this.markdownFallbackSource) {
+          if (this.selectionStart >= 0) { this.selectionBar() }
+          if (this.markdownChunks.length > 1) {
+            List({ space: 0 }) {
+              ForEach(this.markdownChunks, (chunk: MarkdownChunk, idx: number) => {
+                ListItem() {
+                  Column() {
+                    MarkdownView({
+                      markdown: withMarkdownDefinitions(chunk.text, this.markdownDefinitions),
+                      selectable: true,
+                      mediaScopeKey: this.cacheScope + ':' + this.selectedPath + ':' + (this.connection ? this.connection.generationValue() : 0) + ':' + idx,
+                      mediaReady: !!this.connection && this.connection.ready,
+                      onCopy: this.onCopy,
+                      onOpenLink: (url: string) => { this.onOpenLink(url); },
+                      onOpenImage: (path: string) => { void this.openFile(resolveRelativeMarkdownPath(this.selectedPath, path)); },
+                      resolveMedia: this.connection ? (source: string, refresh: boolean): Promise<ResolvedMarkdownMedia> =>
+                        this.connection!.markdownMediaUrl(resolveRelativeMarkdownPath(this.selectedPath, source), this.cwd, refresh) : undefined
+                    })
+                  }.width('100%').padding({ left: 14, right: 14, top: idx === 0 ? 14 : 4, bottom: idx === this.markdownChunks.length - 1 ? 14 : 4 })
+                }
+              }, (_chunk: MarkdownChunk, idx: number) => this.selectedPath + ':md:' + idx + ':' + this.markdownChunks.length)
+            }.width('100%').layoutWeight(1)
+              .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
+          } else {
+            Scroll() {
+              Column() {
+                MarkdownView({ markdown: this.file.contents, selectable: true,
+                  mediaScopeKey: this.cacheScope + ':' + this.selectedPath + ':' + (this.connection ? this.connection.generationValue() : 0),
+                  mediaReady: !!this.connection && this.connection.ready,
+                  onCopy: this.onCopy,
+                  onOpenLink: (url: string) => { this.onOpenLink(url); },
+                  onOpenImage: (path: string) => { void this.openFile(resolveRelativeMarkdownPath(this.selectedPath, path)); },
+                  resolveMedia: this.connection ? (source: string, refresh: boolean): Promise<ResolvedMarkdownMedia> =>
+                    this.connection!.markdownMediaUrl(resolveRelativeMarkdownPath(this.selectedPath, source), this.cwd, refresh) : undefined })
+              }.padding(14)
+            }.width('100%').layoutWeight(1).align(Alignment.TopStart)
+              .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
+          }
         } else {
+          if (this.markdownFallbackSource && isMarkdown(this.selectedPath) && this.richMode === 'preview') {
+            Text('该 Markdown 包含超大代码块，已自动切换为源码视图以保证流畅滚动。')
+              .fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%').padding({ left: Space.xxs, right: Space.xxs })
+          }
           if (this.selectionStart >= 0) { this.selectionBar() }
           List({ space: 0, initialIndex: this.previewStartIndex }) {
             ForEach(this.lines, (line: FileLine, index: number) => {
@@ -758,7 +1071,7 @@ export struct FilesPanel {
                   DiffLineNumber({ line: line.number, lastLine: this.lines.length,
                     active: index >= Math.min(this.selectionStart < 0 ? -1 : this.selectionStart, this.selectionEnd < 0 ? -1 : this.selectionEnd) &&
                       this.selectionStart >= 0 && index <= Math.max(this.selectionStart, this.selectionEnd) })
-                  CodeLine({ text: line.text }).layoutWeight(1)
+                  CodeLine({ text: line.text, language: detectCodeLanguage(this.selectedPath) }).layoutWeight(1)
                 }.width('100%').constraintSize({ minHeight: (this.codeFontSize + 15) + 'fp' })
                   .alignItems(VerticalAlign.Top)
                   .backgroundColor(this.selectionStart >= 0 &&

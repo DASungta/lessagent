@@ -4,7 +4,8 @@ import { FormRow } from './ui/FormRow';
 import { AppButton } from './ui/AppButton';
 import { FontSize, LineHeight, Sizes, Space } from '../common/Theme';
 import { EnvironmentEntry } from '../protocol/Environment';
-import { LabsField, LabsSettingKey, LabsSettings, readLabsSettings, writeLabsSetting } from '../protocol/LabsSettings';
+import { AgentFeedbackMode } from '../protocol/AgentFeedback';
+import { LabsField, LabsSettingKey, LabsSettings, readLabsSettings, writeAgentFeedbackMode, writeLabsSetting } from '../protocol/LabsSettings';
 import { T3Client } from '../services/T3Client';
 
 @Component
@@ -110,6 +111,36 @@ export struct LabsSettingsPanel {
       if (this.epoch === epoch) this.busy = false;
     }
   }
+  private canEditFeedback(): boolean {
+    const entry = this.target();
+    const connection = entry ? this.connectionFor(entry.localId) : undefined;
+    const field = this.snapshot?.agentFeedback;
+    return !this.busy && !this.needsRefresh && !!entry && !!connection?.ready &&
+      entry.environmentId === this.snapshot?.environmentId &&
+      connection.canScope('settings:write') !== false && field?.value !== undefined && !field.locked;
+  }
+  private async chooseFeedbackMode(mode: AgentFeedbackMode): Promise<void> {
+    const entry = this.target();
+    const connection = entry ? this.connectionFor(entry.localId) : undefined;
+    if (!entry || !connection || !this.canEditFeedback()) return;
+    const epoch = ++this.epoch;
+    this.busy = true;
+    this.message = '';
+    try {
+      const result = await writeAgentFeedbackMode(connection, entry.environmentId, mode);
+      if (this.current(entry, connection, epoch)) {
+        this.snapshot = result;
+        this.message = '已保存并核对服务端结果';
+      }
+    } catch (_) {
+      if (this.epoch === epoch) {
+        this.needsRefresh = true;
+        this.message = '修改未确认，请刷新核对';
+      }
+    } finally {
+      if (this.epoch === epoch) this.busy = false;
+    }
+  }
 
   @Builder
   setting(title: string, detail: string, key: LabsSettingKey, isFirst: boolean = false) {
@@ -164,16 +195,56 @@ export struct LabsSettingsPanel {
               Text('当前连接仅可查看').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
                 .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs }).width('100%')
             }
-            if (this.snapshot.linkedEnvironmentsEnabled.value === undefined && this.snapshot.fastWorktreeCheckout.value === undefined) {
+            if (this.snapshot.linkedEnvironmentsEnabled.value === undefined &&
+              this.snapshot.fastWorktreeCheckout.value === undefined &&
+              this.snapshot.agentFeedback.value === undefined) {
               GroupCard() {
                 FormRow({ kind: 'value', label: '当前环境未提供实验功能', value: '', valueMuted: true, chevron: false, isFirst: true })
               }
             } else {
-              GroupCard({ title: '实验功能（Beta）' }) {
-                this.setting('关联环境（Beta）', '允许代理通过已建立的关联在不同环境工作。关闭后，已运行的任务可继续完成。',
-                  'linkedEnvironmentsEnabled', true)
-                this.setting('快速检出工作树（Beta）', 'Mac 使用缓存加快工作树检出。关闭后服务端清除检出缓存。',
-                  'fastWorktreeCheckout', this.field('linkedEnvironmentsEnabled')?.value === undefined)
+              if (this.snapshot.linkedEnvironmentsEnabled.value !== undefined ||
+                this.snapshot.fastWorktreeCheckout.value !== undefined) {
+                GroupCard({ title: '实验功能（Beta）' }) {
+                  this.setting('关联环境（Beta）', '允许代理通过已建立的关联在不同环境工作。关闭后，已运行的任务可继续完成。',
+                    'linkedEnvironmentsEnabled', true)
+                  this.setting('快速检出工作树（Beta）', 'Mac 使用缓存加快工作树检出。关闭后服务端清除检出缓存。',
+                    'fastWorktreeCheckout', this.field('linkedEnvironmentsEnabled')?.value === undefined)
+                }
+              }
+              if (this.snapshot.agentFeedback.value !== undefined) {
+                GroupCard({
+                  title: this.snapshot.agentFeedback.locked
+                    ? 'Agent 反馈（Beta · ' + this.snapshot.managedBy + ' 管理）'
+                    : 'Agent 反馈（Beta）'
+                }) {
+                  FormRow({
+                    kind: 'choice',
+                    label: '关闭',
+                    subtitle: 'Agent 不会向 T3 团队发送任何问题反馈。',
+                    checked: this.snapshot.agentFeedback.value === 'off',
+                    disabled: !this.canEditFeedback(),
+                    isFirst: true,
+                    onTap: () => { void this.chooseFeedbackMode('off'); }
+                  })
+                  FormRow({
+                    kind: 'choice',
+                    label: '仅我主动要求时',
+                    subtitle: '要求反馈时在会话中展示脱敏报告卡片，经您确认后才发送。',
+                    checked: this.snapshot.agentFeedback.value === 'on-request',
+                    disabled: !this.canEditFeedback(),
+                    isFirst: false,
+                    onTap: () => { void this.chooseFeedbackMode('on-request'); }
+                  })
+                  FormRow({
+                    kind: 'choice',
+                    label: '自动上报',
+                    subtitle: 'Agent 遇到 T3 Code 问题时也会自动发起上报。',
+                    checked: this.snapshot.agentFeedback.value === 'auto',
+                    disabled: !this.canEditFeedback(),
+                    isFirst: false,
+                    onTap: () => { void this.chooseFeedbackMode('auto'); }
+                  })
+                }
               }
             }
           }

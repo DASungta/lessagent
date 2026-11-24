@@ -1,6 +1,7 @@
 import { picker, fileIo, fileUri } from '@kit.CoreFileKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { image } from '@kit.ImageKit';
+import { boundAttachmentFileName } from '../protocol/R4';
 import { client, T3Client } from './T3Client';
 
 interface QueuedAttachment {
@@ -75,12 +76,12 @@ export class AttachmentPicker {
   }
   private fileName(uri: string, fallback: string): string {
     const name = new fileUri.FileUri(uri).name || '';
-    return name.trim() || fallback;
+    return boundAttachmentFileName(name, fallback);
   }
   private jpegName(name: string): string {
     const dot = name.lastIndexOf('.');
     const stem = dot > 0 ? name.slice(0, dot) : name;
-    return (stem || 'photo') + '.jpg';
+    return boundAttachmentFileName((stem || 'photo') + '.jpg', 'photo.jpg');
   }
   private mime(name: string): string {
     const lower = name.toLowerCase();

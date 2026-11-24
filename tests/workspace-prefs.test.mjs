@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { DEFAULT_TERMINAL_FONT_SIZE } from '../entry/src/main/ets/protocol/Terminal.ts';
+import { composerUrl, r5Url } from './load-core.mjs';
 import { createRequire } from 'node:module';
 const ts = createRequire(import.meta.url)((process.env.DEVECO_HOME || '/Applications/DevEco-Studio.app/Contents') +
   '/sdk/default/openharmony/ets/build-tools/ets-loader/node_modules/typescript');
@@ -10,6 +11,8 @@ globalThis.AppStorage = { setOrCreate: (key, value) => published.set(key, value)
 const source = (await readFile(new URL('../entry/src/main/ets/services/WorkspacePrefs.ets', import.meta.url), 'utf8'))
   .replace("import { fileIo } from '@kit.CoreFileKit';", 'const fileIo = {};')
   .replace("import { BusinessError } from '@kit.BasicServicesKit';", '')
+  .replace("'../protocol/Composer'", JSON.stringify(composerUrl))
+  .replace("'../protocol/R5'", JSON.stringify(r5Url))
   .replace("'../protocol/Terminal'", JSON.stringify(new URL('../entry/src/main/ets/protocol/Terminal.ts', import.meta.url).href));
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 } }).outputText;
 const P = await import('data:text/javascript;base64,' + Buffer.from(compiled).toString('base64'));
@@ -22,7 +25,7 @@ test('R3 preferences validate grouping, sort, filter bounds and default omitted 
     projectFilterGroupingMode: 'repository_path',
     threadSortOrder: 'created_at', archivedSortOrder: 'oldest', workingShelfEnabled: true,
     useLastProjectForNewThreads: true, lastThreadProject: undefined,
-    workingShelfExpanded: false, snoozedShelfExpanded: false, settledShelfExpanded: false, followUpBehavior: 'steer', terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE, codeFontSize: null, codeWordBreak: false, pullRequestHideTestFiles: false, sideThreadOpenTarget: 'panel'
+    workingShelfExpanded: false, snoozedShelfExpanded: false, settledShelfExpanded: false, followUpBehavior: 'steer', terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE, codeFontSize: null, codeWordBreak: false, pullRequestHideTestFiles: false, sideThreadOpenTarget: 'panel', modelFavorites: [], pullRequestSavedViews: []
   });
   assert.throws(() => P.workspacePreferences({ schemaVersion: 2 }), /版本/);
   assert.throws(() => P.workspacePreferences({ schemaVersion: 1, projectGroupingMode: 'bad',

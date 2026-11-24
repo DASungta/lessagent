@@ -404,6 +404,17 @@ export interface ChatMessage {
   timestamp?: string;
 }
 
+// A run that already started received its queued input even if recovery later cancelled it.
+export function isHeldRun(run: Record<string, Object>): boolean {
+  const status = typeof run.status === 'string' ? run.status : '';
+  if (status === 'queued') return true;
+  if (status === 'cancelled') {
+    const startedAt = run.startedAt;
+    return startedAt === undefined || startedAt === null || startedAt === '';
+  }
+  return false;
+}
+
 export class ThreadState {
   threadId: string;
   cursor: number = -1;
@@ -476,7 +487,7 @@ export class ThreadState {
         for (const item of this.items) this.upsertItemMessage(item);
       } else {
         for (const msg of this.messageRecords) {
-          if (!this.isHiddenContinuationMessage(msg)) this.upsert(msg);
+          if (!this.isHiddenContinuationMessage(msg) && !this.isHeldRunId(msg.runId)) this.upsert(msg);
         }
       }
       this.historyCursor = typeof item.historyCursor === 'string' ? item.historyCursor : '';
@@ -496,9 +507,7 @@ export class ThreadState {
     if (type === 'message.updated') {
       const payload = record(event.payload);
       this.merge(this.messageRecords, payload);
-      const isQueued = typeof payload.runId === 'string' &&
-        this.runs.some((r: Record<string, Object>) => r.id === payload.runId && r.status === 'queued');
-      if (!this.isHiddenContinuationMessage(payload) && !isQueued) {
+      if (!this.isHiddenContinuationMessage(payload) && !this.isHeldRunId(payload.runId)) {
         this.upsert(payload);
       }
     }
@@ -515,6 +524,17 @@ export class ThreadState {
     else if (type === 'run.created' || type === 'run.updated') {
       const run = record(event.payload);
       this.merge(this.runs, run);
+      if (!isHeldRun(run) && typeof run.id === 'string' && run.id) {
+        const releasedRunId = run.id as string;
+        for (const itemRow of this.items) {
+          if (itemRow.runId === releasedRunId) this.upsertItemMessage(itemRow);
+        }
+        for (const msgRow of this.messageRecords) {
+          if (msgRow.runId === releasedRunId && !this.isHiddenContinuationMessage(msgRow)) {
+            this.upsert(msgRow);
+          }
+        }
+      }
       const active = this.runs.find((row: Record<string, Object>) =>
         typeof row.status === 'string' && ['preparing', 'starting', 'running', 'waiting'].includes(row.status));
       const runStatus = active && typeof active.status === 'string' ? active.status :
@@ -713,9 +733,25 @@ export class ThreadState {
     this.items.push(payload);
   }
 
+  private isHeldRunId(runId: Object | undefined): boolean {
+    if (typeof runId !== 'string' || !runId) return false;
+    return this.runs.some((row: Record<string, Object>) => row.id === runId && isHeldRun(row));
+  }
+
+  private hasRunRecord(runId: Object | undefined): boolean {
+    if (typeof runId !== 'string' || !runId) return false;
+    return this.runs.some((row: Record<string, Object>) => row.id === runId);
+  }
+
   private upsertItemMessage(payload: Record<string, Object>): void {
     if (payload.type !== 'assistant_message' && payload.type !== 'user_message') return;
-    if (payload.type === 'user_message' && payload.inputIntent === 'queued_turn' && payload.status === 'pending') return;
+    if (payload.type === 'user_message' && payload.inputIntent === 'queued_turn') {
+      if (this.hasRunRecord(payload.runId)) {
+        if (this.isHeldRunId(payload.runId)) return;
+      } else if (payload.status === 'pending') {
+        return;
+      }
+    }
     if (payload.type === 'user_message' && this.isHiddenContinuationMessage(payload)) return;
     if (typeof payload.messageId !== 'string') return;
     const matched = this.findMessageRecord(payload.messageId);

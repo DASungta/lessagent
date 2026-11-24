@@ -7,13 +7,18 @@ import { SectionHeader } from './ui/SectionHeader';
 import { ProviderLogo } from './ui/ProviderLogo';
 import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
 import { ModelChoice } from '../protocol/Core';
-import { ModelSelection, OptionSelection, TaskSettings, ModelOptionControl, ModelOptionValue, optionControls, supportedModes, interactionModes } from '../protocol/Composer';
+import {
+  ModelSelection, OptionSelection, TaskSettings, ModelOptionControl, ModelOptionValue,
+  ModelFavoriteEntry, modelFavoriteKey, parseModelFavorites, serverHasModelFavorites,
+  optionControls, supportedModes, interactionModes
+} from '../protocol/Composer';
 import { record } from '../protocol/Wire';
 
 @Component
 export struct TaskSettingsPanel {
   @Prop models: ModelChoice[] = [];
   @Prop config: Record<string, Object> = {};
+  @Prop localFavorites: ModelFavoriteEntry[] = [];
   @Prop @Watch('syncSettings') settings: TaskSettings;
   @Prop busy: boolean = false;
   @Prop status: string = '';
@@ -22,10 +27,15 @@ export struct TaskSettingsPanel {
   onInstall: (instanceId: string) => void = () => {};
   onAuth: (instanceId: string) => void = () => {};
   onRefreshProviders: (instanceId: string) => void = () => {};
+  onToggleFavorite: (provider: string, model: string, favorite: boolean) => Promise<void> = async () => {};
   @State selected: ModelSelection = { instanceId: '', model: '' };
   @State permission: string = 'approval-required';
   @State interaction: string = 'default';
   @State query: string = '';
+  @State favoritesOnly: boolean = false;
+  @State providerFilter: string = '';
+  @State showLegacy: boolean = false;
+  @State optimisticFavorites: Record<string, boolean> = {};
   @State providerExpanded: boolean = false;
 
   /** Synchronizes local picker state when the parent updates `settings`. */
@@ -40,9 +50,61 @@ export struct TaskSettingsPanel {
   }
   private controls(): ModelOptionControl[] { return optionControls(this.config, this.selected); }
   private modes(): string[] { return supportedModes(this.config, this.selected); }
+  private effectiveFavoriteKeys(): Set<string> {
+    const source = serverHasModelFavorites(this.config) ? parseModelFavorites(this.config) : this.localFavorites;
+    const keys: Set<string> = new Set();
+    for (const item of source) {
+      keys.add(modelFavoriteKey(item.provider, item.model));
+    }
+    for (const key of Object.keys(this.optimisticFavorites)) {
+      if (this.optimisticFavorites[key]) keys.add(key);
+      else keys.delete(key);
+    }
+    return keys;
+  }
+  private isFavorite(model: ModelChoice): boolean {
+    return this.effectiveFavoriteKeys().has(modelFavoriteKey(model.instanceId, model.model));
+  }
+  private hasLegacyModels(): boolean {
+    return this.models.some((model: ModelChoice) => model.legacy === true);
+  }
+  private allProviderIds(): string[] {
+    const ids: string[] = [];
+    for (const m of this.models) {
+      if (!ids.includes(m.instanceId)) ids.push(m.instanceId);
+    }
+    return ids;
+  }
   private visibleModels(): ModelChoice[] {
     const query = this.query.trim().toLowerCase();
-    return query ? this.models.filter((model: ModelChoice) => model.label.toLowerCase().includes(query)) : this.models;
+    const favs = this.effectiveFavoriteKeys();
+    return this.models.filter((model: ModelChoice) => {
+      if (this.providerFilter && model.instanceId !== this.providerFilter) return false;
+      const isSelected = this.selected.instanceId === model.instanceId && this.selected.model === model.model;
+      if (!this.showLegacy && model.legacy === true && !isSelected) return false;
+      if (model.hidden === true && !isSelected) return false;
+      if (this.favoritesOnly && !favs.has(modelFavoriteKey(model.instanceId, model.model))) return false;
+      if (query) {
+        const hay = (model.label + ' ' + model.model + ' ' + this.providerLabel(model.instanceId)).toLowerCase();
+        if (!hay.includes(query)) return false;
+      }
+      return true;
+    });
+  }
+  private toggleFavorite(model: ModelChoice): void {
+    const key = modelFavoriteKey(model.instanceId, model.model);
+    const nextValue = !this.isFavorite(model);
+    const nextMap: Record<string, boolean> = {};
+    for (const k of Object.keys(this.optimisticFavorites)) nextMap[k] = this.optimisticFavorites[k];
+    nextMap[key] = nextValue;
+    this.optimisticFavorites = nextMap;
+    void this.onToggleFavorite(model.instanceId, model.model, nextValue).catch(() => {
+      const revert: Record<string, boolean> = {};
+      for (const k of Object.keys(this.optimisticFavorites)) {
+        if (k !== key) revert[k] = this.optimisticFavorites[k];
+      }
+      this.optimisticFavorites = revert;
+    });
   }
   private providers(): Record<string, Object>[] {
     if (this.config.providers === undefined) return [];
@@ -105,11 +167,71 @@ export struct TaskSettingsPanel {
               .enabled(!this.busy).onChange((value: string) => this.query = value)
           }
           .width('100%').padding({ left: Space.sm, right: Space.sm }).backgroundColor($r('app.color.card'))
-          .borderRadius(Radius.button).margin({ top: Space.xxs, bottom: Space.xxs }).alignItems(VerticalAlign.Center)
+          .borderRadius(Radius.button).margin({ top: Space.xxs, bottom: Space.xs }).alignItems(VerticalAlign.Center)
+
+          Scroll() {
+            Row({ space: Space.xs }) {
+              Button(this.favoritesOnly ? '★ 仅收藏' : '☆ 仅收藏')
+                .height(32)
+                .fontSize(FontSize.caption)
+                .fontWeight(this.favoritesOnly ? Weight.semibold : Weight.regular)
+                .fontColor(this.favoritesOnly ? $r('app.color.on_prominent') : $r('app.color.ink'))
+                .backgroundColor(this.favoritesOnly ? $r('app.color.prominent') : $r('app.color.card'))
+                .borderRadius(Radius.full)
+                .padding({ left: 12, right: 12 })
+                .accessibilityText(this.favoritesOnly ? '仅收藏模型，已开启' : '仅收藏模型')
+                .onClick(() => { this.favoritesOnly = !this.favoritesOnly; })
+
+              if (this.allProviderIds().length > 1) {
+                Button('全部 Provider')
+                  .height(32)
+                  .fontSize(FontSize.caption)
+                  .fontWeight(this.providerFilter === '' ? Weight.semibold : Weight.regular)
+                  .fontColor(this.providerFilter === '' ? $r('app.color.primary_text') : $r('app.color.ink'))
+                  .backgroundColor(this.providerFilter === '' ? $r('app.color.info_bg') : $r('app.color.card'))
+                  .borderRadius(Radius.full)
+                  .padding({ left: 12, right: 12 })
+                  .onClick(() => { this.providerFilter = ''; })
+                ForEach(this.allProviderIds(), (pid: string) => {
+                  Button(this.providerLabel(pid))
+                    .height(32)
+                    .fontSize(FontSize.caption)
+                    .fontWeight(this.providerFilter === pid ? Weight.semibold : Weight.regular)
+                    .fontColor(this.providerFilter === pid ? $r('app.color.primary_text') : $r('app.color.ink'))
+                    .backgroundColor(this.providerFilter === pid ? $r('app.color.info_bg') : $r('app.color.card'))
+                    .borderRadius(Radius.full)
+                    .padding({ left: 12, right: 12 })
+                    .onClick(() => { this.providerFilter = this.providerFilter === pid ? '' : pid; })
+                }, (pid: string) => pid)
+              }
+
+              if (this.hasLegacyModels()) {
+                Button(this.showLegacy ? '含旧模型' : '显示旧模型')
+                  .height(32)
+                  .fontSize(FontSize.caption)
+                  .fontColor(this.showLegacy ? $r('app.color.primary_text') : $r('app.color.muted'))
+                  .backgroundColor(this.showLegacy ? $r('app.color.info_bg') : $r('app.color.card'))
+                  .borderRadius(Radius.full)
+                  .padding({ left: 12, right: 12 })
+                  .onClick(() => { this.showLegacy = !this.showLegacy; })
+              }
+            }
+          }
+          .scrollable(ScrollDirection.Horizontal)
+          .scrollBar(BarState.Off)
+          .width('100%')
+          .margin({ bottom: Space.xs })
 
           if (!this.visibleProviderIds().length) {
             GroupCard() {
-              FormRow({ kind: 'value', label: '没有匹配的模型', value: '', valueMuted: true, chevron: false, isFirst: true })
+              FormRow({
+                kind: 'value',
+                label: this.favoritesOnly && !this.providerFilter && !this.query.trim() ? '暂无收藏模型' : '没有匹配的模型',
+                value: '',
+                valueMuted: true,
+                chevron: false,
+                isFirst: true
+              })
             }
           } else {
             ForEach(this.visibleProviderIds(), (providerId: string) => {
@@ -128,20 +250,36 @@ export struct TaskSettingsPanel {
                 .padding({ left: Space.xxs, right: Space.xxs, bottom: 5 })
                 Column() {
                   ForEach(this.modelsForProvider(providerId), (model: ModelChoice, index: number) => {
-                    FormRow({
-                      kind: 'choice',
-                      label: model.model,
-                      subtitle: model.label,
-                      checked: this.selected.instanceId === model.instanceId && this.selected.model === model.model,
-                      disabled: this.busy,
-                      isFirst: index === 0,
-                      onTap: () => {
-                        this.selected = { instanceId: model.instanceId, model: model.model, options: [] };
-                        const modes = this.modes();
-                        if (!modes.includes(this.permission)) this.permission = modes[0] || '';
-                        if (!interactionModes(this.config, this.selected).includes(this.interaction)) this.interaction = 'default';
-                      }
-                    })
+                    Row({ space: 0 }) {
+                      Column() {
+                        FormRow({
+                          kind: 'choice',
+                          label: model.model,
+                          subtitle: model.label + (model.legacy ? ' · 旧模型' : ''),
+                          checked: this.selected.instanceId === model.instanceId && this.selected.model === model.model,
+                          disabled: this.busy,
+                          isFirst: true,
+                          onTap: () => {
+                            this.selected = { instanceId: model.instanceId, model: model.model, options: [] };
+                            const modes = this.modes();
+                            if (!modes.includes(this.permission)) this.permission = modes[0] || '';
+                            if (!interactionModes(this.config, this.selected).includes(this.interaction)) this.interaction = 'default';
+                          }
+                        })
+                      }.layoutWeight(1)
+                      Button(this.isFavorite(model) ? '★' : '☆', { type: ButtonType.Normal, stateEffect: true })
+                        .width(42)
+                        .height(44)
+                        .fontSize(18)
+                        .fontColor(this.isFavorite(model) ? $r('app.color.warning') : $r('app.color.muted'))
+                        .backgroundColor(Color.Transparent)
+                        .enabled(!this.busy)
+                        .accessibilityText((this.isFavorite(model) ? '取消收藏 ' : '收藏 ') + model.model)
+                        .onClick(() => this.toggleFavorite(model))
+                    }
+                    .width('100%')
+                    .alignItems(VerticalAlign.Center)
+                    .border({ width: { top: index === 0 ? 0 : Sizes.hairline }, color: { top: $r('app.color.separator') } })
                   }, (model: ModelChoice) => model.instanceId + ':' + model.model)
                 }
                 .width('100%')

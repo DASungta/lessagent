@@ -1,7 +1,10 @@
 import { http } from '@kit.NetworkKit';
 import { url } from '@kit.ArkTS';
 import { record, text } from '../protocol/Wire';
-import { CloudEnvironmentToken, cloudEnvironmentToken, RelayConnect, RelayEndpoint } from '../protocol/Cloud';
+import {
+  CloudEnvironmentToken, cloudEnvironmentToken, ConnectApprovalPendingError,
+  parseEnvironmentTokenError, RelayConnect, RelayEndpoint
+} from '../protocol/Cloud';
 import { CloudHttpFailure, CloudHttpResult, cloudHttp } from './CloudHttp';
 import { CloudRelay } from './CloudRelay';
 import { CloudEnvironmentTokenStore } from '../storage/CloudStores';
@@ -83,8 +86,11 @@ export class CloudEnvironmentTransport {
         'application/x-www-form-urlencoded');
     } catch (error) {
       if (error instanceof CloudHttpFailure) {
-        throw new Error(error.status === 403 ? '环境要求批准此 T3 Connect 设备，请在主机上核对代码' :
-          '环境 DPoP 鉴权失败，请重新连接');
+        const mapped = parseEnvironmentTokenError(error.status, error.value, this.label, thumbprint);
+        if (mapped instanceof ConnectApprovalPendingError) {
+          this.bootstrap = undefined;
+        }
+        throw mapped;
       }
       throw error as Error;
     }

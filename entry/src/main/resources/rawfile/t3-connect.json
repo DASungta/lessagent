@@ -1,11 +1,11 @@
 {
   "clerk": {
-    "publishableKey": "",
-    "jwtTemplate": "",
+    "publishableKey": "pk_live_Y2xlcmsudDMuY29kZXMk",
+    "jwtTemplate": "t3-relay",
     "oauthClientId": "",
-    "redirectUri": "t3code://auth/callback"
+    "redirectUri": "t3code://app/"
   },
   "relay": {
-    "url": ""
+    "url": "https://relay.t3.codes"
   }
 }

@@ -2,21 +2,26 @@ import { common } from '@kit.AbilityKit';
 import { fileIo } from '@kit.CoreFileKit';
 import { url, util } from '@kit.ArkTS';
 import {
-  CloudAccountSession, CloudConfig, cloudConfig, cloudConfigured, cloudSignInReady,
-  RelayEndpoint, RelayEnvironmentRecord, RelayStatus, relayOfflineMessage
+  ClerkEnvironmentInfo, ClerkSignInAttempt, CloudAccountSession, CloudConfig, cloudConfig,
+  CloudConfigOverride, cloudConfigured, CloudSessionExpiredError, cloudSignInReady,
+  connectDeviceVerificationCode, defaultClerkEnvironment, isCustomCloudConfig,
+  RelayEndpoint, RelayEnvironmentRecord, RelayStatus, relayOfflineMessage,
+  resolveEffectiveCloudConfig
 } from '../protocol/Cloud';
 import { EnvironmentEntry } from '../protocol/Environment';
 import { environments } from './EnvironmentRegistry';
 import { CloudEnvironmentTokenStore, RelayTokenStore } from '../storage/CloudStores';
-import { CloudAuth } from './CloudAuth';
+import { CloudConfigOverrideStore, CloudOnboardingStore } from '../storage/CloudPrefsStore';
+import { CloudAuth, CloudSignInResult } from './CloudAuth';
 import { CloudRelay } from './CloudRelay';
 import { CloudEnvironmentTransport } from './CloudConnection';
-import { DpopSigner } from './Dpop';
+import { DpopSigner, dpopSigner } from './Dpop';
 
 export interface CloudEnvironmentView {
   environmentId: string;
   label: string;
   httpBaseUrl: string;
+  providerKind: string;
   linkedAt: number;
   availability: string;
   statusText: string;
@@ -92,12 +97,17 @@ function errorText(error: Object): string {
 }
 
 export class CloudManager {
+  baseConfig: CloudConfig;
+  override: CloudConfigOverride | undefined = undefined;
   config: CloudConfig;
   configError: string = '';
-  signer: DpopSigner = new DpopSigner();
+  signer: DpopSigner = dpopSigner;
   auth: CloudAuth;
   environmentTokens: CloudEnvironmentTokenStore = new CloudEnvironmentTokenStore();
   environments: CloudEnvironmentView[] = [];
+  environmentInfo: ClerkEnvironmentInfo = defaultClerkEnvironment();
+  deviceCode: string = '';
+  showOnboarding: boolean = false;
   refreshing: boolean = false;
   busy: boolean = false;
   status: string = '未初始化';
@@ -107,12 +117,20 @@ export class CloudManager {
   private relayValue: CloudRelay | undefined = undefined;
   private deviceIdValue: string = '';
   private filesDir: string;
+  private overrideStore: CloudConfigOverrideStore;
+  private onboardingStore: CloudOnboardingStore;
   private generation: number = 0;
   private refreshGeneration: number = 0;
 
-  constructor(config: CloudConfig, configError: string, filesDir: string) {
-    this.config = config; this.configError = configError; this.filesDir = filesDir;
-    this.auth = new CloudAuth(config, this.signer);
+  constructor(baseConfig: CloudConfig, configError: string, filesDir: string) {
+    this.baseConfig = baseConfig;
+    this.configError = configError;
+    this.filesDir = filesDir;
+    this.overrideStore = new CloudConfigOverrideStore(filesDir);
+    this.onboardingStore = new CloudOnboardingStore(filesDir);
+    this.override = this.overrideStore.load();
+    this.config = resolveEffectiveCloudConfig(baseConfig, this.override);
+    this.auth = new CloudAuth(this.config);
   }
 
   get configured(): boolean { return cloudConfigured(this.config); }
@@ -120,14 +138,27 @@ export class CloudManager {
   get signedIn(): boolean { return !!this.sessionValue; }
   get session(): CloudAccountSession | undefined { return this.sessionValue; }
   get deviceId(): string { return this.deviceIdValue; }
+  get isCustomConfig(): boolean { return isCustomCloudConfig(this.baseConfig, this.config); }
+  get signInAttempt(): ClerkSignInAttempt | undefined { return this.auth.activeAttempt; }
+  get pendingSsoStrategy(): string { return this.auth.pendingSsoStrategy; }
 
   private notify(): void {
     try { this.onUpdate(); } catch (_) {}
     AppStorage.setOrCreate('t3CloudRevision', (AppStorage.get<number>('t3CloudRevision') || 0) + 1);
   }
 
+  private async loadDeviceCode(): Promise<void> {
+    try {
+      const thumbprint = await this.signer.thumbprint();
+      this.deviceCode = connectDeviceVerificationCode(thumbprint);
+    } catch (_) {
+      this.deviceCode = '';
+    }
+  }
+
   async initialize(): Promise<void> {
     this.deviceIdValue = deviceIdentity(this.filesDir);
+    await this.loadDeviceCode();
     try { await environments?.initialize(); }
     catch (error) {
       this.status = '环境目录尚未就绪';
@@ -141,15 +172,18 @@ export class CloudManager {
       this.notify();
       return;
     }
+    void this.auth.fetchEnvironment().then((info: ClerkEnvironmentInfo) => {
+      this.environmentInfo = info;
+      this.notify();
+    }).catch(() => {});
     try {
       const restored = await this.auth.restore();
       if (restored) {
         await this.cleanupForeignAccounts(restored.accountId);
-        await this.activate(restored, false);
-      }
-      else {
+        await this.activate(restored, false, false);
+      } else {
         await environments?.setCloudAccount('', undefined);
-        this.status = '未登录';
+        this.status = this.auth.status || '未登录';
       }
     } catch (error) {
       this.error = errorText(error as Object);
@@ -160,13 +194,20 @@ export class CloudManager {
   }
 
   private relay(session: CloudAccountSession, generation: number): CloudRelay {
-    return new CloudRelay(this.config, session.accountId, session.accessToken,
-      () => this.generation === generation && this.sessionValue?.accountId === session.accountId && this.sessionValue.accessToken === session.accessToken,
+    return new CloudRelay(this.config, session.accountId,
+      async (forceRefresh?: boolean): Promise<string> => {
+        if (this.generation !== generation || this.sessionValue?.accountId !== session.accountId) {
+          throw new CloudSessionExpiredError('T3 Connect 账号已切换');
+        }
+        return this.auth.getRelayToken(forceRefresh === true);
+      },
+      () => this.generation === generation && this.sessionValue?.accountId === session.accountId,
       this.signer);
   }
 
-  private async activate(session: CloudAccountSession, persist: boolean): Promise<void> {
+  private async activate(session: CloudAccountSession, persist: boolean, freshSignIn: boolean): Promise<void> {
     if (persist) await this.auth.persist(session);
+    await this.loadDeviceCode();
     this.generation++;
     const generation = this.generation;
     this.sessionValue = session;
@@ -178,6 +219,9 @@ export class CloudManager {
       () => this.generation === generation && this.sessionValue?.accountId === session.accountId));
     this.status = 'T3 Connect 已登录';
     this.error = '';
+    if (freshSignIn && !this.onboardingStore.isOptedOut(session.accountId)) {
+      this.showOnboarding = true;
+    }
     this.notify();
     await this.refresh();
     if (generation !== this.generation) return;
@@ -190,30 +234,250 @@ export class CloudManager {
     }));
   }
 
-  async beginSignIn(context: common.UIAbilityContext): Promise<void> {
-    if (this.busy) return;
-    this.busy = true; this.error = '';
-    try { await this.auth.begin(context); this.status = this.auth.status; }
-    catch (error) { this.error = errorText(error as Object); this.status = this.error; throw error as Error; }
-    finally { this.busy = false; this.notify(); }
-  }
-
-  async completeCallback(uri: string): Promise<void> {
-    if (this.busy) return;
-    this.busy = true; this.error = '';
-    try {
-      const next = await this.auth.complete(uri);
+  private async handleSignInResult(result: CloudSignInResult): Promise<CloudSignInResult> {
+    if (result.kind === 'complete' && result.session) {
+      const next = result.session;
       const current = this.sessionValue;
+      const isTransition = !current || current.accountId !== next.accountId;
       if (current && current.accountId !== next.accountId) this.deactivate();
       await this.cleanupForeignAccounts(next.accountId);
       await this.auth.persist(next);
-      await this.activate(next, false);
+      await this.activate(next, false, isTransition);
       this.status = 'T3 Connect 已登录';
+    } else {
+      this.status = this.auth.status;
+    }
+    return result;
+  }
+
+  async startEmailSignIn(email: string): Promise<CloudSignInResult> {
+    if (this.busy) throw new Error('正在处理中，请稍候');
+    this.busy = true; this.error = '';
+    try {
+      const result = await this.auth.startEmailSignIn(email);
+      return await this.handleSignInResult(result);
     } catch (error) {
       this.error = errorText(error as Object);
       this.status = this.error;
       throw error as Error;
-    } finally { this.busy = false; this.notify(); }
+    } finally {
+      this.busy = false;
+      this.notify();
+    }
+  }
+
+  async sendEmailCode(): Promise<void> {
+    if (this.busy) return;
+    this.busy = true; this.error = '';
+    try {
+      await this.auth.sendEmailCode();
+      this.status = this.auth.status;
+    } catch (error) {
+      this.error = errorText(error as Object);
+      this.status = this.error;
+      throw error as Error;
+    } finally {
+      this.busy = false;
+      this.notify();
+    }
+  }
+
+  async verifyEmailCode(code: string): Promise<CloudSignInResult> {
+    if (this.busy) throw new Error('正在处理中，请稍候');
+    this.busy = true; this.error = '';
+    try {
+      const result = await this.auth.verifyEmailCode(code);
+      return await this.handleSignInResult(result);
+    } catch (error) {
+      this.error = errorText(error as Object);
+      this.status = this.error;
+      throw error as Error;
+    } finally {
+      this.busy = false;
+      this.notify();
+    }
+  }
+
+  async verifyPassword(password: string): Promise<CloudSignInResult> {
+    if (this.busy) throw new Error('正在处理中，请稍候');
+    this.busy = true; this.error = '';
+    try {
+      const result = await this.auth.verifyPassword(password);
+      return await this.handleSignInResult(result);
+    } catch (error) {
+      this.error = errorText(error as Object);
+      this.status = this.error;
+      throw error as Error;
+    } finally {
+      this.busy = false;
+      this.notify();
+    }
+  }
+
+  async prepareSecondFactor(strategy: string): Promise<void> {
+    if (this.busy) return;
+    this.busy = true; this.error = '';
+    try {
+      await this.auth.prepareSecondFactor(strategy);
+      this.status = this.auth.status;
+    } catch (error) {
+      this.error = errorText(error as Object);
+      this.status = this.error;
+      throw error as Error;
+    } finally {
+      this.busy = false;
+      this.notify();
+    }
+  }
+
+  async verifySecondFactor(strategy: string, code: string): Promise<CloudSignInResult> {
+    if (this.busy) throw new Error('正在处理中，请稍候');
+    this.busy = true; this.error = '';
+    try {
+      const result = await this.auth.verifySecondFactor(strategy, code);
+      return await this.handleSignInResult(result);
+    } catch (error) {
+      this.error = errorText(error as Object);
+      this.status = this.error;
+      throw error as Error;
+    } finally {
+      this.busy = false;
+      this.notify();
+    }
+  }
+
+  async beginSsoSignIn(strategy: string, context: common.UIAbilityContext): Promise<void> {
+    if (this.busy) return;
+    this.busy = true; this.error = '';
+    try {
+      await this.auth.beginSso(strategy, context);
+      this.status = this.auth.status;
+    } catch (error) {
+      this.error = errorText(error as Object);
+      this.status = this.error;
+      throw error as Error;
+    } finally {
+      this.busy = false;
+      this.notify();
+    }
+  }
+
+  async completeCallback(uri: string): Promise<CloudSignInResult | undefined> {
+    if (this.busy) return undefined;
+    this.busy = true; this.error = '';
+    try {
+      const result = await this.auth.completeSsoCallback(uri);
+      return await this.handleSignInResult(result);
+    } catch (error) {
+      this.error = errorText(error as Object);
+      this.status = this.error;
+      throw error as Error;
+    } finally {
+      this.busy = false;
+      this.notify();
+    }
+  }
+
+  async cancelPendingSignIn(): Promise<void> {
+    await this.auth.cancelPending();
+    this.error = '';
+    this.status = this.auth.status;
+    this.notify();
+  }
+
+  dismissOnboarding(dontShowAgain: boolean): void {
+    if (dontShowAgain && this.sessionValue?.accountId) {
+      this.onboardingStore.optOut(this.sessionValue.accountId);
+    }
+    this.showOnboarding = false;
+    this.notify();
+  }
+
+  async saveConfigOverride(publishableKey: string, jwtTemplate: string, relayUrl: string): Promise<void> {
+    if (this.busy) return;
+    const candidate: CloudConfigOverride = {
+      enabled: true,
+      publishableKey: publishableKey.trim(),
+      jwtTemplate: jwtTemplate.trim(),
+      relayUrl: relayUrl.trim()
+    };
+    const nextConfig = resolveEffectiveCloudConfig(this.baseConfig, candidate);
+    if (this.signedIn) {
+      await this.signOut();
+    }
+    this.busy = true; this.error = '';
+    try {
+      this.override = this.overrideStore.save(candidate);
+      this.config = nextConfig;
+      this.configError = '';
+      this.auth = new CloudAuth(this.config);
+      this.environmentInfo = defaultClerkEnvironment();
+      this.status = '已切换至自定义 T3 Connect 配置';
+      void this.auth.fetchEnvironment().then((info: ClerkEnvironmentInfo) => {
+        this.environmentInfo = info;
+        this.notify();
+      }).catch(() => {});
+    } catch (error) {
+      this.error = errorText(error as Object);
+      throw error as Error;
+    } finally {
+      this.busy = false;
+      this.notify();
+    }
+  }
+
+  async resetConfigOverride(): Promise<void> {
+    if (this.busy) return;
+    if (this.signedIn) {
+      await this.signOut();
+    }
+    this.busy = true; this.error = '';
+    try {
+      this.overrideStore.clear();
+      this.override = undefined;
+      this.config = this.baseConfig;
+      this.auth = new CloudAuth(this.config);
+      this.environmentInfo = defaultClerkEnvironment();
+      this.status = '已恢复官方默认 T3 Connect 配置';
+      if (this.configured) {
+        void this.auth.fetchEnvironment().then((info: ClerkEnvironmentInfo) => {
+          this.environmentInfo = info;
+          this.notify();
+        }).catch(() => {});
+      }
+    } catch (error) {
+      this.error = errorText(error as Object);
+      throw error as Error;
+    } finally {
+      this.busy = false;
+      this.notify();
+    }
+  }
+
+  async resetDeviceKey(): Promise<void> {
+    if (this.busy) return;
+    this.busy = true; this.error = '';
+    try {
+      await this.signer.reset();
+      try { await new RelayTokenStore().clear(); } catch (_) {}
+      for (const entry of environments?.directory.entries || []) {
+        if (entry.kind === 'cloud') {
+          try { await this.environmentTokens.clear(entry.environmentId); } catch (_) {}
+        }
+      }
+      await this.loadDeviceCode();
+      this.status = '已重置本机 DPoP 设备密钥，新验证码 ' + this.deviceCode;
+      if (this.sessionValue) {
+        const current = this.sessionValue;
+        await this.activate(current, false, false);
+      }
+    } catch (error) {
+      this.error = errorText(error as Object);
+      throw error as Error;
+    } finally {
+      this.busy = false;
+      this.notify();
+    }
   }
 
   private deactivate(): void {
@@ -221,6 +485,7 @@ export class CloudManager {
     this.sessionValue = undefined;
     this.relayValue = undefined;
     this.environments = [];
+    this.showOnboarding = false;
     this.refreshing = false;
   }
 
@@ -236,7 +501,7 @@ export class CloudManager {
     let failure = '';
     try { await environments?.setCloudAccount('', undefined); }
     catch (error) { failure = errorText(error as Object); }
-    try { await this.auth.clear(); }
+    try { await this.auth.clear(true); }
     catch (error) { failure = errorText(error as Object); }
     for (const account of accounts) {
       try { await this.cleanupAccount(account); }
@@ -283,6 +548,7 @@ export class CloudManager {
         environmentId: record.environmentId,
         label: record.label,
         httpBaseUrl: record.endpoint.httpBaseUrl,
+        providerKind: record.endpoint.providerKind,
         linkedAt: record.linkedAt,
         availability: 'checking',
         statusText: '正在检查中继状态',
@@ -314,6 +580,11 @@ export class CloudManager {
       if (generation === this.refreshGeneration) {
         this.error = errorText(error as Object);
         this.status = this.error;
+        if (error instanceof CloudSessionExpiredError) {
+          this.deactivate();
+          try { await environments?.setCloudAccount('', undefined); } catch (_) {}
+          try { await this.auth.clear(false); } catch (_) {}
+        }
       }
     } finally {
       if (generation === this.refreshGeneration) { this.refreshing = false; this.notify(); }

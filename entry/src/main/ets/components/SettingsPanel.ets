@@ -167,8 +167,13 @@ export struct SettingsPanel {
   @Prop projectCount: number = 0;
   @Prop archivedCount: number = 0;
   @Prop environmentCount: number = 0;
+  @Prop cloudConfigured: boolean = false;
+  @Prop cloudSignedIn: boolean = false;
+  @Prop cloudAccountLabel: string = '';
+  @Prop cloudCustomConfig: boolean = false;
   onBack: () => void = () => {};
   onEnvironments: () => void = () => {};
+  onCloudAccount: () => void = () => {};
   onProjects: () => void = () => {};
   onArchive: () => void = () => {};
   onGrouping: (mode: string) => void = () => {};
@@ -438,7 +443,7 @@ export struct SettingsPanel {
             .margin({ top: Space.xxs, bottom: Space.xs })
             .alignItems(VerticalAlign.Center)
 
-            if (settingsMatch(this.query, '连接与项目 环境 连接 路径 T3 Connect 项目 归档 恢复 删除')) {
+            if (settingsMatch(this.query, '连接与项目 环境 连接 路径 T3 Connect 云 中继 账号 登录 远程 项目 归档 恢复 删除')) {
               Text('连接与项目')
                 .fontSize(FontSize.caption)
                 .lineHeight(LineHeight.caption)
@@ -446,6 +451,24 @@ export struct SettingsPanel {
                 .padding({ left: Space.xxs, right: Space.xxs, top: Space.sm, bottom: 5 })
                 .width('100%')
               Column() {
+                if (this.cloudConfigured) {
+                  Button({ type: ButtonType.Normal }) {
+                    Row({ space: 10 }) {
+                      Column({ space: 2 }) {
+                        Text('T3 Connect').fontSize(FontSize.body).lineHeight(LineHeight.body).fontWeight(Weight.regular).width('100%')
+                        Text(this.cloudSignedIn ?
+                          (this.cloudAccountLabel || '已登录') + (this.cloudCustomConfig ? ' · 自定义中继' : '') :
+                          '登录以跨网络访问已链接的机器')
+                          .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted')).width('100%')
+                          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+                      }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+                      Text(this.cloudSignedIn ? '已登录' : '未登录').fontSize(FontSize.callout)
+                        .fontColor(this.cloudSignedIn ? $r('app.color.primary_text') : $r('app.color.muted'))
+                      Image($r('app.media.ui_chevron_right')).width(Sizes.chevron).height(Sizes.chevron).opacity(0.6).accessibilityLevel('no')
+                    }.width('100%').padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs }).constraintSize({ minHeight: Sizes.formRowMin })
+                  }.width('100%').backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
+                    .onClick(() => this.onCloudAccount())
+                }
                 Button({ type: ButtonType.Normal }) {
                   Row({ space: 10 }) {
                     Column({ space: 2 }) {
@@ -456,6 +479,7 @@ export struct SettingsPanel {
                     Image($r('app.media.ui_chevron_right')).width(Sizes.chevron).height(Sizes.chevron).opacity(0.6).accessibilityLevel('no')
                   }.width('100%').padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs }).constraintSize({ minHeight: Sizes.formRowMin })
                 }.width('100%').backgroundColor(Color.Transparent).fontColor($r('app.color.ink'))
+                  .border({ width: { top: this.cloudConfigured ? Sizes.hairline : 0 }, color: { top: $r('app.color.separator') } })
                   .onClick(() => this.onEnvironments())
                 Button({ type: ButtonType.Normal }) {
                   Row({ space: 10 }) {
@@ -646,7 +670,7 @@ export struct SettingsPanel {
               }.width('100%').backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
             }
 
-            if (this.query.trim() && !settingsMatch(this.query, '连接与项目 环境 连接 路径 T3 Connect 项目 归档 恢复 删除') &&
+            if (this.query.trim() && !settingsMatch(this.query, '连接与项目 环境 连接 路径 T3 Connect 云 中继 账号 登录 远程 项目 归档 恢复 删除') &&
               !settingsMatch(this.query, '项目分组 仓库 路径 独立') && !settingsMatch(this.query, '外观 主题 浅色 深色 系统') &&
               !settingsMatch(this.query, CODE_APPEARANCE_SEARCH) &&
               !settingsMatch(this.query, '帮助 诊断 复制 版本 关于 许可 开源') &&

@@ -20,7 +20,7 @@ async function load(handler) {
       calls.push({ url, method, headers: { ...headers }, body, contentType });
       const response = await handler(url, method, headers, body, calls);
       if (response.error) throw new Failure(response.error.status, response.error.value);
-      return { status: response.status || 200, value: response.value };
+      return { status: response.status || 200, value: response.value, headers: {} };
     }
   };
   const source = (await readFile(new URL('../entry/src/main/ets/services/CloudConnection.ets', import.meta.url), 'utf8'))
@@ -112,7 +112,7 @@ test('ticket 404 falls back to the bare endpoint with a fresh proof for that pat
 });
 
 test('environment 401 invalidates the cached token and obtains a new relay bootstrap', async () => {
-  let exchanges = 0, attempts = 0, bootstraps = 0;
+  let exchanges = 0, attempts = 0;
   const ctx = await load(async (url, method, headers) => {
     if (url.endsWith('/oauth/token')) {
       exchanges++;
@@ -156,4 +156,48 @@ test('cachedEndpoint and tokenExpiresAt reuse valid cached token across reconnec
   assert.equal(recoveredUrl.searchParams.get('wsTicket'), 'TICKET_3');
   assert.equal(recoveredUrl.searchParams.get('frameParts'), '1');
   assert.equal(ctx.bootstrap(), 2);
+});
+
+test('host 403 connect_approval_pending throws ConnectApprovalPendingError with device verification code and refreshes bootstrap on retry', async () => {
+  const cloud = await import(cloudUrl);
+  let exchanges = 0;
+  const ctx = await load(async (url) => {
+    if (url.endsWith('/oauth/token')) {
+      exchanges++;
+      if (exchanges === 1) {
+        return { error: { status: 403, value: { code: 'connect_approval_pending', traceId: 'trace-approve-1' } } };
+      }
+      return { value: { access_token: 'ENV_APPROVED', token_type: 'DPoP', expires_in: 300 } };
+    }
+    if (url.endsWith('/api/auth/websocket-ticket/rpc')) return { value: { ticket: 'APPROVED_TICKET' } };
+    throw Error('unexpected ' + url);
+  });
+  const expectedCode = cloud.connectDeviceVerificationCode('thumb-a');
+  await assert.rejects(ctx.transport.socketUrl(), (err) => {
+    assert.ok(err instanceof cloud.ConnectApprovalPendingError);
+    assert.equal(err.verificationCode, expectedCode);
+    assert.equal(err.traceId, 'trace-approve-1');
+    assert.ok(err.message.includes(expectedCode));
+    return true;
+  });
+  // After approval on the host, the next retry fetches a fresh bootstrap and connects cleanly.
+  const socket = new URL(await ctx.transport.socketUrl());
+  assert.equal(socket.searchParams.get('wsTicket'), 'APPROVED_TICKET');
+  assert.equal(ctx.bootstrap(), 2);
+});
+
+test('host 403 without connect_approval_pending reports device denial instead of pending approval', async () => {
+  const cloud = await import(cloudUrl);
+  const ctx = await load(async (url) => {
+    if (url.endsWith('/oauth/token')) {
+      return { error: { status: 403, value: { code: 'operation_forbidden', traceId: 'trace-deny' } } };
+    }
+    throw Error('unexpected ' + url);
+  });
+  await assert.rejects(ctx.transport.socketUrl(), (err) => {
+    assert.ok(!(err instanceof cloud.ConnectApprovalPendingError));
+    assert.match(err.message, /拒绝/);
+    assert.match(err.message, /trace-deny/);
+    return true;
+  });
 });

@@ -7,15 +7,23 @@ import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Th
 import { EnvironmentEntry } from '../protocol/Environment';
 import { ScopedProject } from '../protocol/Projects';
 import { T3Client } from '../services/T3Client';
-import { setPullRequestHideTestFiles } from '../services/WorkspacePrefs';
+import {
+  deletePullRequestSavedView,
+  localPullRequestSavedViews,
+  savePullRequestSavedView,
+  setPullRequestHideTestFiles
+} from '../services/WorkspacePrefs';
 import { CodeLine } from './CodeLine';
 import { DiffLineNumber } from './DiffLineNumber';
-import { DiffFile, DiffHunk, DiffRow, filterDiffTestFiles, firstPullRequestCursor, hasPullRequestCursors, LabelCandidateView,
-  mergePullRequestRows, normalizePullRequestCursors, orderParsedDiffFilesForReview, parseDiff, PullRequestDetailView, PullRequestGuideView,
-  PullRequestPage, pullRequestPatch, PullRequestProjectChoice, pullRequestProjectChoices,
-  PullRequestProjectSource, pullRequestRef, PullRequestRow, pullRequestStateLabel, ReviewerCandidateView,
-  reviewCommentDraft, ReviewGuideExcerpt, ReviewGuideFile, ReviewGuideNote, ReviewGuideStop,
-  PullRequestActivityView, PullRequestCommentView, PullRequestThreadCommentView, PullRequestThreadView,
+import { detectCodeLanguage, WordDiffSegment } from '../protocol/FilePreview';
+import { computeHunkWordDiffs, DiffFile, DiffHunk, DiffRow, filterDiffTestFiles, firstPullRequestCursor, hasPullRequestCursors,
+  isPullRequestFileViewed, LabelCandidateView, mergePullRequestRows, normalizePullRequestCursors, orderParsedDiffFilesForReview,
+  parseDiff, PullRequestActionExtra, PullRequestAgentTask, PullRequestAgentTaskOption, pullRequestAgentPrompt,
+  pullRequestAgentTaskOptions, PullRequestDetailView, PullRequestGuideView, PullRequestListFilterOptions, PullRequestPage,
+  pullRequestPatch, PullRequestProjectChoice, pullRequestProjectChoices, PullRequestProjectSource, pullRequestRef,
+  PullRequestRow, PullRequestSavedView, pullRequestSavedViewSignature, PullRequestStackHead, PullRequestStackLayer,
+  pullRequestStateLabel, ReviewerCandidateView, reviewCommentDraft, ReviewGuideExcerpt, ReviewGuideFile, ReviewGuideNote,
+  ReviewGuideStop, PullRequestActivityView, PullRequestCommentView, PullRequestThreadCommentView, PullRequestThreadView,
   PullRequestCheckView, tagPullRequestRows } from '../protocol/R5';
 import { record, text } from '../protocol/Wire';
 import { MarkdownView } from './MarkdownView';
@@ -52,11 +60,19 @@ export struct PullRequestsPanel {
   onBack: () => void = () => {};
   onStatus: (value: string) => void = () => {};
   onCopy: (value: string) => void = () => {};
+  onStartAgentTask: (localId: string, projectId: string, prompt: string) => void = () => {};
 
   @State rows: PullRequestRow[] = [];
   @State filter: string = 'open';
   @State query: string = '';
   @State requestedQuery: string = '';
+  @State involvementFilter: string = 'all';
+  @State draftFilter: string = '';
+  @State reviewFilter: string = '';
+  @State checksFilter: string = '';
+  @State authorFilter: string = '';
+  @State savedViews: PullRequestSavedView[] = [];
+  @State saveViewName: string = '';
   @State nextCursor: string = '';
   @State errors: string[] = [];
   @State loading: boolean = false;
@@ -95,6 +111,10 @@ export struct PullRequestsPanel {
   @State activityError: string = '';
   @State liveChecks: PullRequestCheckView[] = [];
   @State liveChecksState: string = '';
+  @State viewedServerStates: Record<string, string> = {};
+  @State viewedOptimistic: Record<string, boolean> = {};
+  @State viewedError: string = '';
+  @State stackLayers: PullRequestStackLayer[] = [];
 
   private alive: boolean = false;
   private readRevision: number = 0;
@@ -102,8 +122,13 @@ export struct PullRequestsPanel {
   private nextCursorsByTarget: Map<string, Record<string, string>> = new Map<string, Record<string, string>>();
   private lastTargetsSignature: string = '';
   private detailConnection: T3Client | undefined = undefined;
+  private hunkWordDiffCache: Map<string, Map<number, WordDiffSegment[]>> = new Map();
 
-  aboutToAppear(): void { this.alive = true; void this.loadList(); }
+  aboutToAppear(): void {
+    this.alive = true;
+    this.savedViews = localPullRequestSavedViews();
+    void this.loadList();
+  }
   aboutToDisappear(): void {
     this.alive = false;
     this.readRevision++;
@@ -335,6 +360,12 @@ export struct PullRequestsPanel {
     const projectId = this.projectId;
     const filter = this.filter;
     const query = this.query;
+    const involvement = this.involvementFilter;
+    const draft = this.draftFilter;
+    const review = this.reviewFilter;
+    const checks = this.checksFilter;
+    const author = this.authorFilter;
+    const filterOptions: PullRequestListFilterOptions = { involvement, draft, review, checks, author };
     const selectedEnv = this.selectedEnvLocalId || '';
     const selectedProject = this.selectedProjectKey || '';
     this.requestedQuery = query;
@@ -349,6 +380,8 @@ export struct PullRequestsPanel {
     const current = (): boolean => {
       if (!this.alive || this.readRevision !== revision || !!this.selected) return false;
       if (this.projectId !== projectId || this.filter !== filter || this.query !== query) return false;
+      if (this.involvementFilter !== involvement || this.draftFilter !== draft ||
+        this.reviewFilter !== review || this.checksFilter !== checks || this.authorFilter !== author) return false;
       if ((this.selectedEnvLocalId || '') !== selectedEnv || (this.selectedProjectKey || '') !== selectedProject) return false;
       for (const target of fetchTargets) {
         if (target.client.generationValue() !== target.generation) return false;
@@ -373,7 +406,7 @@ export struct PullRequestsPanel {
             const savedCursors = append ? cursorSnapshot.get(target.key) : undefined;
             const useMap = hasPullRequestCursors(savedCursors) ? savedCursors : undefined;
             const cursorArg = append ? (firstPullRequestCursor(useMap) || legacyCursor) : '';
-            const page = await target.client.listPullRequests(filter, query, cursorArg, target.projectId, useMap);
+            const page = await target.client.listPullRequests(filter, query, cursorArg, target.projectId, useMap, filterOptions);
             return { target, page, errorMessage: '' };
           } catch (reason) {
             const message = (reason as Error).message || '读取失败';
@@ -446,6 +479,9 @@ export struct PullRequestsPanel {
     this.drafts = []; this.error = ''; this.notice = '';
     this.guide = undefined; this.guideError = ''; this.guideBusy = false; this.activityError = '';
     this.liveChecks = []; this.liveChecksState = '';
+    this.viewedServerStates = {}; this.viewedOptimistic = {}; this.viewedError = '';
+    this.stackLayers = [];
+    this.hunkWordDiffCache.clear();
     this.readingDetail = true; this.busy = true; this.loading = true;
     try {
       const ref = pullRequestRef(rowProjectId, repository, number, row.host || '');
@@ -477,6 +513,22 @@ export struct PullRequestsPanel {
         if (!current()) return;
         if (checks) { this.liveChecks = checks.checks; this.liveChecksState = checks.state; }
       } catch (_) { if (!current()) return; }
+      if (detail.viewedFilesSupported !== false) {
+        try {
+          const viewed = await connection.pullRequestFilesViewed(ref);
+          if (!current()) return;
+          const nextMap: Record<string, string> = {};
+          for (const entry of viewed.files) nextMap[entry.path] = entry.state;
+          this.viewedServerStates = nextMap;
+        } catch (_) { if (!current()) return; }
+      }
+      if (row.stackSize > 1) {
+        try {
+          const layers = await connection.pullRequestStackLayers(ref);
+          if (!current()) return;
+          this.stackLayers = layers;
+        } catch (_) { if (!current()) return; }
+      }
       try {
         const guide = await connection.pullRequestReviewGuide(ref);
         if (!current()) return;
@@ -499,6 +551,9 @@ export struct PullRequestsPanel {
     this.patchFiles = []; this.panelMode = ''; this.notice = ''; this.error = '';
     this.guide = undefined; this.guideError = ''; this.guideBusy = false;
     this.liveChecks = []; this.liveChecksState = '';
+    this.viewedServerStates = {}; this.viewedOptimistic = {}; this.viewedError = '';
+    this.stackLayers = [];
+    this.hunkWordDiffCache.clear();
     void this.loadList();
   }
 
@@ -532,12 +587,12 @@ export struct PullRequestsPanel {
     this.onDetailChange(!!this.selected);
   }
 
-  private async runAction(action: string, mergeMethod: string = ''): Promise<void> {
+  private async runAction(action: string, mergeMethod: string = '', extra?: PullRequestActionExtra): Promise<void> {
     const connection = this.activeDetailClient();
     if (!connection || this.busy) return;
     this.busy = true; this.error = ''; this.notice = '正在执行 ' + action + '…';
     try {
-      await connection.pullRequestAction(this.ref(), action, mergeMethod);
+      await connection.pullRequestAction(this.ref(), action, mergeMethod, '', extra);
       this.notice = '操作已提交；请刷新核对服务端状态';
       const row = this.selected;
       if (row) await this.open(row);
@@ -545,6 +600,65 @@ export struct PullRequestsPanel {
       this.error = 'PR 操作失败：' + (reason as Error).message + '。不会自动重试。';
       this.notice = '';
     } finally { this.busy = false; }
+  }
+
+  private openStackLayersForMerge(): PullRequestStackLayer[] {
+    if (!this.detail || this.stackLayers.length < 2) return [];
+    const currentIndex = this.stackLayers.findIndex((layer: PullRequestStackLayer) => layer.number === this.detail!.number);
+    const slice = currentIndex >= 0 ? this.stackLayers.slice(0, currentIndex + 1) : this.stackLayers;
+    return slice.filter((layer: PullRequestStackLayer) => layer.state === 'open' && !!layer.headSha);
+  }
+
+  private async toggleFileViewed(path: string): Promise<void> {
+    const connection = this.activeDetailClient();
+    if (!connection || !this.selected) return;
+    const nextViewed = !isPullRequestFileViewed(path, this.viewedServerStates, this.viewedOptimistic);
+    const nextOpt: Record<string, boolean> = {};
+    for (const k of Object.keys(this.viewedOptimistic)) nextOpt[k] = this.viewedOptimistic[k];
+    nextOpt[path] = nextViewed;
+    this.viewedOptimistic = nextOpt;
+    this.viewedError = '';
+    try {
+      await connection.setPullRequestFilesViewed(this.ref(), [{ path, viewed: nextViewed }]);
+      const nextSrv: Record<string, string> = {};
+      for (const k of Object.keys(this.viewedServerStates)) nextSrv[k] = this.viewedServerStates[k];
+      nextSrv[path] = nextViewed ? 'viewed' : 'unviewed';
+      this.viewedServerStates = nextSrv;
+      const cleanedOpt: Record<string, boolean> = {};
+      for (const k of Object.keys(this.viewedOptimistic)) {
+        if (k !== path) cleanedOpt[k] = this.viewedOptimistic[k];
+      }
+      this.viewedOptimistic = cleanedOpt;
+    } catch (reason) {
+      const revertedOpt: Record<string, boolean> = {};
+      for (const k of Object.keys(this.viewedOptimistic)) {
+        if (k !== path) revertedOpt[k] = this.viewedOptimistic[k];
+      }
+      this.viewedOptimistic = revertedOpt;
+      this.viewedError = '审阅状态更新失败：' + (reason as Error).message;
+    }
+  }
+
+  private isFileViewed(path: string): boolean {
+    return isPullRequestFileViewed(path, this.viewedServerStates, this.viewedOptimistic);
+  }
+
+  private viewedFileCount(): number {
+    let count = 0;
+    for (const file of this.visiblePatchFiles()) {
+      if (this.isFileViewed(file.path)) count += 1;
+    }
+    return count;
+  }
+
+  private rowWordSegments(hunk: DiffHunk, index: number): WordDiffSegment[] {
+    const key = this.selectedFile + ':' + hunk.header;
+    let map = this.hunkWordDiffCache.get(key);
+    if (!map) {
+      map = computeHunkWordDiffs(hunk);
+      this.hunkWordDiffCache.set(key, map);
+    }
+    return map.get(index) || [];
   }
 
   private async submitComment(): Promise<void> {
@@ -691,8 +805,91 @@ export struct PullRequestsPanel {
     finally { this.busy = false; }
   }
 
+  private hasActiveAdvancedFilter(): boolean {
+    return (this.involvementFilter !== 'all' && !!this.involvementFilter) ||
+      !!this.draftFilter || !!this.reviewFilter || !!this.checksFilter || !!this.authorFilter.trim();
+  }
+
   private hasActiveScopeFilter(): boolean {
-    return !!this.selectedProjectKey || !!this.selectedEnvLocalId;
+    return !!this.selectedProjectKey || !!this.selectedEnvLocalId || this.hasActiveAdvancedFilter();
+  }
+
+  private currentSavedViewSnapshot(name: string, id: string): PullRequestSavedView {
+    return {
+      id,
+      name,
+      state: this.filter,
+      query: this.query,
+      involvement: this.involvementFilter || 'all',
+      draft: this.draftFilter,
+      review: this.reviewFilter,
+      checks: this.checksFilter,
+      author: this.authorFilter.trim(),
+      environmentLocalId: this.projectId ? '' : this.selectedEnvLocalId,
+      projectKey: this.projectId ? '' : this.selectedProjectKey
+    };
+  }
+
+  private isSavedViewActive(view: PullRequestSavedView): boolean {
+    return pullRequestSavedViewSignature(view) ===
+      pullRequestSavedViewSignature(this.currentSavedViewSnapshot(view.name, view.id));
+  }
+
+  private applySavedView(view: PullRequestSavedView): void {
+    this.filter = view.state || 'open';
+    this.query = view.query || '';
+    this.involvementFilter = view.involvement || 'all';
+    this.draftFilter = view.draft || '';
+    this.reviewFilter = view.review || '';
+    this.checksFilter = view.checks || '';
+    this.authorFilter = view.author || '';
+    if (!this.projectId) {
+      this.selectedEnvLocalId = view.environmentLocalId || '';
+      this.selectedProjectKey = view.projectKey || '';
+    }
+    this.filterSheetOpen = false;
+    void this.loadList();
+  }
+
+  private async saveCurrentView(): Promise<void> {
+    const label = this.saveViewName.trim() ||
+      (this.involvementFilter === 'authored' ? '我创建的 PR' :
+        this.involvementFilter === 'reviewing' ? '待我评审' :
+        this.checksFilter === 'failing' ? '检查失败的 PR' :
+        '视图 ' + (this.savedViews.length + 1));
+    const view = this.currentSavedViewSnapshot(label, 'view_' + Date.now().toString(36));
+    try {
+      this.savedViews = await savePullRequestSavedView(view);
+      this.saveViewName = '';
+      this.onStatus('已保存筛选视图：' + label);
+    } catch (reason) {
+      this.onStatus('保存视图失败：' + (reason as Error).message);
+    }
+  }
+
+  private async removeSavedView(id: string): Promise<void> {
+    try {
+      this.savedViews = await deletePullRequestSavedView(id);
+      this.onStatus('已删除筛选视图');
+    } catch (reason) {
+      this.onStatus('删除视图失败：' + (reason as Error).message);
+    }
+  }
+
+  private advancedFilterSummary(): string {
+    const parts: string[] = [];
+    if (this.involvementFilter === 'authored') parts.push('我创建');
+    else if (this.involvementFilter === 'reviewing') parts.push('待我评审');
+    if (this.draftFilter === 'only') parts.push('仅草稿');
+    else if (this.draftFilter === 'hide') parts.push('隐藏草稿');
+    if (this.reviewFilter === 'approved') parts.push('已批准');
+    else if (this.reviewFilter === 'changes-requested') parts.push('需修改');
+    else if (this.reviewFilter === 'review-required') parts.push('待评审');
+    else if (this.reviewFilter === 'none') parts.push('未评审');
+    if (this.checksFilter === 'passing') parts.push('检查通过');
+    else if (this.checksFilter === 'failing') parts.push('检查失败');
+    if (this.authorFilter.trim()) parts.push('作者:' + this.authorFilter.trim());
+    return parts.join(' · ');
   }
 
   private scopeSummary(): string {
@@ -757,6 +954,11 @@ export struct PullRequestsPanel {
   private resetScopeFilters(): void {
     this.selectedEnvLocalId = '';
     this.selectedProjectKey = '';
+    this.involvementFilter = 'all';
+    this.draftFilter = '';
+    this.reviewFilter = '';
+    this.checksFilter = '';
+    this.authorFilter = '';
     this.filterSheetOpen = false;
     void this.loadList();
   }
@@ -869,18 +1071,129 @@ export struct PullRequestsPanel {
             }
           }
 
+          GroupCard({ title: '参与角色' }) {
+            Flex({ wrap: FlexWrap.Wrap }) {
+              ForEach([['all', '全部'], ['authored', '我创建'], ['reviewing', '待我评审']], (pair: string[]) => {
+                Button(pair[1], { type: ButtonType.Normal })
+                  .fontSize(FontSize.caption)
+                  .fontWeight(this.involvementFilter === pair[0] ? Weight.semibold : Weight.medium)
+                  .constraintSize({ minHeight: 34 }).padding({ left: Space.sm, right: Space.sm }).margin({ right: 6, bottom: 6 })
+                  .backgroundColor(this.involvementFilter === pair[0] ? $r('app.color.info_bg') : $r('app.color.group'))
+                  .fontColor(this.involvementFilter === pair[0] ? $r('app.color.primary_text') : $r('app.color.ink'))
+                  .border({ width: Sizes.hairline, color: this.involvementFilter === pair[0] ? $r('app.color.primary') : $r('app.color.border'), radius: Radius.tool })
+                  .borderRadius(Radius.tool)
+                  .onClick(() => { this.involvementFilter = pair[0]; void this.loadList(); })
+              }, (pair: string[]) => pair[0])
+            }.width('100%').padding(Space.sm)
+          }
+
+          GroupCard({ title: '草稿 / 评审 / CI 检查' }) {
+            Column({ space: Space.xs }) {
+              Text('草稿状态').fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
+              Flex({ wrap: FlexWrap.Wrap }) {
+                ForEach([['', '不限'], ['hide', '隐藏草稿'], ['only', '仅草稿']], (pair: string[]) => {
+                  Button(pair[1], { type: ButtonType.Normal })
+                    .fontSize(FontSize.caption)
+                    .fontWeight(this.draftFilter === pair[0] ? Weight.semibold : Weight.medium)
+                    .constraintSize({ minHeight: 32 }).padding({ left: Space.sm, right: Space.sm }).margin({ right: 6, bottom: 6 })
+                    .backgroundColor(this.draftFilter === pair[0] ? $r('app.color.info_bg') : $r('app.color.group'))
+                    .fontColor(this.draftFilter === pair[0] ? $r('app.color.primary_text') : $r('app.color.ink'))
+                    .border({ width: Sizes.hairline, color: this.draftFilter === pair[0] ? $r('app.color.primary') : $r('app.color.border'), radius: Radius.tool })
+                    .borderRadius(Radius.tool)
+                    .onClick(() => { this.draftFilter = pair[0]; void this.loadList(); })
+                }, (pair: string[]) => 'draft:' + pair[0])
+              }.width('100%')
+
+              Text('评审结论').fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
+              Flex({ wrap: FlexWrap.Wrap }) {
+                ForEach([['', '不限'], ['approved', '已批准'], ['changes-requested', '需修改'], ['review-required', '待评审'], ['none', '未评审']], (pair: string[]) => {
+                  Button(pair[1], { type: ButtonType.Normal })
+                    .fontSize(FontSize.caption)
+                    .fontWeight(this.reviewFilter === pair[0] ? Weight.semibold : Weight.medium)
+                    .constraintSize({ minHeight: 32 }).padding({ left: Space.sm, right: Space.sm }).margin({ right: 6, bottom: 6 })
+                    .backgroundColor(this.reviewFilter === pair[0] ? $r('app.color.info_bg') : $r('app.color.group'))
+                    .fontColor(this.reviewFilter === pair[0] ? $r('app.color.primary_text') : $r('app.color.ink'))
+                    .border({ width: Sizes.hairline, color: this.reviewFilter === pair[0] ? $r('app.color.primary') : $r('app.color.border'), radius: Radius.tool })
+                    .borderRadius(Radius.tool)
+                    .onClick(() => { this.reviewFilter = pair[0]; void this.loadList(); })
+                }, (pair: string[]) => 'rev:' + pair[0])
+              }.width('100%')
+
+              Text('CI 检查').fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
+              Flex({ wrap: FlexWrap.Wrap }) {
+                ForEach([['', '不限'], ['passing', '通过'], ['failing', '失败']], (pair: string[]) => {
+                  Button(pair[1], { type: ButtonType.Normal })
+                    .fontSize(FontSize.caption)
+                    .fontWeight(this.checksFilter === pair[0] ? Weight.semibold : Weight.medium)
+                    .constraintSize({ minHeight: 32 }).padding({ left: Space.sm, right: Space.sm }).margin({ right: 6, bottom: 6 })
+                    .backgroundColor(this.checksFilter === pair[0] ? $r('app.color.info_bg') : $r('app.color.group'))
+                    .fontColor(this.checksFilter === pair[0] ? $r('app.color.primary_text') : $r('app.color.ink'))
+                    .border({ width: Sizes.hairline, color: this.checksFilter === pair[0] ? $r('app.color.primary') : $r('app.color.border'), radius: Radius.tool })
+                    .borderRadius(Radius.tool)
+                    .onClick(() => { this.checksFilter = pair[0]; void this.loadList(); })
+                }, (pair: string[]) => 'chk:' + pair[0])
+              }.width('100%')
+
+              Text('按作者筛选').fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
+              TextInput({ placeholder: '输入作者账号（留空不限）', text: this.authorFilter })
+                .height(38).width('100%').fontSize(FontSize.body).fontColor($r('app.color.ink'))
+                .placeholderColor($r('app.color.placeholder')).backgroundColor($r('app.color.group'))
+                .borderRadius(Radius.tool).padding({ left: 10, right: 10 })
+                .onChange((value: string) => { this.authorFilter = value; })
+                .onSubmit(() => { void this.loadList(); })
+            }.width('100%').padding(Space.sm).alignItems(HorizontalAlign.Start)
+          }
+
+          GroupCard({ title: '已保存视图' }) {
+            Column({ space: Space.xs }) {
+              Row({ space: Space.xs }) {
+                TextInput({ placeholder: '为当前筛选命名…', text: this.saveViewName })
+                  .layoutWeight(1).height(38).fontSize(FontSize.body).fontColor($r('app.color.ink'))
+                  .placeholderColor($r('app.color.placeholder')).backgroundColor($r('app.color.group'))
+                  .borderRadius(Radius.tool).padding({ left: 10, right: 10 })
+                  .onChange((value: string) => { this.saveViewName = value; })
+                AppButton({
+                  label: '保存视图', kind: 'primary', compact: true,
+                  onTap: () => { void this.saveCurrentView(); }
+                })
+              }.width('100%').alignItems(VerticalAlign.Center)
+              if (this.savedViews.length > 0) {
+                ForEach(this.savedViews, (view: PullRequestSavedView) => {
+                  Row({ space: Space.xs }) {
+                    Text(view.name).fontSize(FontSize.body).fontColor($r('app.color.ink')).layoutWeight(1)
+                      .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+                      .onClick(() => { this.applySavedView(view); })
+                    AppButton({
+                      label: '应用', kind: 'text', compact: true,
+                      onTap: () => { this.applySavedView(view); }
+                    })
+                    AppButton({
+                      label: '删除', kind: 'text', compact: true,
+                      onTap: () => { void this.removeSavedView(view.id); }
+                    })
+                  }.width('100%').constraintSize({ minHeight: 40 })
+                    .border({ width: { top: Sizes.hairline }, color: { top: $r('app.color.separator') } })
+                    .alignItems(VerticalAlign.Center)
+                }, (view: PullRequestSavedView) => view.id)
+              } else {
+                Text('保存常用筛选组合后，会在列表顶部一键切换。')
+                  .fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
+              }
+            }.width('100%').padding(Space.sm).alignItems(HorizontalAlign.Start)
+          }
+
           Column({ space: Space.xs }) {
             if (this.hasActiveScopeFilter()) {
               AppButton({
-                label: '清除项目与环境筛选',
+                label: '清除全部筛选',
                 kind: 'secondary',
                 fill: true,
                 onTap: () => { this.resetScopeFilters(); }
               })
             }
             AppButton({
-              label: '立即刷新',
-              kind: 'secondary',
+              label: '应用并刷新',
+              kind: 'primary',
               fill: true,
               onTap: () => {
                 this.filterSheetOpen = false;
@@ -915,6 +1228,12 @@ export struct PullRequestsPanel {
             label: '刷新', kind: 'text',
             onTap: () => { if (this.selected) void this.open(this.selected); }
           })
+        } else {
+          IconButton({
+            icon: $r('app.media.ui_filter'),
+            label: this.hasActiveScopeFilter() ? '筛选拉取请求（已启用）' : '筛选拉取请求',
+            onTap: () => { this.filterSheetOpen = true; }
+          })
         }
       }
     } else {
@@ -935,11 +1254,11 @@ export struct PullRequestsPanel {
           }.alignItems(VerticalAlign.Center)
         }.layoutWeight(1).alignItems(HorizontalAlign.Start)
           .onClick(() => { if (this.canFilterScope()) this.filterSheetOpen = true; })
-        if (this.canFilterScope()) {
+        if (this.canFilterScope() || true) {
           Stack({ alignContent: Alignment.TopEnd }) {
             IconButton({
               icon: $r('app.media.ui_filter'),
-              label: this.hasActiveScopeFilter() ? '筛选项目与环境（已启用）' : '筛选项目与环境',
+              label: this.hasActiveScopeFilter() ? '筛选拉取请求（已启用）' : '筛选拉取请求',
               onTap: () => { this.filterSheetOpen = true; }
             })
             if (this.hasActiveScopeFilter()) {
@@ -974,40 +1293,72 @@ export struct PullRequestsPanel {
       }.width('100%').padding(2).backgroundColor($r('app.color.group'))
         .border({ width: Sizes.hairline, color: $r('app.color.border') }).borderRadius(9)
 
-      if (this.canFilterScope()) {
+      if (this.savedViews.length > 0) {
         Scroll() {
           Row({ space: Space.xs }) {
-            Row({ space: 5 }) {
-              Image($r('app.media.ui_folder')).width(13).height(13).opacity(0.75).accessibilityLevel('no')
-              Text(this.projectFilterChipLabel())
+            ForEach(this.savedViews, (view: PullRequestSavedView) => {
+              Button(view.name, { type: ButtonType.Normal })
                 .fontSize(FontSize.caption)
-                .fontWeight(this.selectedProjectKey ? Weight.semibold : Weight.medium)
-                .fontColor(this.selectedProjectKey ? $r('app.color.primary_text') : $r('app.color.ink'))
-                .maxLines(1)
-              Image($r('app.media.ui_chevron_down')).width(10).height(10).opacity(0.6).accessibilityLevel('no')
-            }
-            .height(32).padding({ left: 10, right: 10 })
-            .backgroundColor(this.selectedProjectKey ? $r('app.color.info_bg') : $r('app.color.card'))
-            .border({ width: Sizes.hairline, color: this.selectedProjectKey ? $r('app.color.primary') : $r('app.color.border') })
-            .borderRadius(Radius.full).alignItems(VerticalAlign.Center)
-            .accessibilityText('按项目筛选：' + this.projectFilterChipLabel())
-            .onClick(() => { this.filterSheetOpen = true; })
+                .fontWeight(this.isSavedViewActive(view) ? Weight.semibold : Weight.medium)
+                .height(30).padding({ left: 10, right: 10 })
+                .backgroundColor(this.isSavedViewActive(view) ? $r('app.color.info_bg') : $r('app.color.card'))
+                .fontColor(this.isSavedViewActive(view) ? $r('app.color.primary_text') : $r('app.color.ink'))
+                .border({ width: Sizes.hairline, color: this.isSavedViewActive(view) ? $r('app.color.primary') : $r('app.color.border'), radius: Radius.full })
+                .borderRadius(Radius.full)
+                .onClick(() => { this.applySavedView(view); })
+            }, (view: PullRequestSavedView) => view.id + ':' + (this.isSavedViewActive(view) ? '1' : '0'))
+          }.alignItems(VerticalAlign.Center)
+        }.scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).align(Alignment.Start).width('100%')
+      }
 
-            if (this.enabledEnvironments().length > 1) {
+      if (this.canFilterScope() || this.hasActiveAdvancedFilter()) {
+        Scroll() {
+          Row({ space: Space.xs }) {
+            if (this.canFilterScope()) {
               Row({ space: 5 }) {
-                Image($r('app.media.ui_env_desktop')).width(13).height(13).opacity(0.75).accessibilityLevel('no')
-                Text(this.environmentFilterChipLabel())
+                Image($r('app.media.ui_folder')).width(13).height(13).opacity(0.75).accessibilityLevel('no')
+                Text(this.projectFilterChipLabel())
                   .fontSize(FontSize.caption)
-                  .fontWeight(this.selectedEnvLocalId ? Weight.semibold : Weight.medium)
-                  .fontColor(this.selectedEnvLocalId ? $r('app.color.primary_text') : $r('app.color.ink'))
+                  .fontWeight(this.selectedProjectKey ? Weight.semibold : Weight.medium)
+                  .fontColor(this.selectedProjectKey ? $r('app.color.primary_text') : $r('app.color.ink'))
                   .maxLines(1)
                 Image($r('app.media.ui_chevron_down')).width(10).height(10).opacity(0.6).accessibilityLevel('no')
               }
               .height(32).padding({ left: 10, right: 10 })
-              .backgroundColor(this.selectedEnvLocalId ? $r('app.color.info_bg') : $r('app.color.card'))
-              .border({ width: Sizes.hairline, color: this.selectedEnvLocalId ? $r('app.color.primary') : $r('app.color.border') })
+              .backgroundColor(this.selectedProjectKey ? $r('app.color.info_bg') : $r('app.color.card'))
+              .border({ width: Sizes.hairline, color: this.selectedProjectKey ? $r('app.color.primary') : $r('app.color.border') })
               .borderRadius(Radius.full).alignItems(VerticalAlign.Center)
-              .accessibilityText('按环境筛选：' + this.environmentFilterChipLabel())
+              .accessibilityText('按项目筛选：' + this.projectFilterChipLabel())
+              .onClick(() => { this.filterSheetOpen = true; })
+
+              if (this.enabledEnvironments().length > 1) {
+                Row({ space: 5 }) {
+                  Image($r('app.media.ui_env_desktop')).width(13).height(13).opacity(0.75).accessibilityLevel('no')
+                  Text(this.environmentFilterChipLabel())
+                    .fontSize(FontSize.caption)
+                    .fontWeight(this.selectedEnvLocalId ? Weight.semibold : Weight.medium)
+                    .fontColor(this.selectedEnvLocalId ? $r('app.color.primary_text') : $r('app.color.ink'))
+                    .maxLines(1)
+                  Image($r('app.media.ui_chevron_down')).width(10).height(10).opacity(0.6).accessibilityLevel('no')
+                }
+                .height(32).padding({ left: 10, right: 10 })
+                .backgroundColor(this.selectedEnvLocalId ? $r('app.color.info_bg') : $r('app.color.card'))
+                .border({ width: Sizes.hairline, color: this.selectedEnvLocalId ? $r('app.color.primary') : $r('app.color.border') })
+                .borderRadius(Radius.full).alignItems(VerticalAlign.Center)
+                .accessibilityText('按环境筛选：' + this.environmentFilterChipLabel())
+                .onClick(() => { this.filterSheetOpen = true; })
+              }
+            }
+
+            if (this.hasActiveAdvancedFilter()) {
+              Row({ space: 4 }) {
+                Text(this.advancedFilterSummary())
+                  .fontSize(FontSize.caption).fontWeight(Weight.semibold).fontColor($r('app.color.primary_text')).maxLines(1)
+              }
+              .height(32).padding({ left: 10, right: 10 })
+              .backgroundColor($r('app.color.info_bg'))
+              .border({ width: Sizes.hairline, color: $r('app.color.primary') })
+              .borderRadius(Radius.full).alignItems(VerticalAlign.Center)
               .onClick(() => { this.filterSheetOpen = true; })
             }
 
@@ -1020,7 +1371,7 @@ export struct PullRequestsPanel {
               .backgroundColor($r('app.color.card'))
               .border({ width: Sizes.hairline, color: $r('app.color.border') })
               .borderRadius(Radius.full).alignItems(VerticalAlign.Center)
-              .accessibilityText('清除项目与环境筛选')
+              .accessibilityText('清除全部筛选')
               .onClick(() => { this.resetScopeFilters(); })
             }
           }.alignItems(VerticalAlign.Center)
@@ -1216,6 +1567,23 @@ export struct PullRequestsPanel {
                   .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink')).borderRadius(Radius.button)
                   .constraintSize({ minHeight: 38 }).padding({ left: Space.sm, right: Space.sm }).margin({ right: 6, bottom: 6 })
                   .onClick(() => { this.editing = true; })
+                if (!this.detail.autoMergeEnabled && this.detail.actions.includes('enable-auto-merge')) {
+                  Button('开启自动合并').fontSize(FontSize.callout).fontWeight(Weight.medium)
+                    .backgroundColor($r('app.color.info_bg')).fontColor($r('app.color.primary_text')).borderRadius(Radius.button)
+                    .constraintSize({ minHeight: 38 }).padding({ left: Space.sm, right: Space.sm }).margin({ right: 6, bottom: 6 })
+                    .enabled(!this.busy)
+                    .onClick(() => {
+                      const method = this.detail && this.detail.mergeMethods.length > 0 ? this.detail.mergeMethods[0] : '';
+                      void this.runAction('enable-auto-merge', method, { expectedHeadSha: this.detail?.headSha || '' });
+                    })
+                }
+                if (this.detail.actions.includes('disable-auto-merge')) {
+                  Button('取消自动合并').fontSize(FontSize.callout).fontWeight(Weight.medium)
+                    .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink')).borderRadius(Radius.button)
+                    .constraintSize({ minHeight: 38 }).padding({ left: Space.sm, right: Space.sm }).margin({ right: 6, bottom: 6 })
+                    .enabled(!this.busy)
+                    .onClick(() => { void this.runAction('disable-auto-merge'); })
+                }
               }.width('100%')
               if (this.detail.mergeMethods.length && this.detail.actions.includes('merge')) {
                 Text('合并方式').fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
@@ -1231,12 +1599,68 @@ export struct PullRequestsPanel {
                       .onClick(() => {
                         AlertDialog.show({ title: '合并 PR？', message: '方式：' + method,
                           primaryButton: { value: '取消', action: () => {} },
-                          secondaryButton: { value: '合并', action: () => { void this.runAction('merge', method); } } });
+                          secondaryButton: { value: '合并', action: () => {
+                            void this.runAction('merge', method, { expectedHeadSha: this.detail?.headSha || '' });
+                          } } });
                       })
                   }, (method: string) => method)
                 }.width('100%')
+                if (this.openStackLayersForMerge().length >= 2) {
+                  AppButton({
+                    label: '合并整个 Stack（' + this.openStackLayersForMerge().length + ' 个 PR）',
+                    kind: 'secondary', compact: true, fill: true, disabled: this.busy,
+                    onTap: () => {
+                      const layers = this.openStackLayersForMerge();
+                      const method = this.detail && this.detail.mergeMethods.length > 0 ? this.detail.mergeMethods[0] : 'squash';
+                      const heads: PullRequestStackHead[] = layers.map((layer: PullRequestStackLayer): PullRequestStackHead => ({
+                        number: layer.number,
+                        headSha: layer.headSha
+                      }));
+                      AlertDialog.show({
+                        title: '合并整个 Stack？',
+                        message: '将按顺序合并 ' + layers.map((l: PullRequestStackLayer) => '#' + l.number).join(' → ') + '（方式：' + method + '）。',
+                        primaryButton: { value: '取消', action: () => {} },
+                        secondaryButton: { value: '确认合并', action: () => {
+                          void this.runAction('merge', method, {
+                            expectedHeadSha: this.detail?.headSha || '',
+                            stackNumber: this.detail?.number,
+                            expectedStackHeads: heads
+                          });
+                        } }
+                      });
+                    }
+                  })
+                }
               }
             }.padding(14).width('100%').alignItems(HorizontalAlign.Start)
+          }
+
+          GroupCard({ title: '让 Agent 协助' }) {
+            Column({ space: 0 }) {
+              ForEach(pullRequestAgentTaskOptions(this.detail), (opt: PullRequestAgentTaskOption, idx: number) => {
+                Row({ space: Space.xs }) {
+                  Column({ space: 2 }) {
+                    Text(opt.title).fontSize(FontSize.body).fontWeight(Weight.medium)
+                      .fontColor(opt.disabled ? $r('app.color.muted') : $r('app.color.ink')).width('100%')
+                    Text(opt.subtitle).fontSize(FontSize.caption).fontColor($r('app.color.muted')).width('100%')
+                  }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+                  if (!opt.disabled) {
+                    Image($r('app.media.ui_chevron_right')).width(Sizes.chevron).height(Sizes.chevron).opacity(0.55).accessibilityLevel('no')
+                  }
+                }
+                .width('100%').constraintSize({ minHeight: Sizes.formRowMin })
+                .padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs })
+                .alignItems(VerticalAlign.Center)
+                .opacity(opt.disabled ? 0.55 : 1)
+                .border({ width: { top: idx === 0 ? 0 : Sizes.hairline }, color: { top: $r('app.color.separator') } })
+                .onClick(() => {
+                  if (opt.disabled || !this.detail) return;
+                  const targetLocal = this.selected?.localId || this.activeLocalId || '';
+                  const targetProject = this.detail.projectId || this.projectId;
+                  this.onStartAgentTask(targetLocal, targetProject, pullRequestAgentPrompt(opt.task, this.detail));
+                })
+              }, (opt: PullRequestAgentTaskOption) => opt.task + ':' + (opt.disabled ? '1' : '0'))
+            }.width('100%')
           }
 
           if (this.editing) {
@@ -1274,7 +1698,21 @@ export struct PullRequestsPanel {
           })
           Text(this.drafts.length + ' 条审阅草稿').fontSize(FontSize.caption).fontColor($r('app.color.muted'))
             .layoutWeight(1).textAlign(TextAlign.End)
-        }.width('100%').padding({ left: Space.xs, right: Space.sm })
+          if (!this.detail || this.detail.viewedFilesSupported !== false) {
+            Button(this.isFileViewed(this.selectedFile) ? '✓ 已审阅' : '标记已审阅', { type: ButtonType.Normal })
+              .fontSize(FontSize.caption)
+              .fontWeight(this.isFileViewed(this.selectedFile) ? Weight.semibold : Weight.medium)
+              .constraintSize({ minHeight: 34 }).padding({ left: 10, right: 10 })
+              .backgroundColor(this.isFileViewed(this.selectedFile) ? $r('app.color.info_bg') : $r('app.color.card'))
+              .fontColor(this.isFileViewed(this.selectedFile) ? $r('app.color.primary_text') : $r('app.color.ink'))
+              .border({ width: Sizes.hairline, color: this.isFileViewed(this.selectedFile) ? $r('app.color.primary') : $r('app.color.border'), radius: Radius.tool })
+              .borderRadius(Radius.tool)
+              .onClick(() => { void this.toggleFileViewed(this.selectedFile); })
+          }
+        }.width('100%').padding({ left: Space.xs, right: Space.sm }).alignItems(VerticalAlign.Center)
+        if (this.viewedError) {
+          Text(this.viewedError).fontSize(FontSize.caption).fontColor($r('app.color.danger')).width('100%')
+        }
         List({ space: Space.xs }) {
           ListItem() {
             Text(this.selectedFile).fontSize(FontSize.body).fontWeight(Weight.medium).fontColor($r('app.color.ink'))
@@ -1297,8 +1735,14 @@ export struct PullRequestsPanel {
                     Text(row.kind === 'add' ? '+' : row.kind === 'del' ? '-' : ' ')
                       .fontSize(this.codeFontSize).fontFamily('monospace').width((this.codeFontSize + 2) + 'fp')
                       .lineHeight((this.codeFontSize + 9) + 'fp')
-                    CodeLine({ text: row.text, color: row.kind === 'add' ? $r('app.color.diff_add_ink') :
-                      row.kind === 'del' ? $r('app.color.diff_del_ink') : $r('app.color.ink') }).layoutWeight(1)
+                    CodeLine({
+                      text: row.text,
+                      language: detectCodeLanguage(this.selectedFile),
+                      wordSegments: this.rowWordSegments(hunk, index),
+                      diffKind: row.kind,
+                      color: row.kind === 'add' ? $r('app.color.diff_add_ink') :
+                        row.kind === 'del' ? $r('app.color.diff_del_ink') : $r('app.color.ink')
+                    }).layoutWeight(1)
                   }.width('100%').constraintSize({ minHeight: (this.codeFontSize + 9) + 'fp' })
                     .alignItems(VerticalAlign.Top)
                     .backgroundColor(this.selectedHunk === hunk.header && this.lineStart >= 0 &&
@@ -1360,8 +1804,19 @@ export struct PullRequestsPanel {
             Text('已隐藏 ' + this.hiddenTestFileCount() + ' 个测试文件')
               .fontSize(FontSize.caption).fontColor($r('app.color.muted')).layoutWeight(1)
               .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+          } else {
+            Blank().layoutWeight(1)
+          }
+          if (this.visiblePatchFiles().length > 0 && (!this.detail || this.detail.viewedFilesSupported !== false)) {
+            StatusBadge({
+              text: '已审阅 ' + this.viewedFileCount() + '/' + this.visiblePatchFiles().length,
+              tone: this.viewedFileCount() === this.visiblePatchFiles().length ? 'success' : 'neutral'
+            })
           }
         }.width('100%').alignItems(VerticalAlign.Center)
+        if (this.viewedError) {
+          Text(this.viewedError).fontSize(FontSize.caption).fontColor($r('app.color.danger')).width('100%')
+        }
         if (this.patchFiles.length > 0 && this.visiblePatchFiles().length === 0) {
           GroupCard() {
             Column({ space: Space.xs }) {
@@ -1382,9 +1837,20 @@ export struct PullRequestsPanel {
             ForEach(this.visiblePatchFiles(), (file: DiffFile, index: number) => {
               ListItem() {
                 Row({ space: Space.xs }) {
+                  if (!this.detail || this.detail.viewedFilesSupported !== false) {
+                    Button(this.isFileViewed(file.path) ? '✓' : '○', { type: ButtonType.Normal })
+                      .width(44).height(44)
+                      .fontSize(FontSize.headline)
+                      .fontWeight(Weight.semibold)
+                      .fontColor(this.isFileViewed(file.path) ? $r('app.color.primary_text') : $r('app.color.muted'))
+                      .backgroundColor(Color.Transparent)
+                      .borderRadius(Radius.tool)
+                      .accessibilityText((this.isFileViewed(file.path) ? '取消已审阅：' : '标记已审阅：') + file.path)
+                      .onClick(() => { void this.toggleFileViewed(file.path); })
+                  }
                   Column({ space: 3 }) {
                     Text(file.path.slice(file.path.lastIndexOf('/') + 1)).fontSize(FontSize.body).fontWeight(Weight.medium)
-                      .fontColor($r('app.color.ink')).width('100%').wordBreak(WordBreak.BREAK_ALL)
+                      .fontColor(this.isFileViewed(file.path) ? $r('app.color.muted') : $r('app.color.ink')).width('100%').wordBreak(WordBreak.BREAK_ALL)
                     if (file.path.includes('/')) {
                       Text(file.path.slice(0, file.path.lastIndexOf('/'))).fontSize(FontSize.caption).fontColor($r('app.color.muted'))
                         .width('100%').wordBreak(WordBreak.BREAK_ALL).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -1392,11 +1858,12 @@ export struct PullRequestsPanel {
                   }.layoutWeight(1).alignItems(HorizontalAlign.Start)
                   Text('+' + file.additions).fontSize(FontSize.badge).fontColor($r('app.color.diff_add_ink'))
                   Text('-' + file.deletions).fontSize(FontSize.badge).fontColor($r('app.color.diff_del_ink'))
-                }.constraintSize({ minHeight: Sizes.formRowMin }).padding({ left: 14, right: 14, top: Space.xs, bottom: Space.xs }).width('100%')
+                }.constraintSize({ minHeight: Sizes.formRowMin }).padding({ left: 6, right: 14, top: Space.xs, bottom: Space.xs }).width('100%')
+                  .alignItems(VerticalAlign.Center)
                   .accessibilityText(file.path + '，新增 ' + file.additions + ' 行，删除 ' + file.deletions + ' 行')
                   .onClick(() => { this.selectedFile = file.path; this.selectedHunk = ''; })
               }
-            }, (file: DiffFile, index: number) => file.path + ':' + file.changeType + ':' + index)
+            }, (file: DiffFile, index: number) => file.path + ':' + file.changeType + ':' + index + ':' + (this.isFileViewed(file.path) ? 'v' : 'u'))
             if (!this.patchFiles.length) {
               ListItem() {
                 Text(this.diffError || (this.loading ? '正在读取文件差异…' : '没有可显示的文件差异')).fontSize(FontSize.callout)

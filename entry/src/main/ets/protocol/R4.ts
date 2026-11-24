@@ -66,6 +66,29 @@ function safeToken(value: string, label: string, max: number): string {
   return value;
 }
 
+export const BOUNDED_ATTACHMENT_FILENAME_MAX = 180;
+
+/** Safely bounds attachment filenames to <= maxLength (<= 255) while preserving extension and stripping control chars. */
+export function boundAttachmentFileName(
+  raw: string,
+  fallback: string = 'attachment',
+  maxLength: number = BOUNDED_ATTACHMENT_FILENAME_MAX
+): string {
+  const cap = Math.max(16, Math.min(255, Math.floor(maxLength)));
+  const cleaned = (raw || '').replace(/[\x00-\x1f\x7f]/g, '').replace(/[\\/]+/g, '_').trim();
+  const base = cleaned || fallback.trim() || 'attachment';
+  if (base.length <= cap) return base;
+  const dot = base.lastIndexOf('.');
+  if (dot > 0 && dot < base.length - 1) {
+    const ext = base.slice(dot);
+    if (ext.length <= 16 && ext.length < cap - 1) {
+      const stem = base.slice(0, cap - ext.length).replace(/[. ]+$/, '') || 'file';
+      return stem + ext;
+    }
+  }
+  return base.slice(0, cap).trim() || 'attachment';
+}
+
 export function attachmentRecord(value: Object): DraftAttachment {
   const row = record(value);
   const type = text(row.type);
