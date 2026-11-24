@@ -48,13 +48,13 @@
 
 | 首页工作台 | 会话与代码高亮 | 文件浏览与原生 Mermaid | Git 变更与提交 |
 | :---: | :---: | :---: | :---: |
-| <img src="docs/screenshots/promo-v0.1.1/01-home-light.jpeg" width="200" alt="首页工作台（浅色）" /> | <img src="docs/screenshots/promo-v0.1.1/02-chat-light.jpeg" width="200" alt="会话与代码高亮（浅色）" /> | <img src="docs/screenshots/promo-v0.1.1/03-files-mermaid-light.jpeg" width="200" alt="文件浏览与原生 Mermaid（浅色）" /> | <img src="docs/screenshots/promo-v0.1.1/04-git-light.jpeg" width="200" alt="Git 变更与提交（浅色）" /> |
+| <img src="docs/screenshots/promo-v0.1.10/01-home-light.jpeg" width="200" alt="首页工作台（浅色）" /> | <img src="docs/screenshots/promo-v0.1.10/02-chat-light.jpeg" width="200" alt="会话与代码高亮（浅色）" /> | <img src="docs/screenshots/promo-v0.1.10/03-files-mermaid-light.jpeg" width="200" alt="文件浏览与原生 Mermaid（浅色）" /> | <img src="docs/screenshots/promo-v0.1.10/04-git-light.jpeg" width="200" alt="Git 变更与提交（浅色）" /> |
 
-| 分组设置中心 | 关于与版本页 | 深色首页工作台 | 深色会话详情 |
+| 分组设置中心 | 关于与独立声明 | 深色首页工作台 | 深色会话详情 |
 | :---: | :---: | :---: | :---: |
-| <img src="docs/screenshots/promo-v0.1.1/05-settings-light.jpeg" width="200" alt="分组设置中心（浅色）" /> | <img src="docs/screenshots/promo-v0.1.1/06-about-version-light.jpeg" width="200" alt="关于与版本页" /> | <img src="docs/screenshots/promo-v0.1.1/07-home-dark.jpeg" width="200" alt="深色首页工作台" /> | <img src="docs/screenshots/promo-v0.1.1/08-chat-dark.jpeg" width="200" alt="深色会话详情" /> |
+| <img src="docs/screenshots/promo-v0.1.10/05-settings-light.jpeg" width="200" alt="分组设置中心（浅色）" /> | <img src="docs/screenshots/promo-v0.1.10/06-about-version-light.jpeg" width="200" alt="关于与独立声明" /> | <img src="docs/screenshots/promo-v0.1.10/07-home-dark.jpeg" width="200" alt="深色首页工作台" /> | <img src="docs/screenshots/promo-v0.1.10/08-chat-dark.jpeg" width="200" alt="深色会话详情" /> |
 
-> 以上历史预览截图采集自早期版本真机演示数据（品牌升级为「简码 · LessAgent」后将在下个版本更新对应截图）。
+> 以上真机预览截图采集自 **简码 · LessAgent `v0.1.10`**（连接隔离测试环境与演示仓库数据，涵盖浅色与深色模式）。
 
 ## 核心特性
 

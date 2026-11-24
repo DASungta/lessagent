@@ -48,13 +48,13 @@
 
 | Home Workbench | Chat & Code Highlighting | File Browser & Native Mermaid | Git Status & Commit |
 | :---: | :---: | :---: | :---: |
-| <img src="docs/screenshots/promo-v0.1.1/01-home-light.jpeg" width="200" alt="Home Workbench (Light)" /> | <img src="docs/screenshots/promo-v0.1.1/02-chat-light.jpeg" width="200" alt="Chat and Code Highlighting (Light)" /> | <img src="docs/screenshots/promo-v0.1.1/03-files-mermaid-light.jpeg" width="200" alt="File Browser and Native Mermaid (Light)" /> | <img src="docs/screenshots/promo-v0.1.1/04-git-light.jpeg" width="200" alt="Git Status and Commit (Light)" /> |
+| <img src="docs/screenshots/promo-v0.1.10/01-home-light.jpeg" width="200" alt="Home Workbench (Light)" /> | <img src="docs/screenshots/promo-v0.1.10/02-chat-light.jpeg" width="200" alt="Chat and Code Highlighting (Light)" /> | <img src="docs/screenshots/promo-v0.1.10/03-files-mermaid-light.jpeg" width="200" alt="File Browser and Native Mermaid (Light)" /> | <img src="docs/screenshots/promo-v0.1.10/04-git-light.jpeg" width="200" alt="Git Status and Commit (Light)" /> |
 
-| Grouped Settings | About & Version | Home Workbench (Dark) | Chat Detail (Dark) |
+| Grouped Settings | About & Notice | Home Workbench (Dark) | Chat Detail (Dark) |
 | :---: | :---: | :---: | :---: |
-| <img src="docs/screenshots/promo-v0.1.1/05-settings-light.jpeg" width="200" alt="Grouped Settings (Light)" /> | <img src="docs/screenshots/promo-v0.1.1/06-about-version-light.jpeg" width="200" alt="About and Version" /> | <img src="docs/screenshots/promo-v0.1.1/07-home-dark.jpeg" width="200" alt="Home Workbench (Dark)" /> | <img src="docs/screenshots/promo-v0.1.1/08-chat-dark.jpeg" width="200" alt="Chat Detail (Dark)" /> |
+| <img src="docs/screenshots/promo-v0.1.10/05-settings-light.jpeg" width="200" alt="Grouped Settings (Light)" /> | <img src="docs/screenshots/promo-v0.1.10/06-about-version-light.jpeg" width="200" alt="About and Independent Notice" /> | <img src="docs/screenshots/promo-v0.1.10/07-home-dark.jpeg" width="200" alt="Home Workbench (Dark)" /> | <img src="docs/screenshots/promo-v0.1.10/08-chat-dark.jpeg" width="200" alt="Chat Detail (Dark)" /> |
 
-> Historical screenshots captured on real hardware using a demo repository fixture prior to the LessAgent (简码) rebrand; refreshed screenshots will accompany the next release.
+> Real-device screenshots captured from **LessAgent (简码) `v0.1.10`** against an isolated test server and demo repository fixture across Light and Dark themes.
 
 ## Features
 
