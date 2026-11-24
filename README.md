@@ -7,7 +7,7 @@
 <h1>简码 · LessAgent</h1>
 
 <p>
-  基于 <strong>ArkTS + ArkUI</strong> 打造的独立第三方 <strong>T3 Code</strong> 原生移动客户端 ——<br />
+  基于 <strong>ArkTS + ArkUI</strong> 打造的独立第三方 <strong>T3 Code</strong> 鸿蒙原生客户端 ——<br />
   直连电脑或服务器端的 T3 Code 服务端，随时随地驱动 Coding Agent、审阅变更与操作研发工具。
 </p>
 
@@ -42,7 +42,7 @@
 > - 本客户端兼容 [T3 Code](https://github.com/pingdotgg/t3code) 服务端协议（`orchestrationProtocol=2`），内置的 [MIT 许可证副本](entry/src/main/resources/rawfile/t3code-license.txt) 仅用于说明协议与代码参考来源。
 > - 应用支持兼容接入上游托管中继服务 **T3 Connect**，但上游不承诺第三方客户端的长期接口稳定性；您可随时切换**自建中继**或使用**局域网 / Tailnet / 公网直连**模式。
 
-**简码（LessAgent）** 是一款独立维护的非官方第三方 [T3 Code](https://github.com/pingdotgg/t3code) 原生移动客户端，用于远程操控研发工作区与 Coding Agent。架构上作为瘦客户端运行，所有 Coding Agent 执行与仓库操作均在您的电脑或远端服务端完成；全套页面、会话流、Markdown、代码高亮、Mermaid 图表与 Diff 审阅均以原生 ArkUI 实现，并在真机上完成端到端联调与视觉打磨。
+**简码（LessAgent）** 是一款独立维护的非官方第三方 [T3 Code](https://github.com/pingdotgg/t3code) 鸿蒙原生客户端，用于远程操控研发工作区与 Coding Agent。架构上作为瘦客户端运行，所有 Coding Agent 执行与仓库操作均在您的电脑或远端服务端完成；全套页面、会话流、Markdown、代码高亮、Mermaid 图表与 Diff 审阅均以原生 ArkUI 实现，并在真机上完成端到端联调与视觉打磨。
 
 ## 界面预览
 
