@@ -14,8 +14,8 @@
 <p>
   <img src="https://img.shields.io/badge/API-24%2B-0C4146?style=flat-square" alt="API 24+" />
   <img src="https://img.shields.io/badge/ArkTS_%2B_ArkUI-Native-166B64?style=flat-square" alt="ArkTS + ArkUI Native" />
-  <a href="https://github.com/DASungta/lessagent/releases/tag/v0.1.10-preview"><img src="https://img.shields.io/badge/Preview-v0.1.10--preview-22C9A8?style=flat-square" alt="Preview v0.1.10-preview" /></a>
-  <img src="https://img.shields.io/badge/Tests-750_passing-16A34A?style=flat-square" alt="750 Tests Passing" />
+  <a href="https://github.com/DASungta/lessagent/releases/tag/v0.1.11-preview"><img src="https://img.shields.io/badge/Preview-v0.1.11--preview-22C9A8?style=flat-square" alt="Preview v0.1.11-preview" /></a>
+  <img src="https://img.shields.io/badge/Tests-769_passing-16A34A?style=flat-square" alt="769 Tests Passing" />
   <img src="https://img.shields.io/badge/License-MIT-52525B?style=flat-square" alt="MIT License" />
 </p>
 
@@ -87,7 +87,7 @@
 
 ### 下载预览侧载包
 
-当前项目处于 **Preview** 阶段，可在 [GitHub Releases (`v0.1.10-preview`)](https://github.com/DASungta/lessagent/releases/tag/v0.1.10-preview) 查看历史预览包（后续将随新包名 `com.dasungta.lessagent` 发布新版构建产物）。
+当前项目处于 **Preview** 阶段，可直接前往 [GitHub Releases (`v0.1.11-preview`)](https://github.com/DASungta/lessagent/releases/tag/v0.1.11-preview) 下载预编译的 **未签名调试模式 HAP**（`lessagent-v0.1.11-preview-unsigned.hap`，附 `.sha256` 校验文件，包名 `com.dasungta.lessagent`，兼容 `API 20+`）。
 
 > **侧载说明**：出于系统安全机制，真机拒绝直接安装未签名包，而调试签名强绑定单台设备 UDID 与个人证书。下载未签名包后，请使用您自己的开发者账号注入调试签名后安装，或直接克隆源码在 DevEco Studio 中为 `com.dasungta.lessagent` 开启自动签名编译安装。
 
@@ -103,7 +103,7 @@
 git clone https://github.com/DASungta/lessagent.git
 cd lessagent
 
-# 运行全部宿主单元测试与主题对比度校验（750/750）
+# 运行全部宿主单元测试与主题对比度校验（769/769）
 node --experimental-strip-types --test tests/*.test.mjs
 
 # 构建 Debug HAP（可通过 DEVECO_HOME 指定 DevEco Studio 安装路径）

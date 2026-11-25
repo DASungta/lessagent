@@ -14,8 +14,8 @@
 <p>
   <img src="https://img.shields.io/badge/API-24%2B-0C4146?style=flat-square" alt="API 24+" />
   <img src="https://img.shields.io/badge/ArkTS_%2B_ArkUI-Native-166B64?style=flat-square" alt="ArkTS + ArkUI Native" />
-  <a href="https://github.com/DASungta/lessagent/releases/tag/v0.1.10-preview"><img src="https://img.shields.io/badge/Preview-v0.1.10--preview-22C9A8?style=flat-square" alt="Preview v0.1.10-preview" /></a>
-  <img src="https://img.shields.io/badge/Tests-750_passing-16A34A?style=flat-square" alt="750 Tests Passing" />
+  <a href="https://github.com/DASungta/lessagent/releases/tag/v0.1.11-preview"><img src="https://img.shields.io/badge/Preview-v0.1.11--preview-22C9A8?style=flat-square" alt="Preview v0.1.11-preview" /></a>
+  <img src="https://img.shields.io/badge/Tests-769_passing-16A34A?style=flat-square" alt="769 Tests Passing" />
   <img src="https://img.shields.io/badge/License-MIT-52525B?style=flat-square" alt="MIT License" />
 </p>
 
@@ -87,7 +87,7 @@
 
 ### Download Preview Sideload Package
 
-This project is currently in **Preview**. Earlier preview builds are hosted at [GitHub Releases (`v0.1.10-preview`)](https://github.com/DASungta/lessagent/releases/tag/v0.1.10-preview) (upcoming releases will ship packages under `com.dasungta.lessagent`).
+This project is currently in **Preview**. You can download the prebuilt **unsigned debug-mode HAP** (`lessagent-v0.1.11-preview-unsigned.hap`, with its `.sha256` checksum, bundle `com.dasungta.lessagent`, API `20+`) from [GitHub Releases (`v0.1.11-preview`)](https://github.com/DASungta/lessagent/releases/tag/v0.1.11-preview).
 
 > **Sideloading Note**: Devices reject unsigned HAPs as well as debug packages signed for another device's UDID. Sign unsigned packages with your own developer certificate/profile, or clone the repo and build with automatic signing for `com.dasungta.lessagent` in DevEco Studio.
 
@@ -103,7 +103,7 @@ This project is currently in **Preview**. Earlier preview builds are hosted at [
 git clone https://github.com/DASungta/lessagent.git
 cd lessagent
 
-# Run all host unit tests and theme contrast checks (750/750)
+# Run all host unit tests and theme contrast checks (769/769)
 node --experimental-strip-types --test tests/*.test.mjs
 
 # Build the Debug HAP (override DevEco Studio path via DEVECO_HOME if needed)

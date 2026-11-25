@@ -2,8 +2,8 @@
   "app": {
     "bundleName": "com.dasungta.lessagent",
     "vendor": "DASungta",
-    "versionCode": 11,
-    "versionName": "0.1.10",
+    "versionCode": 12,
+    "versionName": "0.1.11",
     "icon": "$media:layered_image",
     "label": "$string:app_name",
     "configuration": "$profile:configuration"
