@@ -665,8 +665,9 @@ export struct RequestCard {
               }
               TextArea({ placeholder: display.placeholder, text: this.customText(display.question) })
                 .width('100%')
-                .constraintSize({ minHeight: 44 })
-                .maxLines(4, { overflowMode: MaxLinesMode.SCROLL })
+                .enterKeyType(EnterKeyType.NEW_LINE)
+                .constraintSize({ minHeight: 44, maxHeight: 120 })
+                .barState(BarState.Auto)
                 .fontSize(FontSize.body)
                 .lineHeight(LineHeight.body)
                 .fontColor($r('app.color.ink'))

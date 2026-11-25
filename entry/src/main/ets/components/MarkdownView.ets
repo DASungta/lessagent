@@ -488,6 +488,7 @@ export struct MarkdownView {
           } else if (span.kind === 'link') {
             if (span.href && span.href.startsWith('t3-context://')) {
               Span(span.text).fontColor($r('app.color.primary_text')).fontWeight(FontWeight.Medium)
+                .onClick(() => { if (span.href) this.onOpenLink(span.href); })
             } else {
               Span(span.text).fontColor($r('app.color.primary_text'))
                 .decoration({ type: TextDecorationType.Underline, color: $r('app.color.primary_text') })
@@ -532,15 +533,22 @@ export struct MarkdownView {
     Column({ space: this.compact ? 3 : 4 }) {
       ForEach(block.items, (item: MarkdownListItem, index: number) => {
         Row({ space: 6 }) {
-          Text(item.checked === undefined ? (item.ordered ? (block.start + index) + '.' : '•') :
-            (item.checked ? '☑' : '☐'))
-            .fontSize(this.bodySize()).fontColor(item.checked === undefined ? $r('app.color.muted') : $r('app.color.primary_text'))
-            .width(this.compact ? 18 : 28).textAlign(TextAlign.End)
+          Text(item.checked === undefined
+            ? (item.displayMarker || (item.ordered ? item.marker : '•'))
+            : (item.checked ? '☑' : '☐'))
+            .fontSize(this.bodySize())
+            .lineHeight(this.bodyLineHeight() + 'fp')
+            .fontColor(item.checked === undefined ? $r('app.color.muted') : $r('app.color.primary_text'))
+            .constraintSize({ minWidth: this.compact ? 22 : 28 })
+            .maxLines(1)
+            .flexShrink(0)
+            .textAlign(TextAlign.End)
           Column() {
             this.inline(item.spans, this.bodySize(), this.bodyLineHeight(), this.bodyColor(), FontWeight.Normal)
           }.layoutWeight(1)
         }.width('100%').padding({ left: Math.min(item.depth, 4) * (this.compact ? 12 : 18) }).alignItems(VerticalAlign.Top)
-      }, (item: MarkdownListItem, index: number) => index + ':' + item.text)
+      }, (item: MarkdownListItem, index: number) =>
+        index + ':' + item.depth + ':' + item.displayMarker + ':' + String(item.checked) + ':' + item.text)
     }.width('100%')
   }
 
@@ -758,13 +766,25 @@ export struct MarkdownView {
     }
   }
 
+  private blockKey(block: MarkdownBlock, index: number): string {
+    if (block.kind === 'image') return index + ':image:' + block.url + ':' + block.alt;
+    if (block.kind === 'list') {
+      const last = block.items.length > 0 ? block.items[block.items.length - 1] : undefined;
+      return index + ':list:' + block.items.length + ':' + block.text.length + ':' +
+        block.text.slice(0, 24) + ':' + (last ? last.displayMarker + ':' + last.text.slice(-24) : '');
+    }
+    if (block.kind === 'table') {
+      return index + ':table:' + block.header.join('|').slice(0, 24) + ':' + block.rows.length + ':' +
+        (block.rows.length > 0 ? block.rows[block.rows.length - 1].join('|').slice(-24) : '');
+    }
+    return index + ':' + block.kind + ':' + block.text.length + ':' + block.text.slice(0, 40) + ':' + block.text.slice(-24);
+  }
+
   build() {
     Column({ space: this.compact ? 6 : 10 }) {
       ForEach(markdownDocument(this.markdown), (block: MarkdownBlock, index: number) => {
         this.blockView(block, index)
-      }, (block: MarkdownBlock, index: number) => block.kind === 'image'
-        ? index + ':image:' + block.url + ':' + block.alt
-        : index + ':' + block.kind + ':' + block.text.length + ':' + block.text.slice(0, 40))
+      }, (block: MarkdownBlock, index: number) => this.blockKey(block, index))
     }.width('100%').alignItems(HorizontalAlign.Start).foregroundColor($r('app.color.ink'))
   }
 }

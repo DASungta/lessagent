@@ -3,8 +3,27 @@ import { BackgroundTaskView, DraftAttachment, GuestMessageView, GuestShareView, 
 import { ThreadView } from '../protocol/Projects';
 import { AppButton } from './ui/AppButton';
 import { GroupCard } from './ui/GroupCard';
-import { StatusBadge } from './ui/StatusBadge';
+import { BadgeTone, StatusBadge } from './ui/StatusBadge';
 import { TopBar } from './ui/TopBar';
+
+function extrasSubagentStatusText(status: string): string {
+  if (status === 'running') return '运行中';
+  if (status === 'pending') return '排队中';
+  if (status === 'waiting') return '等待中';
+  if (status === 'idle') return '空闲';
+  if (status === 'completed') return '已完成';
+  if (status === 'failed') return '失败';
+  if (status === 'cancelled') return '已取消';
+  if (status === 'interrupted') return '已停止';
+  return status || '未知';
+}
+
+function extrasSubagentStatusTone(status: string): BadgeTone {
+  if (status === 'running' || status === 'pending' || status === 'waiting') return 'info';
+  if (status === 'completed') return 'success';
+  if (status === 'failed') return 'danger';
+  return 'neutral';
+}
 
 @Component
 export struct ThreadExtrasPanel {
@@ -76,7 +95,7 @@ export struct ThreadExtrasPanel {
                   Text(agent.title)
                     .fontSize(FontSize.body).lineHeight(LineHeight.body).fontWeight(Weight.medium)
                     .fontColor($r('app.color.ink')).layoutWeight(1).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-                  StatusBadge({ text: agent.status, tone: agent.canStop ? 'info' : 'neutral' })
+                  StatusBadge({ text: extrasSubagentStatusText(agent.status), tone: extrasSubagentStatusTone(agent.status) })
                 }.width('100%').alignItems(VerticalAlign.Center)
                 if (agent.remoteEnvironmentId) {
                   Text('远端环境：' + (agent.remoteLabel || agent.remoteEnvironmentId))
@@ -92,35 +111,37 @@ export struct ThreadExtrasPanel {
                     .fontSize(FontSize.caption).lineHeight(LineHeight.caption).fontColor($r('app.color.muted'))
                     .width('100%').maxLines(4)
                 }
-                Row({ space: Space.xs }) {
-                  if (agent.childThreadId || agent.remoteThreadId) {
-                    Row() {
-                      AppButton({
-                        label: '打开',
-                        kind: 'secondary',
-                        compact: true,
-                        fill: true,
-                        disabled: !this.connected,
-                        onTap: () => this.onOpenThread(agent.childThreadId || agent.remoteThreadId, agent.remoteEnvironmentId, agent.remoteLabel || '')
-                      })
-                    }.layoutWeight(1)
-                  }
-                  if (agent.canStop) {
-                    Row() {
-                      AppButton({
-                        label: '停止',
-                        kind: 'danger',
-                        compact: true,
-                        fill: true,
-                        disabled: this.busy,
-                        onTap: () => this.onStopSubagent(agent.id)
-                      })
-                    }.layoutWeight(1)
-                  }
-                }.width('100%')
+                if (agent.childThreadId || agent.remoteThreadId || agent.canStop) {
+                  Row({ space: Space.xs }) {
+                    if (agent.childThreadId || agent.remoteThreadId) {
+                      Row() {
+                        AppButton({
+                          label: '打开',
+                          kind: 'secondary',
+                          compact: true,
+                          fill: true,
+                          disabled: !this.connected,
+                          onTap: () => this.onOpenThread(agent.childThreadId || agent.remoteThreadId, agent.remoteEnvironmentId, agent.remoteLabel || '')
+                        })
+                      }.layoutWeight(1)
+                    }
+                    if (agent.canStop) {
+                      Row() {
+                        AppButton({
+                          label: '停止',
+                          kind: 'danger',
+                          compact: true,
+                          fill: true,
+                          disabled: this.busy,
+                          onTap: () => this.onStopSubagent(agent.id)
+                        })
+                      }.layoutWeight(1)
+                    }
+                  }.width('100%')
+                }
               }.padding(Space.md).width('100%').alignItems(HorizontalAlign.Start)
                 .backgroundColor($r('app.color.card')).borderRadius(Radius.card)
-            }, (agent: SubagentView) => agent.id)
+            }, (agent: SubagentView) => agent.id + '|' + agent.status + '|' + String(agent.canStop) + '|' + agent.updatedAt)
           }
           if (this.sideChats.length) {
             GroupCard({ title: 'Side chat · ' + this.sideChats.length }) {

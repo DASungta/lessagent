@@ -135,3 +135,29 @@ test('U1: deriveResumableRunId hides resume only when provider lacks native resu
  assert.equal(r4.deriveResumableRunId(usageFailed,'usage_limit'),'');
  assert.equal(r4.deriveResumableRunId({...usageFailed,providerSessions:[{id:'ps-1',capabilities:{turns:{supportsNativeResume:true}}}]},'usage_limit'),'u-fail');
 });
+
+test('subagents never mark idle or non-stoppable native subagents as stoppable',()=>{
+ const rows=r4.subagents([
+  {id:'idle-native',origin:'provider_native',driver:'antigravity',runId:'r1',status:'idle',childThreadId:'c1',title:'Backend Protocol & Fence Engineer'},
+  {id:'idle-app',origin:'app_owned',driver:'codex',runId:'r1',status:'idle',childThreadId:'c2',title:'App Idle'},
+  {id:'done-app',origin:'app_owned',driver:'codex',runId:'r1',status:'completed',childThreadId:'c3',title:'Done'},
+  {id:'run-app',origin:'app_owned',driver:'codex',runId:'r1',status:'running',childThreadId:'c4',title:'Active App'},
+  {id:'run-app-no-child',origin:'app_owned',driver:'codex',runId:'r1',status:'running',childThreadId:null,title:'No Child'},
+  {id:'run-agy',origin:'provider_native',driver:'antigravity',runId:'r1',status:'running',childThreadId:'c5',nativeTaskRef:{strength:'strong',nativeId:'n1'},title:'Active Agy'},
+  {id:'run-claude-strong',origin:'provider_native',driver:'claudeAgent',runId:'r1',status:'running',nativeTaskRef:{strength:'strong',nativeId:'n2'},title:'Active Claude'},
+  {id:'run-claude-weak',origin:'provider_native',driver:'claudeAgent',runId:'r1',status:'running',nativeTaskRef:{strength:'weak',nativeId:'n3'},title:'Weak Claude'},
+  {id:'wf-running',origin:'provider_native',driver:'claudeAgent',runId:'r1',status:'running',nativeTaskRef:{strength:'strong',nativeId:'wf1'},workflow:{phases:[],agents:[]},title:'Workflow'},
+  {id:'wf-idle',origin:'provider_native',driver:'claudeAgent',runId:'r1',status:'idle',nativeTaskRef:{strength:'strong',nativeId:'wf2'},workflow:{phases:[],agents:[]},title:'Idle Workflow'}
+ ]);
+ const byId=Object.fromEntries(rows.map(row=>[row.id,row]));
+ assert.equal(byId['idle-native'].canStop,false);
+ assert.equal(byId['idle-app'].canStop,false);
+ assert.equal(byId['done-app'].canStop,false);
+ assert.equal(byId['run-app'].canStop,true);
+ assert.equal(byId['run-app-no-child'].canStop,false);
+ assert.equal(byId['run-agy'].canStop,false);
+ assert.equal(byId['run-claude-strong'].canStop,true);
+ assert.equal(byId['run-claude-weak'].canStop,false);
+ assert.equal(byId['wf-running'].canStop,true);
+ assert.equal(byId['wf-idle'].canStop,false);
+});

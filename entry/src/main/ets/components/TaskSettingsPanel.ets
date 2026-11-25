@@ -157,70 +157,75 @@ export struct TaskSettingsPanel {
         })
       }
 
-      Scroll() {
-        Column({ space: 0 }) {
-          Row({ space: Space.xs }) {
-            Image($r('app.media.ui_search')).width(16).height(16).opacity(0.6).accessibilityLevel('no')
-            TextInput({ placeholder: '搜索模型或 Provider', text: this.query })
-              .layoutWeight(1).height(40).fontSize(FontSize.body).fontColor($r('app.color.ink'))
-              .placeholderColor($r('app.color.placeholder')).backgroundColor(Color.Transparent).padding(0)
-              .enabled(!this.busy).onChange((value: string) => this.query = value)
-          }
-          .width('100%').padding({ left: Space.sm, right: Space.sm }).backgroundColor($r('app.color.card'))
-          .borderRadius(Radius.button).margin({ top: Space.xxs, bottom: Space.xs }).alignItems(VerticalAlign.Center)
+      Column({ space: 0 }) {
+        Row({ space: Space.xs }) {
+          Image($r('app.media.ui_search')).width(16).height(16).opacity(0.6).accessibilityLevel('no')
+          TextInput({ placeholder: '搜索模型或 Provider', text: this.query })
+            .layoutWeight(1).height(40).fontSize(FontSize.body).fontColor($r('app.color.ink'))
+            .placeholderColor($r('app.color.placeholder')).backgroundColor(Color.Transparent).padding(0)
+            .enabled(!this.busy).onChange((value: string) => this.query = value)
+        }
+        .width('100%').padding({ left: Space.sm, right: Space.sm }).backgroundColor($r('app.color.card'))
+        .borderRadius(Radius.button).margin({ top: Space.xxs, bottom: Space.xs }).alignItems(VerticalAlign.Center)
 
-          Scroll() {
-            Row({ space: Space.xs }) {
-              Button(this.favoritesOnly ? '★ 仅收藏' : '☆ 仅收藏')
+        Scroll() {
+          Row({ space: Space.xs }) {
+            Button(this.favoritesOnly ? '★ 仅收藏' : '☆ 仅收藏')
+              .height(32)
+              .fontSize(FontSize.caption)
+              .fontWeight(this.favoritesOnly ? Weight.semibold : Weight.regular)
+              .fontColor(this.favoritesOnly ? $r('app.color.on_prominent') : $r('app.color.ink'))
+              .backgroundColor(this.favoritesOnly ? $r('app.color.prominent') : $r('app.color.card'))
+              .borderRadius(Radius.full)
+              .padding({ left: 12, right: 12 })
+              .accessibilityText(this.favoritesOnly ? '仅收藏模型，已开启' : '仅收藏模型')
+              .onClick(() => { this.favoritesOnly = !this.favoritesOnly; })
+
+            if (this.allProviderIds().length > 1) {
+              Button('全部 Provider')
                 .height(32)
                 .fontSize(FontSize.caption)
-                .fontWeight(this.favoritesOnly ? Weight.semibold : Weight.regular)
-                .fontColor(this.favoritesOnly ? $r('app.color.on_prominent') : $r('app.color.ink'))
-                .backgroundColor(this.favoritesOnly ? $r('app.color.prominent') : $r('app.color.card'))
+                .fontWeight(this.providerFilter === '' ? Weight.semibold : Weight.regular)
+                .fontColor(this.providerFilter === '' ? $r('app.color.primary_text') : $r('app.color.ink'))
+                .backgroundColor(this.providerFilter === '' ? $r('app.color.info_bg') : $r('app.color.card'))
                 .borderRadius(Radius.full)
                 .padding({ left: 12, right: 12 })
-                .accessibilityText(this.favoritesOnly ? '仅收藏模型，已开启' : '仅收藏模型')
-                .onClick(() => { this.favoritesOnly = !this.favoritesOnly; })
-
-              if (this.allProviderIds().length > 1) {
-                Button('全部 Provider')
+                .onClick(() => { this.providerFilter = ''; })
+              ForEach(this.allProviderIds(), (pid: string) => {
+                Button(this.providerLabel(pid))
                   .height(32)
                   .fontSize(FontSize.caption)
-                  .fontWeight(this.providerFilter === '' ? Weight.semibold : Weight.regular)
-                  .fontColor(this.providerFilter === '' ? $r('app.color.primary_text') : $r('app.color.ink'))
-                  .backgroundColor(this.providerFilter === '' ? $r('app.color.info_bg') : $r('app.color.card'))
+                  .fontWeight(this.providerFilter === pid ? Weight.semibold : Weight.regular)
+                  .fontColor(this.providerFilter === pid ? $r('app.color.primary_text') : $r('app.color.ink'))
+                  .backgroundColor(this.providerFilter === pid ? $r('app.color.info_bg') : $r('app.color.card'))
                   .borderRadius(Radius.full)
                   .padding({ left: 12, right: 12 })
-                  .onClick(() => { this.providerFilter = ''; })
-                ForEach(this.allProviderIds(), (pid: string) => {
-                  Button(this.providerLabel(pid))
-                    .height(32)
-                    .fontSize(FontSize.caption)
-                    .fontWeight(this.providerFilter === pid ? Weight.semibold : Weight.regular)
-                    .fontColor(this.providerFilter === pid ? $r('app.color.primary_text') : $r('app.color.ink'))
-                    .backgroundColor(this.providerFilter === pid ? $r('app.color.info_bg') : $r('app.color.card'))
-                    .borderRadius(Radius.full)
-                    .padding({ left: 12, right: 12 })
-                    .onClick(() => { this.providerFilter = this.providerFilter === pid ? '' : pid; })
-                }, (pid: string) => pid)
-              }
+                  .onClick(() => { this.providerFilter = this.providerFilter === pid ? '' : pid; })
+              }, (pid: string) => pid)
+            }
 
-              if (this.hasLegacyModels()) {
-                Button(this.showLegacy ? '含旧模型' : '显示旧模型')
-                  .height(32)
-                  .fontSize(FontSize.caption)
-                  .fontColor(this.showLegacy ? $r('app.color.primary_text') : $r('app.color.muted'))
-                  .backgroundColor(this.showLegacy ? $r('app.color.info_bg') : $r('app.color.card'))
-                  .borderRadius(Radius.full)
-                  .padding({ left: 12, right: 12 })
-                  .onClick(() => { this.showLegacy = !this.showLegacy; })
-              }
+            if (this.hasLegacyModels()) {
+              Button(this.showLegacy ? '含旧模型' : '显示旧模型')
+                .height(32)
+                .fontSize(FontSize.caption)
+                .fontColor(this.showLegacy ? $r('app.color.primary_text') : $r('app.color.muted'))
+                .backgroundColor(this.showLegacy ? $r('app.color.info_bg') : $r('app.color.card'))
+                .borderRadius(Radius.full)
+                .padding({ left: 12, right: 12 })
+                .onClick(() => { this.showLegacy = !this.showLegacy; })
             }
           }
-          .scrollable(ScrollDirection.Horizontal)
-          .scrollBar(BarState.Off)
-          .width('100%')
-          .margin({ bottom: Space.xs })
+        }
+        .scrollable(ScrollDirection.Horizontal)
+        .scrollBar(BarState.Off)
+        .width('100%')
+        .margin({ bottom: Space.xs })
+      }
+      .width('100%')
+      .padding({ left: Space.sm, right: Space.sm })
+
+      Scroll() {
+        Column({ space: 0 }) {
 
           if (!this.visibleProviderIds().length) {
             GroupCard() {
@@ -267,12 +272,20 @@ export struct TaskSettingsPanel {
                           }
                         })
                       }.layoutWeight(1)
-                      Button(this.isFavorite(model) ? '★' : '☆', { type: ButtonType.Normal, stateEffect: true })
-                        .width(42)
+                      Button({ type: ButtonType.Normal, stateEffect: true }) {
+                        Text(this.isFavorite(model) ? '★' : '☆')
+                          .fontSize(18)
+                          .lineHeight('22fp')
+                          .fontColor(this.isFavorite(model) ? $r('app.color.warning') : $r('app.color.muted'))
+                          .textAlign(TextAlign.Center)
+                      }
+                        .width(44)
                         .height(44)
-                        .fontSize(18)
-                        .fontColor(this.isFavorite(model) ? $r('app.color.warning') : $r('app.color.muted'))
+                        .padding(0)
+                        .margin({ right: 4 })
+                        .flexShrink(0)
                         .backgroundColor(Color.Transparent)
+                        .borderRadius(Radius.tool)
                         .enabled(!this.busy)
                         .accessibilityText((this.isFavorite(model) ? '取消收藏 ' : '收藏 ') + model.model)
                         .onClick(() => this.toggleFavorite(model))

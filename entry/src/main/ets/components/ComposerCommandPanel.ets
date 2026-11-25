@@ -1,4 +1,5 @@
 import { FontSize, LineHeight, Radius, Sizes, Space, Weight } from '../common/Theme';
+import { MentionItem } from '../protocol/Mentions';
 import { BranchView } from '../protocol/R4';
 import {
   TASK_FOLDER_DEFAULT_REPOSITORIES_MAX,
@@ -6,6 +7,7 @@ import {
   resolveWorktreeRepositorySelection
 } from '../protocol/ThreadRepositories';
 import { AppButton } from './ui/AppButton';
+import { ProviderLogo } from './ui/ProviderLogo';
 import { TopBar } from './ui/TopBar';
 
 @Component
@@ -16,6 +18,11 @@ export struct ComposerCommandPanel {
   @Prop commands: string[] = [];
   @Prop skills: string[] = [];
   @Prop files: string[] = [];
+  @Prop mentionThreads: MentionItem[] = [];
+  @Prop mentionEnvironments: MentionItem[] = [];
+  @Prop mentionModels: MentionItem[] = [];
+  @Prop mentionFileItems: MentionItem[] = [];
+  @Prop mentionLoading: boolean = false;
   @Prop branches: BranchView[] = [];
   @Prop environments: string[] = [];
   @Prop repoChoices: WorktreeRepositoryChoice[] = [];
@@ -26,6 +33,7 @@ export struct ComposerCommandPanel {
   onCommand: (value: string) => void = () => {};
   onSkill: (value: string) => void = () => {};
   onFile: (value: string) => void = () => {};
+  onMentionSelect: (item: MentionItem) => void = () => {};
   onBranch: (value: BranchView) => void = () => {};
   onEnvironment: (value: string) => void = () => {};
   onWorktree: (value: boolean) => void = () => {};
@@ -99,6 +107,69 @@ export struct ComposerCommandPanel {
       .onClick(action)
   }
 
+  @Builder mentionSectionHeader(title: string) {
+    Text(title)
+      .fontSize(FontSize.caption)
+      .lineHeight(LineHeight.caption)
+      .fontWeight(Weight.semibold)
+      .fontColor($r('app.color.muted'))
+      .width('100%')
+      .padding({ left: Space.xxs, right: Space.xxs, top: Space.xs, bottom: 2 })
+  }
+
+  @Builder mentionRow(item: MentionItem) {
+    Button({ type: ButtonType.Normal }) {
+      Row({ space: Space.sm }) {
+        if (item.kind === 'model') {
+          Row() {
+            ProviderLogo({ driver: item.providerDriver, model: item.model, logoSize: 18 })
+          }.width(20).height(20).justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center).flexShrink(0)
+        } else {
+          Image(
+            item.kind === 'thread' ? $r('app.media.ui_tab_chats') :
+            item.kind === 'environment' ? $r('app.media.ui_env_desktop') :
+            item.fileKind === 'directory' ? $r('app.media.ui_folder') :
+            $r('app.media.ui_tool_file')
+          )
+            .width(17)
+            .height(17)
+            .opacity(0.75)
+            .flexShrink(0)
+            .accessibilityLevel('no')
+        }
+        Column({ space: 2 }) {
+          Text(item.label)
+            .fontSize(FontSize.body)
+            .lineHeight(LineHeight.body)
+            .fontWeight(Weight.medium)
+            .fontColor($r('app.color.ink'))
+            .width('100%')
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          if (item.description) {
+            Text(item.description)
+              .fontSize(FontSize.caption)
+              .lineHeight(LineHeight.caption)
+              .fontColor($r('app.color.muted'))
+              .width('100%')
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+          }
+        }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+        Image($r('app.media.ui_chevron_right')).width(Sizes.chevron).height(Sizes.chevron).opacity(0.45).accessibilityLevel('no')
+      }.width('100%').padding({ left: Space.md, right: Space.md, top: Space.sm, bottom: Space.sm })
+    }.width('100%').padding(0).backgroundColor($r('app.color.card')).borderRadius(Radius.card)
+      .enabled(!this.busy).onClick(() => this.onMentionSelect(item))
+  }
+
+  private hasMentionItems(): boolean {
+    return this.mentionThreads.length > 0 ||
+      this.mentionEnvironments.length > 0 ||
+      this.mentionModels.length > 0 ||
+      this.mentionFileItems.length > 0 ||
+      this.files.length > 0;
+  }
+
   build() {
     Column() {
       TopBar({
@@ -113,7 +184,7 @@ export struct ComposerCommandPanel {
         Row({ space: Space.xs }) {
           Image($r('app.media.ui_search')).width(16).height(16).opacity(0.6).accessibilityLevel('no')
           TextInput({
-            placeholder: this.mode === 'mention' ? '搜索工作区文件' : this.mode === 'branch' ? '搜索分支' :
+            placeholder: this.mode === 'mention' ? '搜索会话、环境、模型或文件' : this.mode === 'branch' ? '搜索分支' :
               this.mode === 'repositories' ? '筛选仓库' : '输入以筛选',
             text: this.query
           })
@@ -141,11 +212,54 @@ export struct ComposerCommandPanel {
               ForEach(this.skills.filter((name: string) => this.match(name)), (name: string) =>
                 this.row('skill:' + name, '作为结构化上下文附加', () => this.onSkill(name)))
             } else if (this.mode === 'mention') {
-              if (!this.query.trim()) {
-                Text('输入文件名或路径开始搜索').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
+              if (this.mentionThreads.length > 0) {
+                if (this.query.trim()) {
+                  this.mentionSectionHeader('会话')
+                } else {
+                  this.mentionSectionHeader('最近会话')
+                }
+                ForEach(this.mentionThreads, (item: MentionItem) => {
+                  this.mentionRow(item)
+                }, (item: MentionItem) => item.id + '|' + item.label + '|' + item.description)
               }
-              ForEach(this.files.filter((path: string) => this.match(path)), (path: string) =>
-                this.row(path, '附加文件引用', () => this.onFile(path)))
+              if (this.mentionEnvironments.length > 0) {
+                this.mentionSectionHeader('环境')
+                ForEach(this.mentionEnvironments, (item: MentionItem) => {
+                  this.mentionRow(item)
+                }, (item: MentionItem) => item.id + '|' + item.label)
+              }
+              if (this.mentionModels.length > 0) {
+                this.mentionSectionHeader('模型')
+                ForEach(this.mentionModels, (item: MentionItem) => {
+                  this.mentionRow(item)
+                }, (item: MentionItem) => item.id + '|' + item.label)
+              }
+              if (this.mentionFileItems.length > 0) {
+                this.mentionSectionHeader('工作区文件')
+                ForEach(this.mentionFileItems, (item: MentionItem) => {
+                  this.mentionRow(item)
+                }, (item: MentionItem) => item.id + '|' + item.fileKind)
+              } else if (this.files.length > 0) {
+                this.mentionSectionHeader('工作区文件')
+                ForEach(this.files.filter((path: string) => this.match(path)), (path: string) =>
+                  this.row(path, '附加文件引用', () => this.onFile(path)))
+              }
+              if (this.mentionLoading) {
+                Row({ space: Space.xs }) {
+                  LoadingProgress().width(14).height(14).color($r('app.color.muted')).accessibilityLevel('no')
+                  Text(this.hasMentionItems() ? '正在搜索更多会话与文件…' : '正在搜索…')
+                    .fontSize(FontSize.caption)
+                    .fontColor($r('app.color.muted'))
+                }.width('100%').padding({ left: Space.xxs, top: Space.xs, bottom: Space.xs }).alignItems(VerticalAlign.Center)
+              } else if (!this.hasMentionItems()) {
+                Text(this.query.trim()
+                  ? '没有匹配的会话、环境、模型或文件'
+                  : '输入关键词搜索会话、环境、模型或工作区文件')
+                  .fontSize(FontSize.callout)
+                  .fontColor($r('app.color.muted'))
+                  .width('100%')
+                  .padding({ left: Space.xxs, top: Space.xs })
+              }
             } else if (this.mode === 'environment') {
               ForEach(this.environments, (label: string) =>
                 this.row(label, '切换到该环境', () => this.onEnvironment(label)))

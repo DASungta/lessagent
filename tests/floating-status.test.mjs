@@ -364,3 +364,40 @@ test('FloatingStatusCapsule supports offline status and stepDelayedConnectionUi 
   step = F.stepDelayedConnectionUi(state, { ready: false, connecting: false, offline: true, error: '', nowMs: 7200 });
   assert.equal(step.suppressConnecting, false);
 });
+
+test('resolveSubagentPillSegment hides idle-only completed turns and never shows 0 已完成', () => {
+  // Completed turn with only idle subagents (e.g. Antigravity subagentsIdleOnTurnCompletion) hides the pill
+  const completedAllIdle = F.deriveThreadTurnSubagents(
+    [{ id: 'r1', ordinal: 1, status: 'completed', startedAt: '2026-01-01T00:00:00.000Z' }],
+    [
+      { id: 's1', runId: 'r1', origin: 'provider_native', driver: 'antigravity', title: 'Backend Protocol & Fence Engineer', status: 'idle', updatedAt: '2026-01-01T00:01:00.000Z' },
+      { id: 's2', runId: 'r1', origin: 'provider_native', driver: 'antigravity', title: 'Frontend Online Check-In Engineer', status: 'idle', updatedAt: '2026-01-01T00:01:01.000Z' },
+      { id: 's3', runId: 'r1', origin: 'provider_native', driver: 'antigravity', title: 'Backend VisitGuide Orchestration Engineer', status: 'idle', updatedAt: '2026-01-01T00:01:02.000Z' }
+    ]
+  );
+  assert.equal(completedAllIdle.liveCount, 0);
+  assert.equal(completedAllIdle.settledCount, 0);
+  assert.equal(completedAllIdle.idleCount, 3);
+  assert.equal(completedAllIdle.subagents.every(s => s.canStop === false), true);
+  assert.equal(F.resolveSubagentPillSegment(completedAllIdle), undefined);
+
+  // Active turn with only idle subagents reports '2 空闲' instead of '0 已完成'
+  const activeAllIdle = F.deriveThreadTurnSubagents(
+    [{ id: 'r1', ordinal: 1, status: 'running', startedAt: '2026-01-01T00:00:00.000Z' }],
+    [
+      { id: 's1', runId: 'r1', title: 'Worker 1', status: 'idle', updatedAt: '2026-01-01T00:01:00.000Z' },
+      { id: 's2', runId: 'r1', title: 'Worker 2', status: 'idle', updatedAt: '2026-01-01T00:01:01.000Z' }
+    ]
+  );
+  assert.equal(F.resolveSubagentPillSegment(activeAllIdle).label, '2 空闲');
+
+  // Completed turn with mixed completed + idle counts only completed
+  const mixedDoneAndIdle = F.deriveThreadTurnSubagents(
+    [{ id: 'r1', ordinal: 1, status: 'completed', startedAt: '2026-01-01T00:00:00.000Z' }],
+    [
+      { id: 's1', runId: 'r1', title: 'Done Worker', status: 'completed', updatedAt: '2026-01-01T00:01:00.000Z' },
+      { id: 's2', runId: 'r1', title: 'Idle Worker', status: 'idle', updatedAt: '2026-01-01T00:01:01.000Z' }
+    ]
+  );
+  assert.equal(F.resolveSubagentPillSegment(mixedDoneAndIdle).label, '1 已完成');
+});

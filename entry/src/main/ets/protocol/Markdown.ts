@@ -13,6 +13,8 @@ export interface MarkdownListItem {
   depth: number;
   ordered: boolean;
   marker: string;
+  number: number;
+  displayMarker: string;
   checked: boolean | undefined;
   text: string;
   spans: InlineSpan[];
@@ -439,17 +441,59 @@ function collectDetails(lines: string[], start: number): { body: string; open: b
   return { body: summaryMatch ? body.replace(SUMMARY, '') : body, open, next: index + 1 };
 }
 
+interface ListLevelState {
+  indent: number;
+  ordered: boolean;
+  delimiter: string;
+  nextNumber: number;
+}
+
 function parseItems(lines: string[], start: number, defs?: Record<string, string>): { items: MarkdownListItem[]; next: number } {
   const items: MarkdownListItem[] = [];
+  const stack: ListLevelState[] = [];
   let index = start;
-  let orderStart = 0;
   while (index < lines.length) {
     const match = LIST.exec(lines[index]);
     if (!match) break;
     const indent = match[1].replace(/\t/g, '    ').length;
     const marker = match[2];
     const ordered = /\d/.test(marker);
-    if (ordered && orderStart === 0) orderStart = Number.parseInt(marker, 10);
+    const delimiter = ordered ? (marker.endsWith(')') ? ')' : '.') : marker;
+    const parsedNum = ordered ? Number.parseInt(marker, 10) : 0;
+    const rawNum = ordered && Number.isFinite(parsedNum) ? parsedNum : 1;
+
+    let itemNumber = 0;
+    if (stack.length === 0) {
+      stack.push({ indent, ordered, delimiter, nextNumber: ordered ? rawNum + 1 : 0 });
+      itemNumber = ordered ? rawNum : 0;
+    } else {
+      while (stack.length > 1 && indent < stack[stack.length - 2].indent + 2) {
+        stack.pop();
+      }
+      const top = stack[stack.length - 1];
+      if (indent >= top.indent + 2) {
+        stack.push({ indent, ordered, delimiter, nextNumber: ordered ? rawNum + 1 : 0 });
+        itemNumber = ordered ? rawNum : 0;
+      } else {
+        const sameKind = ordered === top.ordered && (!ordered || delimiter === top.delimiter);
+        if (stack.length === 1 && !sameKind) {
+          break;
+        }
+        if (sameKind) {
+          if (ordered) {
+            itemNumber = top.nextNumber;
+            top.nextNumber += 1;
+          }
+          if (indent < top.indent) top.indent = indent;
+        } else {
+          stack[stack.length - 1] = { indent, ordered, delimiter, nextNumber: ordered ? rawNum + 1 : 0 };
+          itemNumber = ordered ? rawNum : 0;
+        }
+      }
+    }
+
+    const depth = Math.max(0, stack.length - 1);
+    const displayMarker = ordered ? String(itemNumber) + delimiter : '•';
     let text = match[3];
     let checked: boolean | undefined = undefined;
     const task = /^\[([ xX])\]\s+(.*)$/.exec(text);
@@ -461,7 +505,7 @@ function parseItems(lines: string[], start: number, defs?: Record<string, string
       text += ' ' + lines[index].trim();
       index += 1;
     }
-    items.push({ depth: Math.floor(indent / 2), ordered, marker, checked,
+    items.push({ depth, ordered, marker, number: itemNumber, displayMarker, checked,
       text: plainInline(text), spans: inlineSpans(text, defs) });
     while (index < lines.length && isBlank(lines[index])) {
       const ahead = lines.findIndex((line: string, position: number) => position > index && !isBlank(line));
@@ -571,11 +615,12 @@ export function markdownDocument(source: string): MarkdownBlock[] {
     if (LIST.test(line)) {
       const parsed = parseItems(lines, index, defs);
       const ordered = parsed.items.length > 0 && parsed.items[0].ordered;
-      const startValue = ordered ? Number.parseInt(parsed.items[0].marker, 10) : 1;
+      const startValue = ordered ? parsed.items[0].number : 1;
       const list = block('list');
       list.ordered = ordered;
       list.start = Number.isFinite(startValue) ? startValue : 1;
       list.items = parsed.items;
+      list.text = parsed.items.map((item: MarkdownListItem) => item.displayMarker + ' ' + item.text).join('\n');
       blocks.push(list);
       index = parsed.next;
       continue;

@@ -1,4 +1,5 @@
 import { DeviceStreamAccess, safeDeviceHubBase } from '../protocol/DevicePreview';
+import { composeMessageWithContexts, MentionFileEntry } from '../protocol/Mentions';
 import { ModelFavoriteEntry, modelFavoriteUpdatePatch, ModelSelection, TaskSettings, launchTask, validateTaskSettings, queueCommand } from '../protocol/Composer';
 import { AgentFeedbackAnswer, agentFeedbackAnswerPayload } from '../protocol/AgentFeedback';
 import { clearServerClock, observeServerIsoTime, recordServerClock } from '../protocol/ServerClock';
@@ -11,6 +12,7 @@ import { BranchView, branches, branchListInput, ComposerContextRecord, ComposerD
 import {
   derivePendingBackgroundWork,
   deriveThreadTurnSubagents,
+  formatSubagentDisplayTitle,
   PendingBackgroundTaskView,
   PendingBackgroundWorkView,
   presentPendingBackgroundWork,
@@ -206,6 +208,7 @@ interface ThreadSettingPayload {
 interface MessageDispatchMode { type: string; }
 interface FileSearchPayload { cwd: string; query: string; limit: number; imageOnly?: boolean; }
 interface SubagentStopCommand { type: string; commandId: string; threadId: string; runId: string; subagentId: string; }
+interface WorkflowStopPayload { threadId: string; subagentId: string; }
 interface GuestCloseCommand { type: string; commandId: string; threadId: string; }
 interface GuestMessageCommand {
   type: string; commandId: string; threadId: string; guestMessageId: string;
@@ -1467,6 +1470,12 @@ export class T3Client {
   linkedEnvironmentsEnabled(): boolean {
     return this.offersPeerLinks;
   }
+  currentEnvironmentId(): string {
+    return this.activeEnvironmentId();
+  }
+  peerLinkNamesSnapshot(): PeerLinkName[] {
+    return this.peerLinkNamesCache.slice();
+  }
   peerLinkLabel(environmentId: string): string {
     const target = environmentId.trim();
     if (!target) return '';
@@ -2432,10 +2441,11 @@ export class T3Client {
     const attachments: DraftAttachment[] = this.attachments.slice();
     const limit = attachmentLimitError(attachments);
     if (limit) throw new Error(limit);
+    const composed = composeMessageWithContexts(prompt, context);
     const threadId = util.generateRandomUUID();
     const messageId = util.generateRandomUUID();
-    const input = record(launchTask(util.generateRandomUUID(), threadId, messageId, projectId, prompt, settings,
-      attachments, context.length ? contextPayload(context) : undefined, launchWorkspace(draft, isGitRepo)));
+    const input = record(launchTask(util.generateRandomUUID(), threadId, messageId, projectId, composed.text, settings,
+      attachments, composed.context.length ? contextPayload(composed.context) : undefined, launchWorkspace(draft, isGitRepo)));
     this.launching = true;
     try {
       await this.selectRecovery(threadId);
@@ -2689,7 +2699,8 @@ export class T3Client {
     if (!this.thread || this.thread.cursor < 0) throw new Error('请先同步会话');
     const threadId = this.thread.threadId;
     const messageId = util.generateRandomUUID();
-    const command = record(sendMessage(util.generateRandomUUID(), threadId, messageId, prompt));
+    const composed = composeMessageWithContexts(prompt, context);
+    const command = record(sendMessage(util.generateRandomUUID(), threadId, messageId, composed.text));
     if (!['auto', 'start', 'queue', 'steer'].includes(delivery)) throw new Error('无效发送方式');
     if (delivery === 'queue') { const mode: MessageDispatchMode = { type: 'queue_after_active' }; command.dispatchMode = mode; }
     if (delivery === 'steer' || delivery === 'auto') command.deliveryIntent = delivery;
@@ -2697,7 +2708,7 @@ export class T3Client {
       if (this.attachmentThread !== threadId) throw new Error('附件属于其他会话，请重新选择');
       command.attachments = this.attachments.slice();
     }
-    if (context.length) command.context = contextPayload(context);
+    if (composed.context.length) command.context = contextPayload(composed.context);
 
     this.status = '正在提交';
     this.onUpdate();
@@ -2723,6 +2734,23 @@ export class T3Client {
     const rpc = this.requireRpc();
     await rpc.request('vcs.switchRef', switchBranchInput(cwd, branch), undefined, 30000, false);
     if (rpc !== this.rpc) throw new Error('连接已变更，请重新加载分支');
+  }
+  async searchEntries(cwd: string, query: string, limit: number = 20): Promise<MentionFileEntry[]> {
+    const rpc = this.requireRpc();
+    const payload: FileSearchPayload = {
+      cwd,
+      query: query.trim().slice(0, 256),
+      limit: Math.max(1, Math.min(200, Math.floor(limit)))
+    };
+    const value = record(await rpc.request('projects.searchEntries', payload, undefined, 10000, false));
+    if (rpc !== this.rpc) throw new Error('连接已变更');
+    return objects(value.entries).map((entry: Object): MentionFileEntry => {
+      const row = record(entry);
+      return {
+        path: text(row.path),
+        kind: typeof row.kind === 'string' ? row.kind : 'file'
+      };
+    });
   }
   async searchFiles(cwd: string, query: string, imageOnly: boolean = false): Promise<string[]> {
     const rpc = this.requireRpc();
@@ -3305,6 +3333,7 @@ export class T3Client {
     if (!this.thread) return [];
     const rows = subagents(this.thread.subagents);
     for (const row of rows) {
+      row.title = formatSubagentDisplayTitle(row.title);
       const child = this.shell.threads.find((thread) => thread.id === row.childThreadId ||
         (row.remoteThreadId !== '' && thread.id === row.remoteThreadId));
       row.pendingKind = child ? child.pendingKind : '';
@@ -3350,8 +3379,14 @@ export class T3Client {
   async stopSubagent(subagentId: string): Promise<void> {
     if (!this.thread) throw new Error('请先选择会话');
     const subagent = this.thread.subagents.find((row: Record<string, Object>) => row.id === subagentId);
-    if (!subagent || !this.threadSubagents().find((row: SubagentView) => row.id === subagentId)?.canStop) {
+    const view = this.threadSubagents().find((row: SubagentView) => row.id === subagentId);
+    if (!subagent || !view?.canStop) {
       throw new Error('子任务已结束或不可停止');
+    }
+    if (view.isWorkflow) {
+      const payload: WorkflowStopPayload = { threadId: this.thread.threadId, subagentId };
+      await this.rpcRequest('orchestration.stopWorkflow', payload);
+      return;
     }
     const childThreadId = typeof subagent.childThreadId === 'string' ? subagent.childThreadId : '';
     if (subagent.origin === 'app_owned' && childThreadId) {
@@ -3744,7 +3779,7 @@ export class T3Client {
   }
 
   async upload(name: string, bytes: ArrayBuffer, mimeType: string = 'application/octet-stream',
-    type: string = 'file', stillSelected: () => boolean = () => true): Promise<void> {
+    type: string = 'file', stillSelected: () => boolean = () => true): Promise<Attachment> {
     const rpc = this.requireRpc();
     if ((!this.draftScope && !this.thread) || !this.activeEnvironmentId() || this.mutationPending) throw new Error('请先同步会话并核对未知提交');
     const threadId = this.draftScope || this.thread!.threadId;
@@ -3760,6 +3795,7 @@ export class T3Client {
       throw new Error(limit);
     }
     this.attachmentThread = threadId; this.attachments = next; this.attachment = target;
+    return target;
   }
 
   async uploadOne(name: string, bytes: ArrayBuffer, mimeType: string = 'application/octet-stream',

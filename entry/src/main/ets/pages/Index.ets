@@ -23,15 +23,25 @@ import { TerminalSize, terminalInput, terminalAccess } from '../protocol/Termina
 import {
   TaskSettings, ModelSelection, OptionSelection, QueuedRun, queuedRuns, validateTaskSettings, modelOptionsSummary,
   ModelFavoriteEntry,
-  CompactEditorGeometry, ExpandedModelLayout, shouldExpandComposer, resolveCompactEditorGeometry, layoutExpandedModelControl
+  CompactEditorGeometry, ExpandedModelLayout, shouldExpandComposer, resolveCompactEditorGeometry, layoutExpandedModelControl,
+  composerAttachmentKind
 } from '../protocol/Composer';
 import { BranchView, branches, ComposerContextRecord, ComposerDraft, composerDraftLabel, composerDraft, contextRecord,
   draftSettings, emptyWorkspace, DraftWorkspace, switchDraftWorkspaceMode, draftWorkspaceForBranch, mentionContext, skillContext, attachmentLimitError,
-  terminalContext,
+  terminalContext, R4_MAX_CONTEXT_RECORDS,
   BranchView as R4Branch, proposedPlans, PlanView, SubagentView, GuestShareView, GuestMessageView,
   BackgroundTaskView, tokenUsage, TokenUsage, DraftAttachment } from '../protocol/R4';
+import {
+  ComposerInlineTrigger, deterministicEnvironmentContext, deterministicFileContext, deterministicThreadContext,
+  detectInlineMentionTrigger, extractMentionModelCandidates, formatComposerModelMention,
+  matchMentionEnvironments, matchMentionModels, matchMentionThreads,
+  MentionEnvironmentCandidate, MentionFileEntry, mentionFileItems, MentionItem,
+  parseComposerContextHref, replaceTextRange
+} from '../protocol/Mentions';
 import { draftStore } from '../storage/DraftStore';
 import { ComposerCommandPanel } from '../components/ComposerCommandPanel';
+import { ComposerAttachmentStrip } from '../components/ComposerAttachmentStrip';
+import { ComposerMentionPopover } from '../components/ComposerMentionPopover';
 import { ThreadExtrasPanel } from '../components/ThreadExtrasPanel';
 import { FloatingStatusCapsule } from '../components/FloatingStatusCapsule';
 import { ThreadAgentsPanel } from '../components/ThreadAgentsPanel';
@@ -91,7 +101,7 @@ import { GitPanel } from '../components/GitPanel';
 import { PullRequestsPanel } from '../components/PullRequestsPanel';
 import { picker, fileIo, fileUri } from '@kit.CoreFileKit';
 import { systemShare } from '@kit.ShareKit';
-import { Choice, ModelChoice, ActionCard, cards, LinkRequestView, linkRequests, linkAccessChoices } from '../protocol/Core';
+import { Attachment, Choice, ModelChoice, ActionCard, cards, LinkRequestView, linkRequests, linkAccessChoices } from '../protocol/Core';
 import { MessageSource } from '../components/MessageSource';
 import { RequestCard } from '../components/RequestCard';
 import { pasteboard } from '@kit.BasicServicesKit';
@@ -107,7 +117,7 @@ import {
   ArchiveEnvironmentEntry, ArchiveProjectGroup, ProjectGroup, ProjectView, ScopedProject, ScopedThread, ThreadCapabilities,
   ThreadProjectRef, ThreadShelfState, ThreadView, attachPendingSubagentRequests, buildArchiveGroups, buildProjectGroups, buildThreadShelves,
   isListedThread, newTaskDestination, pickableProjectGroups, projectGroupRefs, samePath, scopedProjectView, scopedThreadView,
-  sortProjectGroups, topOfPinnedRun
+  sortProjectGroups, threadView, topOfPinnedRun
 } from '../protocol/Projects';
 import {
   WorktreeRepositoryChoice,
@@ -191,6 +201,13 @@ interface PreviewOpenPayload { threadId: string; url: string; runtime: string; v
 interface TerminalRefPayload { threadId: string; terminalId: string; }
 interface TerminalAttachPayload { threadId: string; terminalId: string; cwd: string; cols: number; rows: number; resume: boolean; restartIfNotRunning: boolean; maxHistoryBytes: number; }
 interface TerminalResizePayload { threadId: string; terminalId: string; cols: number; rows: number; }
+interface MentionSearchThreadsPayload { query: string; limit: number; titlesOnly: boolean; }
+interface MentionGroupsView {
+  threads: MentionItem[];
+  environments: MentionItem[];
+  models: MentionItem[];
+  files: MentionItem[];
+}
 interface TerminalClosePayload { threadId: string; terminalId: string; deleteHistory: boolean; }
 interface ProjectUpdatePatch { title?: string; pinned?: boolean; archived?: boolean; }
 interface ShareUploadPlan {
@@ -399,7 +416,26 @@ struct Index {
   @State commandPanel: string = '';
   @State commandQuery: string = '';
   @State mentionFiles: string[] = [];
+  @State mentionFileEntries: MentionFileEntry[] = [];
+  @State mentionExtraThreads: ScopedThread[] = [];
+  @State mentionLoading: boolean = false;
+  @State mentionLinkedLabels: Record<string, string> = {};
+  @State inlineMentionTrigger: ComposerInlineTrigger | undefined = undefined;
+  @State inlineMentionItems: MentionItem[] = [];
+  @State inlineMentionLoading: boolean = false;
+  private inlineMentionDismissedKey: string = '';
+  private composerCursor: number = 0;
+  private composerSelectionEnd: number = 0;
+  private mentionSearchTimer: number = 0;
+  private mentionSearchSeq: number = 0;
+  private inlineMentionTimer: number = 0;
+  private inlineMentionSeq: number = 0;
+  private inlineMentionFileEntries: MentionFileEntry[] = [];
+  private inlineMentionExtraThreads: ScopedThread[] = [];
+  private inlineMentionLastQuery: string = '';
+  private inlineMentionLastCwd: string = '';
   @State attachments: DraftAttachment[] = [];
+  @State attachmentPreviewMap: Record<string, string> = {};
   @State requestAttachments: Record<string, DraftAttachment[]> = {};
   @State extraPlans: PlanView[] = [];
   @State extraSubagents: SubagentView[] = [];
@@ -511,6 +547,9 @@ struct Index {
 
   aboutToAppear(): void {
     this.alive = true;
+    this.picker.setOnUploaded((uploaded: Attachment, bytes: ArrayBuffer) => {
+      this.cacheComposerAttachmentPreview(uploaded, bytes);
+    });
     this.shareChanged();
     configureNotificationTargets((target: NotificationTarget): boolean => this.notificationValid(target));
     if (draftStore) void draftStore.load().then((rows: ComposerDraft[]) => {
@@ -1057,6 +1096,7 @@ struct Index {
         this.contextDrafts.set(previousKey, this.draftContext.slice());
       }
       this.selectedLocalId = localId;
+      this.clearInlineMention();
       this.draftMode = false;
       this.draftModelCustomized = false;
       if (next) next.draftScope = '';
@@ -1092,7 +1132,12 @@ struct Index {
     }
     bindClient(next);
     let picker = this.pickers.get(localId);
-    if (!picker || !picker.belongsTo(client)) { picker = new AttachmentPicker(client); this.pickers.set(localId, picker); }
+    if (!picker || !picker.belongsTo(client)) {
+      picker = new AttachmentPicker(client, (uploaded: Attachment, bytes: ArrayBuffer) => {
+        this.cacheComposerAttachmentPreview(uploaded, bytes);
+      });
+      this.pickers.set(localId, picker);
+    }
     this.picker = picker;
     this.canRetryAttachment = this.picker.canRetry();
   }
@@ -1294,6 +1339,7 @@ struct Index {
           if (!current()) throw new Error('分享或目标连接已变化，请重试');
           const item = await owner.uploadOne(file.name, bytes, file.mimeType, file.type, current);
           if (!current()) throw new Error('分享或目标连接已变化，请重试');
+          try { this.cacheComposerAttachmentPreview(item, bytes); } catch (_) {}
           plan.uploaded.set(file.id, item);
           this.shareUploadedCount = plan.uploaded.size;
         });
@@ -2296,16 +2342,42 @@ struct Index {
     await this.beginDraft(project.id);
   }
 
-  private addFileContext(path: string): void {
-    const contextId = 'mention-' + util.generateRandomUUID();
-    this.draftContext = this.draftContext.concat([mentionContext(path, contextId)]);
+  private upsertDraftContext(item: ComposerContextRecord, message: string): boolean {
+    const existingIdx = this.draftContext.findIndex((current: ComposerContextRecord) =>
+      current.contextId === item.contextId);
+    if (existingIdx >= 0) {
+      const next = this.draftContext.slice();
+      next[existingIdx] = item;
+      this.draftContext = next;
+      if (message) this.status = message;
+      this.scheduleDraftSave();
+      return true;
+    }
+    if (this.draftContext.length >= R4_MAX_CONTEXT_RECORDS) {
+      this.status = '上下文数量已达上限（最多 ' + R4_MAX_CONTEXT_RECORDS + ' 条）';
+      return false;
+    }
+    this.draftContext = this.draftContext.concat([item]);
+    if (message) this.status = message;
     this.scheduleDraftSave();
+    return true;
+  }
+
+  private addFileContext(path: string): void {
+    try {
+      this.upsertDraftContext(deterministicFileContext(path), '已引用文件：' + path);
+    } catch (error) {
+      this.status = (error as Error).message;
+    }
   }
 
   private addSkillContext(name: string): void {
-    const contextId = 'skill-' + util.generateRandomUUID();
-    this.draftContext = this.draftContext.concat([skillContext(name, contextId)]);
-    this.scheduleDraftSave();
+    try {
+      const contextId = 'skill-' + util.generateRandomUUID();
+      this.upsertDraftContext(skillContext(name, contextId), '已附加 Skill：' + name);
+    } catch (error) {
+      this.status = (error as Error).message;
+    }
   }
 
   private addTerminalContext(line: ActivityLine): void {
@@ -2314,9 +2386,7 @@ struct Index {
       const context = terminalContext(line.itemId, '终端 · ' + line.label, 0,
         Math.max(0, rows.length - 1), line.text.slice(0, 64000),
         'terminal-' + util.generateRandomUUID());
-      this.draftContext = this.draftContext.concat([context]);
-      this.status = '已引用终端输出；发送时作为结构化上下文';
-      this.scheduleDraftSave();
+      this.upsertDraftContext(context, '已引用终端输出；发送时作为结构化上下文');
     } catch (error) { this.status = (error as Error).message; }
   }
 
@@ -2346,25 +2416,390 @@ struct Index {
     } catch (error) { this.status = (error as Error).message; }
   }
 
+  private currentMentionEnvironmentId(): string {
+    return this.draftEnvironment() || client.currentEnvironmentId();
+  }
+
+  private currentMentionLinkedLabels(): Record<string, string> {
+    const map: Record<string, string> = {};
+    if (!client.linkedEnvironmentsEnabled()) return map;
+    for (const key of Object.keys(this.mentionLinkedLabels)) {
+      if (this.mentionLinkedLabels[key]) map[key] = this.mentionLinkedLabels[key];
+    }
+    for (const item of client.peerLinkNamesSnapshot()) {
+      if (item.environmentId && !map[item.environmentId]) {
+        map[item.environmentId] = item.label || item.environmentId;
+      }
+    }
+    return map;
+  }
+
+  private async refreshMentionLinkedLabels(): Promise<void> {
+    if (!client.ready || !client.linkedEnvironmentsEnabled()) {
+      this.mentionLinkedLabels = {};
+      return;
+    }
+    const owner = client;
+    const initial: Record<string, string> = {};
+    for (const item of owner.peerLinkNamesSnapshot()) {
+      if (item.environmentId) initial[item.environmentId] = item.label || item.environmentId;
+    }
+    this.mentionLinkedLabels = initial;
+    try {
+      const names = await owner.peerLinkNames();
+      if (owner !== client || !this.alive) return;
+      const fresh: Record<string, string> = {};
+      for (const item of names) {
+        if (item.environmentId) fresh[item.environmentId] = item.label || item.environmentId;
+      }
+      this.mentionLinkedLabels = fresh;
+      if (this.inlineMentionTrigger) this.refreshInlineMentionItems();
+    } catch (_) {}
+  }
+
+  private mentionEnvironmentCandidates(): MentionEnvironmentCandidate[] {
+    return this.environmentEntries
+      .filter((entry: EnvironmentEntry) => !entry.deleting && entry.enabled && !!entry.environmentId)
+      .map((entry: EnvironmentEntry): MentionEnvironmentCandidate => ({
+        environmentId: entry.environmentId,
+        label: entry.label
+      }));
+  }
+
+  private computeMentionGroups(
+    query: string,
+    fileEntries: MentionFileEntry[],
+    extraThreads: ScopedThread[],
+    forSheet: boolean
+  ): MentionGroupsView {
+    const currentEnvironmentId = this.currentMentionEnvironmentId();
+    const linkedLabels = this.currentMentionLinkedLabels();
+    const offersLinked = client.linkedEnvironmentsEnabled();
+    const excludeThreadId = this.draftMode ? '' : this.threadId;
+    const pool = extraThreads.length ? this.scopedThreads.concat(extraThreads) : this.scopedThreads;
+    const hasQuery = query.trim().length > 0;
+    const threads = currentEnvironmentId
+      ? matchMentionThreads({
+          threads: pool,
+          currentEnvironmentId,
+          linkedEnvironmentLabels: linkedLabels,
+          excludeThreadId,
+          query,
+          limit: forSheet ? (hasQuery ? 12 : 6) : (hasQuery ? 5 : 4),
+          allowEmptyQuery: true
+        })
+      : [];
+    const environments = currentEnvironmentId
+      ? matchMentionEnvironments({
+          environments: this.mentionEnvironmentCandidates(),
+          linkedEnvironmentLabels: linkedLabels,
+          currentEnvironmentId,
+          offersLinkedEnvironments: offersLinked,
+          query,
+          limit: 5,
+          allowEmptyQuery: forSheet
+        })
+      : [];
+    const models = matchMentionModels(
+      extractMentionModelCandidates(client.config, this.models),
+      query,
+      8,
+      true
+    );
+    const files = mentionFileItems(fileEntries, forSheet ? 30 : 12);
+    return { threads, environments, models, files };
+  }
+
+  private async searchOlderThreadsForMention(query: string): Promise<ScopedThread[]> {
+    const trimmed = query.trim().slice(0, 200);
+    if (trimmed.length < 2) return [];
+    const currentEnvId = this.currentMentionEnvironmentId();
+    const linkedLabels = this.currentMentionLinkedLabels();
+    const registry = this.registry();
+    const targets: EnvironmentEntry[] = this.environmentEntries.filter((entry: EnvironmentEntry) =>
+      !entry.deleting && entry.enabled && !!entry.environmentId &&
+      (entry.environmentId === currentEnvId || !!linkedLabels[entry.environmentId])
+    );
+    const collected: ScopedThread[] = [];
+    await Promise.all(targets.map(async (entry: EnvironmentEntry) => {
+      const conn = registry.clients.get(entry.localId);
+      if (!conn || !conn.ready) return;
+      try {
+        const payload: MentionSearchThreadsPayload = { query: trimmed, limit: 20, titlesOnly: true };
+        const value = record(await conn.searchThreads(payload));
+        if (!Array.isArray(value.threads)) return;
+        for (const raw of value.threads as Object[]) {
+          try {
+            const parsed = threadView(raw);
+            const project = this.scopedProjects.find((p: ScopedProject) =>
+              p.localId === entry.localId && p.id === parsed.projectId);
+            collected.push(scopedThreadView(
+              parsed,
+              entry.localId,
+              entry.environmentId,
+              entry.label,
+              project ? project.label : '',
+              project?.projectIcon
+            ));
+          } catch (_) {}
+        }
+      } catch (_) {}
+    }));
+    return collected;
+  }
+
+  private sheetMentionGroups(): MentionGroupsView {
+    return this.computeMentionGroups(
+      this.commandQuery,
+      this.mentionFileEntries,
+      this.mentionExtraThreads,
+      true
+    );
+  }
+
   private async openFileMention(): Promise<void> {
-    this.commandPanel = 'mention'; this.commandQuery = '';
+    this.openComposerCommand('mention');
   }
 
   private openComposerCommand(mode: string): void {
     this.commandPanel = mode; this.commandQuery = ''; this.mentionFiles = [];
+    this.mentionFileEntries = []; this.mentionExtraThreads = []; this.mentionLoading = false;
     if (mode === 'branch' && !this.branches.length) void this.loadBranches();
     if ((mode === 'branch' || mode === 'repositories') && !this.draftRepoChoices.length &&
       (this.draftProject()?.trackedFolders?.length || 0) > 0) {
       void this.loadDraftRepositories();
     }
     this.openPanel('composer-command');
+    if (mode === 'mention') {
+      void this.refreshMentionLinkedLabels();
+      this.triggerSheetMentionSearch('', true);
+    }
   }
 
-  private async searchMentionFiles(query: string): Promise<void> {
+  private triggerSheetMentionSearch(query: string, immediate: boolean = false): void {
     this.commandQuery = query;
-    if (!query.trim()) { this.mentionFiles = []; return; }
-    try { this.mentionFiles = await client.searchFiles(this.draftCwd(), query); }
-    catch (error) { this.status = (error as Error).message; this.mentionFiles = []; }
+    if (this.mentionSearchTimer) {
+      clearTimeout(this.mentionSearchTimer);
+      this.mentionSearchTimer = 0;
+    }
+    const seq = ++this.mentionSearchSeq;
+    const cwd = this.currentWorkspace();
+    const owner = client;
+    const canSearchFiles = owner.ready && !!cwd;
+    const canSearchThreads = owner.ready && query.trim().length >= 2;
+    if (!canSearchFiles && !canSearchThreads) {
+      this.mentionFileEntries = [];
+      this.mentionFiles = [];
+      this.mentionExtraThreads = [];
+      this.mentionLoading = false;
+      return;
+    }
+    this.mentionLoading = true;
+    const execute = async (): Promise<void> => {
+      try {
+        const filesPromise: Promise<MentionFileEntry[]> = canSearchFiles
+          ? owner.searchEntries(cwd, query, 30).catch(() => [])
+          : Promise.resolve([]);
+        const threadsPromise: Promise<ScopedThread[]> = canSearchThreads
+          ? this.searchOlderThreadsForMention(query).catch(() => [])
+          : Promise.resolve([]);
+        const results = await Promise.all([filesPromise, threadsPromise]);
+        if (seq !== this.mentionSearchSeq || owner !== client || !this.alive ||
+          !this.panelOpen || this.panel !== 'composer-command' || this.commandPanel !== 'mention') {
+          return;
+        }
+        this.mentionFileEntries = results[0];
+        this.mentionFiles = results[0].map((entry: MentionFileEntry) => entry.path);
+        this.mentionExtraThreads = results[1];
+      } finally {
+        if (seq === this.mentionSearchSeq) {
+          this.mentionLoading = false;
+        }
+      }
+    };
+    if (immediate) {
+      void execute();
+    } else {
+      this.mentionSearchTimer = setTimeout(() => {
+        this.mentionSearchTimer = 0;
+        void execute();
+      }, 180) as number;
+    }
+  }
+
+  private clearInlineMention(resetDismissed: boolean = true): void {
+    if (this.inlineMentionTimer) {
+      clearTimeout(this.inlineMentionTimer);
+      this.inlineMentionTimer = 0;
+    }
+    this.inlineMentionSeq += 1;
+    this.inlineMentionTrigger = undefined;
+    this.inlineMentionItems = [];
+    this.inlineMentionLoading = false;
+    if (resetDismissed) this.inlineMentionDismissedKey = '';
+  }
+
+  private dismissInlineMention(): void {
+    if (this.inlineMentionTrigger) {
+      this.inlineMentionDismissedKey = this.inlineMentionTrigger.rangeStart + ':' + this.inlineMentionTrigger.query;
+    }
+    this.clearInlineMention(false);
+  }
+
+  private refreshInlineMentionItems(): void {
+    const trigger = this.inlineMentionTrigger;
+    if (!trigger) {
+      this.inlineMentionItems = [];
+      return;
+    }
+    const groups = this.computeMentionGroups(
+      trigger.query,
+      this.inlineMentionFileEntries,
+      this.inlineMentionExtraThreads,
+      false
+    );
+    this.inlineMentionItems = groups.threads
+      .concat(groups.environments)
+      .concat(groups.models)
+      .concat(groups.files);
+  }
+
+  private syncInlineMention(value: string, cursorStart: number, cursorEnd: number): void {
+    if (this.busy || this.unknown || this.panelOpen || cursorStart !== cursorEnd) {
+      this.clearInlineMention();
+      return;
+    }
+    const trigger = detectInlineMentionTrigger(value, cursorEnd);
+    if (!trigger) {
+      this.clearInlineMention();
+      return;
+    }
+    const triggerKey = trigger.rangeStart + ':' + trigger.query;
+    if (this.inlineMentionDismissedKey === triggerKey) {
+      this.inlineMentionTrigger = undefined;
+      this.inlineMentionItems = [];
+      this.inlineMentionLoading = false;
+      return;
+    }
+    if (this.inlineMentionDismissedKey && this.inlineMentionDismissedKey !== triggerKey) {
+      this.inlineMentionDismissedKey = '';
+    }
+    const cwd = this.currentWorkspace();
+    const queryChanged = trigger.query !== this.inlineMentionLastQuery || cwd !== this.inlineMentionLastCwd;
+    const wasOpen = this.inlineMentionTrigger !== undefined;
+    this.inlineMentionTrigger = trigger;
+    if (queryChanged) {
+      this.inlineMentionLastQuery = trigger.query;
+      this.inlineMentionLastCwd = cwd;
+      this.inlineMentionFileEntries = [];
+      this.inlineMentionExtraThreads = [];
+    }
+    this.refreshInlineMentionItems();
+    if (!wasOpen) {
+      void this.refreshMentionLinkedLabels();
+    }
+    if (!queryChanged && wasOpen) return;
+    if (this.inlineMentionTimer) {
+      clearTimeout(this.inlineMentionTimer);
+      this.inlineMentionTimer = 0;
+    }
+    const owner = client;
+    const canSearchFiles = owner.ready && !!cwd;
+    const canSearchThreads = owner.ready && trigger.query.trim().length >= 2;
+    if (!canSearchFiles && !canSearchThreads) {
+      this.inlineMentionLoading = false;
+      return;
+    }
+    const seq = ++this.inlineMentionSeq;
+    this.inlineMentionLoading = true;
+    this.inlineMentionTimer = setTimeout(() => {
+      this.inlineMentionTimer = 0;
+      void (async (): Promise<void> => {
+        try {
+          const filesPromise: Promise<MentionFileEntry[]> = canSearchFiles
+            ? owner.searchEntries(cwd, trigger.query, 15).catch(() => [])
+            : Promise.resolve([]);
+          const threadsPromise: Promise<ScopedThread[]> = canSearchThreads
+            ? this.searchOlderThreadsForMention(trigger.query).catch(() => [])
+            : Promise.resolve([]);
+          const results = await Promise.all([filesPromise, threadsPromise]);
+          if (seq !== this.inlineMentionSeq || owner !== client || !this.alive || !this.inlineMentionTrigger) {
+            return;
+          }
+          this.inlineMentionFileEntries = results[0];
+          this.inlineMentionExtraThreads = results[1];
+          this.refreshInlineMentionItems();
+        } finally {
+          if (seq === this.inlineMentionSeq) {
+            this.inlineMentionLoading = false;
+          }
+        }
+      })();
+    }, 160) as number;
+  }
+
+  private applyMentionItem(item: MentionItem, trigger?: ComposerInlineTrigger): void {
+    const activeTrigger = trigger;
+    if (item.kind === 'model') {
+      const token = formatComposerModelMention(item.instanceId, item.model) + ' ';
+      if (activeTrigger) {
+        const replaced = replaceTextRange(this.prompt, activeTrigger.rangeStart, activeTrigger.rangeEnd, token);
+        this.prompt = replaced.text;
+        this.composerCursor = replaced.cursor;
+        this.composerSelectionEnd = replaced.cursor;
+        this.clearInlineMention();
+        this.syncComposerExpanded(replaced.text, '');
+        setTimeout(() => {
+          try { this.composerController.caretPosition(replaced.cursor); } catch (_) {}
+        }, 16);
+      } else {
+        const prefix = this.prompt && !/\s$/.test(this.prompt) ? this.prompt + ' ' : this.prompt;
+        this.prompt = prefix + token;
+        this.panelOpen = false;
+        this.syncComposerExpanded(this.prompt, '');
+      }
+      this.status = '已插入模型引用：' + item.label;
+      this.scheduleDraftSave();
+      return;
+    }
+
+    let ok = false;
+    try {
+      if (item.kind === 'thread') {
+        ok = this.upsertDraftContext(
+          deterministicThreadContext(item.environmentId, item.threadId, item.label),
+          '已引用会话：' + item.label
+        );
+      } else if (item.kind === 'environment') {
+        ok = this.upsertDraftContext(
+          deterministicEnvironmentContext(item.environmentId, item.label),
+          '已引用环境：' + item.label
+        );
+      } else if (item.kind === 'file') {
+        ok = this.upsertDraftContext(
+          deterministicFileContext(item.path),
+          '已引用文件：' + item.path
+        );
+      }
+    } catch (error) {
+      this.status = (error as Error).message;
+      return;
+    }
+    if (!ok) return;
+
+    if (activeTrigger) {
+      const replaced = replaceTextRange(this.prompt, activeTrigger.rangeStart, activeTrigger.rangeEnd, '');
+      this.prompt = replaced.text;
+      this.composerCursor = replaced.cursor;
+      this.composerSelectionEnd = replaced.cursor;
+      this.clearInlineMention();
+      this.syncComposerExpanded(replaced.text, '');
+      setTimeout(() => {
+        try { this.composerController.caretPosition(replaced.cursor); } catch (_) {}
+      }, 16);
+    } else {
+      this.panelOpen = false;
+    }
   }
 
   private environmentLabels(): string[] {
@@ -2739,14 +3174,29 @@ struct Index {
       this.threadAttachments().find((item: DraftAttachment) => item.name === name);
   }
 
+  private async openAttachmentItem(item: DraftAttachment): Promise<void> {
+    const cached = this.lookupLocalAttachmentPreview ? this.lookupLocalAttachmentPreview(item) : '';
+    this.selectedAttachment = item;
+    this.attachmentPreviewUrl = cached;
+    this.attachmentStatus = '';
+    this.openPanel('attachment');
+    if (cached && this.attachmentMediaKind(item) === 'image') return;
+    try {
+      const url = await client.attachmentUrl(item.id, item.name, item.mimeType, true);
+      if (this.selectedAttachment && this.selectedAttachment.id === item.id) {
+        this.attachmentPreviewUrl = url;
+      }
+    } catch (error) {
+      if (!cached && this.selectedAttachment && this.selectedAttachment.id === item.id) {
+        this.attachmentStatus = (error as Error).message;
+      }
+    }
+  }
+
   private async openAttachment(name: string): Promise<void> {
     const item = this.findAttachment(name);
     if (!item) { this.status = '附件已不在当前快照中'; return; }
-    this.selectedAttachment = item; this.attachmentPreviewUrl = ''; this.attachmentStatus = '';
-    this.openPanel('attachment');
-    try {
-      this.attachmentPreviewUrl = await client.attachmentUrl(item.id, item.name, item.mimeType, true);
-    } catch (error) { this.attachmentStatus = (error as Error).message; }
+    await this.openAttachmentItem(item);
   }
 
   private async saveAttachment(): Promise<void> {
@@ -2901,6 +3351,7 @@ struct Index {
   }
 
   private async watch(id: string, preserveScroll: boolean = false): Promise<void> {
+    this.clearInlineMention();
     const previousKey = this.draftKey();
     if (this.draftMode) await this.persistDraft();
     else {
@@ -2965,6 +3416,9 @@ struct Index {
   private async send(): Promise<void> {
     if (this.busy) return;
     this.busy = true;
+    this.inlineMentionTrigger = undefined;
+    this.inlineMentionItems = [];
+    this.inlineMentionLoading = false;
     const submitted = this.prompt;
     const submittedContext = Array.isArray(this.draftContext) ? this.draftContext.slice() : [];
     const owner = client;
@@ -3097,7 +3551,7 @@ struct Index {
     if (canRetry) {
       items.push({ value: '重试上传', action: () => { void this.attach('retry'); } });
     }
-    items.push({ value: '引用文件 @', action: () => { this.openComposerCommand('mention'); } });
+    items.push({ value: '文件与提及 @', action: () => { this.openComposerCommand('mention'); } });
     items.push({ value: '命令 /', action: () => { this.openComposerCommand('commands'); } });
     items.push({ value: '技能', action: () => { this.openComposerCommand('skill'); } });
     items.push({ value: '语音输入', action: () => { this.voiceTarget = this.draftKey(); this.page = 'voice'; } });
@@ -3416,7 +3870,50 @@ struct Index {
       decodedThreadId: target.decodedThreadId
     });
   }
+  private findContextRecordById(contextId: string): Record<string, Object> | undefined {
+    const records = client.thread?.messageRecords || [];
+    for (let i = records.length - 1; i >= 0; i -= 1) {
+      const msgCtx = optionalRecord(records[i].context);
+      if (!msgCtx || !Array.isArray(msgCtx.records)) continue;
+      for (const entry of msgCtx.records as Object[]) {
+        const row = optionalRecord(entry);
+        if (row && row.contextId === contextId) return row;
+      }
+    }
+    for (const draftItem of this.draftContext) {
+      if (draftItem.contextId === contextId) {
+        const merged: Record<string, Object> = {};
+        merged['version'] = 1;
+        merged['kind'] = draftItem.kind;
+        merged['contextId'] = draftItem.contextId;
+        merged['label'] = draftItem.label;
+        for (const key of Object.keys(draftItem.payload)) merged[key] = draftItem.payload[key];
+        return merged;
+      }
+    }
+    return undefined;
+  }
+
   private async openLink(url: string): Promise<void> {
+    const contextRef = parseComposerContextHref(url);
+    if (contextRef) {
+      const row = this.findContextRecordById(contextRef.contextId);
+      if (contextRef.kind === 'thread' && row && typeof row.threadId === 'string' && row.threadId.trim()) {
+        const envId = typeof row.environmentId === 'string' ? row.environmentId.trim() : '';
+        await this.openSideThread('linked', row.threadId.trim(), envId, '');
+        return;
+      }
+      if (contextRef.kind === 'mention' && row && typeof row.path === 'string' && row.path.trim()) {
+        await this.openLink(row.path.trim());
+        return;
+      }
+      if (contextRef.kind === 'environment' && row && typeof row.label === 'string' && row.label.trim()) {
+        this.status = '已提及环境：' + row.label.trim();
+        return;
+      }
+      this.status = '上下文记录不可用';
+      return;
+    }
     const classified = classifyMarkdownLink(url);
     if (classified.kind === 'external' || classified.kind === 'mailto') {
       await this.openExternalUrl(classified.href);
@@ -3569,6 +4066,10 @@ struct Index {
     return '';
   }
   private resolveAttachmentById(attachmentId: string): ChatAttachment | undefined {
+    const draftAtt = this.attachments.find((item: DraftAttachment) => item.id === attachmentId);
+    if (draftAtt) {
+      return { id: draftAtt.id, type: draftAtt.type, name: draftAtt.name, mimeType: draftAtt.mimeType, sizeBytes: draftAtt.sizeBytes };
+    }
     for (const msg of this.messages) {
       if (!msg.attachments) continue;
       const found = msg.attachments.find((item: ChatAttachment) => item.id === attachmentId);
@@ -3650,6 +4151,80 @@ struct Index {
       }
     } catch (_) {}
     return fileUri.getUriFromPath(filePath);
+  }
+  private setAttachmentPreviewUri(attachmentId: string, uri: string): void {
+    if (!attachmentId || !uri || this.attachmentPreviewMap[attachmentId] === uri) return;
+    const next: Record<string, string> = {};
+    for (const key of Object.keys(this.attachmentPreviewMap)) {
+      next[key] = this.attachmentPreviewMap[key];
+    }
+    next[attachmentId] = uri;
+    this.attachmentPreviewMap = next;
+  }
+  private attachmentPreviewCachePath(item: DraftAttachment): string {
+    const safeId = (item.id || '').replace(/[^A-Za-z0-9_-]/g, '');
+    if (!safeId) return '';
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      const dir = context.cacheDir + '/t3-media-cache';
+      try { fileIo.mkdirSync(dir); } catch (_) {}
+      const ext = this.mediaFileExtension(item.name, '', 'image');
+      return dir + '/att-' + safeId + ext;
+    } catch (_) {
+      return '';
+    }
+  }
+  private lookupLocalAttachmentPreview(item: DraftAttachment): string {
+    const existing = this.attachmentPreviewMap[item.id];
+    if (existing) return existing;
+    if (composerAttachmentKind(item.type, item.name, item.mimeType) !== 'image') return '';
+    const filePath = this.attachmentPreviewCachePath(item);
+    if (!filePath) return '';
+    try {
+      const stat = fileIo.statSync(filePath);
+      if (stat.size > 0) {
+        const uri = fileUri.getUriFromPath(filePath);
+        this.setAttachmentPreviewUri(item.id, uri);
+        return uri;
+      }
+    } catch (_) {}
+    return '';
+  }
+  private cacheComposerAttachmentPreview(item: DraftAttachment, bytes: ArrayBuffer): string {
+    if (composerAttachmentKind(item.type, item.name, item.mimeType) !== 'image' || bytes.byteLength <= 0) return '';
+    const filePath = this.attachmentPreviewCachePath(item);
+    if (!filePath) return '';
+    try {
+      const tmpPath = filePath + '.tmp-' + Date.now();
+      const file = fileIo.openSync(tmpPath, fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC);
+      try {
+        fileIo.writeSync(file.fd, bytes);
+        fileIo.fsyncSync(file.fd);
+      } finally {
+        fileIo.closeSync(file);
+      }
+      try { fileIo.renameSync(tmpPath, filePath); }
+      catch (_) {
+        try { fileIo.unlinkSync(tmpPath); } catch (_) {}
+        const direct = fileIo.openSync(filePath, fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC);
+        try { fileIo.writeSync(direct.fd, bytes); fileIo.fsyncSync(direct.fd); } finally { fileIo.closeSync(direct); }
+      }
+      const uri = fileUri.getUriFromPath(filePath);
+      this.setAttachmentPreviewUri(item.id, uri);
+      return uri;
+    } catch (_) {
+      return '';
+    }
+  }
+  private async resolveComposerAttachmentPreview(item: DraftAttachment): Promise<string> {
+    const local = this.lookupLocalAttachmentPreview(item);
+    if (local) return local;
+    return client.attachmentUrl(item.id, item.name, item.mimeType || 'application/octet-stream', true);
+  }
+  private async downloadComposerAttachmentPreview(url: string, item: DraftAttachment): Promise<string> {
+    const localUri = await this.downloadMediaToLocalCache(client, url, 'image', item.name);
+    if (localUri) this.setAttachmentPreviewUri(item.id, localUri);
+    return localUri;
   }
   private async loadMediaBytesFor(
     owner: T3Client,
@@ -4227,6 +4802,7 @@ struct Index {
   }
 
   private openPanel(name: string): void {
+    this.clearInlineMention();
     this.panel = name; this.panelOpen = true;
     this.linkedSignature = ''; this.linkedGeneration++;
     this.refreshLinkedWhenChanged();
@@ -4546,7 +5122,7 @@ struct Index {
         } else {
           Scroll() {
             Column({ space: Space.sm }) {
-              if (this.selectedAttachment.type === 'image' && this.attachmentPreviewUrl) {
+              if ((this.selectedAttachment.type === 'image' || this.attachmentMediaKind(this.selectedAttachment) === 'image') && this.attachmentPreviewUrl) {
                 Image(this.attachmentPreviewUrl).width('100%').constraintSize({ maxHeight: 420 })
                   .objectFit(ImageFit.Contain).backgroundColor($r('app.color.card')).borderRadius(Radius.card)
                   .onError(() => {
@@ -4867,6 +5443,11 @@ struct Index {
     } else if (this.panel === 'composer-command') {
       ComposerCommandPanel({ mode: this.commandPanel, query: this.commandQuery, busy: this.busy,
         commands: client.providerCommands(), skills: client.providerSkills(), files: this.mentionFiles,
+        mentionThreads: this.commandPanel === 'mention' ? this.sheetMentionGroups().threads : [],
+        mentionEnvironments: this.commandPanel === 'mention' ? this.sheetMentionGroups().environments : [],
+        mentionModels: this.commandPanel === 'mention' ? this.sheetMentionGroups().models : [],
+        mentionFileItems: this.commandPanel === 'mention' ? this.sheetMentionGroups().files : [],
+        mentionLoading: this.commandPanel === 'mention' ? this.mentionLoading : false,
         branches: this.branches, environments: this.environmentLabels(),
         repoChoices: this.draftRepoChoices,
         repoChoicesLoaded: this.draftRepoChoicesLoaded,
@@ -4875,12 +5456,13 @@ struct Index {
         startFromOrigin: this.draftWorkspace.startFromOrigin,
         onClose: () => this.panelOpen = false,
         onQuery: (value: string) => {
-          if (this.commandPanel === 'mention') void this.searchMentionFiles(value);
+          if (this.commandPanel === 'mention') this.triggerSheetMentionSearch(value, false);
           else this.commandQuery = value;
         },
         onCommand: (value: string) => this.insertCommand(value),
         onSkill: (name: string) => { this.addSkillContext(name); this.panelOpen = false; },
         onFile: (path: string) => { this.addFileContext(path); this.panelOpen = false; },
+        onMentionSelect: (item: MentionItem) => { this.applyMentionItem(item); },
         onBranch: (ref: BranchView) => { void this.selectBranch(ref).catch((error: Error) => this.status = error.message); },
         onEnvironment: (label: string) => {
           const id = this.environmentIdForLabel(label);
@@ -6227,53 +6809,43 @@ struct Index {
       })
         .hitTestBehavior(HitTestMode.Transparent)
     }.width('100%').layoutWeight(1)
+    if (this.inlineMentionTrigger !== undefined && !this.busy && !this.unknown && !this.panelOpen) {
+      Column() {
+        ComposerMentionPopover({
+          items: this.inlineMentionItems,
+          query: this.inlineMentionTrigger.query,
+          loading: this.inlineMentionLoading,
+          onSelect: (item: MentionItem) => {
+            if (this.inlineMentionTrigger) {
+              this.applyMentionItem(item, this.inlineMentionTrigger);
+            }
+          },
+          onDismiss: () => this.dismissInlineMention()
+        })
+      }.width('100%').padding({ left: Space.sm, right: Space.sm, top: Space.xxs, bottom: Space.xxs })
+    }
     Column({ space: 0 }) {
-      if (this.draftContext.length || this.attachments.length) {
-        Scroll() {
-          Row({ space: 6 }) {
-            ForEach(this.draftContext, (item: ComposerContextRecord) => {
-              Row({ space: 4 }) {
-                Text(item.kind + ': ' + item.label)
-                  .fontSize(FontSize.caption).lineHeight(LineHeight.caption)
-                  .fontColor($r('app.color.ink'))
-                  .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-                  .constraintSize({ maxWidth: 168 })
-                Text('×')
-                  .fontSize(FontSize.callout).fontColor($r('app.color.muted'))
-              }
-              .height(30).padding({ left: 10, right: 8 })
-              .backgroundColor($r('app.color.card')).borderRadius(Radius.tool)
-              .border({ width: 0.5, color: $r('app.color.border') })
-              .alignItems(VerticalAlign.Center)
-              .accessibilityDescription('移除引用 ' + item.label)
-              .onClick(() => this.removeContext(item.contextId))
-            }, (item: ComposerContextRecord) => item.contextId)
-            ForEach(this.attachments, (item: DraftAttachment) => {
-              Row({ space: 0 }) {
-                Button({ type: ButtonType.Normal, stateEffect: true }) {
-                  Text((item.type === 'image' ? '图 · ' : '文件 · ') + item.name)
-                    .fontSize(FontSize.caption).lineHeight(LineHeight.caption)
-                    .fontColor($r('app.color.ink'))
-                    .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-                    .constraintSize({ maxWidth: 176 })
-                }
-                .height(30).padding({ left: 10, right: 6 })
-                .backgroundColor(Color.Transparent)
-                .onClick(() => { void this.openAttachment(item.name); })
-                Button({ type: ButtonType.Normal, stateEffect: true }) {
-                  Text('×').fontSize(FontSize.callout).fontColor($r('app.color.muted'))
-                }
-                .width(26).height(30).padding(0)
-                .backgroundColor(Color.Transparent)
-                .accessibilityText('移除附件 ' + item.name)
-                .onClick(() => { client.removeAttachment(item.id); this.refreshAttachments(); this.scheduleDraftSave(); })
-              }
-              .backgroundColor($r('app.color.card')).borderRadius(Radius.tool)
-              .border({ width: 0.5, color: $r('app.color.border') })
-              .alignItems(VerticalAlign.Center)
-            }, (item: DraftAttachment) => item.id)
-          }.padding({ left: 12, right: 12, top: 10, bottom: 2 })
-        }.scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).align(Alignment.Start).width('100%')
+      if (this.draftContext.length || this.attachments.length || this.uploadingAttachment) {
+        ComposerAttachmentStrip({
+          attachments: this.attachments,
+          contexts: this.draftContext,
+          uploading: this.uploadingAttachment,
+          previewUris: this.attachmentPreviewMap,
+          scopeKey: this.markdownMediaScopeKey(),
+          mediaReady: this.ready,
+          lookupLocalPreview: (item: DraftAttachment): string => this.lookupLocalAttachmentPreview(item),
+          resolvePreview: (item: DraftAttachment): Promise<string> => this.resolveComposerAttachmentPreview(item),
+          downloadLocalPreview: (url: string, item: DraftAttachment): Promise<string> =>
+            this.downloadComposerAttachmentPreview(url, item),
+          onOpenAttachment: (item: DraftAttachment) => { void this.openAttachmentItem(item); },
+          onRemoveAttachment: (id: string) => {
+            client.removeAttachment(id);
+            this.refreshAttachments();
+            this.scheduleDraftSave();
+          },
+          onRemoveContext: (contextId: string) => this.removeContext(contextId),
+          onCancelUpload: () => this.cancelAttachmentUpload()
+        })
       }
       Stack({ alignContent: Alignment.BottomStart }) {
         Row({ space: 4 }) {
@@ -6395,7 +6967,7 @@ struct Index {
               })
           }
           if (!this.draftMode && this.threadRunning && !this.busy && !this.unknown &&
-            this.prompt.trim().length === 0 && this.attachments.length === 0) {
+            this.prompt.trim().length === 0 && this.attachments.length === 0 && this.draftContext.length === 0) {
             Button({ type: ButtonType.Circle, stateEffect: true }) {
               Rect().width(11).height(11).radius(2.5).fill($r('app.color.danger'))
             }.width(36).height(36).flexShrink(0)
@@ -6413,9 +6985,9 @@ struct Index {
                 Image($r('app.media.ui_send')).width(17).height(17).accessibilityLevel('no')
               }
             }.width(36).height(36).flexShrink(0).backgroundColor($r('app.color.prominent'))
-              .opacity(this.busy || (this.ready && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0)) ? 1 : 0.28)
+              .opacity(this.busy || (this.ready && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0 || this.draftContext.length > 0)) ? 1 : 0.28)
               .accessibilityText(this.busy ? '正在提交' : '发送消息')
-              .enabled(this.ready && !this.busy && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0))
+              .enabled(this.ready && !this.busy && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0 || this.draftContext.length > 0))
               .onClick(() => this.send())
           } else {
             Button({ type: ButtonType.Circle, stateEffect: true }) {
@@ -6425,9 +6997,9 @@ struct Index {
                 Image($r('app.media.ui_send')).width(17).height(17).accessibilityLevel('no')
               }
             }.width(36).height(36).flexShrink(0).backgroundColor($r('app.color.prominent'))
-              .opacity(this.busy || (this.ready && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0)) ? 1 : 0.28)
+              .opacity(this.busy || (this.ready && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0 || this.draftContext.length > 0)) ? 1 : 0.28)
               .accessibilityText(this.busy ? '正在提交' : '发送消息')
-              .enabled(this.ready && !this.busy && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0))
+              .enabled(this.ready && !this.busy && !this.unknown && (this.prompt.trim().length > 0 || this.attachments.length > 0 || this.draftContext.length > 0))
               .bindContextMenu(this.sendModeContextMenu(), ResponseType.LongPress)
               .onClick(() => this.send())
           }
@@ -6447,10 +7019,29 @@ struct Index {
             const previewValue = preview?.value || '';
             this.composerPreviewText = previewValue;
             this.composingText = !!previewValue;
-            const unchanged = this.prompt === value;
+            const prevPrompt = this.prompt;
+            const unchanged = prevPrompt === value;
             this.prompt = value;
             if (unchanged) this.syncComposerExpanded(value, previewValue);
             this.scheduleDraftSave();
+            if (!previewValue) {
+              const delta = value.length - prevPrompt.length;
+              const baseCursor = this.composerCursor === this.composerSelectionEnd &&
+                this.composerSelectionEnd <= prevPrompt.length
+                ? this.composerSelectionEnd
+                : prevPrompt.length;
+              const estimated = Math.max(0, Math.min(value.length, baseCursor + delta));
+              this.composerCursor = estimated;
+              this.composerSelectionEnd = estimated;
+              this.syncInlineMention(value, estimated, estimated);
+            }
+          })
+          .onTextSelectionChange((selectionStart: number, selectionEnd: number) => {
+            this.composerCursor = selectionStart;
+            this.composerSelectionEnd = selectionEnd;
+            if (!this.composingText) {
+              this.syncInlineMention(this.prompt, selectionStart, selectionEnd);
+            }
           })
           .onFocus(() => { this.composerFocused = true; this.keyboard.reset(); })
           .onBlur(() => { this.composerFocused = false; this.composingText = false; this.composerPreviewText = ''; this.keyboard.reset(); })
@@ -6462,10 +7053,11 @@ struct Index {
               this.syncComposerExpanded();
             }
           })
-          .constraintSize({ minHeight: this.composerExpanded ? 46 : 38 })
-          .maxLines(5, { overflowMode: MaxLinesMode.SCROLL })
+          .enterKeyType(EnterKeyType.NEW_LINE)
+          .constraintSize({ minHeight: this.composerExpanded ? 46 : 38, maxHeight: 156 })
+          .barState(BarState.Auto)
           .padding(this.composerExpanded
-            ? { left: 14, right: 14, top: (this.draftContext.length || this.attachments.length) ? 6 : 12, bottom: 4 }
+            ? { left: 14, right: 14, top: (this.draftContext.length || this.attachments.length || this.uploadingAttachment) ? 6 : 12, bottom: 4 }
             : { left: 4, right: 4, top: 8, bottom: 8 })
           .margin(this.composerExpanded
             ? { left: 0, bottom: 46 }
@@ -6488,6 +7080,7 @@ struct Index {
     }.margin({ left: Space.sm, right: Space.sm, top: Space.xxs, bottom: this.composerFocused ? Space.xs : Space.sm })
       .backgroundColor($r('app.color.group')).borderRadius(Radius.composer)
       .border({ width: 1, color: $r('app.color.border') })
+      .clip(true)
   }
 
   private measureTextVp(value: string, fontSize: number, fontWeight: number = Weight.regular): number {

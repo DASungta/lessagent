@@ -25,6 +25,7 @@ export interface ThreadTurnSubagentsView {
   subagents: SubagentView[];
   liveCount: number;
   settledCount: number;
+  idleCount: number;
   hasWorkflow: boolean;
 }
 
@@ -542,10 +543,12 @@ export function deriveThreadTurnSubagents(
 
   let liveCount = 0;
   let settledCount = 0;
+  let idleCount = 0;
   let hasWorkflow = false;
   for (const row of parsed) {
     if (isWorkActiveStatus(row.status)) liveCount += 1;
     else if (isTerminalSubagentStatus(row.status)) settledCount += 1;
+    else if (row.status === 'idle') idleCount += 1;
     if (row.isWorkflow) hasWorkflow = true;
   }
 
@@ -556,6 +559,7 @@ export function deriveThreadTurnSubagents(
     subagents: parsed,
     liveCount,
     settledCount,
+    idleCount,
     hasWorkflow
   };
 }
@@ -570,6 +574,16 @@ export function resolveSubagentPillSegment(turn: ThreadTurnSubagentsView | undef
       liveCount: turn.liveCount,
       totalCount: total,
       accessibilityLabel: turn.liveCount + ' / ' + total + ' 个子 Agent 运行中'
+    };
+  }
+  if (turn.settledCount === 0) {
+    if (!turn.turnActive && !turn.hasWorkflow) return undefined;
+    const idle = turn.idleCount > 0 ? turn.idleCount : total;
+    return {
+      label: idle + ' 空闲',
+      liveCount: 0,
+      totalCount: total,
+      accessibilityLabel: idle + ' 个子 Agent 空闲'
     };
   }
   return {

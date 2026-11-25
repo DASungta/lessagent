@@ -178,6 +178,14 @@ export function threadContext(environmentId: string, threadId: string, title: st
     payload: { environmentId, threadId, title: title.slice(0, 200) } };
 }
 
+export function environmentContext(environmentId: string, label: string,
+  contextId: string): ComposerContextRecord {
+  safeToken(environmentId, '环境标识', 128);
+  const cleanLabel = (label || environmentId).trim().slice(0, 200) || environmentId;
+  return { version: 1, kind: 'environment', contextId, label: cleanLabel,
+    payload: { environmentId } };
+}
+
 export function contextPayload(context: ComposerContextRecord[]): Object {
   if (context.length > R4_MAX_CONTEXT_RECORDS) throw new Error('上下文记录过多');
   if (new Set(context.map((item: ComposerContextRecord) => item.contextId)).size !== context.length) {
@@ -349,6 +357,8 @@ export interface SubagentView {
   id: string;
   title: string;
   status: string;
+  origin: string;
+  driver: string;
   childThreadId: string;
   remoteThreadId: string;
   remoteEnvironmentId: string;
@@ -362,23 +372,51 @@ export interface SubagentView {
   updatedAt: string;
   isWorkflow: boolean;
 }
+
+export function canStopSubagentRecord(row: Record<string, Object>): boolean {
+  const status = text(row.status);
+  if (status !== 'pending' && status !== 'running' && status !== 'waiting') return false;
+  const origin = typeof row.origin === 'string' ? row.origin : '';
+  const driver = typeof row.driver === 'string' ? row.driver : '';
+  const childThreadId = typeof row.childThreadId === 'string' ? row.childThreadId : '';
+  const runId = typeof row.runId === 'string' ? row.runId : '';
+  const isWorkflow = row.workflow !== undefined && row.workflow !== null;
+  const nativeTaskRef = row.nativeTaskRef !== undefined && row.nativeTaskRef !== null &&
+    typeof row.nativeTaskRef === 'object' && !Array.isArray(row.nativeTaskRef)
+    ? row.nativeTaskRef as Record<string, Object> : undefined;
+  const nativeId = nativeTaskRef && typeof nativeTaskRef.nativeId === 'string' ? nativeTaskRef.nativeId : '';
+  const nativeStrength = nativeTaskRef && typeof nativeTaskRef.strength === 'string' ? nativeTaskRef.strength : '';
+  if (isWorkflow) {
+    return status === 'running' && origin === 'provider_native' && driver === 'claudeAgent' && nativeId !== '';
+  }
+  if (origin === 'app_owned') return childThreadId !== '';
+  if (origin === 'provider_native') {
+    return driver === 'claudeAgent' && runId !== '' && nativeStrength === 'strong' && nativeId !== '';
+  }
+  return origin === '' && childThreadId !== '';
+}
+
 export function subagents(rows: Record<string, Object>[]): SubagentView[] {
   return compactArray(rows, (entry: Object): SubagentView => {
     const row = record(entry);
     const remote = row.remoteChild !== undefined && row.remoteChild !== null && typeof row.remoteChild === 'object' && !Array.isArray(row.remoteChild)
       ? row.remoteChild as Record<string, Object> : undefined;
     const status = text(row.status);
+    const origin = typeof row.origin === 'string' ? row.origin : '';
+    const driver = typeof row.driver === 'string' ? row.driver : '';
     return {
       id: text(row.id),
       title: typeof row.title === 'string' && row.title.trim() ? row.title :
         (typeof row.prompt === 'string' ? row.prompt.slice(0, 80) : 'Subagent'),
       status,
+      origin,
+      driver,
       childThreadId: typeof row.childThreadId === 'string' ? row.childThreadId : '',
       remoteThreadId: remote && typeof remote.threadId === 'string' ? remote.threadId : '',
       remoteEnvironmentId: remote && typeof remote.environmentId === 'string' ? remote.environmentId : '',
       remoteLabel: remote && typeof remote.label === 'string' ? remote.label.trim() : '',
       detail: typeof row.progress === 'string' ? row.progress : typeof row.result === 'string' ? row.result : '',
-      canStop: ['pending', 'running', 'waiting', 'idle'].includes(status),
+      canStop: canStopSubagentRecord(row),
       pendingKind: '',
       runId: typeof row.runId === 'string' ? row.runId : '',
       startedAt: typeof row.startedAt === 'string' ? row.startedAt : '',

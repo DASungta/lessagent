@@ -1,6 +1,7 @@
 import { picker, fileIo, fileUri } from '@kit.CoreFileKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { image } from '@kit.ImageKit';
+import { Attachment } from '../protocol/Core';
 import { boundAttachmentFileName } from '../protocol/R4';
 import { client, T3Client } from './T3Client';
 
@@ -15,7 +16,14 @@ const MAX_FILE_BYTES = 50 * 1024 * 1024;
 // shortcut: each document is read into memory; use streaming before raising the 50 MiB contract cap.
 export class AttachmentPicker {
   private owner: T3Client;
-  constructor(owner: T3Client = client) { this.owner = owner; }
+  private onUploaded: ((attachment: Attachment, bytes: ArrayBuffer) => void) | undefined;
+  constructor(owner: T3Client = client, onUploaded?: (attachment: Attachment, bytes: ArrayBuffer) => void) {
+    this.owner = owner;
+    this.onUploaded = onUploaded;
+  }
+  setOnUploaded(handler: ((attachment: Attachment, bytes: ArrayBuffer) => void) | undefined): void {
+    this.onUploaded = handler;
+  }
   belongsTo(owner: T3Client): boolean { return this.owner === owner; }
   private uris: QueuedAttachment[] = [];
   private scope: string = '';
@@ -140,7 +148,10 @@ export class AttachmentPicker {
         }
       }
       if (!current()) throw new Error('会话已变更，请重新选择附件');
-      await this.owner.upload(uploadName, bytes, mimeType, isImage ? 'image' : 'file', current);
+      const uploaded = await this.owner.upload(uploadName, bytes, mimeType, isImage ? 'image' : 'file', current);
+      if (this.onUploaded) {
+        try { this.onUploaded(uploaded, bytes); } catch (_) {}
+      }
     } finally { await fileIo.close(file); }
   }
 }

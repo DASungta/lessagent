@@ -1838,11 +1838,14 @@ export struct PullRequestsPanel {
               ListItem() {
                 Row({ space: Space.xs }) {
                   if (!this.detail || this.detail.viewedFilesSupported !== false) {
-                    Button(this.isFileViewed(file.path) ? '✓' : '○', { type: ButtonType.Normal })
-                      .width(44).height(44)
-                      .fontSize(FontSize.headline)
-                      .fontWeight(Weight.semibold)
-                      .fontColor(this.isFileViewed(file.path) ? $r('app.color.primary_text') : $r('app.color.muted'))
+                    Button({ type: ButtonType.Normal, stateEffect: true }) {
+                      Text(this.isFileViewed(file.path) ? '✓' : '○')
+                        .fontSize(FontSize.headline)
+                        .fontWeight(Weight.semibold)
+                        .fontColor(this.isFileViewed(file.path) ? $r('app.color.primary_text') : $r('app.color.muted'))
+                        .textAlign(TextAlign.Center)
+                    }
+                      .width(44).height(44).padding(0).flexShrink(0)
                       .backgroundColor(Color.Transparent)
                       .borderRadius(Radius.tool)
                       .accessibilityText((this.isFileViewed(file.path) ? '取消已审阅：' : '标记已审阅：') + file.path)

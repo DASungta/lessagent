@@ -4,7 +4,8 @@ import {composerUrl} from './load-core.mjs';
 import {ThreadState} from '../entry/src/main/ets/protocol/Wire.ts';
 const {
   launchTask, validateTaskSettings, optionControls, supportedModes, queuedRuns, queueCommand, modelOptionsSummary,
-  shouldExpandComposer, resolveCompactEditorGeometry, layoutExpandedModelControl
+  shouldExpandComposer, resolveCompactEditorGeometry, layoutExpandedModelControl,
+  composerAttachmentKind, composerAttachmentExtensionBadge, formatAttachmentSize, composerContextChipLabel
 }=await import(composerUrl);
 const config={providers:[{instanceId:'codex',driver:'codex',installed:true,enabled:true,models:[{slug:'m',capabilities:{optionDescriptors:[{id:'reasoningEffort',label:'Reasoning',type:'select',options:[{id:'high',label:'High'}]},{id:'fast',label:'Fast',type:'boolean'}]}}],supportedRuntimeModes:['approval-required','full-access']}],settings:{}};
 const settings={modelSelection:{instanceId:'codex',model:'m',options:[{id:'reasoningEffort',value:'high'},{id:'fast',value:false}]},runtimeMode:'approval-required',interactionMode:'default'};
@@ -156,4 +157,29 @@ test('layoutExpandedModelControl never overflows slot for long model names, long
    }
   }
  }
+});
+
+test('composer attachment preview helpers classify media types, badges, sizes, and context labels cleanly',()=>{
+ assert.equal(composerAttachmentKind('image','a.jpg','image/jpeg'),'image');
+ assert.equal(composerAttachmentKind('file','Screenshot.PNG','application/octet-stream'),'image');
+ assert.equal(composerAttachmentKind('file','demo.mp4','video/mp4'),'video');
+ assert.equal(composerAttachmentKind('file','report.pdf','application/pdf'),'file');
+
+ assert.equal(composerAttachmentExtensionBadge('report.pdf','application/pdf'),'PDF');
+ assert.equal(composerAttachmentExtensionBadge('config.json','application/json'),'JSON');
+ assert.equal(composerAttachmentExtensionBadge('archive.tar.gz','application/gzip'),'GZ');
+ assert.equal(composerAttachmentExtensionBadge('README','text/plain'),'TXT');
+ assert.equal(composerAttachmentExtensionBadge('blob','application/octet-stream'),'FILE');
+
+ assert.equal(formatAttachmentSize(0),'');
+ assert.equal(formatAttachmentSize(512),'512 B');
+ assert.equal(formatAttachmentSize(1536),'1.5 KB');
+ assert.equal(formatAttachmentSize(256*1024),'256 KB');
+ assert.equal(formatAttachmentSize(2.5*1024*1024),'2.5 MB');
+
+ assert.equal(composerContextChipLabel('mention','src/app.ts'),'@src/app.ts');
+ assert.equal(composerContextChipLabel('skill','review'),'skill:review');
+ assert.equal(composerContextChipLabel('terminal','npm test'),'终端 · npm test');
+ assert.equal(composerContextChipLabel('thread','修复登录闪退'),'会话 · 修复登录闪退');
+ assert.equal(composerContextChipLabel('environment','ca02'),'环境 · ca02');
 });

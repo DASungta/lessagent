@@ -172,8 +172,10 @@ export struct ProjectWorktreeSettingsPanel {
             .backgroundColor($r('app.color.group')).fontColor($r('app.color.ink'))
             .onSelect((index: number) => { if (values[index] !== undefined) void this.save(key, values[index]); })
         } else if (this.editingKey === key) {
-          TextArea({ text: this.draft, placeholder: title }).width('100%').constraintSize({ minHeight: 44 })
-            .maxLines(4, { overflowMode: MaxLinesMode.SCROLL })
+          TextArea({ text: this.draft, placeholder: title }).width('100%')
+            .enterKeyType(EnterKeyType.NEW_LINE)
+            .constraintSize({ minHeight: 44, maxHeight: 120 })
+            .barState(BarState.Auto)
             .fontSize(FontSize.body).fontColor($r('app.color.ink')).placeholderColor($r('app.color.placeholder'))
             .backgroundColor($r('app.color.group')).borderRadius(Radius.tool).padding(10)
             .accessibilityText(title).onChange((value: string) => { this.draft = value; })

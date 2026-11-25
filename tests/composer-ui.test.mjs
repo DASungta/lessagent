@@ -170,11 +170,11 @@ test('composer starts single-line with icon-only model trigger, expands to stack
 
  assert.deepEqual(
   page.composerAttachmentMenu(false, false, false, false, 'auto', 0, false).map((item) => item.value),
-  ['从图库选择', '选择文件', '引用文件 @', '命令 /', '技能', '语音输入', '粘贴结构化上下文', '队列']
+  ['从图库选择', '选择文件', '文件与提及 @', '命令 /', '技能', '语音输入', '粘贴结构化上下文', '队列']
  );
  assert.deepEqual(
   page.composerAttachmentMenu(false, false, false, true, 'auto', 0, false).map((item) => item.value),
-  ['从图库选择', '选择文件', '引用文件 @', '命令 /', '技能', '语音输入', '粘贴结构化上下文']
+  ['从图库选择', '选择文件', '文件与提及 @', '命令 /', '技能', '语音输入', '粘贴结构化上下文']
  );
  assert.deepEqual(
   page.composerAttachmentMenu(true, false, false, false, 'auto', 0, false).map((item) => item.value),
@@ -182,11 +182,11 @@ test('composer starts single-line with icon-only model trigger, expands to stack
  );
  assert.deepEqual(
   page.composerAttachmentMenu(false, true, false, false, 'auto', 2, true).map((item) => item.value),
-  ['从图库选择', '选择文件', '重试上传', '引用文件 @', '命令 /', '技能', '语音输入', '粘贴结构化上下文', '队列 (2)', '排队发送', '引导运行']
+  ['从图库选择', '选择文件', '重试上传', '文件与提及 @', '命令 /', '技能', '语音输入', '粘贴结构化上下文', '队列 (2)', '排队发送', '引导运行']
  );
  assert.deepEqual(
   page.composerAttachmentMenu(false, false, true, false, 'queue', 1, true).map((item) => item.value),
-  ['从图库选择', '选择文件', '引用文件 @', '命令 /', '技能', '语音输入', '粘贴结构化上下文', '队列 (1)', '恢复自动发送', '清空附件']
+  ['从图库选择', '选择文件', '文件与提及 @', '命令 /', '技能', '语音输入', '粘贴结构化上下文', '队列 (1)', '恢复自动发送', '清空附件']
  );
 });
 
@@ -253,4 +253,26 @@ test('TaskSettingsPanel watches settings prop and mounts only while panelOpen is
   const panelSource = await readFile(new URL('../entry/src/main/ets/components/TaskSettingsPanel.ets', import.meta.url), 'utf8');
   assert.match(panelSource, /@Prop\s+@Watch\('syncSettings'\)\s+settings:\s*TaskSettings\b/);
   assert.match(source, /this\.panelOpen\s*&&\s*this\.panel\s*===\s*'task-settings'/);
+  // Favorite star button must use a zero-padding container Button so default 16vp button padding never clips the glyph
+  assert.doesNotMatch(panelSource, /Button\(this\.isFavorite\(model\)/);
+  assert.match(panelSource, /Button\(\{\s*type:\s*ButtonType\.Normal,\s*stateEffect:\s*true\s*\}\)\s*\{\s*Text\(this\.isFavorite\(model\)\s*\?\s*'★'\s*:\s*'☆'\)[\s\S]*?\.width\(44\)[\s\S]*?\.padding\(0\)[\s\S]*?\.flexShrink\(0\)/);
+});
+
+test('composer TextArea and other multiline editors allow native scrolling and newlines without clipping MaxLinesMode.SCROLL', async () => {
+  const checkedFiles = [
+    '../entry/src/main/ets/pages/Index.ets',
+    '../entry/src/main/ets/components/RequestCard.ets',
+    '../entry/src/main/ets/components/ProjectWorktreeSettingsPanel.ets',
+    '../entry/src/main/ets/components/ShareImportPanel.ets'
+  ];
+  for (const rel of checkedFiles) {
+    const content = await readFile(new URL(rel, import.meta.url), 'utf8');
+    assert.doesNotMatch(content, /MaxLinesMode\.SCROLL/, `${rel} should use constraintSize maxHeight instead of MaxLinesMode.SCROLL`);
+  }
+  assert.match(source, /\.id\('composer-input'\)[\s\S]*?\.enterKeyType\(EnterKeyType\.NEW_LINE\)[\s\S]*?\.constraintSize\(\{\s*minHeight:\s*this\.composerExpanded\s*\?\s*46\s*:\s*38,\s*maxHeight:\s*156\s*\}\)[\s\S]*?\.barState\(BarState\.Auto\)/);
+  assert.match(source, /ComposerAttachmentStrip\(\{[\s\S]*?attachments:\s*this\.attachments[\s\S]*?uploading:\s*this\.uploadingAttachment[\s\S]*?previewUris:\s*this\.attachmentPreviewMap[\s\S]*?onOpenAttachment:\s*\(item:\s*DraftAttachment\)\s*=>\s*\{\s*void this\.openAttachmentItem\(item\);\s*\}/);
+  const stripSource = await readFile(new URL('../entry/src/main/ets/components/ComposerAttachmentStrip.ets', import.meta.url), 'utf8');
+  assert.match(stripSource, /ImageFit\.Cover/);
+  assert.match(stripSource, /composerAttachmentExtensionBadge/);
+  assert.match(stripSource, /formatAttachmentSize/);
 });

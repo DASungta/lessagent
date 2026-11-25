@@ -1,5 +1,5 @@
 // Execute the actual NetworkKit adapter with a small fake kit; HAP build checks the SDK types.
-import { coreUrl, projectsUrl, composerUrl, r4Url, filesUrl, r5Url, floatingStatusUrl, markdownUrl, htmlRenderUrl, threadRepositoriesUrl, linkedThreadUrl, linkBatchUrl, serverClockUrl, agentFeedbackUrl, filePreviewUrl, mcpAppUrl } from './load-core.mjs';
+import { coreUrl, projectsUrl, composerUrl, r4Url, mentionsUrl, filesUrl, r5Url, floatingStatusUrl, markdownUrl, htmlRenderUrl, threadRepositoriesUrl, linkedThreadUrl, linkBatchUrl, serverClockUrl, agentFeedbackUrl, filePreviewUrl, mcpAppUrl } from './load-core.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -222,7 +222,9 @@ async function setup(options = {}) {
     .replace("'../protocol/FilePreview'", JSON.stringify(filePreviewUrl))
     .replace("'../protocol/McpApp'", JSON.stringify(mcpAppUrl))
     .replace("'../protocol/R5'", JSON.stringify(r5Url));
-  const sourceWithR4 = source.replace("'../protocol/R4'", JSON.stringify(r4Url));
+  const sourceWithR4 = source
+    .replace("'../protocol/R4'", JSON.stringify(r4Url))
+    .replace("'../protocol/Mentions'", JSON.stringify(mentionsUrl));
   const compiled = ts.transpileModule(sourceWithR4, { compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 } }).outputText;
   const { T3Client } = await import('data:text/javascript;base64,' + Buffer.from(compiled + '\n// instance ' + ++moduleId).toString('base64'));
   const client = new T3Client();

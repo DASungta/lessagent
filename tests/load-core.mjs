@@ -22,6 +22,13 @@ const r4Source = (await readFile(new URL('../entry/src/main/ets/protocol/R4.ts',
   .replace("'./Composer'", JSON.stringify(composerUrl));
 export const r4Url = data(compile(r4Source));
 
+const mentionsSource = (await readFile(new URL('../entry/src/main/ets/protocol/Mentions.ts', import.meta.url), 'utf8'))
+  .replace("'./Core'", JSON.stringify(coreUrl))
+  .replace("'./Projects'", JSON.stringify(projectsUrl))
+  .replace("'./R4'", JSON.stringify(r4Url))
+  .replace("'./Wire'", JSON.stringify(wireUrl));
+export const mentionsUrl = data(compile(mentionsSource));
+
 const htmlRenderSource = (await readFile(new URL('../entry/src/main/ets/protocol/HtmlRender.ts', import.meta.url), 'utf8'))
   .replace("'./Wire'", JSON.stringify(wireUrl));
 export const htmlRenderUrl = data(compile(htmlRenderSource));

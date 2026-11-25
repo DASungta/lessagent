@@ -225,7 +225,8 @@ export function launchTask(commandId: string, threadId: string, messageId: strin
   if (!projectId.trim() || (!prompt.trim() && attachments.length === 0) || prompt.length > 1000000) {
     throw new Error('请选择项目并填写任务或添加附件');
   }
-  const title = prompt.trim() ? prompt.trim().replace(/\s+/g, ' ').slice(0, 72) : 'New task';
+  const readable = formatMentionPreviewText(prompt).trim();
+  const title = readable ? readable.replace(/\s+/g, ' ').slice(0, 72) : 'New task';
   return { commandId, threadId, projectId, creationSource: 'mobile', title, generateTitle: true,
     modelSelection: settings.modelSelection, runtimeMode: settings.runtimeMode, interactionMode: settings.interactionMode,
     workspaceStrategy, initialMessage: { messageId, text: prompt, attachments,
@@ -454,6 +455,64 @@ export interface SetModelFavoritePatchEntry {
   provider: string;
   model: string;
   favorite: boolean;
+}
+
+export type ComposerAttachmentKind = 'image' | 'video' | 'file';
+
+export function composerAttachmentKind(type: string, name: string, mimeType: string): ComposerAttachmentKind {
+  const mime = (mimeType || '').trim().toLowerCase();
+  const cleanName = (name || '').trim();
+  if (mime.startsWith('video/') || /\.(?:mp4|webm|mov|m4v|ogv|mkv|avi|3gp)$/i.test(cleanName)) {
+    return 'video';
+  }
+  if (type === 'image' || mime.startsWith('image/') ||
+    /\.(?:png|jpe?g|gif|webp|bmp|svg|avif|heic)$/i.test(cleanName)) {
+    return 'image';
+  }
+  return 'file';
+}
+
+export function composerAttachmentExtensionBadge(name: string, mimeType: string): string {
+  const cleanName = (name || '').trim();
+  const dot = cleanName.lastIndexOf('.');
+  if (dot > 0 && dot < cleanName.length - 1) {
+    const ext = cleanName.slice(dot + 1).replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    if (ext.length >= 1 && ext.length <= 5) return ext.slice(0, 4);
+  }
+  const mime = (mimeType || '').trim().toLowerCase();
+  if (mime === 'application/pdf') return 'PDF';
+  if (mime === 'application/json') return 'JSON';
+  if (mime === 'text/plain') return 'TXT';
+  if (mime === 'text/markdown') return 'MD';
+  if (mime === 'text/html') return 'HTML';
+  if (mime.startsWith('video/')) return 'VID';
+  if (mime.startsWith('audio/')) return 'AUD';
+  if (mime.startsWith('image/')) return 'IMG';
+  return 'FILE';
+}
+
+export function formatAttachmentSize(sizeBytes: number): string {
+  if (!Number.isFinite(sizeBytes) || sizeBytes <= 0) return '';
+  if (sizeBytes < 1024) return Math.round(sizeBytes) + ' B';
+  if (sizeBytes < 1024 * 1024) {
+    const kb = sizeBytes / 1024;
+    return (kb >= 100 ? Math.round(kb) : Number(kb.toFixed(1))) + ' KB';
+  }
+  const mb = sizeBytes / (1024 * 1024);
+  return (mb >= 100 ? Math.round(mb) : Number(mb.toFixed(1))) + ' MB';
+}
+
+export function composerContextChipLabel(kind: string, label: string): string {
+  const cleanLabel = (label || '').trim();
+  if (!cleanLabel) return kind || '引用';
+  if (kind === 'mention') return cleanLabel.startsWith('@') ? cleanLabel : '@' + cleanLabel;
+  if (kind === 'skill') return cleanLabel.startsWith('skill:') ? cleanLabel : 'skill:' + cleanLabel;
+  if (kind === 'terminal') return '终端 · ' + cleanLabel;
+  if (kind === 'thread') return '会话 · ' + cleanLabel;
+  if (kind === 'environment') return '环境 · ' + cleanLabel;
+  if (kind === 'review-comment') return '评审 · ' + cleanLabel;
+  if (kind === 'response') return '回复 · ' + cleanLabel;
+  return (kind ? kind + ': ' : '') + cleanLabel;
 }
 
 export function modelFavoriteUpdatePatch(

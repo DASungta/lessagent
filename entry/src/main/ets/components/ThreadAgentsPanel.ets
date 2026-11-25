@@ -127,6 +127,14 @@ export struct ThreadAgentsPanel {
             .backgroundColor($r('app.color.card'))
             .borderRadius(Radius.card)
           } else {
+            if (!this.hasActiveAgent() && this.subagents.some((agent: SubagentView) => agent.status === 'idle')) {
+              Text('当前轮次已结束；以下子 Agent 处于空闲待命状态，未在后台运行，可随时打开查看记录。')
+                .fontSize(FontSize.caption)
+                .lineHeight(LineHeight.caption)
+                .fontColor($r('app.color.muted'))
+                .padding({ left: Space.xxs, right: Space.xxs, top: 2, bottom: 2 })
+                .width('100%')
+            }
             ForEach(this.subagents, (agent: SubagentView) => {
               Column({ space: Space.xs }) {
                 Row({ space: Space.xs }) {
