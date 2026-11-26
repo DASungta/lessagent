@@ -434,3 +434,58 @@ test('forkFromMessage forwards sourceThreadId and title, prevents duplicate fork
   }
  }
 });
+
+test('chat subpages stay layered over chat and returnToChatWithScrollRestore avoids bumping a preserved scroller', async () => {
+ const subpageMethod = source.slice(source.indexOf('  private isChatSubpage()'), source.indexOf('  private showHomeBottomBar()'));
+ const restoreMethod = source.slice(source.indexOf('  private needsChatScrollFallback('), source.indexOf('  private openHtmlFullscreen('));
+ const compiled = ts.transpileModule('return class { ' + subpageMethod + '\n' + restoreMethod + ' }', { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+ const Page = new Function(compiled)();
+ const page = new Page();
+
+ page.page = 'files';
+ assert.equal(page.isChatSubpage(), true);
+ page.page = 'review';
+ assert.equal(page.isChatSubpage(), true);
+ page.page = 'html-viewer';
+ page.htmlViewerEntry = undefined;
+ assert.equal(page.isChatSubpage(), false);
+ page.htmlViewerEntry = { id: 'e1' };
+ assert.equal(page.isChatSubpage(), true);
+ page.page = 'sessions';
+ assert.equal(page.isChatSubpage(), false);
+
+ const scrolledTo = [];
+ Object.assign(page, {
+  alive: true,
+  page: 'files',
+  draftMode: false,
+  selectedLocalId: 'env-1',
+  threadId: 'thread-1',
+  messages: [{ id: 'm1' }],
+  pendingScrollRestore: { localId: 'env-1', threadId: 'thread-1', scrollY: 1200, scrollIndex: 8 },
+  scroller: {
+   currentOffset: () => ({ xOffset: 0, yOffset: 1200 }),
+   isAtEnd: () => true,
+   scrollTo: (opts) => scrolledTo.push(opts),
+   scrollToIndex: (idx) => scrolledTo.push({ index: idx })
+  }
+ });
+ page.returnToChatWithScrollRestore();
+ assert.equal(page.page, 'chat');
+ assert.equal(page.pendingScrollRestore, undefined);
+ await new Promise(r => setTimeout(r, 260));
+ assert.deepEqual(scrolledTo, []);
+
+ // Fallback still triggers if the List unexpectedly reset to y=0 while not at end
+ page.page = 'files';
+ page.pendingScrollRestore = { localId: 'env-1', threadId: 'thread-1', scrollY: 960, scrollIndex: 6 };
+ page.scroller = {
+  currentOffset: () => ({ xOffset: 0, yOffset: 0 }),
+  isAtEnd: () => false,
+  scrollTo: (opts) => scrolledTo.push(opts),
+  scrollToIndex: (idx) => scrolledTo.push({ index: idx })
+ };
+ page.returnToChatWithScrollRestore();
+ await new Promise(r => setTimeout(r, 100));
+ assert.deepEqual(scrolledTo, [{ xOffset: 0, yOffset: 960 }]);
+});

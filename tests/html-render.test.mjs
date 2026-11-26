@@ -194,3 +194,13 @@ test('groupWorkByMessage promotes completed html_render out of collapsed steps i
   assert.equal(soloWork.tail.items.length, 0);
   assert.equal(soloWork.tail.runMeta, undefined);
 });
+
+test('htmlRender scroll policies isolate standalone previews and delegate non-overflowing inline cards', () => {
+  assert.equal(hr.htmlRenderNestedScrollPolicy(false, false), 'self-only');
+  assert.equal(hr.htmlRenderNestedScrollPolicy(false, true), 'self-only');
+  assert.equal(hr.htmlRenderNestedScrollPolicy(true, false), 'parent-first');
+  assert.equal(hr.htmlRenderNestedScrollPolicy(true, true), 'self-first');
+
+  assert.equal(hr.htmlRenderOverScrollPolicy(false), 'always');
+  assert.equal(hr.htmlRenderOverScrollPolicy(true), 'never');
+});

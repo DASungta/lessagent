@@ -1030,7 +1030,16 @@ struct Index {
     }).catch(() => {});
   }
 
+  private blurChatFocus(): void {
+    try {
+      this.getUIContext().getFocusController().clearFocus();
+    } catch (_) {}
+  }
+
   private onPageChanged(): void {
+    if (this.isChatSubpage()) {
+      this.blurChatFocus();
+    }
     this.ensureBrowserPreviewWatch();
   }
 
@@ -3730,9 +3739,10 @@ struct Index {
     if (this.threadId === point.threadId && client.thread && client.thread.threadId === point.threadId && this.messages.length > 0) {
       const restore = this.pendingScrollRestore;
       this.pendingScrollRestore = undefined;
-      if (restore) {
+      if (restore && this.needsChatScrollFallback(restore)) {
         const applySameThreadRestore = (): void => {
           if (!this.alive || this.page !== 'chat' || this.threadId !== restore.threadId) return;
+          if (!this.needsChatScrollFallback(restore)) return;
           if (restore.scrollY > 0) this.scroller.scrollTo({ xOffset: 0, yOffset: restore.scrollY });
           else if (restore.scrollIndex > 0) this.scroller.scrollToIndex(restore.scrollIndex);
         };
@@ -4070,14 +4080,29 @@ struct Index {
     }
     this.status = '暂不支持打开此链接';
   }
+  private needsChatScrollFallback(restore: SideThreadReturnPoint): boolean {
+    if (restore.scrollY <= 0 && restore.scrollIndex <= 0) return false;
+    let currentY = 0;
+    let atEnd = false;
+    try {
+      const offset = this.scroller.currentOffset();
+      if (offset && typeof offset.yOffset === 'number' && Number.isFinite(offset.yOffset)) {
+        currentY = offset.yOffset;
+      }
+      atEnd = this.scroller.isAtEnd();
+    } catch (_) {}
+    return currentY < 1 && !atEnd;
+  }
+
   private returnToChatWithScrollRestore(): void {
     const restore = this.pendingScrollRestore;
+    this.pendingScrollRestore = undefined;
     this.page = 'chat';
     if (restore && restore.localId === this.selectedLocalId && restore.threadId === this.threadId &&
-      !this.draftMode && this.messages.length > 0) {
-      this.pendingScrollRestore = undefined;
+      !this.draftMode && this.messages.length > 0 && this.needsChatScrollFallback(restore)) {
       const apply = (): void => {
         if (!this.alive || this.page !== 'chat' || this.draftMode || this.threadId !== restore.threadId) return;
+        if (!this.needsChatScrollFallback(restore)) return;
         if (restore.scrollY > 0) this.scroller.scrollTo({ xOffset: 0, yOffset: restore.scrollY });
         else if (restore.scrollIndex > 0) this.scroller.scrollToIndex(restore.scrollIndex);
       };
@@ -7414,6 +7439,18 @@ struct Index {
     return this.page === 'sessions' || this.page === 'home-pulls' || this.page === 'usage' || this.page === 'settings';
   }
 
+  private isChatSubpage(): boolean {
+    if (this.page === 'files' || this.page === 'review' || this.page === 'git' ||
+      this.page === 'pull-requests' || this.page === 'terminal' || this.page === 'preview' ||
+      this.page === 'device-picker' || this.page === 'voice') {
+      return true;
+    }
+    if (this.page === 'html-viewer') return this.htmlViewerEntry !== undefined;
+    if (this.page === 'android-device' || this.page === 'device-preview') return this.deviceChoice !== undefined;
+    if (this.page === 'linked-thread') return this.linkedThreadTarget !== undefined;
+    return false;
+  }
+
   private showHomeBottomBar(): boolean {
     return (this.page === 'sessions' && !this.searchFocused) ||
       (this.page === 'home-pulls' && !this.homeTabDetailOpen) ||
@@ -7466,9 +7503,7 @@ struct Index {
             })
           }.width('100%').padding({ left: Space.page, right: Space.page, top: Space.xs, bottom: Space.xxs })
         }
-        if (this.page === 'voice') {
-          VoiceInputPanel({ onBack: () => this.page = 'chat', onInsert: (value: string) => this.insertVoice(value) })
-        } else if (this.page === 'share') {
+        if (this.page === 'share') {
           ShareImportPanel({ shareId: this.shareId, parts: this.shareParts, destination: this.shareDestination, busy: this.savingShare,
             attachments: this.shareAttachments, uploading: this.uploadingShare, uploadedCount: this.shareUploadedCount,
             error: this.shareError, onEdit: (id: number, value: string) => this.editSharePart(id, value),
@@ -7589,307 +7624,331 @@ struct Index {
                   .finally(() => { this.busy = false; void this.loadArchive(); });
               } } });
           } })
-      } else if (this.page === 'device-picker') {
-        DevicePickerPanel({ connection: this.previewConnection, threadId: this.previewThreadId,
-          onOpen: (device: DevicePreviewChoice, hubPath: string, kind: string): Promise<void> => this.openDevice(device, hubPath, kind),
-          onBack: () => this.page = 'chat' })
-      } else if (this.page === 'android-device' && this.deviceChoice) {
-        AndroidDevicePanel({ deviceName: this.deviceChoice.name, hostLabel: this.deviceChoice.hostLabel,
-          canOperate: (): boolean => this.previewCurrent() && client.canScope('orchestration:operate') !== false,
-          setOrientation: async (value: string): Promise<void> => {
-            if (!this.previewCurrent() || !this.deviceChoice || client.canScope('orchestration:operate') === false ||
-              !['portrait', 'landscape_left', 'portrait_upside_down', 'landscape_right'].includes(value)) throw new Error('设备目标或权限已变化');
-            await client.rpcRequest('device.action', { hostId: this.deviceChoice.hostId, deviceId: this.deviceChoice.id,
-              type: 'setOrientation', value } as DeviceActionPayload, 15000, false);
-          },
-          prepareConnection: () => this.rebindPreviewConnection(), isCurrent: (): boolean => this.previewCurrent(),
-          getStreamUrl: async (): Promise<string> => {
-            if (!this.previewCurrent() || !this.deviceChoice) throw new Error('设备环境已变化');
-            return this.previewConnection!.androidDeviceStreamUrl(this.deviceHubPath, this.deviceChoice.hostId, this.deviceChoice.id);
-          }, onBack: () => this.page = 'device-picker' })
-      } else if (this.page === 'device-preview' && this.deviceChoice) {
-        DevicePreviewPanel({ deviceName: this.deviceChoice.name, hostLabel: this.deviceChoice.hostLabel,
-          platform: this.deviceChoice.platform, prepareConnection: () => this.rebindPreviewConnection(), isCurrent: (): boolean => this.previewCurrent(),
-          getAccess: async (): Promise<DeviceStreamAccess> => {
-            if (!this.previewCurrent() || !this.deviceChoice) throw new Error('设备环境已变化');
-            return this.previewConnection!.deviceStreamAccess(this.deviceHubPath, this.deviceChoice.hostId, this.deviceChoice.id);
-          }, onBack: () => this.page = 'device-picker' })
-      } else if (this.page === 'preview') {
-        PreviewPanel({ initialUrl: this.previewAddress, initialTabId: this.previewTabs.get(this.previewKey) || '',
-          autoConnect: this.previewAutoConnect,
-          createTab: (address: string): Promise<string> => this.createPreviewTab(address),
-          resizeTab: async (tabId: string, viewport: PreviewResizeViewport): Promise<PreviewViewport> => {
-            if (!this.previewCurrent() || client.canScope('preview:operate') === false) throw new Error('预览环境或权限已变化');
-            const owner = this.previewConnection!; const threadId = this.previewThreadId;
-            const result = await owner.rpcRequest('preview.resize', previewResizeInput(threadId, tabId, viewport), 15000, false);
-            if (!this.previewCurrent() || owner !== this.previewConnection || threadId !== this.previewThreadId) throw new Error('预览环境已变化');
-            return verifyPreviewResize(result, threadId, tabId, viewport);
-          },
-          requiresZoomRepair: (): boolean => this.previewZoomRepairRequired(),
-          zoomTab: (tabId: string, zoomFactor: number, viewport?: PreviewViewport,
-            stillControlled?: () => boolean): Promise<PreviewZoomResult> =>
-            this.adjustPreviewZoom(tabId, zoomFactor, viewport, stillControlled),
-          watchTabs: (changed: () => void): (() => void) => {
-            if (!this.previewCurrent()) throw new Error('预览环境已变化');
-            const owner = this.previewConnection!;
-            const threadId = this.previewThreadId;
-            const listener = owner.watchRpcStream('subscribePreviewEvents', {} as Record<string, Object>, (value: Object): void => {
-              if (this.previewCurrent() && owner === this.previewConnection && threadId === this.previewThreadId &&
-                record(value).threadId === threadId) changed();
-            });
-            return (): void => owner.stopRpcStream(listener);
-          },
-          listTabs: async (): Promise<PreviewTab[]> => {
-            if (!this.previewCurrent()) throw new Error('预览环境已变化');
-            const owner = this.previewConnection!;
-            const threadId = this.previewThreadId;
-            const result = await owner.rpcRequest('preview.list', { threadId } as PreviewRefPayload, 15000, false);
-            if (!this.previewCurrent() || owner !== this.previewConnection || threadId !== this.previewThreadId) {
-              throw new Error('预览环境已变化');
-            }
-            return previewTabs(result, threadId);
-          },
-          streamUrl: async (tabId: string): Promise<string> => {
-            if (!this.previewCurrent()) throw new Error('预览环境已变化');
-            return this.previewConnection!.previewStreamUrl(this.previewThreadId, tabId);
-          }, closeTab: async (tabId: string): Promise<void> => {
-            if (!this.previewCurrent() || client.canScope('preview:operate') === false) throw new Error('预览环境或权限已变化');
-            await client.rpcRequest('preview.close', { threadId: this.previewThreadId, tabId } as PreviewRefPayload, 15000, false);
-          }, prepareConnection: () => this.rebindPreviewConnection(), isCurrent: (): boolean => this.previewCurrent(),
-          onTab: (tabId: string) => { this.previewTabs.set(this.previewKey, tabId); },
-          onBack: () => this.page = 'chat' })
-      } else if (this.page === 'terminal') {
-        TerminalPanel({ threadId: this.terminalThreadId,
-          onCopy: async (value: string): Promise<void> => {
-            this.terminalOwner();
-            await pasteboard.getSystemPasteboard().setData(pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, value));
-          },
-          canOperate: (): boolean => {
-            try { return this.terminalOwner().canScope('terminal:operate') !== false; } catch (_) { return false; }
-          },
-          watchTerminals: (receive: (value: Object) => void, failed: (message: string) => void): (() => void) =>
-            this.terminalOwner().watchTerminals(receive, failed),
-          attach: (terminalId: string, size: TerminalSize, resume: boolean, receive: (value: Object) => void,
-            failed: (message: string) => void): (() => void) => {
-            const owner = this.terminalOwner();
-            const threadId = this.terminalThreadId;
-            if (owner.canScope('terminal:operate') === false) {
-              return owner.attachTerminal({ threadId, terminalId } as TerminalRefPayload, receive, failed, true);
-            }
-            return owner.attachTerminal({ threadId, terminalId, cwd: this.terminalCwd,
-              cols: size.cols, rows: size.rows, resume, restartIfNotRunning: !resume,
-              maxHistoryBytes: 524288 } as TerminalAttachPayload, receive, failed);
-          },
-          write: async (terminalId: string, data: string): Promise<void> => {
-            const owner = this.terminalOwner();
-            if (!terminalAccess(owner.canScope('terminal:read'), owner.canScope('terminal:operate')).canOperate) throw new Error('此连接无权操作终端');
-            await owner.rpcRequest('terminal.write', terminalInput(this.terminalThreadId, terminalId, data), 15000, false);
-          },
-          reply: async (terminalId: string, data: string): Promise<void> => {
-            const owner = this.terminalOwner();
-            if (!terminalAccess(owner.canScope('terminal:read'), owner.canScope('terminal:operate')).canOperate) throw new Error('此连接无权操作终端');
-            const payload = record(terminalInput(this.terminalThreadId, terminalId, data));
-            payload.reply = true;
-            await owner.rpcRequest('terminal.write', payload, 15000, false);
-          },
-          resize: async (terminalId: string, size: TerminalSize): Promise<void> => {
-            const owner = this.terminalOwner();
-            if (owner.canScope('terminal:operate') === false) throw new Error('此连接无权操作终端');
-            await owner.rpcRequest('terminal.resize', { threadId: this.terminalThreadId, terminalId,
-              cols: size.cols, rows: size.rows } as TerminalResizePayload, 15000, false);
-          },
-          closeTerminal: async (terminalId: string): Promise<void> => {
-            const owner = this.terminalOwner();
-            if (owner.canScope('terminal:operate') === false) throw new Error('此连接无权操作终端');
-            await owner.rpcRequest('terminal.close', { threadId: this.terminalThreadId, terminalId,
-              deleteHistory: false } as TerminalClosePayload, 15000, false);
-          }, onBack: () => this.page = 'chat' })
-      } else if (this.page === 'html-viewer' && this.htmlViewerEntry) {
-        Column({ space: 0 }) {
-          TopBar({
-            title: this.htmlViewerEntry.render.title || 'HTML 视图',
-            subtitle: htmlRenderFileName(this.htmlViewerEntry.render.title),
-            showBack: true,
-            closeStyle: true,
-            backLabel: '返回会话',
-            onBack: () => { this.returnToChatWithScrollRestore(); }
-          }) {
-            IconButton({
-              icon: $r('app.media.ui_more'),
-              label: '页面操作',
-              onTap: () => {}
-            })
-              .bindMenu([
-                { value: '重新加载', action: () => { void this.reloadHtmlFullscreen(); } },
-                { value: '保存到文件', action: () => { void this.saveHtmlRender(); } },
-                { value: '分享文件', action: () => { void this.shareHtmlRender(); } }
-              ])
-          }
-          if (this.htmlViewerError) {
-            Column({ space: Space.sm }) {
-              Text(this.htmlViewerError).fontSize(FontSize.callout).fontColor($r('app.color.danger'))
-              AppButton({
-                label: '重新加载',
-                kind: 'secondary',
-                compact: true,
-                onTap: () => { void this.reloadHtmlFullscreen(); }
-              })
-            }
-            .width('100%')
-            .layoutWeight(1)
-            .justifyContent(FlexAlign.Center)
-            .alignItems(HorizontalAlign.Center)
-            .padding(Space.lg)
-          } else if (this.htmlViewerUri) {
-            Column() {
-              ForEach([this.htmlViewerUri + ':' + this.htmlViewerAttempt], (_key: string) => {
-                HtmlRenderWebView({
-                  uri: this.htmlViewerUri,
-                  title: this.htmlViewerEntry!.render.title,
-                  nested: false,
-                  isHtmlRender: true,
-                  onOpenExternalLink: (url: string) => { void this.openExternalUrl(url); },
-                  onLoadError: () => { this.htmlViewerError = '页面加载失败，请重试'; }
-                })
-              }, (key: string) => key)
-            }
-            .width('100%')
-            .layoutWeight(1)
-          } else {
-            Column() {
-              LoadingProgress().width(24).height(24).color($r('app.color.muted'))
-            }
-            .width('100%')
-            .layoutWeight(1)
-            .justifyContent(FlexAlign.Center)
-            .alignItems(HorizontalAlign.Center)
-          }
-        }.width('100%').height('100%').backgroundColor($r('app.color.screen')).foregroundColor($r('app.color.ink'))
-      } else if (this.page === 'files') {
-        FilesPanel({ cacheScope: this.selectedLocalId, connection: client, cwd: this.filesOverrideCwd || this.currentWorkspace(),
-          threadId: this.draftMode ? '' : this.threadId,
-          title: this.draftMode ? '草稿文件' : '文件与源码',
-          initialPath: this.filesInitialPath,
-          initialDir: this.filesInitialDir,
-          initialLine: this.filesInitialLine,
-          directFileOnly: this.filesDirectFileOnly,
-          onBack: () => { this.returnToChatWithScrollRestore(); },
-          onCompose: (value: Object, label: string) => this.addExternalContext(value, label),
-          onCopy: (value: string) => { void this.copy(value); },
-          onStatus: (value: string) => this.status = value,
-          onOpenExternalLink: (url: string) => { void this.openExternalUrl(url); },
-          onOpenLink: (url: string) => { void this.openLink(url); } })
-      } else if (this.page === 'review') {
-        ReviewPanel({ connection: client, cwd: this.currentWorkspace(), threadId: this.threadId,
-          projectId: this.projectId,
-          worktreePath: this.draftMode ? this.draftWorkspace.worktreePath : client.threadWorktreePath(),
-          project: this.draftMode ? this.draftProject() : client.threadProject(),
-          checkpointScopes: this.draftMode ? [] : client.threadCheckpointScopes(),
-          checkpoints: this.draftMode ? [] : client.threadCheckpoints(),
-          onBack: () => this.page = 'chat',
-          onCompose: (value: Object, label: string) => this.addExternalContext(value, label),
-          onCopy: (value: string) => { void this.copy(value); },
-          onStatus: (value: string) => this.status = value })
-      } else if (this.page === 'git') {
-        GitPanel({ connection: client, cwd: this.currentWorkspace(), threadId: this.threadId,
-          projectId: this.projectId,
-          worktreePath: this.draftMode ? this.draftWorkspace.worktreePath : client.threadWorktreePath(),
-          project: this.draftMode ? this.draftProject() : client.threadProject(),
-          checkpointScopes: this.draftMode ? [] : client.threadCheckpointScopes(),
-          checkpoints: this.draftMode ? [] : client.threadCheckpoints(),
-          onBack: () => this.page = 'chat',
-          onStatus: (value: string) => this.reportScopedGitStatus(this.selectedLocalId, this.threadId, value) })
-      } else if (this.page === 'pull-requests') {
-        PullRequestsPanel({ connection: client, projectId: this.projectId,
-          projectLabel: this.projects.find((project: ProjectView) => project.id === this.projectId)?.label || '',
-          onBack: () => this.page = 'chat', onStatus: (value: string) => this.status = value,
-          onCopy: (value: string) => { void this.copy(value); },
-          onStartAgentTask: (localId: string, projectId: string, prompt: string) => {
-            void this.startPrAgentTask(localId, projectId, prompt);
-          } })
-        } else if (this.page === 'linked-thread' && this.linkedThreadTarget) {
-          LinkedThreadPanel({
-            target: this.linkedThreadTarget,
-            viaClient: this.registry().clients.get(this.linkedThreadTarget.viaLocalId) || client,
-            viaReady: this.environmentReady[this.linkedThreadTarget.viaLocalId] === true ||
-              (this.linkedThreadTarget.viaLocalId === this.selectedLocalId && this.ready),
-            showOpenInMain: false,
-            connecting: this.linkedConnecting,
-            connectNotice: this.linkedConnectNotice,
-            connectError: this.linkedConnectError,
-            onConnect: (target: LinkedThreadTarget) => this.connectLinkedThreadEnvironment(target),
-            onClose: () => { void this.leaveLinkedThreadPage(); },
-            onCopy: (value: string) => { void this.copy(value); },
-            onOpenLink: (url: string) => { void this.openLink(url); },
-            onOpenImage: (source: string) => { void this.openMarkdownImage(source); },
-            onShareMedia: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
-              const tid = !this.draftMode && client.thread ? client.thread.threadId : '';
-              void this.shareInlineMediaFor(client, this.selectedLocalId, tid, this.currentWorkspace(), source, alt, kind, resolvedUrl, displayPath);
-            },
-            onSaveMediaToGallery: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
-              const tid = !this.draftMode && client.thread ? client.thread.threadId : '';
-              void this.saveInlineMediaToGalleryFor(client, tid, this.currentWorkspace(), source, alt, kind, resolvedUrl, displayPath);
-            },
-            onSaveMediaToFile: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
-              const tid = !this.draftMode && client.thread ? client.thread.threadId : '';
-              void this.saveInlineMediaToFileFor(client, tid, this.currentWorkspace(), source, alt, kind, resolvedUrl, displayPath);
-            },
-            downloadLocalMedia: (url: string, kind: string, displayPath: string): Promise<string> =>
-              this.downloadMediaToLocalCache(client, url, kind, displayPath)
-          })
-        } else if (this.page === 'chat') {
-          Row({ space: Space.xxs }) {
-            IconButton({
-              icon: $r('app.media.ui_back'),
-              label: this.sideThreadReturnStack.length > 0 ? '返回父会话' : '返回会话列表',
-              onTap: () => { void this.leaveChatOrReturnParent(); }
-            })
-            Column() {
-              Text(this.draftMode ? '新任务' : this.threads.find((t: ThreadView) => t.id === this.threadId)?.label || this.cachedChatTitle || '会话')
-                .fontSize(FontSize.headline).lineHeight(LineHeight.headline).fontWeight(Weight.semibold)
-                .fontColor($r('app.color.ink')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-              Row({ space: 3 }) {
-                Text((this.projects.find((p: ProjectView) => p.id === this.projectId)?.label || this.cachedChatProject || 'No project') + ' · ' +
-                  (this.environmentEntries.find((e: EnvironmentEntry) => e.localId === this.selectedLocalId)?.label || '环境'))
-                  .fontSize(FontSize.caption).lineHeight(LineHeight.caption)
-                  .fontColor($r('app.color.muted')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-                  .constraintSize({ maxWidth: '92%' })
-                if (this.draftMode) {
-                  Image($r('app.media.ui_chevron_right')).width(10).height(10).opacity(0.6).accessibilityLevel('no')
-                }
-              }.alignItems(VerticalAlign.Center)
-            }.layoutWeight(1).alignItems(HorizontalAlign.Start).justifyContent(FlexAlign.Center)
-              .padding({ left: Space.xxs }).accessibilityGroup(true)
-              .accessibilityDescription(this.draftMode ? '点击切换项目' : '')
-              .onClick(() => { if (this.draftMode) this.openProjectPicker(false, true); })
-            if (!this.draftMode) {
-              IconButton({
-                icon: $r('app.media.ui_terminal'),
-                label: '打开终端',
-                disabled: !this.threadTerminalEnabled,
-                onTap: () => {
-                  this.terminalConnection = client;
-                  this.terminalThreadId = this.threadId;
-                  this.terminalCwd = this.currentWorkspace();
-                  this.panelOpen = false;
-                  this.page = 'terminal';
-                }
-              })
-            }
-            IconButton({ icon: $r('app.media.ui_more'), label: '会话操作', onTap: () => this.openPanel('thread') })
-          }.width('100%').constraintSize({ minHeight: Sizes.topBar }).padding({ left: Space.xs, right: Space.xs })
-            .alignItems(VerticalAlign.Center)
+      } else if (this.page === 'chat' || this.isChatSubpage()) {
+        Stack() {
           Column() {
-            if (this.showChatStatusBanner()) {
-              Text(this.status).fontSize(FontSize.caption).lineHeight(LineHeight.caption)
-                .fontColor($r('app.color.muted')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
-                .width('100%').padding({ left: Space.md, right: Space.md, top: Space.xs, bottom: Space.xxs })
-                .accessibilityText('状态：' + this.status).onClick(() => this.openPanel('thread'))
+            Row({ space: Space.xxs }) {
+              IconButton({
+                icon: $r('app.media.ui_back'),
+                label: this.sideThreadReturnStack.length > 0 ? '返回父会话' : '返回会话列表',
+                onTap: () => { void this.leaveChatOrReturnParent(); }
+              })
+              Column() {
+                Text(this.draftMode ? '新任务' : this.threads.find((t: ThreadView) => t.id === this.threadId)?.label || this.cachedChatTitle || '会话')
+                  .fontSize(FontSize.headline).lineHeight(LineHeight.headline).fontWeight(Weight.semibold)
+                  .fontColor($r('app.color.ink')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+                Row({ space: 3 }) {
+                  Text((this.projects.find((p: ProjectView) => p.id === this.projectId)?.label || this.cachedChatProject || 'No project') + ' · ' +
+                    (this.environmentEntries.find((e: EnvironmentEntry) => e.localId === this.selectedLocalId)?.label || '环境'))
+                    .fontSize(FontSize.caption).lineHeight(LineHeight.caption)
+                    .fontColor($r('app.color.muted')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+                    .constraintSize({ maxWidth: '92%' })
+                  if (this.draftMode) {
+                    Image($r('app.media.ui_chevron_right')).width(10).height(10).opacity(0.6).accessibilityLevel('no')
+                  }
+                }.alignItems(VerticalAlign.Center)
+              }.layoutWeight(1).alignItems(HorizontalAlign.Start).justifyContent(FlexAlign.Center)
+                .padding({ left: Space.xxs }).accessibilityGroup(true)
+                .accessibilityDescription(this.draftMode ? '点击切换项目' : '')
+                .onClick(() => { if (this.draftMode) this.openProjectPicker(false, true); })
+              if (!this.draftMode) {
+                IconButton({
+                  icon: $r('app.media.ui_terminal'),
+                  label: '打开终端',
+                  disabled: !this.threadTerminalEnabled,
+                  onTap: () => {
+                    this.terminalConnection = client;
+                    this.terminalThreadId = this.threadId;
+                    this.terminalCwd = this.currentWorkspace();
+                    this.panelOpen = false;
+                    this.page = 'terminal';
+                  }
+                })
+              }
+              IconButton({ icon: $r('app.media.ui_more'), label: '会话操作', onTap: () => this.openPanel('thread') })
+            }.width('100%').constraintSize({ minHeight: Sizes.topBar }).padding({ left: Space.xs, right: Space.xs })
+              .alignItems(VerticalAlign.Center)
+            Column() {
+              if (this.showChatStatusBanner()) {
+                Text(this.status).fontSize(FontSize.caption).lineHeight(LineHeight.caption)
+                  .fontColor($r('app.color.muted')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .width('100%').padding({ left: Space.md, right: Space.md, top: Space.xs, bottom: Space.xxs })
+                  .accessibilityText('状态：' + this.status).onClick(() => this.openPanel('thread'))
+              }
+              this.chatPage()
+            }.width('100%').layoutWeight(1).backgroundColor($r('app.color.screen'))
+              .borderRadius({ topLeft: 26, topRight: 26 }).clip(true)
+          }
+          .width('100%')
+          .height('100%')
+          .visibility(this.page === 'chat' ? Visibility.Visible : Visibility.Hidden)
+          .enabled(this.page === 'chat')
+          .hitTestBehavior(this.page === 'chat' ? HitTestMode.Default : HitTestMode.Block)
+          .accessibilityLevel(this.page === 'chat' ? 'auto' : 'no-hide-descendants')
+
+          if (this.page !== 'chat') {
+            Column() {
+              if (this.page === 'voice') {
+                VoiceInputPanel({ onBack: () => this.page = 'chat', onInsert: (value: string) => this.insertVoice(value) })
+              } else if (this.page === 'device-picker') {
+                DevicePickerPanel({ connection: this.previewConnection, threadId: this.previewThreadId,
+                  onOpen: (device: DevicePreviewChoice, hubPath: string, kind: string): Promise<void> => this.openDevice(device, hubPath, kind),
+                  onBack: () => this.page = 'chat' })
+              } else if (this.page === 'android-device' && this.deviceChoice) {
+                AndroidDevicePanel({ deviceName: this.deviceChoice.name, hostLabel: this.deviceChoice.hostLabel,
+                  canOperate: (): boolean => this.previewCurrent() && client.canScope('orchestration:operate') !== false,
+                  setOrientation: async (value: string): Promise<void> => {
+                    if (!this.previewCurrent() || !this.deviceChoice || client.canScope('orchestration:operate') === false ||
+                      !['portrait', 'landscape_left', 'portrait_upside_down', 'landscape_right'].includes(value)) throw new Error('设备目标或权限已变化');
+                    await client.rpcRequest('device.action', { hostId: this.deviceChoice.hostId, deviceId: this.deviceChoice.id,
+                      type: 'setOrientation', value } as DeviceActionPayload, 15000, false);
+                  },
+                  prepareConnection: () => this.rebindPreviewConnection(), isCurrent: (): boolean => this.previewCurrent(),
+                  getStreamUrl: async (): Promise<string> => {
+                    if (!this.previewCurrent() || !this.deviceChoice) throw new Error('设备环境已变化');
+                    return this.previewConnection!.androidDeviceStreamUrl(this.deviceHubPath, this.deviceChoice.hostId, this.deviceChoice.id);
+                  }, onBack: () => this.page = 'device-picker' })
+              } else if (this.page === 'device-preview' && this.deviceChoice) {
+                DevicePreviewPanel({ deviceName: this.deviceChoice.name, hostLabel: this.deviceChoice.hostLabel,
+                  platform: this.deviceChoice.platform, prepareConnection: () => this.rebindPreviewConnection(), isCurrent: (): boolean => this.previewCurrent(),
+                  getAccess: async (): Promise<DeviceStreamAccess> => {
+                    if (!this.previewCurrent() || !this.deviceChoice) throw new Error('设备环境已变化');
+                    return this.previewConnection!.deviceStreamAccess(this.deviceHubPath, this.deviceChoice.hostId, this.deviceChoice.id);
+                  }, onBack: () => this.page = 'device-picker' })
+              } else if (this.page === 'preview') {
+                PreviewPanel({ initialUrl: this.previewAddress, initialTabId: this.previewTabs.get(this.previewKey) || '',
+                  autoConnect: this.previewAutoConnect,
+                  createTab: (address: string): Promise<string> => this.createPreviewTab(address),
+                  resizeTab: async (tabId: string, viewport: PreviewResizeViewport): Promise<PreviewViewport> => {
+                    if (!this.previewCurrent() || client.canScope('preview:operate') === false) throw new Error('预览环境或权限已变化');
+                    const owner = this.previewConnection!; const threadId = this.previewThreadId;
+                    const result = await owner.rpcRequest('preview.resize', previewResizeInput(threadId, tabId, viewport), 15000, false);
+                    if (!this.previewCurrent() || owner !== this.previewConnection || threadId !== this.previewThreadId) throw new Error('预览环境已变化');
+                    return verifyPreviewResize(result, threadId, tabId, viewport);
+                  },
+                  requiresZoomRepair: (): boolean => this.previewZoomRepairRequired(),
+                  zoomTab: (tabId: string, zoomFactor: number, viewport?: PreviewViewport,
+                    stillControlled?: () => boolean): Promise<PreviewZoomResult> =>
+                    this.adjustPreviewZoom(tabId, zoomFactor, viewport, stillControlled),
+                  watchTabs: (changed: () => void): (() => void) => {
+                    if (!this.previewCurrent()) throw new Error('预览环境已变化');
+                    const owner = this.previewConnection!;
+                    const threadId = this.previewThreadId;
+                    const listener = owner.watchRpcStream('subscribePreviewEvents', {} as Record<string, Object>, (value: Object): void => {
+                      if (this.previewCurrent() && owner === this.previewConnection && threadId === this.previewThreadId &&
+                        record(value).threadId === threadId) changed();
+                    });
+                    return (): void => owner.stopRpcStream(listener);
+                  },
+                  listTabs: async (): Promise<PreviewTab[]> => {
+                    if (!this.previewCurrent()) throw new Error('预览环境已变化');
+                    const owner = this.previewConnection!;
+                    const threadId = this.previewThreadId;
+                    const result = await owner.rpcRequest('preview.list', { threadId } as PreviewRefPayload, 15000, false);
+                    if (!this.previewCurrent() || owner !== this.previewConnection || threadId !== this.previewThreadId) {
+                      throw new Error('预览环境已变化');
+                    }
+                    return previewTabs(result, threadId);
+                  },
+                  streamUrl: async (tabId: string): Promise<string> => {
+                    if (!this.previewCurrent()) throw new Error('预览环境已变化');
+                    return this.previewConnection!.previewStreamUrl(this.previewThreadId, tabId);
+                  }, closeTab: async (tabId: string): Promise<void> => {
+                    if (!this.previewCurrent() || client.canScope('preview:operate') === false) throw new Error('预览环境或权限已变化');
+                    await client.rpcRequest('preview.close', { threadId: this.previewThreadId, tabId } as PreviewRefPayload, 15000, false);
+                  }, prepareConnection: () => this.rebindPreviewConnection(), isCurrent: (): boolean => this.previewCurrent(),
+                  onTab: (tabId: string) => { this.previewTabs.set(this.previewKey, tabId); },
+                  onBack: () => this.page = 'chat' })
+              } else if (this.page === 'terminal') {
+                TerminalPanel({ threadId: this.terminalThreadId,
+                  onCopy: async (value: string): Promise<void> => {
+                    this.terminalOwner();
+                    await pasteboard.getSystemPasteboard().setData(pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, value));
+                  },
+                  canOperate: (): boolean => {
+                    try { return this.terminalOwner().canScope('terminal:operate') !== false; } catch (_) { return false; }
+                  },
+                  watchTerminals: (receive: (value: Object) => void, failed: (message: string) => void): (() => void) =>
+                    this.terminalOwner().watchTerminals(receive, failed),
+                  attach: (terminalId: string, size: TerminalSize, resume: boolean, receive: (value: Object) => void,
+                    failed: (message: string) => void): (() => void) => {
+                    const owner = this.terminalOwner();
+                    const threadId = this.terminalThreadId;
+                    if (owner.canScope('terminal:operate') === false) {
+                      return owner.attachTerminal({ threadId, terminalId } as TerminalRefPayload, receive, failed, true);
+                    }
+                    return owner.attachTerminal({ threadId, terminalId, cwd: this.terminalCwd,
+                      cols: size.cols, rows: size.rows, resume, restartIfNotRunning: !resume,
+                      maxHistoryBytes: 524288 } as TerminalAttachPayload, receive, failed);
+                  },
+                  write: async (terminalId: string, data: string): Promise<void> => {
+                    const owner = this.terminalOwner();
+                    if (!terminalAccess(owner.canScope('terminal:read'), owner.canScope('terminal:operate')).canOperate) throw new Error('此连接无权操作终端');
+                    await owner.rpcRequest('terminal.write', terminalInput(this.terminalThreadId, terminalId, data), 15000, false);
+                  },
+                  reply: async (terminalId: string, data: string): Promise<void> => {
+                    const owner = this.terminalOwner();
+                    if (!terminalAccess(owner.canScope('terminal:read'), owner.canScope('terminal:operate')).canOperate) throw new Error('此连接无权操作终端');
+                    const payload = record(terminalInput(this.terminalThreadId, terminalId, data));
+                    payload.reply = true;
+                    await owner.rpcRequest('terminal.write', payload, 15000, false);
+                  },
+                  resize: async (terminalId: string, size: TerminalSize): Promise<void> => {
+                    const owner = this.terminalOwner();
+                    if (owner.canScope('terminal:operate') === false) throw new Error('此连接无权操作终端');
+                    await owner.rpcRequest('terminal.resize', { threadId: this.terminalThreadId, terminalId,
+                      cols: size.cols, rows: size.rows } as TerminalResizePayload, 15000, false);
+                  },
+                  closeTerminal: async (terminalId: string): Promise<void> => {
+                    const owner = this.terminalOwner();
+                    if (owner.canScope('terminal:operate') === false) throw new Error('此连接无权操作终端');
+                    await owner.rpcRequest('terminal.close', { threadId: this.terminalThreadId, terminalId,
+                      deleteHistory: false } as TerminalClosePayload, 15000, false);
+                  }, onBack: () => this.page = 'chat' })
+              } else if (this.page === 'html-viewer' && this.htmlViewerEntry) {
+                Column({ space: 0 }) {
+                  TopBar({
+                    title: this.htmlViewerEntry.render.title || 'HTML 视图',
+                    subtitle: htmlRenderFileName(this.htmlViewerEntry.render.title),
+                    showBack: true,
+                    closeStyle: true,
+                    backLabel: '返回会话',
+                    onBack: () => { this.returnToChatWithScrollRestore(); }
+                  }) {
+                    IconButton({
+                      icon: $r('app.media.ui_more'),
+                      label: '页面操作',
+                      onTap: () => {}
+                    })
+                      .bindMenu([
+                        { value: '重新加载', action: () => { void this.reloadHtmlFullscreen(); } },
+                        { value: '保存到文件', action: () => { void this.saveHtmlRender(); } },
+                        { value: '分享文件', action: () => { void this.shareHtmlRender(); } }
+                      ])
+                  }
+                  if (this.htmlViewerError) {
+                    Column({ space: Space.sm }) {
+                      Text(this.htmlViewerError).fontSize(FontSize.callout).fontColor($r('app.color.danger'))
+                      AppButton({
+                        label: '重新加载',
+                        kind: 'secondary',
+                        compact: true,
+                        onTap: () => { void this.reloadHtmlFullscreen(); }
+                      })
+                    }
+                    .width('100%')
+                    .layoutWeight(1)
+                    .justifyContent(FlexAlign.Center)
+                    .alignItems(HorizontalAlign.Center)
+                    .padding(Space.lg)
+                  } else if (this.htmlViewerUri) {
+                    Column() {
+                      ForEach([this.htmlViewerUri + ':' + this.htmlViewerAttempt], (_key: string) => {
+                        HtmlRenderWebView({
+                          uri: this.htmlViewerUri,
+                          title: this.htmlViewerEntry!.render.title,
+                          nested: false,
+                          isHtmlRender: true,
+                          onOpenExternalLink: (url: string) => { void this.openExternalUrl(url); },
+                          onLoadError: () => { this.htmlViewerError = '页面加载失败，请重试'; }
+                        })
+                      }, (key: string) => key)
+                    }
+                    .width('100%')
+                    .layoutWeight(1)
+                  } else {
+                    Column() {
+                      LoadingProgress().width(24).height(24).color($r('app.color.muted'))
+                    }
+                    .width('100%')
+                    .layoutWeight(1)
+                    .justifyContent(FlexAlign.Center)
+                    .alignItems(HorizontalAlign.Center)
+                  }
+                }.width('100%').height('100%').backgroundColor($r('app.color.screen')).foregroundColor($r('app.color.ink'))
+              } else if (this.page === 'files') {
+                FilesPanel({ cacheScope: this.selectedLocalId, connection: client, cwd: this.filesOverrideCwd || this.currentWorkspace(),
+                  threadId: this.draftMode ? '' : this.threadId,
+                  title: this.draftMode ? '草稿文件' : '文件与源码',
+                  initialPath: this.filesInitialPath,
+                  initialDir: this.filesInitialDir,
+                  initialLine: this.filesInitialLine,
+                  directFileOnly: this.filesDirectFileOnly,
+                  onBack: () => { this.returnToChatWithScrollRestore(); },
+                  onCompose: (value: Object, label: string) => this.addExternalContext(value, label),
+                  onCopy: (value: string) => { void this.copy(value); },
+                  onStatus: (value: string) => this.status = value,
+                  onOpenExternalLink: (url: string) => { void this.openExternalUrl(url); },
+                  onOpenLink: (url: string) => { void this.openLink(url); } })
+              } else if (this.page === 'review') {
+                ReviewPanel({ connection: client, cwd: this.currentWorkspace(), threadId: this.threadId,
+                  projectId: this.projectId,
+                  worktreePath: this.draftMode ? this.draftWorkspace.worktreePath : client.threadWorktreePath(),
+                  project: this.draftMode ? this.draftProject() : client.threadProject(),
+                  checkpointScopes: this.draftMode ? [] : client.threadCheckpointScopes(),
+                  checkpoints: this.draftMode ? [] : client.threadCheckpoints(),
+                  onBack: () => this.page = 'chat',
+                  onCompose: (value: Object, label: string) => this.addExternalContext(value, label),
+                  onCopy: (value: string) => { void this.copy(value); },
+                  onStatus: (value: string) => this.status = value })
+              } else if (this.page === 'git') {
+                GitPanel({ connection: client, cwd: this.currentWorkspace(), threadId: this.threadId,
+                  projectId: this.projectId,
+                  worktreePath: this.draftMode ? this.draftWorkspace.worktreePath : client.threadWorktreePath(),
+                  project: this.draftMode ? this.draftProject() : client.threadProject(),
+                  checkpointScopes: this.draftMode ? [] : client.threadCheckpointScopes(),
+                  checkpoints: this.draftMode ? [] : client.threadCheckpoints(),
+                  onBack: () => this.page = 'chat',
+                  onStatus: (value: string) => this.reportScopedGitStatus(this.selectedLocalId, this.threadId, value) })
+              } else if (this.page === 'pull-requests') {
+                PullRequestsPanel({ connection: client, projectId: this.projectId,
+                  projectLabel: this.projects.find((project: ProjectView) => project.id === this.projectId)?.label || '',
+                  onBack: () => this.page = 'chat', onStatus: (value: string) => this.status = value,
+                  onCopy: (value: string) => { void this.copy(value); },
+                  onStartAgentTask: (localId: string, projectId: string, prompt: string) => {
+                    void this.startPrAgentTask(localId, projectId, prompt);
+                  } })
+              } else if (this.page === 'linked-thread' && this.linkedThreadTarget) {
+                LinkedThreadPanel({
+                  target: this.linkedThreadTarget,
+                  viaClient: this.registry().clients.get(this.linkedThreadTarget.viaLocalId) || client,
+                  viaReady: this.environmentReady[this.linkedThreadTarget.viaLocalId] === true ||
+                    (this.linkedThreadTarget.viaLocalId === this.selectedLocalId && this.ready),
+                  showOpenInMain: false,
+                  connecting: this.linkedConnecting,
+                  connectNotice: this.linkedConnectNotice,
+                  connectError: this.linkedConnectError,
+                  onConnect: (target: LinkedThreadTarget) => this.connectLinkedThreadEnvironment(target),
+                  onClose: () => { void this.leaveLinkedThreadPage(); },
+                  onCopy: (value: string) => { void this.copy(value); },
+                  onOpenLink: (url: string) => { void this.openLink(url); },
+                  onOpenImage: (source: string) => { void this.openMarkdownImage(source); },
+                  onShareMedia: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
+                    const tid = !this.draftMode && client.thread ? client.thread.threadId : '';
+                    void this.shareInlineMediaFor(client, this.selectedLocalId, tid, this.currentWorkspace(), source, alt, kind, resolvedUrl, displayPath);
+                  },
+                  onSaveMediaToGallery: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
+                    const tid = !this.draftMode && client.thread ? client.thread.threadId : '';
+                    void this.saveInlineMediaToGalleryFor(client, tid, this.currentWorkspace(), source, alt, kind, resolvedUrl, displayPath);
+                  },
+                  onSaveMediaToFile: (source: string, alt: string, kind: string, resolvedUrl: string, displayPath: string) => {
+                    const tid = !this.draftMode && client.thread ? client.thread.threadId : '';
+                    void this.saveInlineMediaToFileFor(client, tid, this.currentWorkspace(), source, alt, kind, resolvedUrl, displayPath);
+                  },
+                  downloadLocalMedia: (url: string, kind: string, displayPath: string): Promise<string> =>
+                    this.downloadMediaToLocalCache(client, url, kind, displayPath)
+                })
+              }
             }
-            this.chatPage()
-          }.width('100%').layoutWeight(1).backgroundColor($r('app.color.screen'))
-            .borderRadius({ topLeft: 26, topRight: 26 }).clip(true)
-        } else {
+            .width('100%')
+            .height('100%')
+            .backgroundColor($r('app.color.group'))
+            .hitTestBehavior(HitTestMode.Default)
+          }
+        }
+        .width('100%')
+        .layoutWeight(1)
+      } else {
           Row({ space: 4 }) {
             Button({ type: ButtonType.Normal }) {
               if (this.homeShowReconnectingHeader()) {

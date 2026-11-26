@@ -740,6 +740,8 @@ export struct FilesPanel {
         .width('100%').layoutWeight(1)
         .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
         .divider({ strokeWidth: Sizes.hairline, color: $r('app.color.separator') })
+        .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+        .nestedScroll({ scrollForward: NestedScrollMode.SELF_ONLY, scrollBackward: NestedScrollMode.SELF_ONLY })
       }
     }.width('100%').layoutWeight(1).padding({ left: Space.sm, right: Space.sm, top: Space.xxs, bottom: Space.sm })
   }
@@ -879,6 +881,8 @@ export struct FilesPanel {
             .width('100%').layoutWeight(1)
             .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
             .divider({ strokeWidth: Sizes.hairline, color: $r('app.color.separator') })
+            .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+            .nestedScroll({ scrollForward: NestedScrollMode.SELF_ONLY, scrollBackward: NestedScrollMode.SELF_ONLY })
           }
           this.mediaActionBar()
         }.width('100%').layoutWeight(1)
@@ -928,6 +932,8 @@ export struct FilesPanel {
           Scroll() {
             Image(this.imageUrl).width('100%').objectFit(ImageFit.Contain)
           }.width('100%').layoutWeight(1).backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
+            .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+            .nestedScroll({ scrollForward: NestedScrollMode.SELF_ONLY, scrollBackward: NestedScrollMode.SELF_ONLY })
           this.mediaActionBar()
         }.width('100%').layoutWeight(1)
       } else if (this.imageUrl && isVideo(this.selectedPath)) {
@@ -1009,9 +1015,11 @@ export struct FilesPanel {
                     }.backgroundColor(rowIdx % 2 === 0 ? $r('app.color.card') : $r('app.color.group'))
                   }, (_row: string[], rowIdx: number) => String(rowIdx))
                 }.alignItems(HorizontalAlign.Start)
-              }.scrollable(ScrollDirection.Horizontal).align(Alignment.TopStart)
+              }.scrollable(ScrollDirection.Horizontal).align(Alignment.TopStart).edgeEffect(EdgeEffect.Spring)
             }.scrollable(ScrollDirection.Vertical).align(Alignment.TopStart).width('100%').layoutWeight(1)
               .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
+              .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+              .nestedScroll({ scrollForward: NestedScrollMode.SELF_ONLY, scrollBackward: NestedScrollMode.SELF_ONLY })
           }.width('100%').layoutWeight(1)
         } else if (isRtf(this.selectedPath) && this.richMode === 'preview' && !this.selectedMatch) {
           Scroll() {
@@ -1020,6 +1028,8 @@ export struct FilesPanel {
               .copyOption(CopyOptions.InApp).width('100%').padding(14)
           }.width('100%').layoutWeight(1).align(Alignment.TopStart)
             .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
+            .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+            .nestedScroll({ scrollForward: NestedScrollMode.SELF_ONLY, scrollBackward: NestedScrollMode.SELF_ONLY })
         } else if (isMarkdown(this.selectedPath) && this.richMode === 'preview' && !this.selectedMatch && !this.markdownFallbackSource) {
           if (this.selectionStart >= 0) { this.selectionBar() }
           if (this.markdownChunks.length > 1) {
@@ -1043,6 +1053,8 @@ export struct FilesPanel {
               }, (_chunk: MarkdownChunk, idx: number) => this.selectedPath + ':md:' + idx + ':' + this.markdownChunks.length)
             }.width('100%').layoutWeight(1)
               .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
+              .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+              .nestedScroll({ scrollForward: NestedScrollMode.SELF_ONLY, scrollBackward: NestedScrollMode.SELF_ONLY })
           } else {
             Scroll() {
               Column() {
@@ -1057,6 +1069,8 @@ export struct FilesPanel {
               }.padding(14)
             }.width('100%').layoutWeight(1).align(Alignment.TopStart)
               .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
+              .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+              .nestedScroll({ scrollForward: NestedScrollMode.SELF_ONLY, scrollBackward: NestedScrollMode.SELF_ONLY })
           }
         } else {
           if (this.markdownFallbackSource && isMarkdown(this.selectedPath) && this.richMode === 'preview') {
@@ -1082,6 +1096,8 @@ export struct FilesPanel {
             }, (line: FileLine) => String(line.number))
           }.width('100%').layoutWeight(1)
             .backgroundColor($r('app.color.card')).borderRadius(Radius.card).clip(true)
+            .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+            .nestedScroll({ scrollForward: NestedScrollMode.SELF_ONLY, scrollBackward: NestedScrollMode.SELF_ONLY })
         }
       }
     }.width('100%').layoutWeight(1).padding({ left: Space.sm, right: Space.sm, top: Space.xxs, bottom: Space.sm })
@@ -1096,5 +1112,6 @@ export struct FilesPanel {
       }
       if (this.selectedPath) { this.preview() } else { this.browser() }
     }.width('100%').height('100%').backgroundColor($r('app.color.group')).foregroundColor($r('app.color.ink'))
+      .hitTestBehavior(HitTestMode.Default)
   }
 }

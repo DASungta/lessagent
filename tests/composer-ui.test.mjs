@@ -19,7 +19,7 @@ function page(localId='a') {
     source:{update(){}},picker:{clear(){}},panelOpen:true,draftWorkspace:emptyWorkspace(),draftContext:[],attachments:[],
     branches:[],branchesLoading:false,commandPanel:'',sendMode:'auto',messages:[],actions:[],tools:[],linkItems:[],queued:[],
     extraPlans:[],extraSubagents:[],extraGuest:undefined,extraUsage:undefined,draftEnvironment:()=> 'env-a',
-    loadBranches:async()=>{}, newDraftDefaults:async()=>({runtimeMode:'approval-required',workspace:emptyWorkspace()}),
+    loadBranches:async()=>{}, stopBrowserPreviewWatch(){}, newDraftDefaults:async()=>({runtimeMode:'approval-required',workspace:emptyWorkspace()}),
     persistDraft:async function(){const r=this.draftRecord();if(r)this.draftRecords=[r,...this.draftRecords.filter(d=>d.draftId!==r.draftId)];},
     taskSettings:{modelSelection:{instanceId:'codex',model:'m'},runtimeMode:'approval-required',interactionMode:'default'}});
 }
@@ -216,6 +216,7 @@ test('new drafts adopt resolved defaultModelSelection with options and retarget 
     draftContext: [], attachments: [], branches: [], branchesLoading: false, commandPanel: '', sendMode: 'auto',
     messages: [], actions: [], tools: [], linkItems: [], queued: [], extraPlans: [], extraSubagents: [],
     extraGuest: undefined, extraUsage: undefined, draftEnvironment: () => 'env-a', loadBranches: async () => {},
+    stopBrowserPreviewWatch() {},
     persistDraft: async function() { const r = this.draftRecord(); if (r) this.draftRecords = [r, ...this.draftRecords.filter(d => d.draftId !== r.draftId)]; },
     taskSettings: { modelSelection: { instanceId: '', model: '' }, runtimeMode: 'approval-required', interactionMode: 'default' },
     newDraftDefaults: async (projectId) => ({

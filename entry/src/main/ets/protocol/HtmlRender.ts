@@ -460,3 +460,15 @@ export function readHtmlRenderOverflow(raw: string): { x: boolean; y: boolean; c
     return undefined;
   }
 }
+
+export type HtmlRenderNestedScrollPolicy = 'self-only' | 'self-first' | 'parent-first';
+export type HtmlRenderOverScrollPolicy = 'always' | 'never';
+
+export function htmlRenderNestedScrollPolicy(nested: boolean, overflowY: boolean): HtmlRenderNestedScrollPolicy {
+  if (!nested) return 'self-only';
+  return overflowY ? 'self-first' : 'parent-first';
+}
+
+export function htmlRenderOverScrollPolicy(nested: boolean): HtmlRenderOverScrollPolicy {
+  return nested ? 'never' : 'always';
+}

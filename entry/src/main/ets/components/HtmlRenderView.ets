@@ -4,6 +4,8 @@ import {
   HtmlRenderEntry,
   htmlRenderFallbackCssScript,
   htmlRenderFrameHeight,
+  htmlRenderNestedScrollPolicy,
+  htmlRenderOverScrollPolicy,
   htmlRenderThemeFragment,
   htmlRenderThemeMessageJson,
   readHtmlRenderOverflow,
@@ -36,7 +38,7 @@ const OVERFLOW_PROBE_JS = '(function(){' +
   'if(bottom>0)bottom=Math.ceil(bottom+padB+marB+12);' +
   '}' +
   'var h=bottom>0?Math.max(bottom,sh>window.innerHeight+2?sh:0):sh;' +
-  'return JSON.stringify({x:sw>window.innerWidth+1,y:h>20000,height:h});})()';
+  'return JSON.stringify({x:sw>window.innerWidth+1,y:h>window.innerHeight+2,height:h});})()';
 
 @Component
 export struct HtmlRenderWebView {
@@ -189,6 +191,13 @@ export struct HtmlRenderWebView {
     return this.isDarkTheme() ? '#0a0a0a' : '#fcfcfc';
   }
 
+  private resolvedNestedScrollMode(): NestedScrollMode {
+    const policy = htmlRenderNestedScrollPolicy(this.nested, this.overflowY);
+    if (policy === 'self-only') return NestedScrollMode.SELF_ONLY;
+    if (policy === 'parent-first') return NestedScrollMode.PARENT_FIRST;
+    return NestedScrollMode.SELF_FIRST;
+  }
+
   build() {
     Stack({ alignContent: Alignment.Center }) {
       if (this.initialLoadedUrl) {
@@ -204,9 +213,10 @@ export struct HtmlRenderWebView {
             .zoomAccess(!this.nested)
             .overviewModeAccess(!this.isHtmlRender)
             .multiWindowAccess(true)
+            .overScrollMode(htmlRenderOverScrollPolicy(this.nested) === 'always' ? OverScrollMode.ALWAYS : OverScrollMode.NEVER)
             .nestedScroll({
-              scrollForward: this.nested && !this.overflowY ? NestedScrollMode.PARENT_FIRST : NestedScrollMode.SELF_FIRST,
-              scrollBackward: this.nested && !this.overflowY ? NestedScrollMode.PARENT_FIRST : NestedScrollMode.SELF_FIRST
+              scrollForward: this.resolvedNestedScrollMode(),
+              scrollBackward: this.resolvedNestedScrollMode()
             })
             .onControllerAttached(() => {
               this.controllerAttached = true;
@@ -288,6 +298,7 @@ export struct HtmlRenderWebView {
     .width('100%')
     .height('100%')
     .backgroundColor(this.bgHex())
+    .hitTestBehavior(HitTestMode.Default)
     .accessibilityText(this.title || 'HTML 内容')
   }
 }
