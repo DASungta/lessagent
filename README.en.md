@@ -12,7 +12,7 @@
 </p>
 
 <p>
-  <img src="https://img.shields.io/badge/API-24%2B-0C4146?style=flat-square" alt="API 24+" />
+  <img src="https://img.shields.io/badge/HarmonyOS_API-20%2B-0C4146?style=flat-square" alt="HarmonyOS API 20+" />
   <img src="https://img.shields.io/badge/ArkTS_%2B_ArkUI-Native-166B64?style=flat-square" alt="ArkTS + ArkUI Native" />
   <a href="https://github.com/DASungta/lessagent/releases/tag/v0.1.12-preview"><img src="https://img.shields.io/badge/Preview-v0.1.12--preview-22C9A8?style=flat-square" alt="Preview v0.1.12-preview" /></a>
   <img src="https://img.shields.io/badge/Tests-774_passing-16A34A?style=flat-square" alt="774 Tests Passing" />
@@ -42,7 +42,7 @@
 > - LessAgent implements compatibility with the [T3 Code](https://github.com/pingdotgg/t3code) server protocol (`orchestrationProtocol=2`). The bundled [MIT license copy](entry/src/main/resources/rawfile/t3code-license.txt) is included for upstream protocol/code attribution.
 > - Optional compatibility with the upstream hosted **T3 Connect** relay is supported on a best-effort basis with **no upstream long-term stability guarantees**. You can switch to a **self-hosted relay** or use **direct LAN / Tailnet / HTTPS pairing** at any time.
 
-**LessAgent (简码)** is an independent, unofficial third-party native HarmonyOS client for [T3 Code](https://github.com/pingdotgg/t3code) designed for controlling remote development workspaces and coding agents. Running as a thin client, all coding agent execution and repository operations stay on your desktop or remote server while the phone delivers a responsive native ArkUI experience verified on real hardware.
+**LessAgent (简码)** is an independent, unofficial third-party native HarmonyOS client for [T3 Code](https://github.com/pingdotgg/t3code) designed for controlling remote development workspaces and coding agents. Running as a thin client, all coding agent execution and repository operations stay on your desktop or remote server while the phone delivers a responsive native ArkUI experience—covering chat timelines, Markdown, syntax highlighting, Mermaid diagrams, HTML / rich file previews, and Diff review—verified on real hardware.
 
 ## Screenshots
 
@@ -59,14 +59,16 @@
 ## Features
 
 - **Multi-Environment Workbench & Thread Management**
-  - Direct pairing over LAN, SSH, Tailnet, or loopback (manual entry, QR code scan, `lessagent://` and compatible `t3code://` deep links), plus optional T3 Connect / custom self-hosted Cloud Relay compatibility (`OAuth + PKCE + DPoP`).
-  - Floating bottom bar (`Chats / Pull Requests / Usage / Settings`) paired with a quick **New Task** action; repository/path/flat thread grouping, search, environment & project filters, pin, snooze, settle, archive, and multi-draft restoration.
-- **Native Chat & Rich Media Rendering**
-  - Pure ArkUI message timeline with turn-grouped collapsible work logs & checkpoints, subagent thread inspection, and approval / secret request cards.
-  - Native Markdown rendering, syntax-highlighted code blocks (adjustable font size `8–18` and word wrap), LaTeX math, and native ArkUI Mermaid diagrams (flowchart, sequence, class, and state diagrams), plus built-in offline Chinese voice dictation for drafts.
+  - Direct pairing over LAN, SSH, Tailnet, or loopback (manual entry, QR code scan, `lessagent://` and compatible `t3code://` deep links), peer-linked multi-environment management, plus optional T3 Connect (email / OTP / 2FA / SSO login, `OAuth + PKCE + DPoP`) or custom self-hosted Cloud Relay compatibility.
+  - Floating bottom bar (`Chats / Pull Requests / Usage / Settings`) paired with a quick **New Task** action; repository/path/flat thread grouping, search, environment & project filters, pin, snooze, settle, archive, multi-draft restoration, and model search / favorites / provider & legacy filters.
+- **Native Chat, Composer & Rich Media Rendering**
+  - Pure ArkUI message timeline with turn-grouped collapsible work logs & checkpoints, subagent thread inspection, and tool approval / Agent feedback / secret request cards; bottom **floating status capsule** surfaces live run progress, subagents, queued prompts, and **browser-preview control status** with one-tap jump to the remote preview controller.
+  - **1–6 line auto-growing scrollable composer** with unified **`@` context mentions** (recent & global threads, workspace files, connected environments, models, with clickable `t3-context://` references in messages), attachment thumbnail & file card preview strip, and built-in offline Chinese voice dictation.
+  - Native Markdown rendering (including nested/mixed ordered list numbering and chunked long-document rendering), syntax-highlighted code blocks (`8–18` font size and word wrap), LaTeX math, native ArkUI Mermaid diagrams (flowchart, sequence, class, and state diagrams), inline & fullscreen **HTML (`html_render`)** and **MCP App** sandbox views, plus media save & share.
 - **Mobile Developer Toolbox**
-  - Workspace file browser and full-text search, line-selectable Diff viewer with inline review comments, and full Git workflows (status, stage, commit, branches, push/pull).
-  - GitHub Pull Requests reader / review / guide tour, one-tap remote ANSI terminal in the chat top bar (with scrollback & copy), remote browser preview, and iOS Simulator / Android Emulator device preview.
+  - Workspace file browser and full-text search with multi-format preview (**Markdown, live/source HTML toggle, PDF, ZIP archive browsing, CSV/TSV tables, RTF, images/video/audio**) and background loading up to `8 MiB`; isolated preview scrolling prevents background scroll bleed and preserves chat scroll position upon return.
+  - Line-selectable Diff viewer with word-level highlights and inline review comments, plus full Git workflows (status, stage, commit, branches, push/pull).
+  - GitHub Pull Requests reader / review / guide tour (`Viewed` tracking, Saved Views, auto-merge & stack merge, PR Agent actions), one-tap remote ANSI terminal in the chat top bar (with scrollback & copy), MCP OAuth sign-in, remote browser preview, and iOS Simulator / Android Emulator device preview.
 - **Design System & Native System Integration**
   - 112 symmetric Light/Dark semantic color tokens (`base/element/color.json` & `dark/element/color.json`) guarded by automated WCAG AA (`>= 4.5:1`) contrast tests.
   - Localized app identity (`简码` in Simplified Chinese, `LessAgent` in English), system share sheet integration to import images and files into task drafts, plus a `2×2` home-screen shortcut widget and launcher quick actions.
@@ -75,10 +77,11 @@
 
 | Action | Where to Start |
 |---|---|
-| **Start a task or resume a chat** | Tap the **New Task** button at the bottom-right of the floating bar, or select an existing thread. Switch environment, project, model, and mode beneath the composer. |
-| **Manage connected environments** | Tap the `LessAgent` wordmark in the top-left of the home screen to pair manually, scan a QR code, import a deep link, or manage multiple routes. |
+| **Start a task or resume a chat** | Tap the **New Task** button at the bottom-right of the floating bar, or select an existing thread. The composer auto-grows across 1–6 scrollable lines; switch environment, project, model (with search & favorites), and mode beneath it. |
+| **`@` context mentions & attachments** | Type `@` or open the mention picker to reference threads, workspace files, environments, or models; attached images and files appear as tappable thumbnails/cards above the composer. |
+| **Manage connected environments** | Tap the `LessAgent` wordmark in the top-left of the home screen to pair manually, scan a QR code, import a deep link, or manage multiple routes and peer-linked environments. |
 | **Search & filter threads** | Use the search or filter icon in the home top-right bar to search across threads or scope by environment and project. |
-| **Files, Diff, Git, PRs, Terminal & Preview** | Inside a chat, tap the terminal icon in the top bar for direct shell access, or open **More** (`···`) for Files, Diff, Git, Pull Requests, Browser Preview, and Device Preview. |
+| **Files, Diff, Git, PRs, Terminal & Preview** | Inside a chat, tap the terminal icon in the top bar for direct shell access, or open **More** (`···`) for Files (Markdown / HTML / PDF / ZIP / CSV / media), Diff, Git, Pull Requests, Browser Preview, and Device Preview. When an agent is driving a web page, tap the bottom **floating status capsule** to jump straight to the preview controller. |
 | **Import via system share sheet** | Pick an image or file in Gallery / Files → Share → **LessAgent** (`简码` in Chinese), verify the preview and target project, and save it as a draft. |
 | **Dictate drafts in Chinese** | Open **Tools → Voice Input** in the chat composer to transcribe spoken Chinese directly into the input box. |
 | **Code typography, projects, worktrees & schedules** | Switch to the **Settings** tab at the bottom to configure code font size (`8–18`) / word wrap, add projects, manage source control, override per-project worktree settings, create scheduled tasks, and switch themes. |
@@ -87,13 +90,18 @@
 
 ### Download Preview Sideload Package
 
-This project is currently in **Preview**. You can download the prebuilt **unsigned debug-mode HAP** (`lessagent-v0.1.12-preview-unsigned.hap`, with its `.sha256` checksum, bundle `com.dasungta.lessagent`, API `20+`) from [GitHub Releases (`v0.1.12-preview`)](https://github.com/DASungta/lessagent/releases/tag/v0.1.12-preview).
+This project is currently in **Preview**. You can download the prebuilt **unsigned debug-mode HAP** (`lessagent-v0.1.12-preview-unsigned.hap`, with its `.sha256` checksum, bundle `com.dasungta.lessagent`, compatible with `HarmonyOS API 20+`) from [GitHub Releases (`v0.1.12-preview`)](https://github.com/DASungta/lessagent/releases/tag/v0.1.12-preview). The corresponding `0.1.12 (13)` release package is also submitted to Huawei AppGallery Connect (AGC) invite testing.
+
+**Highlights in `v0.1.12-preview` (including `v0.1.11`):**
+- **Floating Capsule Browser-Control Indicator**: The bottom status capsule displays live remote browser preview / agent control state with one-tap jump to the preview controller.
+- **Scroll-Isolated File & HTML Previews**: Eliminated scroll bleed from Markdown, code, and HTML previews into the underlying chat list, restored native overscroll bounce, and preserved chat scroll position when returning from subpages.
+- **Upgraded Composer & Unified `@` Mentions**: Added a 1–6 line auto-growing scrollable composer with an attachment thumbnail/card preview strip, unified `@` mentions (`threads / files / environments / models` + clickable `t3-context://` links), accurate Markdown nested list numbering, and clean idle subagent dismissal.
 
 > **Sideloading Note**: Devices reject unsigned HAPs as well as debug packages signed for another device's UDID. Sign unsigned packages with your own developer certificate/profile, or clone the repo and build with automatic signing for `com.dasungta.lessagent` in DevEco Studio.
 
 ### Prerequisites
 
-- **DevEco Studio 6.1.1+** with SDK `6.1.1(24)` (`API 24+`)
+- **DevEco Studio 6.1.1+ (Release)** with SDK `6.1.1(24)` (`release` product targets `API 20+` / `6.0.0(20)`–`6.1.1(24)`; `default` debug product targets `6.1.1(24)`)
 - **Node.js 22+** (required for `--experimental-strip-types` host unit tests)
 - A running compatible server (such as a [T3 Code](https://github.com/pingdotgg/t3code) server) on your desktop or remote machine
 
@@ -108,6 +116,9 @@ node --experimental-strip-types --test tests/*.test.mjs
 
 # Build the Debug HAP (override DevEco Studio path via DEVECO_HOME if needed)
 ./scripts/build.sh
+
+# Build API 20+ signed Release .app (requires release signing env)
+./scripts/build-release.sh
 ```
 
 > **Signing Note**: The bundle name is now `com.dasungta.lessagent`. Before installing onto a physical device or building a release package, generate and configure your own debug/release signing certificate and profile for `com.dasungta.lessagent` in DevEco Studio / AGC. Never commit personal certificates or keys to public repositories.
@@ -121,9 +132,9 @@ lessagent/
 ├── entry/src/main/
 │   ├── ets/
 │   │   ├── common/                   # Theme.ets (typography, spacing, radius & size tokens)
-│   │   ├── components/               # Feature panels and ui/ shared design-system components
+│   │   ├── components/               # Feature panels, HTML/MCP views, status capsule & ui/ primitives
 │   │   ├── pages/                    # Main entry page Index.ets
-│   │   ├── protocol/                 # Server protocol compatibility, reducers, Markdown/Diff/Mermaid parsers
+│   │   ├── protocol/                 # Server protocol, reducers, Markdown/Diff/Mermaid/HTML/Mention parsers
 │   │   ├── services/                 # Networking, pairing/auth, remote terminal & OS bridges
 │   │   ├── storage/                  # Local preferences, profiles & draft persistence
 │   │   ├── entryability/             # Main Ability, share sheet & deep-link handlers (lessagent:// & t3code://)
