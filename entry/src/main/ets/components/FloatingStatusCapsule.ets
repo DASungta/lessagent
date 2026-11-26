@@ -19,6 +19,7 @@ export struct FloatingStatusCapsule {
   private timerId: number = 0;
   onStatusTap: () => void = () => {};
   onActionTap: () => void = () => {};
+  onOpenBrowserPreview: () => void = () => {};
   onOpenAgents: () => void = () => {};
   onOpenQueue: () => void = () => {};
   onScrollToEnd: () => void = () => {};
@@ -59,7 +60,12 @@ export struct FloatingStatusCapsule {
 
   private isWarningOnly(): boolean {
     const status = this.model.status;
-    return !!status && status.kind === 'action-needed' && !this.model.agents && this.model.queuedCount === 0;
+    return !!status && status.kind === 'action-needed' &&
+      !this.model.browserPreview && !this.model.agents && this.model.queuedCount === 0;
+  }
+
+  private browserPreviewCompact(): boolean {
+    return !!this.model.status || !!this.model.agents || this.model.queuedCount > 0;
   }
 
   private statusDisplayText(status: FloatingCapsuleStatus): string {
@@ -197,8 +203,85 @@ export struct FloatingStatusCapsule {
               .accessibilityText(this.model.status.actionLabel)
               .onClick(() => this.onActionTap())
             }
-            if (this.model.agents) {
+            if (this.model.browserPreview) {
               if (this.model.status) {
+                this.VerticalDivider()
+              }
+              if (this.browserPreviewCompact()) {
+                Button({ type: ButtonType.Normal, stateEffect: true }) {
+                  if (this.model.browserPreview.count > 1) {
+                    Stack({ alignContent: Alignment.TopEnd }) {
+                      Row() {
+                        Image($r('app.media.ui_globe'))
+                          .width(18)
+                          .height(18)
+                          .objectFit(ImageFit.Contain)
+                          .accessibilityLevel('no')
+                      }
+                      .width('100%')
+                      .height('100%')
+                      .padding({ right: 4 })
+                      .justifyContent(FlexAlign.Center)
+                      .alignItems(VerticalAlign.Center)
+                      Text(String(this.model.browserPreview.count))
+                        .fontSize(FontSize.badge)
+                        .lineHeight(LineHeight.badge)
+                        .fontWeight(Weight.bold)
+                        .fontColor($r('app.color.on_primary_fill'))
+                        .backgroundColor($r('app.color.primary'))
+                        .borderRadius(Radius.full)
+                        .constraintSize({ minWidth: 16 })
+                        .padding({ left: 4, right: 4 })
+                        .textAlign(TextAlign.Center)
+                        .margin({ top: 4, right: 8 })
+                        .accessibilityLevel('no')
+                    }
+                    .width('100%')
+                    .height('100%')
+                  } else {
+                    Image($r('app.media.ui_globe'))
+                      .width(18)
+                      .height(18)
+                      .objectFit(ImageFit.Contain)
+                      .accessibilityLevel('no')
+                  }
+                }
+                .width(this.model.browserPreview.count > 1 ? 48 : 42)
+                .height('100%')
+                .padding(0)
+                .backgroundColor(Color.Transparent)
+                .flexShrink(0)
+                .accessibilityText(this.model.browserPreview.accessibilityLabel)
+                .onClick(() => this.onOpenBrowserPreview())
+              } else {
+                Button({ type: ButtonType.Normal, stateEffect: true }) {
+                  Row({ space: 6 }) {
+                    Image($r('app.media.ui_globe'))
+                      .width(17)
+                      .height(17)
+                      .objectFit(ImageFit.Contain)
+                      .flexShrink(0)
+                      .accessibilityLevel('no')
+                    Text(this.model.browserPreview.label)
+                      .fontSize(FontSize.caption)
+                      .lineHeight(LineHeight.caption)
+                      .fontWeight(Weight.medium)
+                      .fontColor($r('app.color.ink'))
+                      .maxLines(1)
+                  }
+                  .height('100%')
+                  .alignItems(VerticalAlign.Center)
+                }
+                .height('100%')
+                .padding({ left: 14, right: 14 })
+                .backgroundColor(Color.Transparent)
+                .flexShrink(0)
+                .accessibilityText(this.model.browserPreview.accessibilityLabel)
+                .onClick(() => this.onOpenBrowserPreview())
+              }
+            }
+            if (this.model.agents) {
+              if (this.model.status || this.model.browserPreview) {
                 this.VerticalDivider()
               }
               Button({ type: ButtonType.Normal, stateEffect: true }) {
@@ -227,7 +310,7 @@ export struct FloatingStatusCapsule {
               .onClick(() => this.onOpenAgents())
             }
             if (this.model.queuedCount > 0) {
-              if (this.model.status || this.model.agents) {
+              if (this.model.status || this.model.browserPreview || this.model.agents) {
                 this.VerticalDivider()
               }
               Button({ type: ButtonType.Normal, stateEffect: true }) {

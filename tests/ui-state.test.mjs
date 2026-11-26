@@ -188,7 +188,7 @@ test('locked startup retries on foreground without concurrent reconnect or lost 
  const Page=new Function(compiled)();const page=new Page();let attempts=0,reconnects=0,release;
  const registry={initialized:false,directory:{entries:[{localId:'saved',enabled:true}]},entryVisible:()=>true,onUpdate(){},
   async initialize(){if(++attempts===1)throw Error('locked');await new Promise(r=>release=r);this.initialized=true},async reconnect(){reconnects++}};
- Object.assign(page,{alive:true,loaded:false,restoringEnvironments:false,appForeground:true,registry:()=>registry,openShortcut:async()=>{},refreshLinkedWhenChanged(){}});
+ Object.assign(page,{alive:true,loaded:false,restoringEnvironments:false,appForeground:true,registry:()=>registry,openShortcut:async()=>{},refreshLinkedWhenChanged(){},ensureBrowserPreviewWatch(){}});
  await page.restoreAddress();assert.equal(page.loaded,false);assert.equal(page.status,'locked');assert.equal(reconnects,0);
  page.refreshLinkedOnForeground();page.refreshLinkedOnForeground();assert.equal(attempts,2);release();await new Promise(setImmediate);
  assert.equal(page.loaded,true);assert.equal(reconnects,1);assert.equal(registry.directory.entries[0].localId,'saved');
@@ -278,10 +278,10 @@ test('file shares upload only after confirmation, retry acknowledged files once,
 test('preview reopens only a server tab belonging to the current thread',async()=>{
  const method=source.slice(source.indexOf('  private async openPreview()'),source.indexOf('  private async createPreviewTab('));
  const compiled=ts.transpileModule('return class { '+method+' }',{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
- const owner={generationValue:()=>7,async rpcRequest(){return {sessions:[{threadId:'other',runtime:'server',tabId:'bad',navStatus:{}},{threadId:'t',runtime:'desktop',tabId:'desktop',navStatus:{}},{threadId:'t',runtime:'server',tabId:'good',navStatus:{url:'http://localhost:1234'}}]}}};
+ const owner={generationValue:()=>7,async rpcRequest(){return {sessions:[{threadId:'other',runtime:'server',tabId:'bad',navStatus:{}},{threadId:'t',runtime:'desktop',tabId:'desktop',navStatus:{}},{threadId:'t',runtime:'server',tabId:'older',updatedAt:'2026-01-01T00:00:00.000Z',navStatus:{url:'http://localhost:1000'}},{threadId:'t',runtime:'server',tabId:'good',updatedAt:'2026-01-01T00:01:00.000Z',navStatus:{url:'http://localhost:1234'}}]}}};
  const Page=new Function('client','record','text','previewTabs',compiled)(owner,x=>x,x=>x,previewTabs);const page=new Page();
  Object.assign(page,{ready:true,threadId:'t',selectedLocalId:'env',previewTabs:new Map(),panelOpen:true});
- await page.openPreview();assert.equal(page.page,'preview');assert.equal(page.previewTabs.get('env:t'),'good');assert.equal(page.previewAddress,'http://localhost:1234');
+ await page.openPreview();assert.equal(page.page,'preview');assert.equal(page.previewTabs.get('env:t'),'good');assert.equal(page.previewAddress,'http://localhost:1234');assert.equal(page.previewAutoConnect,true);
 });
 test('voice only appends to the still-bound draft and never sends',()=>{
  const method=source.slice(source.indexOf('  private insertVoice('),source.indexOf('  private shareChanged('));

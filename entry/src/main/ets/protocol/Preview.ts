@@ -296,3 +296,175 @@ export function previewFrameMatchesViewport(frame: PreviewViewport, viewport: Pr
   return Math.abs(frame.width * viewport.height - frame.height * viewport.width) <=
     Math.max(viewport.width, viewport.height) * 2;
 }
+
+const PREVIEW_MAX_REPLAY_EVENTS = 200;
+
+export interface ThreadPreviewTabsState {
+  serverEpoch: string;
+  revision: number;
+  listServerEpoch: string;
+  listRevision: number;
+  tabs: PreviewTab[];
+  listed: boolean;
+  pendingEvents: Record<string, Object>[];
+}
+
+export interface ThreadPreviewEventResult {
+  state: ThreadPreviewTabsState;
+  needsListRefresh: boolean;
+}
+
+export function emptyThreadPreviewTabsState(): ThreadPreviewTabsState {
+  return {
+    serverEpoch: '',
+    revision: 0,
+    listServerEpoch: '',
+    listRevision: -1,
+    tabs: [],
+    listed: false,
+    pendingEvents: []
+  };
+}
+
+export function latestPreviewTab(tabs: PreviewTab[]): PreviewTab | undefined {
+  let latest: PreviewTab | undefined = undefined;
+  for (const tab of tabs) {
+    if (!latest || (tab.updatedAt || '') > (latest.updatedAt || '')) latest = tab;
+  }
+  return latest;
+}
+
+function applySinglePreviewEvent(current: ThreadPreviewTabsState, row: Record<string, Object>, threadId: string): ThreadPreviewEventResult {
+  const serverEpoch = typeof row.serverEpoch === 'string' ? row.serverEpoch : '';
+  const revision = typeof row.revision === 'number' && Number.isSafeInteger(row.revision) ? row.revision : -1;
+  if (!serverEpoch || revision <= 0) {
+    return { state: current, needsListRefresh: true };
+  }
+  if (current.serverEpoch === serverEpoch && revision <= current.revision) {
+    return { state: current, needsListRefresh: false };
+  }
+  const tabId = typeof row.tabId === 'string' ? row.tabId : '';
+  const eventType = typeof row.type === 'string' ? row.type : '';
+  const nextTabs = current.tabs.slice();
+  const index = nextTabs.findIndex((tab: PreviewTab): boolean => tab.tabId === tabId);
+  if (eventType === 'closed') {
+    if (index >= 0) nextTabs.splice(index, 1);
+  } else if (eventType === 'failed') {
+    if (index >= 0) {
+      const existing = nextTabs[index];
+      const url = typeof row.url === 'string' ? row.url : existing.url;
+      const title = typeof row.title === 'string' && row.title ? row.title : (url || existing.title);
+      const updatedAt = typeof row.createdAt === 'string' ? row.createdAt : existing.updatedAt;
+      nextTabs[index] = {
+        tabId: existing.tabId,
+        url,
+        title,
+        zoomFactor: existing.zoomFactor,
+        viewport: existing.viewport,
+        updatedAt
+      };
+    }
+  } else if (eventType === 'opened' || eventType === 'navigated' || eventType === 'resized') {
+    if (!row.snapshot || typeof row.snapshot !== 'object' || Array.isArray(row.snapshot)) {
+      return { state: current, needsListRefresh: true };
+    }
+    let parsed: PreviewTab[];
+    try {
+      parsed = previewTabs({ sessions: [row.snapshot as Object] }, threadId);
+    } catch (_) {
+      return { state: current, needsListRefresh: true };
+    }
+    if (parsed.length === 1) {
+      if (index >= 0) nextTabs[index] = parsed[0];
+      else nextTabs.push(parsed[0]);
+    } else if (index >= 0) {
+      nextTabs.splice(index, 1);
+    }
+  } else {
+    return { state: current, needsListRefresh: true };
+  }
+  return {
+    state: {
+      serverEpoch,
+      revision,
+      listServerEpoch: current.listServerEpoch,
+      listRevision: current.listRevision,
+      tabs: nextTabs,
+      listed: current.listed,
+      pendingEvents: current.pendingEvents
+    },
+    needsListRefresh: false
+  };
+}
+
+export function applyPreviewListResult(current: ThreadPreviewTabsState, value: Object, threadId: string): ThreadPreviewTabsState {
+  const result = value as Record<string, Object>;
+  const tabs = previewTabs(value, threadId);
+  const serverEpoch = typeof result.serverEpoch === 'string' ? result.serverEpoch : '';
+  const revision = typeof result.revision === 'number' && Number.isSafeInteger(result.revision) && result.revision >= 0
+    ? result.revision : 0;
+  if (current.listed && serverEpoch && current.listServerEpoch === serverEpoch && revision < current.listRevision) {
+    return current;
+  }
+  const replay = serverEpoch
+    ? current.pendingEvents.filter((event: Record<string, Object>): boolean =>
+        event.serverEpoch === serverEpoch && typeof event.revision === 'number' && event.revision > revision)
+    : [];
+  let next: ThreadPreviewTabsState = {
+    serverEpoch,
+    revision,
+    listServerEpoch: serverEpoch,
+    listRevision: serverEpoch ? revision : -1,
+    tabs,
+    listed: true,
+    pendingEvents: replay
+  };
+  for (const event of replay) {
+    next = applySinglePreviewEvent(next, event, threadId).state;
+  }
+  return next;
+}
+
+export function applyPreviewEvent(current: ThreadPreviewTabsState, value: Object, threadId: string): ThreadPreviewEventResult {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return { state: current, needsListRefresh: false };
+  }
+  const row = value as Record<string, Object>;
+  if (row.threadId !== threadId) {
+    return { state: current, needsListRefresh: false };
+  }
+  const serverEpoch = typeof row.serverEpoch === 'string' ? row.serverEpoch : '';
+  const revision = typeof row.revision === 'number' && Number.isSafeInteger(row.revision) ? row.revision : -1;
+  if (!serverEpoch || revision <= 0) {
+    return { state: current, needsListRefresh: true };
+  }
+  if (current.listServerEpoch && current.listServerEpoch === serverEpoch && revision <= current.listRevision) {
+    return { state: current, needsListRefresh: false };
+  }
+  const buffered = current.pendingEvents.slice(Math.max(0, current.pendingEvents.length - (PREVIEW_MAX_REPLAY_EVENTS - 1)));
+  buffered.push(row);
+  if (current.serverEpoch && serverEpoch !== current.serverEpoch) {
+    return {
+      state: {
+        serverEpoch: current.serverEpoch,
+        revision: current.revision,
+        listServerEpoch: current.listServerEpoch,
+        listRevision: current.listRevision,
+        tabs: current.tabs,
+        listed: current.listed,
+        pendingEvents: buffered
+      },
+      needsListRefresh: true
+    };
+  }
+  const withBuffer: ThreadPreviewTabsState = {
+    serverEpoch: current.serverEpoch,
+    revision: current.revision,
+    listServerEpoch: current.listServerEpoch,
+    listRevision: current.listRevision,
+    tabs: current.tabs,
+    listed: current.listed,
+    pendingEvents: buffered
+  };
+  return applySinglePreviewEvent(withBuffer, row, threadId);
+}

@@ -14,7 +14,8 @@ import { configureNotificationTargets, setVisibleNotificationThread, observeThre
 import { PreviewPanel } from '../components/PreviewPanel';
 import { image } from '@kit.ImageKit';
 import { PreviewTab, previewTabs, PreviewResizeViewport, PreviewViewport, PreviewZoomResult,
-  previewResizeInput, verifyPreviewResize, previewZoomInput, previewZoomTarget, verifyPreviewZoom, previewNeedsZoomRepair, repairPreviewZoom100 } from '../protocol/Preview';
+  previewResizeInput, verifyPreviewResize, previewZoomInput, previewZoomTarget, verifyPreviewZoom, previewNeedsZoomRepair, repairPreviewZoom100,
+  ThreadPreviewTabsState, emptyThreadPreviewTabsState, applyPreviewListResult, applyPreviewEvent } from '../protocol/Preview';
 import { ShareImportPanel } from '../components/ShareImportPanel';
 import { loadStagedShareThumbnail, peekIncomingShare, removeIncomingShare, removeIncomingShareAttachment, withStagedShareAttachment } from '../services/ShareInbox';
 import { IncomingShareAttachment, MAX_SHARED_TEXT_CHARS, SharePart, shareDraftText } from '../protocol/IncomingShare';
@@ -344,7 +345,15 @@ struct Index {
   private previewGeneration: number = 0;
   private previewKey: string = '';
   private previewAddress: string = '';
+  private previewAutoConnect: boolean = false;
   private previewTabs: Map<string, string> = new Map();
+  private browserPreviewWatchKey: string = '';
+  private browserPreviewWatchGeneration: number = 0;
+  private browserPreviewWatchOwner: T3Client | undefined = undefined;
+  private browserPreviewWatchListener: ((value: Object) => void) | undefined = undefined;
+  private browserPreviewState: ThreadPreviewTabsState = emptyThreadPreviewTabsState();
+  private browserPreviewListing: boolean = false;
+  private browserPreviewListAgain: boolean = false;
   private terminalConnection: T3Client | undefined = undefined;
   private terminalThreadId: string = '';
   private terminalCwd: string = '';
@@ -355,7 +364,7 @@ struct Index {
   @State reconnectingCount: number = 0;
   @State offlineCount: number = 0;
   @State settingsSection: string = '';
-  @State page: string = 'sessions';
+  @State @Watch('onPageChanged') page: string = 'sessions';
   @State searchOpen: boolean = false;
   @State homeTabDetailOpen: boolean = false;
   @State showTools: boolean = false;
@@ -720,6 +729,7 @@ struct Index {
         }, 240);
       }
       this.ensureDeviceWatch();
+      this.ensureBrowserPreviewWatch();
       this.refreshLinkedWhenChanged();
       this.rebuildWorkspace();
       this.syncDelayedConnectionUi();
@@ -1018,6 +1028,96 @@ struct Index {
       source.watchAuthAccess(() => { if (generation === this.deviceWatchGeneration) this.updateDevices(); });
       this.updateDevices();
     }).catch(() => {});
+  }
+
+  private onPageChanged(): void {
+    this.ensureBrowserPreviewWatch();
+  }
+
+  private stopBrowserPreviewWatch(clearState: boolean = true): void {
+    this.browserPreviewWatchGeneration++;
+    this.browserPreviewWatchKey = '';
+    this.browserPreviewListing = false;
+    this.browserPreviewListAgain = false;
+    if (this.browserPreviewWatchOwner && this.browserPreviewWatchListener) {
+      this.browserPreviewWatchOwner.stopRpcStream(this.browserPreviewWatchListener);
+    }
+    this.browserPreviewWatchOwner = undefined;
+    this.browserPreviewWatchListener = undefined;
+    if (clearState) {
+      const hadTabs = this.browserPreviewState.tabs.length > 0;
+      this.browserPreviewState = emptyThreadPreviewTabsState();
+      if (hadTabs) this.refreshFloatingCapsule();
+    }
+  }
+
+  private ensureBrowserPreviewWatch(): void {
+    const source = client;
+    const active = this.alive && this.appForeground &&
+      (this.page === 'chat' || this.page === 'preview') &&
+      !this.draftMode && !!this.threadId &&
+      source.ready && source.supports('serverBrowser') &&
+      source.canScope('orchestration:read') !== false;
+    if (!active) {
+      if (this.browserPreviewWatchKey || this.browserPreviewState.tabs.length > 0) {
+        this.stopBrowserPreviewWatch(true);
+      }
+      return;
+    }
+    const key = this.selectedLocalId + ':' + source.generationValue() + ':' + this.threadId;
+    if (key === this.browserPreviewWatchKey && source === this.browserPreviewWatchOwner) return;
+    this.stopBrowserPreviewWatch(true);
+    this.browserPreviewWatchKey = key;
+    this.browserPreviewWatchOwner = source;
+    const generation = ++this.browserPreviewWatchGeneration;
+    const threadId = this.threadId;
+    try {
+      this.browserPreviewWatchListener = source.watchRpcStream(
+        'subscribePreviewEvents',
+        {} as Record<string, Object>,
+        (value: Object): void => {
+          if (!this.alive || generation !== this.browserPreviewWatchGeneration ||
+            source !== this.browserPreviewWatchOwner || source !== client || this.threadId !== threadId) return;
+          const prevCount = this.browserPreviewState.tabs.length;
+          const applied = applyPreviewEvent(this.browserPreviewState, value, threadId);
+          this.browserPreviewState = applied.state;
+          if (applied.state.tabs.length !== prevCount) {
+            this.refreshFloatingCapsule();
+          }
+          if (applied.needsListRefresh) {
+            void this.refreshBrowserPreviewTabs(source, threadId, generation);
+          }
+        }
+      );
+    } catch (_) {}
+    void this.refreshBrowserPreviewTabs(source, threadId, generation);
+  }
+
+  private async refreshBrowserPreviewTabs(source: T3Client, threadId: string, generation: number): Promise<void> {
+    if (this.browserPreviewListing) {
+      this.browserPreviewListAgain = true;
+      return;
+    }
+    this.browserPreviewListing = true;
+    try {
+      const result = record(await source.rpcRequest('preview.list', { threadId } as PreviewRefPayload, 15000, false));
+      if (!this.alive || generation !== this.browserPreviewWatchGeneration ||
+        source !== this.browserPreviewWatchOwner || source !== client || this.threadId !== threadId) return;
+      const prevCount = this.browserPreviewState.tabs.length;
+      this.browserPreviewState = applyPreviewListResult(this.browserPreviewState, result, threadId);
+      if (this.browserPreviewState.tabs.length !== prevCount) {
+        this.refreshFloatingCapsule();
+      }
+    } catch (_) {
+    } finally {
+      if (generation === this.browserPreviewWatchGeneration) {
+        this.browserPreviewListing = false;
+        if (this.browserPreviewListAgain) {
+          this.browserPreviewListAgain = false;
+          void this.refreshBrowserPreviewTabs(source, threadId, generation);
+        }
+      }
+    }
   }
 
   private registry(): EnvironmentRegistry {
@@ -1848,6 +1948,7 @@ struct Index {
     this.keyboard.reset();
     this.alive = false; this.linkPermissionGeneration++; this.linkOwner = undefined; this.linkedGeneration++;
     this.deviceWatchGeneration++; this.deviceWatchKey = ''; client.stopAuthAccess();
+    this.stopBrowserPreviewWatch(false);
     if (this.clockTimer) clearInterval(this.clockTimer);
     if (this.snoozeTimer) clearTimeout(this.snoozeTimer);
     if (this.searchTimer) clearTimeout(this.searchTimer);
@@ -2106,6 +2207,7 @@ struct Index {
     this.expandedWorkGroups = {}; this.expandedUserMessages = {}; this.canOpenDiff = false;
     this.queued = []; this.extraPlans = []; this.extraSubagents = []; this.extraBackground = [];
     this.extraGuest = undefined; this.extraUsage = undefined;
+    this.stopBrowserPreviewWatch(false);
     this.floatingCapsule = emptyFloatingCapsule();
     this.liveThinking = emptyLiveThinkingRow();
     this.turnSubagents = [];
@@ -2979,6 +3081,7 @@ struct Index {
       allThreads: this.threads,
       selectedLocalId: this.selectedLocalId,
       queuedCount: this.queued.length,
+      browserPreviewCount: this.browserPreviewState.tabs.length,
       hasWorktreeSetupCard: this.worktreeSetup !== undefined,
       supportsSnooze: caps === undefined || caps.snooze,
       supportsSettlement: caps === undefined || caps.settlement
@@ -3391,6 +3494,7 @@ struct Index {
     this.prompt = this.textDrafts.get(this.draftKey()) || '';
     this.draftContext = (this.contextDrafts.get(this.draftKey()) || []).slice();
     this.page = 'chat'; this.showTools = false; this.panelOpen = false;
+    this.ensureBrowserPreviewWatch();
     this.refreshFloatingCapsule();
     this.busy = true;
     try {
@@ -4534,9 +4638,14 @@ struct Index {
       if (!this.previewCurrent()) throw new Error('预览环境已变化');
       const existing = previewTabs(result, this.previewThreadId);
       const known = this.previewTabs.get(this.previewKey);
-      const selected = existing.find((item: PreviewTab): boolean => item.tabId === known) || existing[0];
+      let latest: PreviewTab | undefined = undefined;
+      for (const item of existing) {
+        if (!latest || (item.updatedAt || '') > (latest.updatedAt || '')) latest = item;
+      }
+      const selected = existing.find((item: PreviewTab): boolean => item.tabId === known) || latest || existing[0];
       this.previewTabs.set(this.previewKey, selected ? selected.tabId : '');
       this.previewAddress = selected ? selected.url : '';
+      this.previewAutoConnect = !!selected;
       this.panelOpen = false; this.page = 'preview';
     } catch (error) { this.status = (error as Error).message; }
     finally { this.busy = false; }
@@ -4813,6 +4922,7 @@ struct Index {
     if (this.appForeground) void this.openShortcut();
     this.linkedSignature = ''; this.linkedGeneration++;
     this.refreshLinkedWhenChanged();
+    this.ensureBrowserPreviewWatch();
   }
   private refreshLinkedWhenChanged(): void {
     if (!this.appForeground || !this.panelOpen || this.panel !== 'server') return;
@@ -5990,8 +6100,11 @@ struct Index {
               })
               FormRow({
                 label: '浏览器预览',
-                subtitle: '查看与控制本地开发页面',
-                disabled: !(this.ready && !this.draftMode && client.canScope('preview:operate') !== false),
+                subtitle: this.floatingCapsule.browserPreview
+                  ? this.floatingCapsule.browserPreview.label + ' · 查看与控制远端页面'
+                  : '查看与控制本地开发页面',
+                disabled: !(this.ready && !this.draftMode &&
+                  (client.canScope('preview:operate') !== false || this.floatingCapsule.browserPreview !== undefined)),
                 onTap: () => { void this.openPreview(); }
               })
               FormRow({
@@ -6796,6 +6909,7 @@ struct Index {
         showScrollToEnd: this.chatAwayFromBottom && this.messages.length > 0,
         onStatusTap: () => this.openCapsuleStatus(),
         onActionTap: () => this.triggerCapsuleAction(),
+        onOpenBrowserPreview: () => { void this.openPreview(); },
         onOpenAgents: () => {
           this.refreshExtras();
           this.refreshFloatingCapsule();
@@ -7502,6 +7616,7 @@ struct Index {
           }, onBack: () => this.page = 'device-picker' })
       } else if (this.page === 'preview') {
         PreviewPanel({ initialUrl: this.previewAddress, initialTabId: this.previewTabs.get(this.previewKey) || '',
+          autoConnect: this.previewAutoConnect,
           createTab: (address: string): Promise<string> => this.createPreviewTab(address),
           resizeTab: async (tabId: string, viewport: PreviewResizeViewport): Promise<PreviewViewport> => {
             if (!this.previewCurrent() || client.canScope('preview:operate') === false) throw new Error('预览环境或权限已变化');

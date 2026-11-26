@@ -36,6 +36,12 @@ export interface SubagentPillSegment {
   accessibilityLabel: string;
 }
 
+export interface BrowserPreviewPillSegment {
+  count: number;
+  label: string;
+  accessibilityLabel: string;
+}
+
 export interface RunStopView {
   state: string;
   runId: string;
@@ -74,6 +80,7 @@ export interface FloatingCapsuleStatus {
 
 export interface FloatingCapsuleModel {
   status: FloatingCapsuleStatus | undefined;
+  browserPreview: BrowserPreviewPillSegment | undefined;
   agents: SubagentPillSegment | undefined;
   queuedCount: number;
   visible: boolean;
@@ -105,6 +112,7 @@ export interface FloatingCapsuleInput {
   allThreads: ThreadView[];
   selectedLocalId: string;
   queuedCount: number;
+  browserPreviewCount?: number;
   hasWorktreeSetupCard: boolean;
   supportsSnooze: boolean;
   supportsSettlement: boolean;
@@ -188,7 +196,7 @@ export function stepDelayedConnectionUi(
 }
 
 export function emptyFloatingCapsule(): FloatingCapsuleModel {
-  return { status: undefined, agents: undefined, queuedCount: 0, visible: false };
+  return { status: undefined, browserPreview: undefined, agents: undefined, queuedCount: 0, visible: false };
 }
 
 function str(value: Object | undefined): string {
@@ -801,6 +809,17 @@ export function deriveFloatingCapsuleModel(input: FloatingCapsuleInput): Floatin
   const turnSubagents = deriveThreadTurnSubagents(input.runs, input.subagents, input.allThreads);
   const agents = resolveSubagentPillSegment(turnSubagents);
   const queuedCount = input.queuedCount > 0 ? input.queuedCount : 0;
+  const previewCount = input.ready && input.browserPreviewCount !== undefined && input.browserPreviewCount > 0
+    ? Math.floor(input.browserPreviewCount) : 0;
+  const browserPreview: BrowserPreviewPillSegment | undefined = previewCount > 0
+    ? {
+        count: previewCount,
+        label: previewCount === 1 ? '已打开 1 个标签页' : '已打开 ' + previewCount + ' 个标签页',
+        accessibilityLabel: previewCount === 1
+          ? '查看浏览器，查看和控制此会话中打开的浏览器标签页'
+          : '查看 ' + previewCount + ' 个浏览器标签页，查看和控制此会话中打开的浏览器标签页'
+      }
+    : undefined;
 
   let status: FloatingCapsuleStatus | undefined = undefined;
 
@@ -980,8 +999,9 @@ export function deriveFloatingCapsuleModel(input: FloatingCapsuleInput): Floatin
 
   return {
     status,
+    browserPreview,
     agents,
     queuedCount,
-    visible: status !== undefined || agents !== undefined || queuedCount > 0
+    visible: status !== undefined || browserPreview !== undefined || agents !== undefined || queuedCount > 0
   };
 }

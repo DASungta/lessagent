@@ -16,6 +16,7 @@ export struct PreviewPanel {
   @StorageLink('t3Foreground') @Watch('foregroundChanged') foreground: boolean = true;
   @Prop initialTabId: string = '';
   @Prop initialUrl: string = '';
+  @Prop autoConnect: boolean = false;
   createTab: (url: string) => Promise<string> = async () => { throw new Error('预览创建尚未接入'); };
   listTabs: () => Promise<PreviewTab[]> = async () => { throw new Error('预览列表尚未接入'); };
   watchTabs: (changed: () => void) => (() => void) = () => (): void => {};
@@ -80,7 +81,15 @@ export struct PreviewPanel {
   @State expectedViewport: PreviewViewport | undefined = undefined;
   @State pendingAdjustment: string = '';
 
-  aboutToAppear(): void { this.tabId = this.initialTabId; this.address = this.initialUrl; void this.refreshTabs(); }
+  aboutToAppear(): void {
+    this.tabId = this.initialTabId;
+    this.address = this.initialUrl;
+    if (this.autoConnect && this.tabId && this.foreground) {
+      void this.connect();
+    } else {
+      void this.refreshTabs();
+    }
+  }
   private foregroundChanged(): void {
     if (this.foreground) return;
     this.disconnect();

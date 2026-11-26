@@ -4,7 +4,8 @@ import { readFile } from 'node:fs/promises';
 import { compile, data } from './load-core.mjs';
 import { previewViewport, previewPoint, previewControl, previewCanSend, previewJpeg,
   previewKey, previewMouse, previewNavigation, previewTabs, previewHistory, PREVIEW_MAX_FRAME_BYTES,
-  PREVIEW_RESIZE_CHOICES, previewResizeInput, verifyPreviewResize, previewFrameMatchesViewport, previewDecodeSize } from '../entry/src/main/ets/protocol/Preview.ts';
+  PREVIEW_RESIZE_CHOICES, previewResizeInput, verifyPreviewResize, previewFrameMatchesViewport, previewDecodeSize,
+  emptyThreadPreviewTabsState, applyPreviewListResult, applyPreviewEvent, latestPreviewTab } from '../entry/src/main/ets/protocol/Preview.ts';
 
 test('preview coordinates account for letterboxing and reject outside taps', () => {
  const viewport = previewViewport(800,600);
@@ -896,4 +897,123 @@ test('three consecutive oversized frames are acknowledged then stop; invalid JPE
     state.imageSize = originalSize;
     stream.stop();
   }
+});
+
+test('thread browser preview state tracks server tabs across list/event races, restarts, and closures', () => {
+  const makeSession = (tabId, url, title, updatedAt, runtime = 'server', threadId = 'thread-a') => ({
+    threadId,
+    tabId,
+    runtime,
+    navStatus: { _tag: 'Success', url, title },
+    updatedAt
+  });
+
+  // Event arrives before initial preview.list completes; older list must replay newer event.
+  let tracked = emptyThreadPreviewTabsState();
+  let step = applyPreviewEvent(tracked, {
+    type: 'opened',
+    threadId: 'thread-a',
+    tabId: 'tab-2',
+    serverEpoch: 'epoch-1',
+    revision: 5,
+    createdAt: '2026-01-01T00:01:00.000Z',
+    snapshot: makeSession('tab-2', 'https://example.com/2', 'Second', '2026-01-01T00:01:00.000Z')
+  }, 'thread-a');
+  assert.equal(step.needsListRefresh, false);
+  assert.deepEqual(step.state.tabs.map(tab => tab.tabId), ['tab-2']);
+
+  tracked = applyPreviewListResult(step.state, {
+    serverEpoch: 'epoch-1',
+    revision: 4,
+    sessions: [
+      makeSession('tab-1', 'https://example.com/1', 'First', '2026-01-01T00:00:30.000Z'),
+      makeSession('desktop-1', 'https://example.com/d', 'Desktop', '2026-01-01T00:00:40.000Z', 'desktop'),
+      makeSession('other-1', 'https://example.com/o', 'Other', '2026-01-01T00:00:45.000Z', 'server', 'thread-b')
+    ]
+  }, 'thread-a');
+  assert.equal(tracked.listed, true);
+  assert.deepEqual(tracked.tabs.map(tab => tab.tabId), ['tab-1', 'tab-2']);
+  assert.equal(latestPreviewTab(tracked.tabs)?.tabId, 'tab-2');
+
+  // Navigation and load failure keep tab active while updating metadata.
+  step = applyPreviewEvent(tracked, {
+    type: 'navigated',
+    threadId: 'thread-a',
+    tabId: 'tab-1',
+    serverEpoch: 'epoch-1',
+    revision: 6,
+    createdAt: '2026-01-01T00:02:00.000Z',
+    snapshot: makeSession('tab-1', 'https://example.com/1-next', 'First Next', '2026-01-01T00:02:00.000Z')
+  }, 'thread-a');
+  tracked = step.state;
+  assert.equal(tracked.tabs.find(tab => tab.tabId === 'tab-1')?.title, 'First Next');
+  assert.equal(latestPreviewTab(tracked.tabs)?.tabId, 'tab-1');
+
+  // Closing removes only that tab.
+  step = applyPreviewEvent(tracked, {
+    type: 'closed',
+    threadId: 'thread-a',
+    tabId: 'tab-2',
+    serverEpoch: 'epoch-1',
+    revision: 7,
+    createdAt: '2026-01-01T00:03:00.000Z'
+  }, 'thread-a');
+  tracked = step.state;
+  assert.deepEqual(tracked.tabs.map(tab => tab.tabId), ['tab-1']);
+
+  // Server epoch change requests a fresh list instead of trusting stale revisions.
+  step = applyPreviewEvent(tracked, {
+    type: 'opened',
+    threadId: 'thread-a',
+    tabId: 'tab-3',
+    serverEpoch: 'epoch-2',
+    revision: 1,
+    createdAt: '2026-01-01T00:04:00.000Z',
+    snapshot: makeSession('tab-3', 'https://example.com/3', 'Third', '2026-01-01T00:04:00.000Z')
+  }, 'thread-a');
+  assert.equal(step.needsListRefresh, true);
+});
+
+test('PreviewPanel auto-connects on initial open only when requested with an active tab', async () => {
+  const panel = new PreviewPanel();
+  panel.isCurrent = () => true;
+  panel.initialTabId = 'tab-live';
+  panel.initialUrl = 'https://example.com/live';
+  panel.autoConnect = true;
+  let streamCalls = 0;
+  let listCalls = 0;
+  panel.streamUrl = async (tabId) => {
+    streamCalls++;
+    assert.equal(tabId, 'tab-live');
+    return 'wss://example.invalid/ws';
+  };
+  panel.listTabs = async () => {
+    listCalls++;
+    return [{ tabId: 'tab-live', url: 'https://example.com/live', title: 'Live' }];
+  };
+  panel.aboutToAppear();
+  await tick();
+  await tick();
+  assert.equal(streamCalls, 1);
+  assert.equal(listCalls, 1);
+  assert.equal(panel.tabId, 'tab-live');
+  panel.disconnect();
+
+  const manualPanel = new PreviewPanel();
+  manualPanel.isCurrent = () => true;
+  manualPanel.initialTabId = 'tab-manual';
+  manualPanel.initialUrl = 'https://example.com/manual';
+  manualPanel.autoConnect = false;
+  let manualStreamCalls = 0;
+  let manualListCalls = 0;
+  manualPanel.streamUrl = async () => { manualStreamCalls++; return 'wss://example.invalid/ws'; };
+  manualPanel.listTabs = async () => {
+    manualListCalls++;
+    return [{ tabId: 'tab-manual', url: 'https://example.com/manual', title: 'Manual' }];
+  };
+  manualPanel.aboutToAppear();
+  await tick();
+  assert.equal(manualStreamCalls, 0);
+  assert.equal(manualListCalls, 1);
+  manualPanel.disconnect();
 });

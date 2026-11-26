@@ -401,3 +401,35 @@ test('resolveSubagentPillSegment hides idle-only completed turns and never shows
   );
   assert.equal(F.resolveSubagentPillSegment(mixedDoneAndIdle).label, '1 已完成');
 });
+
+test('deriveFloatingCapsuleModel exposes browser preview indicator for working and idle threads and hides when disconnected', async () => {
+  const workingWithBrowser = F.deriveFloatingCapsuleModel(baseInput({
+    runs: [{ id: 'r1', ordinal: 1, status: 'running', startedAt: '2026-01-01T00:00:18.000Z' }],
+    browserPreviewCount: 1
+  }));
+  assert.equal(workingWithBrowser.visible, true);
+  assert.equal(workingWithBrowser.status.kind, 'working');
+  assert.equal(workingWithBrowser.browserPreview.count, 1);
+  assert.equal(workingWithBrowser.browserPreview.label, '已打开 1 个标签页');
+
+  const idleWithTabs = F.deriveFloatingCapsuleModel(baseInput({
+    browserPreviewCount: 2
+  }));
+  assert.equal(idleWithTabs.visible, true);
+  assert.equal(idleWithTabs.status, undefined);
+  assert.equal(idleWithTabs.browserPreview.count, 2);
+  assert.equal(idleWithTabs.browserPreview.label, '已打开 2 个标签页');
+
+  const offlineWithTabs = F.deriveFloatingCapsuleModel(baseInput({
+    ready: false,
+    offline: true,
+    browserPreviewCount: 2
+  }));
+  assert.equal(offlineWithTabs.browserPreview, undefined);
+
+  const indexSource = await readFile(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url), 'utf8');
+  const capsuleSource = await readFile(new URL('../entry/src/main/ets/components/FloatingStatusCapsule.ets', import.meta.url), 'utf8');
+  assert.match(capsuleSource, /onOpenBrowserPreview:\s*\(\)\s*=>\s*void/);
+  assert.match(capsuleSource, /app\.media\.ui_globe/);
+  assert.match(indexSource, /onOpenBrowserPreview:\s*\(\)\s*=>\s*\{\s*void this\.openPreview\(\);\s*\}/);
+});
